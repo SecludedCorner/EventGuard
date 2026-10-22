@@ -10,9 +10,14 @@ import unittest
 from unittest.mock import patch
 
 from eventguard.acceptance_control import FileLease, read_json, write_json
-from eventguard.acceptance_process import capture
+from eventguard.acceptance_process import main as capture_main
+from eventguard.capture_receipt import validate_receipt
 from eventguard.local_wait import _guard, LocalWaitError
-from eventguard.codex_acceptance import main, run, retry, ROOT
+from eventguard import codex_acceptance as legacy
+from eventguard.processes import spawn, finish, remaining_owned
+from budget_fixtures import capture_fixture as capture
+
+ROOT = legacy.ROOT
 
 
 class ControlTests(unittest.TestCase):
@@ -27,13 +32,22 @@ class ControlTests(unittest.TestCase):
         self.assertTrue(lease.acquire())
         source = 'from pathlib import Path; from eventguard.acceptance_control import FileLease; import sys; lease=FileLease(Path(sys.argv[1])); ok=lease.acquire(); lease.release(); raise SystemExit(0 if ok else 3)'
         environment = dict(os.environ, PYTHONPATH=str(ROOT / "src"))
+        def check_exit(expected):
+            child = spawn([sys.executable, "-B", "-c", source, str(path)], env=environment,
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            try:
+                output, errors = child.communicate(timeout=5)
+                self.assertEqual(child.returncode, expected, errors)
+            finally:
+                receipt = finish(child, "test_teardown", grace=.1)
+                self.assertFalse(receipt["forcibly_terminated"])
+                if os.name == "nt":
+                    self.assertEqual(receipt["remaining_owned_processes"], 0)
         try:
-            result = subprocess.run([sys.executable, "-B", "-c", source, str(path)], env=environment, timeout=5)
-            self.assertEqual(result.returncode, 3)
+            check_exit(3)
         finally:
             lease.release()
-        result = subprocess.run([sys.executable, "-B", "-c", source, str(path)], env=environment, timeout=5)
-        self.assertEqual(result.returncode, 0)
+        check_exit(0)
         self.assertTrue(path.exists(), "Never unlink a shared OS lock file")
 
     def test_capture_drains_both_streams_but_caps_saved_bytes(self):
@@ -49,34 +63,32 @@ class ControlTests(unittest.TestCase):
     @unittest.skipUnless(os.name == "nt", "real Windows Job Object timeout behavior")
     def test_owned_timeout_runner_waits_for_receipt_and_exits_without_residuals(self):
         run_dir = self.root / "run"
-        script = self.root / "runner.py"
-        source = '''import sys
-from pathlib import Path
-from unittest.mock import patch
-from eventguard.codex_acceptance import run
-with patch("eventguard.codex_acceptance.command",return_value=[sys.executable,"-c","import time; time.sleep(.5)"]), patch("eventguard.codex_acceptance.importlib.util.find_spec",return_value=True), patch("eventguard.codex_acceptance.shutil.which",return_value="fake"):
- raise SystemExit(run(Path(sys.argv[1]),deadline_seconds=.05))
-'''
-        script.write_text(source)
-        result = subprocess.run([sys.executable, "-B", str(script), str(run_dir)],
-                                env=dict(os.environ, PYTHONPATH=str(ROOT / "src")), timeout=5)
-        self.assertEqual(result.returncode, 1, "Owned timeout is terminal; synthetic output must fail delivery evidence")
+        run_dir.mkdir()
+        baseline = remaining_owned()
+        token = "c" * 32
+        # Shared capture owns a real private Windows Job. This is Python, not Codex.
+        began = time.monotonic()
+        result = capture([sys.executable, "-B", "-c", "import time; time.sleep(.5)"],
+                         run_dir, token, "synthetic timeout fixture", timeout_seconds=.05)
+        self.assertEqual(result, 0, "Complete capture does not itself mean successful delivery")
+        self.assertLess(time.monotonic() - began, 5)
         receipt_path = run_dir / "capture-exit.json"
-        deadline = time.monotonic() + 5
-        while not receipt_path.exists() and time.monotonic() < deadline:
-            time.sleep(.05)
         receipt = read_json(receipt_path)
+        started = read_json(run_dir / "capture-start.json")
         self.assertTrue(receipt["capture_complete"])
         self.assertEqual(receipt["codex_exit_code"], 0)
-        if os.name == "nt":
-            self.assertTrue(receipt["child_exited"])
-            self.assertEqual(receipt["process"]["remaining_owned_processes"], 0)
-            state = read_json(run_dir / "status.json")
-            self.assertEqual(state["state"], "failed")
-            self.assertTrue(state["supervisor_process"]["child_exited"])
-            self.assertEqual(state["supervisor_process"]["remaining_owned_processes"], 0)
-            self.assertFalse(read_json(run_dir / "summary.json")["passed"])
-            self.evidence = {"scope": "real_windows_job_synthetic_python_not_codex", "case": "runner_timeout_receipt", "capture": receipt, "supervisor": state["supervisor_process"]}
+        self.assertTrue(receipt["child_exited"])
+        self.assertEqual(receipt["process"]["remaining_owned_processes"], 0)
+        self.assertTrue(receipt["process"]["managed"])
+        self.assertFalse(receipt["forcibly_terminated"])
+        self.assertEqual(receipt["stop_reason"], "timeout")
+        self.assertEqual(validate_receipt(receipt, started, token), [])
+        self.assertIn("natural_capture_exit_not_verified", validate_receipt(receipt, started, token, require_success=True))
+        self.assertFalse((run_dir / "summary.json").exists(), "Capture must not invent tool delivery success")
+        self.assertEqual(remaining_owned(), baseline)
+        self.evidence = {"scope": "real_windows_job_synthetic_python_not_codex", "case": "capture_timeout_receipt",
+                         "capture": receipt, "known_exit": True, "successful_delivery": False,
+                         "remaining_owned_after": remaining_owned()}
         lease = FileLease(run_dir / "capture.lock")
         deadline = time.monotonic() + 3
         while not lease.acquire() and time.monotonic() < deadline:
@@ -132,21 +144,35 @@ with patch("eventguard.codex_acceptance.command",return_value=[sys.executable,"-
 
     def test_corrupt_state_and_foreign_directory_refuse_retry_without_launch(self):
         run_dir = self.root / "run"
-        with patch("eventguard.codex_acceptance.shutil.which", return_value=None):
-            run(run_dir)
-        original = read_json(run_dir / "status.json")
+        run_dir.mkdir()
+        original = {"run_id": "a" * 32, "attempt_id": "b" * 32, "attempt": 1,
+                    "state": "pending_child_exit", "cli_started": True, "wait_ids_before": []}
+        write_json(run_dir / "acceptance.json", {"kind": legacy.KIND, "run_id": original["run_id"]})
+        write_json(run_dir / "status.json", original)
         for field, value in (("cli_started", None), ("run_id", None), ("attempt_id", "z" * 32),
                              ("attempt", True), ("state", []), ("wait_ids_before", [[]])):
             changed = dict(original, **{field: value})
             write_json(run_dir / "status.json", changed)
-            with self.subTest(field=field), patch("eventguard.codex_acceptance.subprocess.Popen") as launch:
-                self.assertEqual(main(["retry", "--run-dir", str(run_dir)]), 2)
+            before = (run_dir / "status.json").read_bytes()
+            with self.subTest(field=field), patch.object(legacy, "spawn") as launch:
+                self.assertEqual(legacy.main(["status", "--run-dir", str(run_dir)]), 2)
+                self.assertEqual(legacy.main(["retry", "--run-dir", str(run_dir)]), 2)
                 launch.assert_not_called()
+            self.assertEqual((run_dir / "status.json").read_bytes(), before)
         write_json(run_dir / "status.json", original)
+        (run_dir / "runtime").mkdir()
         lease = FileLease(run_dir / "runtime/stdio-owner.lock")
         self.assertTrue(lease.acquire())
         try:
-            with self.assertRaisesRegex(LocalWaitError, "stdio_server_still_owned"):
-                retry(run_dir)
+            self.assertEqual(legacy.retry(run_dir), 2)
+            self.assertEqual(legacy.status(run_dir), original)
         finally:
             lease.release()
+
+    def test_generic_capture_entry_is_retired_and_does_not_spawn_or_create_directory(self):
+        run_dir = self.root / "absent"
+        with patch("eventguard.acceptance_process.spawn") as launch:
+            self.assertEqual(capture_main(["--attempt-dir", str(run_dir), "--attempt-id", "d" * 32,
+                                          "--", sys.executable, "-c", "raise SystemExit(0)"]), 2)
+            launch.assert_not_called()
+        self.assertFalse(run_dir.exists())

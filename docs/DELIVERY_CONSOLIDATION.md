@@ -52,7 +52,9 @@ py -3.13 -B scripts/validate_delivery.py recovery --root reports/queue-recovery-
 
 outbox/inbox/dispatcher 的 Phase 4 保留及背壓政策未放寬。新驗收只用專用 synthetic source，不接正式 DB；不清 pending、不刪未知退出／失敗記錄，也不藉新目錄重啟同一正式事件。ACK 仍只代表接收，不代表診斷、修補或案件結束。
 
-**尚缺的是跨所有入口的每日耐久任務總額。** 現有 `max_tasks=5` 是每一輪上限，每事件三次是跨 run 的耐久限制；不能把它們寫成每日五次。研究任務提出的每日五次政策，本批沒有偷偷實作，也不啟動模型驗收；要實作時須將驗收、失敗與各入口接到同一耐久預留帳本。舊目錄及現有資料不因本批清空。
+後續維護已接入[同安裝每日耐久預算](AGENT_BUDGET.md)：所有受管新 CLI 的驗收、dispatch 與重試共用 UTC+08 每日五次；每輪及每事件上限另行保留。legacy Python run/retry 與 generic capture CLI 也已退役，不僅是外層 script。舊證據 status 純讀，不補造新格式退出保證；不啟動模型、不清空舊資料。
+
+上面四案例若全部執行，八個短任務不能在同一預算日全部啟動，至少分兩日並有各日有效批准；synthetic 驗收也計入。fake CLI 測試使用明示隔離測試安裝，不能拿它宣稱同一天執行八個真任務或繞過正式額度。
 
 ## 啟動與 CI
 

@@ -14,6 +14,14 @@ def parser():
     sub=p.add_subparsers(dest="command",required=True)
     sub.add_parser("capabilities")
     sub.add_parser("status")
+    budget=sub.add_parser("budget",help="本安裝共用耐久預算；不啟動模型")
+    budgetsub=budget.add_subparsers(dest="budget_command",required=True)
+    budgetsub.add_parser("status")
+    initialize=budgetsub.add_parser("initialize",help="明示一次初始化；未知當日用量會阻擋當日")
+    initialize.add_argument("--known-used",type=int,choices=range(6),default=None,
+                            help="僅限已核實的當日受管用量；不會查私人 sessions")
+    reconcile=budgetsub.add_parser("reconcile",help="以已保存且匹配的 Job 退出回條解除未解閘道")
+    reconcile.add_argument("--attempt-dir",type=Path,required=True)
     stopping=sub.add_parser("stop")
     stopping.add_argument("--namespace",choices=("live","test"),help="選填：只停止該 namespace 的已核對 monitor")
     monitor=sub.add_parser("monitor",help="前景持續監看；Ctrl+C 或另一終端 stop")
@@ -60,6 +68,24 @@ def parser():
 
 def execute(args,runtime):
     operator=OperatorAPI(runtime.root)
+    if args.command=="budget":
+        from .agent_budget import BudgetAuthority, BudgetError, public_status
+        try:
+            if args.budget_command=="status":
+                return public_status()
+            if args.budget_command=="initialize":
+                return BudgetAuthority().initialize(known_used=args.known_used)
+            from .acceptance_control import read_json as read_receipt
+            from .local_paths import _guard
+            directory=_guard(args.attempt_dir)
+            installation=Path(__file__).resolve().parents[2]
+            if not any(directory.is_relative_to(installation/name) for name in ("data","logs","reports")):
+                raise ValueError("owned_evidence_directory_required")
+            started=read_receipt(directory/"capture-start.json")
+            receipt=read_receipt(directory/"capture-exit.json")
+            return BudgetAuthority.open_existing().finalize(started["attempt_id"],receipt,started)
+        except BudgetError as error:
+            return {"status":"error","state":"blocked","reason":error.code,"model_started":False}
     if args.command=="capabilities":
         return operator.call("capabilities")
     if args.command=="status":

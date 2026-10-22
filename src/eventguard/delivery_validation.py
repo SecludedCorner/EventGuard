@@ -17,7 +17,9 @@ import sys
 import uuid
 
 from .acceptance_control import read_json, write_json, FileLease
-from .acceptance_process import capture, CAPTURE_LIMIT
+from .acceptance_process import capture, CAPTURE_LIMIT, open_authority, launch_hash
+from .capture_receipt import validate_receipt
+from .events.store import event_payload_hash
 from .agent_dispatch import command, assess_delivery, PROMPT
 from .events.store import EventStore
 from .local_paths import _guard
@@ -75,8 +77,22 @@ def stage(root, manifest, event_id, codex, *, read_only=False):
     write_json(root / "manifest.json", manifest)
     args = command(codex, sys.executable, root / "source", root / "inbox", event_id,
                    directory, allow_ack=not read_only)
-    capture(args, directory, token, READ_PROMPT if read_only else PROMPT, timeout_seconds=180)
-    checked = verify_stage(root, row)
+    prompt = READ_PROMPT if read_only else PROMPT
+    event = next(event for event in manifest["events"] if event["event_id"] == event_id)
+    authority = open_authority()
+    authority.reserve(token, event_id, "test", event_payload_hash(event), "acceptance",
+                      launch_hash=launch_hash(args, prompt))
+    capture_code = capture(args, directory, token, prompt, timeout_seconds=180)
+    try:
+        checked = verify_stage(root, row)
+        if capture_code != 0:
+            checked.update(passed=False, evidence_errors=["capture_or_budget_finalization_failed"])
+    except (OSError, ValueError, RuntimeError, KeyError, TypeError):
+        # Keep a concrete failure outcome beside the original receipt/trace.
+        # Do not echo exception strings from mutable evidence.
+        checked = {"passed": False, "event_id": event_id, "attempt_id": token,
+                   "evidence_errors": ["complete_natural_cli_exit_or_delivery_evidence_required"],
+                   "capture_exit_code": capture_code, "child_exited": None}
     write_json(directory / "assessment.json", checked)
     if not checked["passed"]:
         raise ValueError("acceptance_stage_failed_pending_preserved")
@@ -89,13 +105,7 @@ def verify_stage(root, row):
     directory = _guard(root / row["name"])
     receipt = read_json(directory / "capture-exit.json")
     started = read_json(directory / "capture-start.json")
-    if (receipt.get("attempt_id") != row["attempt_id"] or started.get("attempt_id") != row["attempt_id"]
-            or type(started.get("codex_pid")) is not int or started["codex_pid"] <= 0
-            or receipt.get("codex_pid") != started["codex_pid"]
-            or any(receipt.get(key) is not True for key in ("capture_complete", "child_exited"))
-            or any(receipt.get(key) is not False for key in ("stdout_truncated", "stderr_truncated", "forcibly_terminated"))
-            or receipt.get("stop_reason") != "descendants_remaining"
-            or receipt.get("process", {}).get("remaining_owned_processes") != 0):
+    if validate_receipt(receipt, started, row["attempt_id"], require_success=True):
         raise ValueError("complete_natural_cli_exit_required")
     with (directory / "codex.jsonl").open("rb") as stream:
         raw = stream.read(CAPTURE_LIMIT + 1)

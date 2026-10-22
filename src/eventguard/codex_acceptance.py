@@ -1,4 +1,4 @@
-"""Single real Codex acceptance run; no daemon, registration, or model polling."""
+"""Read-only legacy acceptance evidence; execution APIs are retired."""
 from __future__ import annotations
 
 import argparse
@@ -169,159 +169,18 @@ def _complete(directory, state, receipt):
     return 0 if summary["passed"] else 1
 
 
-def _attempt(directory, state, idle_seconds, deadline_seconds, codex):
-    evidence = _attempt_dir(directory, state["attempt"])
-    runtime = _path(directory, "runtime")
-    event = _fixture(directory)
-    backend = LocalWait(runtime)
-    ledger = backend._load()
-    state["wait_ids_before"] = [item["wait_id"] for item in ledger["waits"]]
-    if event:
-        saved = backend.store.get_event(event["event_id"])
-        if saved and saved.get("delivery_status") == "ack":
-            raise LocalWaitError("acceptance_event_already_acknowledged")
-        if saved is None:
-            backend.store.enqueue(event)  # Recover a crash between fixture persistence and enqueue.
-        state["event_id"] = event["event_id"]
-    state.update(state="preflight", cli_started=False, stop_requested=False)
-    state.pop("supervisor_process", None)
-    _save_state(directory, state)
-    codex_path = shutil.which(codex)
-    if importlib.util.find_spec("mcp") is None or codex_path is None:
-        state.update(state="blocked_missing_codex_or_sdk")
-        _save_state(directory, state)
-        return 2
-    if Path(codex_path).suffix.lower() in {".cmd", ".bat", ".ps1"}:
-        state.update(state="blocked_native_codex_required",
-                     note="Select an existing native Codex executable with --codex-executable; shell wrappers are refused.")
-        _save_state(directory, state)
-        return 2
-    child = None
-    waiting_since = None
-    try:
-        args = [sys.executable, "-B", str(ROOT / "scripts/acceptance_capture.py"),
-                "--attempt-dir", str(evidence), "--attempt-id", state["attempt_id"], "--timeout-seconds", str(deadline_seconds), "--",
-                *command(codex_path, sys.executable, runtime, evidence_dir=evidence)]
-        # Persist unsafe-to-retry BEFORE starting a process, including the crash window.
-        state.update(state="starting", cli_started=True)
-        _save_state(directory, state)
-        child = spawn(args, popen_factory=subprocess.Popen, cwd=ROOT, stdin=subprocess.DEVNULL,
-                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        state.update(state="running", supervisor_pid=child.pid)
-        _save_state(directory, state)
-        began = time.monotonic()
-        while child.poll() is None:
-            state["stop_requested"] = bool(_path(evidence, "stop.request").exists())
-            if not state["stop_requested"] and event is None:
-                ledger = backend._load()
-                waiting = any(item["status"] == "waiting" and item["wait_id"] not in state["wait_ids_before"]
-                              for item in ledger["waits"])
-                if waiting:
-                    waiting_since = waiting_since or time.monotonic()
-                    if time.monotonic() - waiting_since >= idle_seconds:
-                        from .synthetic import make_synthetic
-                        event = make_synthetic("listener")
-                        write_json(_path(directory, "synthetic-event.json"), event)
-                        backend.store.enqueue(event)
-                        state.update(event_id=event["event_id"], emitted_at=utc(), idle_seconds=idle_seconds)
-                        _save_state(directory, state)
-            if time.monotonic() - began >= deadline_seconds or (state["stop_requested"] and isinstance(child, JobPopen)):
-                if isinstance(child, JobPopen):
-                    lifecycle = finish(child, "cancelled" if state["stop_requested"] else "timeout", grace=5)
-                    write_json(_path(evidence, "supervisor-exit.json"), lifecycle)
-                    state["supervisor_process"] = lifecycle
-                    break
-                state.update(state="pending_child_exit", note="Capture worker continues; no process signal or model retry.")
-                _save_state(directory, state)
-                return 3
-            time.sleep(.1)
-        if isinstance(child, JobPopen):
-            state["supervisor_process"] = finish(child, "descendants_remaining", grace=.2)
-        receipt = _receipt(directory, state)
-        if receipt is None:
-            state.update(state="failed_runner" if child.poll() is not None else "pending_child_exit",
-                         child_exited=child.poll() is not None, note="No complete owned exit receipt; retry refused.")
-            _save_state(directory, state)
-            return 3
-        return _complete(directory, state, receipt)
-    except (KeyboardInterrupt, OSError, ValueError, RuntimeError):
-        state.update(state="pending_child_exit" if state.get("cli_started") else "failed_runner",
-                     note="Inspect owned evidence; no process signal or automatic retry.")
-        _save_state(directory, state)
-        return 3 if state.get("cli_started") else 2
-    finally:
-        if child is not None and isinstance(child, JobPopen):
-            state["supervisor_process"] = finish(child, "owner_exception", grace=.2)
-            _save_state(directory, state)
-
-
 def run(directory, idle_seconds=3, deadline_seconds=180, codex="codex"):
-    directory = _guard(directory)
-    directory.mkdir(parents=True, exist_ok=False)
-    identity = uuid.uuid4().hex
-    state = {"state": "preflight", "started_at": utc(), "cli_started": False,
-             "run_id": identity, "attempt": 1, "attempt_id": uuid.uuid4().hex}
-    write_json(_path(directory, "acceptance.json"), {"kind": KIND, "run_id": identity})
-    lease = FileLease(_path(directory, "runner.lock"))
-    if not lease.acquire():
-        return 3
-    try:
-        return _attempt(directory, state, idle_seconds, deadline_seconds, codex)
-    finally:
-        lease.release()
+    """Retired execution API. Existing evidence is preserved, never relaunched."""
+    return 2
 
 
 def retry(directory, idle_seconds=3, deadline_seconds=180, codex="codex"):
-    directory = _guard(directory)
-    state = _load_state(directory)
-    lease = FileLease(_path(directory, "runner.lock"))
-    if not lease.acquire():
-        raise LocalWaitError("acceptance_runner_busy")
-    try:
-        state = _load_state(directory)
-        receipt = _receipt(directory, state)
-        if state.get("cli_started") and receipt is None:
-            raise LocalWaitError("acceptance_child_exit_unconfirmed")
-        # Capture ownership is separate from the runner; both must be free.
-        capture_lease = FileLease(_path(_attempt_dir(directory, state["attempt"]), "capture.lock"))
-        if not capture_lease.acquire():
-            raise LocalWaitError("acceptance_child_still_owned")
-        capture_lease.release()
-        server_lease = FileLease(_path(_path(directory, "runtime"), "stdio-owner.lock"))
-        if not server_lease.acquire():
-            raise LocalWaitError("acceptance_stdio_server_still_owned")
-        server_lease.release()
-        if receipt is not None and state.get("state") not in {"passed", "failed", "stopped"}:
-            _complete(directory, state, receipt)
-        event = _fixture(directory)
-        record = LocalWait(_path(directory, "runtime")).store.get_event(event["event_id"]) if event else None
-        if record and record.get("delivery_status") == "ack":
-            raise LocalWaitError("acceptance_event_already_acknowledged")
-        number = state["attempt"] + 1
-        if number > MAX_ATTEMPTS:
-            raise LocalWaitError("acceptance_retry_budget_exhausted")
-        evidence = _attempt_dir(directory, number)
-        evidence.mkdir(parents=True, exist_ok=False)
-        new_state = {"state": "preflight", "started_at": utc(), "cli_started": False,
-                     "run_id": state["run_id"], "attempt": number, "attempt_id": uuid.uuid4().hex}
-        return _attempt(directory, new_state, idle_seconds, deadline_seconds, codex)
-    finally:
-        lease.release()
+    return 2
 
 
 def status(directory):
-    state = _load_state(directory)
-    lease = FileLease(_path(directory, "runner.lock"))
-    if lease.acquire():
-        try:
-            state = _load_state(directory)
-            receipt = _receipt(directory, state)
-            if receipt and state.get("state") not in {"passed", "failed", "stopped"}:
-                _complete(directory, state, receipt)
-                state = _load_state(directory)
-        finally:
-            lease.release()
-    return state
+    """Read saved legacy facts only; do not backfill modern exit guarantees."""
+    return _load_state(_guard(directory))
 
 
 def main(argv=None):
@@ -334,9 +193,9 @@ def main(argv=None):
     try:
         directory = _guard(args.run_dir)
         if args.action in {"run", "retry"}:
-            code = (run if args.action == "run" else retry)(directory, codex=args.codex_executable)
-            print(json.dumps(status(directory)))
-            return code
+            print(json.dumps({"state": "legacy_execution_retired", "model_started": False,
+                              "reason": "use_validate_delivery_explicit_execute"}))
+            return 2
         state = status(directory)
         if args.action == "stop":
             if state["state"] not in {"starting", "running", "pending_child_exit"}:

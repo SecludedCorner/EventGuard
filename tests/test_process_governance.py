@@ -18,7 +18,7 @@ from eventguard.processes import spawn, finish, remaining_owned, identity, Job, 
 from eventguard.collectors.runner import Runner
 from eventguard.collectors.worker import NativeWorker
 from eventguard.collectors.windows import WindowsCollectors
-from eventguard.acceptance_process import capture
+from budget_fixtures import capture_fixture as capture
 from eventguard.runtime import Runtime, InstanceLock, atomic_json
 from eventguard.monitor import Monitor
 from eventguard.monitor_gap import prepare, persist

@@ -2,7 +2,27 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
-## 2026-10-23：Phase 5 收斂及 Phase 7 計畫
+## 2026-10-23：共用耐久預算、退出閘道與操作狀態
+
+基底 `3b0461988c6bc36f13d514e1e5263c91b4715123`、同一 feature 分支；三個有限子代理的預審保存在 `reports/parallel-preflight-001/`。主線整合共享入口，子代理沒有各自提交或重跑整套。正式 agent 帳本未初始化，沒有真 Codex／模型、全機採集、網路部署、提權、排程或 Phase 7 注入。
+
+本批完成：legacy run/retry 與 generic capture CLI 退役；舊 status 純讀；dispatcher/acceptance 共用嚴格 attempt/PID+建立時間/Job 退出驗證。固定安裝 authority 先原子扣帳、一次性 argv/prompt digest、全域 active/unknown-exit、UTC+08 每日五次、事件三次、不退款、未知 bootstrap 阻擋與 terminal/tombstone 保留。最後 gate 與 OS create 之間採 serialized owner permit；午夜拒絕不留下不可恢復的未啟動 reservation。status 分開 last_report/current owner、逐來源 freshness、逐 namespace 故障，報告明示 total/exported/truncated。契約與限制見 [AGENT_BUDGET](AGENT_BUDGET.md)。
+
+**本版完整數字唯一來源**：`reports/shared-budget-001/full-final/verification-summary.json`。命令 `py -3.13 -B scripts/verify.py --run-dir reports/shared-budget-001/full-final --timeout-seconds 600 --scope full`，Windows/Python **3.13.3**，2026-10-22T21:57:07.230903+00:00：**441 discovered、439 passed、0 failure/error、2 symlink 權限 skip、95 AST**，136.975 秒、exit **0**。passed_checks/source_unchanged=true、per_test_residuals=[]；guardian child_exited=true、exit0、remaining_owned_processes=0、forcibly_terminated=false。scope 是 fixture/SDK/fake CLI 及分列真 Windows owned Job API，不是 provider 採集或真 agent 驗收。
+
+命令 `py -3.13 -B scripts/verify.py --run-dir reports/shared-budget-001/mock-final --timeout-seconds 180 --scope mock`：**104/104 通過**、0 skip/failure/error、5.609 秒、exit0，source_unchanged=true、無殘留。mock 是 full 的明示子集，不相加，不代表 Linux 原生支援或遠端 CI。兩者 source-manifest 必須與目前受測來源完全相同；提交後以 `reports/shared-budget-001/source-commit.json` 綁定 Git tree 位元組，`completion-audit.json` 對照各完成條件／測試／來源／文件。
+
+保留完整資料的命令 `py -3.13 -B reports/shared-budget-001/probe.py` exit0；輸出 `{passed:true, unique_generated:7, received:8, queried:8, acked:7, daily_usage:{2026-10-23:3,2026-10-24:5}, remaining_owned:0, model_calls:0}`。這是 **Python fake CLI、實際本機 SQLite、Windows 私有 Job、兩個 fake clock 預算日**；未改系統時鐘，不能宣稱跑了兩天或八個真模型任務。`retained-probe/id-comparison.json` 保存生成／接收／query／ACK ID 集合與 Counter 比對；missing=[]、duplicate_closures=[]，唯一重複接收是 recovery 同 event/query 的預期補收。四案例 manifest、JSONL/stderr、實際工具回傳、SQLite receipts、pending-proof、八份自然退出回條均留在同一 ignored reports 目錄，沒有提交 runtime。
+
+其他必要證據在完整 suite：八個並發連線競爭最後額度；跨 acceptance/dispatch/retry 五次實際 Python fake CLI，第六次換目錄／來源零 worker；未知退出跨來源／次日；票證重播／命令變更拒絕；marker/DB 缺少、損壞、busy、byte/count 滿載與保守恢復；保留每日／事件計數與 retired-token 摘要；人類 budget CLI 與合成 namespace／heartbeat／>1000 報告。它們不是帳戶級防竄改或真模型成本證據。局部命令與輸出亦保留在 budget-unit-result.json、完整 unit-tests.txt 與 lifecycle-evidence.json。
+
+保留非最終結果：第一個主線 22 項局部測試有 1 項失敗，新的 strict verifier 先拒絕非零 CLI，原測試預期的 stage_failed 尚未保存；修成保存明確 failed assessment，再回固定 stage failure，不放寬自然退出／ACK 判定。budget 最初 default validator keyword 不一致導致 fixture capture return2，修正介面並補 actual writer schema 測試。初次 budget tests 的 SQLite fixture 未 close 造成 teardown WinError32，改 closing；report fixture 超出產品事件上限被正確拒絕，改為明示直接填入 legacy fixture，不放寬產品 cap。這些早期失敗不列通過。
+
+`full/` 的前一版 **440 discovered／438 passed／2 skip**、exit0，沒有程序殘留；最終唯讀審查仍找到午夜 prelaunch reservation 缺口，因此新增修正與回歸後才執行上面的 full-final/mock-final。舊綠燈不能替代未覆蓋的邊界；原記錄保留，不終止測試掩蓋問題。operator 最終審查也指出 budget status 會更新耐久時鐘檢查點，文件已明示它不初始化／不扣額度，但不是帳本位元組唯讀。
+
+限制：時鐘回退／超過36小時未觀測會保守阻擋；日彙總、事件／retired-token 摘要仍有限容量，不能刪帳歸零。沒有 24 小時 soak、登出／重啟、實機狀態注入、真 agent 或 provider 重驗。Phase 7 與敏感／不可逆操作仍須當次批准。未推送或手動觸發 CI，原有 docs/research/ 保留。
+
+## 歷史：2026-10-23 Phase 5 收斂及 Phase 7 計畫
 
 起點 `fa572ca33a972be5ffc691ba3a48b2ccbf256d06`，同一 feature 分支。新驗收使用正式 QueueInbox，重用 dispatcher command/capture/assessor；舊重複 producer/capture 已移除，保留原 wire schema 的測試與 SQLite 唯讀證據 reader。停用 bridge 移到 contrib，核心 import 隔離；四個 cmd 入口改為檢查既有 Python 3.13，CI 僅備妥設定。差異與相容理由見 [收斂對照](DELIVERY_CONSOLIDATION.md)。
 

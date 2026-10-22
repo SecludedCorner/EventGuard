@@ -23,6 +23,7 @@ from eventguard.queue_inbox import QueueInbox
 from eventguard.processes import spawn, finish
 from eventguard.synthetic import make_synthetic
 from test_agent_dispatch import trace_fixture, RECORD
+from budget_fixtures import isolated_budget
 
 ROOT = Path(__file__).resolve().parents[1]
 FAKE = '''import json,sys
@@ -93,7 +94,8 @@ class ConsolidationTests(unittest.TestCase):
             with patch.object(validation, "command", side_effect=fake_command), patch.object(validation.shutil, "which", return_value=sys.executable), patch.object(validation.importlib.util, "find_spec", return_value=True):
                 for case in validation.COUNTS:
                     root = base / case; manifest = validation.prepare(root, case)
-                    proof = validation.execute(root, manifest, sys.executable)
+                    with isolated_budget(base / ("budget-" + case)):
+                        proof = validation.execute(root, manifest, sys.executable)
                     self.assertTrue(proof["passed"], proof)
                     self.assertEqual(proof["missing"], [])
                     self.assertEqual(proof["duplicates"], [])
@@ -112,7 +114,7 @@ class ConsolidationTests(unittest.TestCase):
             manifest = validation.prepare(root, "single")
             def fake_command(codex, python, source, state, identity, evidence, **kwargs):
                 return [sys.executable, "-B", str(fake), str(source), str(state), identity, str(ROOT / "src"), "fail"]
-            with patch.object(validation, "command", side_effect=fake_command), patch.object(validation.shutil, "which", return_value=sys.executable), patch.object(validation.importlib.util, "find_spec", return_value=True):
+            with isolated_budget(base / "budget"), patch.object(validation, "command", side_effect=fake_command), patch.object(validation.shutil, "which", return_value=sys.executable), patch.object(validation.importlib.util, "find_spec", return_value=True):
                 with self.assertRaisesRegex(ValueError, "stage_failed"):
                     validation.execute(root, manifest, sys.executable)
                 self.assertEqual(EventStore(root / "source").get_event(manifest["events"][0]["event_id"])["delivery_status"], "pending")

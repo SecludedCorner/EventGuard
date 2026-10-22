@@ -13,6 +13,7 @@ import unittest
 from unittest.mock import patch
 
 from eventguard.acceptance_control import FileLease, read_json, write_json
+from budget_fixtures import isolated_budget, reserve_capture
 from eventguard.agent_dispatch import (ROOT, KIND, PROMPT, TOOLS, assess_delivery,
                                        command, main, run, status, stop)
 
@@ -79,6 +80,9 @@ class FakeInbox:
     def pending_event_id(self):
         return self.pending
 
+    def delivery_reference(self, event_id):
+        return {"event_id": event_id, "namespace": "test", "payload_hash": "1"*64}
+
     def evidence(self, event_id):
         return deepcopy(RECORD)
 
@@ -91,6 +95,7 @@ class DispatchTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.directory = Path(self.temp.name)
+        self.authority = self.enterContext(isolated_budget(self.directory))
         self.source = self.directory / "source"
         self.source.mkdir()
         (self.source / "eventguard.sqlite3").write_bytes(b"explicit fake fixture")
@@ -266,6 +271,7 @@ class DispatchTests(unittest.TestCase):
         attempt = target / "attempts" / token
         attempt.mkdir(parents=True)
         write_json(attempt / "attempt.json", {"run_id": saved["run_id"], "attempt_id": token})
+        reserve_capture(self.authority, [sys.executable, "-c", "raise SystemExit(99)"], attempt, token, PROMPT)
         with patch("eventguard.acceptance_process.subprocess.Popen", side_effect=AssertionError("Native launch forbidden")):
             self.assertEqual(main(["_capture", "--attempt-dir", str(attempt), "--attempt-id", token,
                 "--deadline-monotonic", str(time.monotonic() - 1), "--stop-run-dir", str(target),

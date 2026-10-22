@@ -59,5 +59,6 @@ py -3.13 -B scripts/eventguard.py stop
 - [24 小時 soak](docs/SOAK_PLAN.md) 尚未執行，真實狀態注入／登出重開機仍未驗證。排程只 dry-run，沒有服務、自啟或全天候承諾。
 - 不提供 EDR／鑑識、自動處置、GUI 或 Linux 原生採集。沒有事件、ACK 或診斷都不能證明主機安全。
 - 執行資料與憑證不入 Git。歷史有限 Codex 通路驗收見 [歷史入口](docs/history/README.md)；不是正常使用的前置條件或新的模型授權。
+- 可選 CLI 共用[每日耐久預算與未知退出閘道](docs/AGENT_BUDGET.md)；未初始化或證據不足就阻擋，不因換目錄重置。這批只做合成／fake CLI 驗證，沒有真模型。
 
 目前投遞／驗收已使用 [同一 QueueInbox 路徑](docs/DELIVERY_CONSOLIDATION.md)；Phase 7 [實機驗證計畫](docs/WINDOWS_VALIDATION_PLAN.md) 尚未執行。下一階段的範圍、完成條件與停止關卡見 [維護目標](docs/MAINTENANCE_GOAL.md)。離線開發與驗證見 [DEVELOPMENT](docs/DEVELOPMENT.md)。

@@ -1,52 +1,39 @@
-"""Owned fake-CLI orchestration only; these tests never invoke a model or CI."""
-from contextlib import ExitStack
+"""Legacy evidence semantics and retired entry safety; no real model or native query."""
+import asyncio
+from contextlib import closing
+from copy import deepcopy
 import json
 import os
 from pathlib import Path
-import subprocess
-import sys
+import sqlite3
 import tempfile
-import time
 import tomllib
 import unittest
 from unittest.mock import patch
 
-from eventguard.codex_acceptance import ROOT, command, main, run, retry, status
-from eventguard.acceptance_control import read_json, FileLease
-from eventguard.local_wait import LocalWait, LocalWaitError
-
-
-# Real LocalWait/SQLite behind an explicitly fake CLI; never real-agent proof.
-FAKE = '''import asyncio,json,sys
-from eventguard.local_wait import LocalWait
+from eventguard import codex_acceptance as legacy
+from eventguard import delivery_validation
+from eventguard.acceptance_control import read_json, write_json, FileLease
+from eventguard.acceptance_evidence import assess
+from eventguard.capture_receipt import validate_receipt
 from eventguard.events.store import StoreError
-backend=LocalWait(sys.argv[1])
-mode=sys.argv[2]
-if mode=="idle":
- asyncio.run(backend.wait_for_event(1))
- raise SystemExit(0)
-if mode=="slow":
- import time
- time.sleep(.8)
- raise SystemExit(0)
-reply=asyncio.run(backend.wait_for_event(5))
-event=reply["event_id"]
-query=backend.query_evidence(event)
-def output(tool,args,result):
- print(json.dumps({"type":"item.completed","item":{"type":"mcp_tool_call","tool":tool,"server":"eventguard_local","status":"completed","error":None,"arguments":args,"result":{"content":[{"type":"text","text":json.dumps(result)}]}}}),flush=True)
-output("wait_for_event",{"timeout_seconds":30},reply)
-output("query_evidence",{"event_id":event},query)
-if mode=="fail_query":
- print(json.dumps({"type":"turn.failed"}))
- raise SystemExit(7)
-if mode=="fail_ack":
- def broken(*args): raise StoreError("fixture_failure")
- backend.store.acknowledge=broken
- backend.ack_event(event,query["query_id"],"reviewed_synthetic")
-ack=backend.ack_event(event,query["query_id"],"reviewed_synthetic")
-output("ack_event",{"event_id":event,"query_id":query["query_id"],"decision":"reviewed_synthetic"},ack)
-print(json.dumps({"type":"turn.completed"}))
-'''
+from eventguard.local_wait import LocalWait, LocalWaitError
+from eventguard.synthetic import make_synthetic
+from test_capture_receipt import fixture as receipt_fixture
+
+ROOT = legacy.ROOT
+
+
+def trace(replies):
+    """Explicit legacy-shaped fixture trace, never evidence of a real agent."""
+    tools = ("wait_for_event", "query_evidence", "ack_event")
+    args = ({"timeout_seconds": 30}, {"event_id": replies[0]["event_id"]},
+            {"event_id": replies[0]["event_id"], "query_id": replies[1]["query_id"], "decision": "reviewed_synthetic"})
+    return [{"type": "item.completed", "item": {"id": "fixture-" + str(n),
+            "type": "mcp_tool_call", "tool": tool, "server": "eventguard_local",
+            "status": "completed", "error": None, "arguments": arguments,
+            "result": {"content": [{"type": "text", "text": json.dumps(reply)}]}}}
+            for n, (tool, arguments, reply) in enumerate(zip(tools, args, replies))] + [{"type": "turn.completed"}]
 
 
 class AcceptanceTests(unittest.TestCase):
@@ -54,35 +41,25 @@ class AcceptanceTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name) / "run"
-        self.script = Path(self.temp.name) / "fake.py"
-        self.script.write_text(FAKE)
-        self.children = []
-        self.addCleanup(self.wait_for_owned_children)
 
-    def wait_for_owned_children(self):
-        for child in self.children:
-            self.assertIsNotNone(child.wait(timeout=8), "Owned fixture must exit naturally")
+    def saved_state(self, **changes):
+        """Create a labelled historical fixture, rather than invoking a retired writer."""
+        self.root.mkdir(parents=True, exist_ok=True)
+        state = {"state": "pending_child_exit", "cli_started": True, "run_id": "c" * 32,
+                 "attempt": 1, "attempt_id": "a" * 32, "wait_ids_before": [], **changes}
+        write_json(self.root / "acceptance.json", {"kind": legacy.KIND, "run_id": state["run_id"]})
+        write_json(self.root / "status.json", state)
+        return state
 
-    def fake_cli(self, mode="success", stop=False):
-        stack = ExitStack()
-        original_popen = subprocess.Popen
-
-        def launch(*args, **kwargs):
-            child = original_popen(*args, **kwargs)
-            self.children.append(child)
-            if stop:
-                (self.root / "stop.request").touch()
-            return child
-
-        stack.enter_context(patch("eventguard.codex_acceptance.command", return_value=[sys.executable, "-B", str(self.script), str(self.root / "runtime"), mode]))
-        stack.enter_context(patch("eventguard.codex_acceptance.importlib.util.find_spec", return_value=True))
-        stack.enter_context(patch("eventguard.codex_acceptance.shutil.which", return_value="fake"))
-        stack.enter_context(patch("eventguard.codex_acceptance.subprocess.Popen", side_effect=launch))
-        stack.enter_context(patch.dict(os.environ, {"PYTHONPATH": str(ROOT / "src")}))
-        return stack
+    def bytes_before(self):
+        # Windows locks the owned byte against readers too; inspect metadata and
+        # runtime payloads, while lease tests separately prove lock ownership.
+        return {p.relative_to(self.root).as_posix():
+                ("lock", p.stat().st_size, p.stat().st_mtime_ns) if p.suffix == ".lock" else p.read_bytes()
+                for p in self.root.rglob("*") if p.is_file()}
 
     def test_command_is_scoped_and_shell_free_with_windows_paths(self):
-        args = command("codex", Path('C:/Python313/python.exe'), Path('C:/test folder/runtime'))
+        args = legacy.command("codex", Path("C:/Python313/python.exe"), Path("C:/test folder/runtime"))
         self.assertIn("--ephemeral", args)
         self.assertIn("--ignore-user-config", args)
         self.assertIn("read-only", args)
@@ -92,123 +69,167 @@ class AcceptanceTests(unittest.TestCase):
         config = tomllib.loads(next(value for value in args if value.startswith("mcp_servers.")))
         server = config["mcp_servers"]["eventguard_local"]
         self.assertEqual(server["enabled_tools"], ["wait_for_event", "query_evidence", "ack_event"])
-        self.assertEqual(server["tools"], {name: {"approval_mode": "approve"}
-                                         for name in server["enabled_tools"]})
+        self.assertEqual(server["tools"], {name: {"approval_mode": "approve"} for name in server["enabled_tools"]})
         self.assertNotIn("default_tools_approval_mode", server)
         self.assertNotIn("approval_policy", config)
 
-    def test_missing_capability_and_directory_not_overwritten(self):
-        with patch("eventguard.codex_acceptance.shutil.which", return_value=None):
-            self.assertEqual(run(self.root), 2)
-        self.assertEqual(status(self.root)["state"], "blocked_missing_codex_or_sdk")
-        with self.assertRaises(FileExistsError):
-            run(self.root)
-        self.assertEqual(main(["run", "--run-dir", str(self.root)]), 2)
-        self.assertEqual(main(["status", "--run-dir", str(self.root)]), 0)
-        self.assertEqual(main(["stop", "--run-dir", str(self.root)]), 0)
+    def test_retired_launchers_never_create_or_overwrite_directory_even_when_capability_exists(self):
+        with patch.object(legacy, "spawn") as launch, patch.object(legacy.shutil, "which", return_value="codex.exe"):
+            for action in ("run", "retry"):
+                self.assertEqual(getattr(legacy, action)(self.root), 2)
+                self.assertEqual(legacy.main([action, "--run-dir", str(self.root)]), 2)
+            launch.assert_not_called()
+        self.assertFalse(self.root.exists())
+        saved = self.saved_state(state="passed")
+        before = self.bytes_before()
+        self.assertEqual(legacy.run(self.root), 2)
+        self.assertEqual(legacy.retry(self.root), 2)
+        self.assertEqual(legacy.status(self.root), saved)
+        self.assertEqual(legacy.main(["status", "--run-dir", str(self.root)]), 0)
+        self.assertEqual(legacy.main(["stop", "--run-dir", str(self.root)]), 0)
+        self.assertEqual(self.bytes_before(), before)
         self.assertFalse((self.root / "stop.request").exists())
 
-    def test_owned_fake_cli_producer_timing_and_ack(self):
-        with self.fake_cli():
-            self.assertEqual(run(self.root, idle_seconds=.2, deadline_seconds=10), 0)
-        summary = read_json(self.root / "summary.json")
+    def test_program_producer_wait_timing_and_legacy_ack_remain_assessable(self):
+        backend = LocalWait(self.root / "runtime")
+        event = make_synthetic("listener")
+        async def receive():
+            waiter = asyncio.create_task(backend.wait_for_event(1))
+            await asyncio.sleep(.03)
+            self.assertFalse(waiter.done())
+            backend.store.enqueue(event)
+            return await waiter
+        waited = asyncio.run(receive())
+        query = backend.query_evidence(event["event_id"])
+        ack = backend.ack_event(event["event_id"], query["query_id"], "reviewed_synthetic")
+        summary = assess(trace((waited, query, ack)), backend._load(), event["event_id"], 0, True)
+        self.assertTrue(summary["passed"], summary)
         self.assertTrue(summary["outbox_acknowledged"])
-        self.assertGreaterEqual(summary["waits"][0]["duration_seconds"], .2)
-        self.assertEqual(status(self.root)["state"], "passed")
-        self.assertTrue(read_json(self.root / "capture-exit.json")["capture_complete"])
-        with self.fake_cli(), self.assertRaisesRegex(LocalWaitError, "already_acknowledged"):
-            retry(self.root)
-        self.assertEqual(len(self.children), 1, "ACK must prevent another model launch")
+        self.assertGreaterEqual(summary["waits"][0]["duration_seconds"], .03)
+        self.assertEqual(backend.store.get_event(event["event_id"])["delivery_status"], "ack")
+        self.assertEqual(backend.ack_event(event["event_id"], query["query_id"], "reviewed_synthetic"), ack)
+        with closing(sqlite3.connect(backend.store.path)) as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM receipts").fetchone()[0], 1)
+        self.assertFalse(ack["real_agent_wake_verified"])
 
-    def test_stop_suppresses_producer_and_child_exits_naturally(self):
-        with self.fake_cli("idle", stop=True):
-            self.assertEqual(run(self.root, idle_seconds=.1, deadline_seconds=5), 1)
-        self.assertEqual(self.children[0].poll(), 0)
-        self.assertEqual(status(self.root)["state"], "stopped")
+    def test_cancelled_wait_suppresses_producer_and_retired_stop_is_scoped(self):
+        backend = LocalWait(self.root / "runtime")
+        async def cancel():
+            waiter = asyncio.create_task(backend.wait_for_event(1))
+            await asyncio.sleep(.01)
+            self.assertFalse(waiter.done())
+            waiter.cancel()
+            with self.assertRaises(asyncio.CancelledError):
+                await waiter
+        asyncio.run(cancel())
+        self.assertEqual(backend._load()["waits"][-1]["status"], "cancelled")
+        self.assertEqual(backend.store.stats()["total"], 0)
+        state = self.saved_state(state="pending_child_exit")
+        self.assertEqual(legacy.main(["stop", "--run-dir", str(self.root)]), 0)
+        self.assertEqual(read_json(self.root / "stop.request")["attempt_id"], state["attempt_id"])
         self.assertFalse((self.root / "synthetic-event.json").exists())
 
-    def test_timeout_capture_survives_parent_and_status_finishes(self):
-        with self.fake_cli("slow"):
-            self.assertEqual(run(self.root, deadline_seconds=.05), 3)
-            with self.assertRaisesRegex(LocalWaitError, "exit_unconfirmed"):
-                retry(self.root)
-        self.assertIsNone(self.children[0].poll())
-        self.assertEqual(status(self.root)["state"], "pending_child_exit")
-        self.children[0].wait(timeout=5)
-        self.assertEqual(status(self.root)["state"], "failed")
-        self.assertTrue(status(self.root)["child_exited"])
-        self.assertTrue((self.root / "summary.json").exists())
+    def test_status_does_not_finalize_pending_evidence_or_mutate_any_saved_bytes(self):
+        saved = self.saved_state()
+        write_json(self.root / "capture-exit.json", {"attempt_id": saved["attempt_id"],
+                   "capture_complete": True, "codex_exit_code": 0})
+        before = self.bytes_before()
+        with patch.object(legacy, "_complete", side_effect=AssertionError("reader must not finalize")), \
+             patch.object(legacy, "write_json", side_effect=AssertionError("reader must not write")):
+            self.assertEqual(legacy.status(self.root), saved)
+        self.assertEqual(self.bytes_before(), before)
+        self.assertEqual(legacy.status(self.root)["state"], "pending_child_exit")
+        self.assertFalse((self.root / "summary.json").exists())
+        self.assertFalse((self.root / "runtime").exists())
 
-    def test_same_event_retry_preserves_all_attempt_evidence(self):
-        with self.fake_cli("fail_query"):
-            self.assertEqual(run(self.root, idle_seconds=.1, deadline_seconds=8), 1)
-        before = LocalWait(self.root / "runtime")._load()
-        identity = status(self.root)["event_id"]
-        query = before["events"][identity]["query_id"]
-        first_trace = (self.root / "codex.jsonl").read_bytes()
-        first_summary = (self.root / "attempt-summary.json").read_bytes()
-        (self.root / "stop.request").touch()  # An old attempt's stop must not poison retry.
-        with self.fake_cli():
-            self.assertEqual(retry(self.root, deadline_seconds=8), 0)
-        after = LocalWait(self.root / "runtime")._load()
-        self.assertEqual(list(after["events"]), [identity])
-        self.assertEqual(after["events"][identity]["query_id"], query)
-        self.assertEqual(len(after["waits"]), 2)
-        self.assertEqual((self.root / "codex.jsonl").read_bytes(), first_trace)
-        self.assertEqual((self.root / "attempt-summary.json").read_bytes(), first_summary)
-        self.assertEqual(status(self.root)["attempt"], 2)
-        self.assertTrue(read_json(self.root / "attempts/0002/summary.json")["passed"])
-        self.assertEqual(len(read_json(self.root / "summary.json")["waits"]), 1)
-
-    def test_forced_supervisor_prevents_fake_delivery_being_classified_passed(self):
-        from eventguard.codex_acceptance import _complete
-        with self.fake_cli():
-            self.assertEqual(run(self.root, idle_seconds=.1, deadline_seconds=8), 0)
-        state = read_json(self.root / "status.json")
-        state["supervisor_process"] = {"forcibly_terminated": True}
-        receipt = read_json(self.root / "capture-exit.json")
-        self.assertEqual(_complete(self.root, state, receipt), 1)
-        self.assertFalse(read_json(self.root / "summary.json")["passed"])
-        self.assertEqual(read_json(self.root / "summary.json")["failure_reason"], "owned_tree_forcibly_terminated")
-
-    def test_retry_reuses_result_persisted_before_ack_failure(self):
-        with self.fake_cli("fail_ack"):
-            self.assertEqual(run(self.root, idle_seconds=.1, deadline_seconds=8), 1)
+    def test_same_event_retry_semantics_preserve_query_and_first_attempt_bytes(self):
         backend = LocalWait(self.root / "runtime")
-        identity = status(self.root)["event_id"]
-        result = backend._load()["events"][identity]["result"]
-        self.assertNotEqual(backend.store.get_event(identity)["delivery_status"], "ack")
-        with self.fake_cli():
-            self.assertEqual(retry(self.root, deadline_seconds=8), 0)
-        self.assertEqual(LocalWait(self.root / "runtime")._load()["events"][identity]["result"], result)
+        event = make_synthetic("listener")
+        backend.store.enqueue(event)
+        waited = asyncio.run(backend.wait_for_event(1))
+        query = backend.query_evidence(event["event_id"])
+        initial = backend._load()
+        first_trace = trace((waited, query))[:-1] + [{"type": "turn.failed"}]
+        first_summary = assess(first_trace, initial, event["event_id"], 7, False)
+        self.assertFalse(first_summary["passed"])
+        self.assertEqual(backend.store.get_event(event["event_id"])["delivery_status"], "pending")
+        write_json(self.root / "attempt-summary.json", first_summary)
+        (self.root / "codex.jsonl").write_bytes(b"\n".join(json.dumps(r).encode() for r in first_trace))
+        before = {name: (self.root / name).read_bytes() for name in ("codex.jsonl", "attempt-summary.json")}
+        (self.root / "stop.request").touch()  # Old orchestration data cannot alter a durable backend.
+        restarted = LocalWait(self.root / "runtime")
+        second_wait = asyncio.run(restarted.wait_for_event(1))
+        second_query = restarted.query_evidence(event["event_id"])
+        ack = restarted.ack_event(event["event_id"], second_query["query_id"], "reviewed_synthetic")
+        after = restarted._load()
+        summary = assess(trace((second_wait, second_query, ack)), after, event["event_id"], 0, True,
+                         wait_ids_before=[w["wait_id"] for w in initial["waits"]])
+        self.assertEqual(list(after["events"]), [event["event_id"]])
+        self.assertEqual(second_query["query_id"], query["query_id"])
+        self.assertEqual(len(after["waits"]), 2)
+        self.assertTrue(summary["passed"], summary)
+        self.assertEqual(len(summary["waits"]), 1)
+        self.assertEqual({name: (self.root / name).read_bytes() for name in before}, before)
 
-    def test_retry_budget_and_cross_process_owner_refuse_launch(self):
-        with patch("eventguard.codex_acceptance.shutil.which", return_value=None):
-            self.assertEqual(run(self.root), 2)
-            lease = FileLease(self.root / "runner.lock")
-            self.assertTrue(lease.acquire())
-            try:
-                with self.assertRaisesRegex(LocalWaitError, "runner_busy"):
-                    retry(self.root)
-            finally:
-                lease.release()
-            self.assertEqual(retry(self.root), 2)
-            self.assertEqual(retry(self.root), 2)
-            with self.assertRaisesRegex(LocalWaitError, "budget_exhausted"):
-                retry(self.root)
-        self.assertEqual(status(self.root)["attempt"], 3)
+    def test_forced_exit_never_upgrades_otherwise_valid_fake_tool_proof(self):
+        backend = LocalWait(self.root / "runtime")
+        event = make_synthetic("listener"); backend.store.enqueue(event)
+        waited = asyncio.run(backend.wait_for_event(1)); query = backend.query_evidence(event["event_id"])
+        ack = backend.ack_event(event["event_id"], query["query_id"], "reviewed_synthetic")
+        summary = assess(trace((waited, query, ack)), backend._load(), event["event_id"], 0, True)
+        self.assertTrue(summary["passed"])
+        receipt, started = receipt_fixture()
+        self.assertEqual(validate_receipt(receipt, started, "a" * 32, require_success=True), [])
+        receipt["forcibly_terminated"] = receipt["process"]["forcibly_terminated"] = True
+        errors = validate_receipt(receipt, started, "a" * 32, require_success=True)
+        self.assertIn("owned_tree_forced_or_unknown", errors)
+        self.assertFalse(summary["passed"] and not errors)
 
-    def test_batch_wrapper_is_refused_without_starting_model(self):
-        with patch("eventguard.codex_acceptance.shutil.which", return_value="C:/npm/codex.cmd"), patch("eventguard.codex_acceptance.importlib.util.find_spec", return_value=True), patch("eventguard.codex_acceptance.subprocess.Popen") as launch:
-            self.assertEqual(run(self.root), 2)
+    def test_result_persisted_before_ack_failure_is_reused_after_restart(self):
+        backend = LocalWait(self.root / "runtime")
+        event = make_synthetic("listener"); backend.store.enqueue(event)
+        waited = asyncio.run(backend.wait_for_event(1)); query = backend.query_evidence(waited["event_id"])
+        with patch.object(backend.store, "acknowledge", side_effect=StoreError("fixture_failure")):
+            with self.assertRaisesRegex(LocalWaitError, "result_preserved"):
+                backend.ack_event(event["event_id"], query["query_id"], "reviewed_synthetic")
+        result = deepcopy(backend._load()["events"][event["event_id"]]["result"])
+        self.assertNotEqual(backend.store.get_event(event["event_id"])["delivery_status"], "ack")
+        restarted = LocalWait(self.root / "runtime")
+        ack = restarted.ack_event(event["event_id"], query["query_id"], "reviewed_synthetic")
+        self.assertEqual(restarted._load()["events"][event["event_id"]]["result"], result)
+        self.assertEqual(ack["result_id"], result["result_id"])
+        self.assertTrue(ack["outbox_acknowledged"])
+
+    def test_historical_attempt_limit_and_live_lease_cannot_reenable_retired_retry(self):
+        saved = self.saved_state(attempt=3, state="failed")
+        lease = FileLease(self.root / "runner.lock")
+        self.assertTrue(lease.acquire())
+        try:
+            before = self.bytes_before()
+            with patch.object(legacy, "spawn") as launch:
+                for _ in range(4):
+                    self.assertEqual(legacy.retry(self.root), 2)
+                    self.assertEqual(legacy.main(["retry", "--run-dir", str(self.root)]), 2)
+                launch.assert_not_called()
+            self.assertEqual(self.bytes_before(), before)
+            self.assertEqual(legacy.status(self.root), saved)
+        finally:
+            lease.release()
+        with self.assertRaisesRegex(LocalWaitError, "invalid_acceptance_attempt"):
+            legacy._attempt_dir(self.root, 4)
+
+    def test_current_wrapper_preflight_is_refused_without_enqueuing_or_model(self):
+        manifest = delivery_validation.prepare(self.root, "single")
+        with patch.object(delivery_validation.shutil, "which", return_value="C:/npm/codex.cmd"), \
+             patch.object(delivery_validation, "capture") as launch:
+            with self.assertRaisesRegex(ValueError, "native_codex_required"):
+                delivery_validation.execute(self.root, manifest, "codex")
             launch.assert_not_called()
-        self.assertEqual(status(self.root)["state"], "blocked_native_codex_required")
+        self.assertEqual(manifest["enqueued"], [])
+        self.assertEqual(manifest["stages"], [])
 
     def test_symlinked_status_and_stop_leaf_never_followed(self):
-        if not hasattr(os, "symlink"):
-            self.skipTest("symlink not available")
-        with patch("eventguard.codex_acceptance.shutil.which", return_value=None):
-            run(self.root)
+        self.saved_state()
         target = Path(self.temp.name) / "unrelated.txt"
         target.write_text("PRIVATE_SENTINEL")
         (self.root / "status.json").unlink()
@@ -216,5 +237,6 @@ class AcceptanceTests(unittest.TestCase):
             (self.root / "status.json").symlink_to(target)
         except OSError:
             self.skipTest("symlink creation unavailable")
-        self.assertEqual(main(["status", "--run-dir", str(self.root)]), 2)
+        self.assertEqual(legacy.main(["status", "--run-dir", str(self.root)]), 2)
+        self.assertEqual(legacy.main(["stop", "--run-dir", str(self.root)]), 2)
         self.assertEqual(target.read_text(), "PRIVATE_SENTINEL")

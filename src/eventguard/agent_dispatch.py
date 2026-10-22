@@ -22,7 +22,9 @@ import uuid
 
 from .acceptance_control import FileLease, read_json, write_json
 from .acceptance_evidence import _tool_result
-from .acceptance_process import CAPTURE_LIMIT, capture
+from .acceptance_process import CAPTURE_LIMIT, capture, open_authority, launch_hash
+from .capture_receipt import validate_receipt
+from .agent_budget import BudgetError
 from .local_paths import LocalWaitError, _guard
 from .queue_inbox import QueueInboxError
 from .processes import spawn, finish, JobPopen
@@ -205,11 +207,7 @@ def _receipt(record):
     try:
         value = read_json(path)
         started = read_json(directory / "capture-start.json")
-        if (value.get("attempt_id") != record["attempt_id"] or value.get("capture_complete") is not True
-                or type(value.get("codex_exit_code")) is not int
-                or started.get("attempt_id") != record["attempt_id"]
-                or type(started.get("codex_pid")) is not int or started["codex_pid"] <= 0
-                or value.get("codex_pid") != started["codex_pid"]):
+        if validate_receipt(value, started, record["attempt_id"]):
             return None
         return value
     except (OSError, ValueError, LocalWaitError):
@@ -338,6 +336,9 @@ def maintain_ledger(path, inbox, policy=None, now=None):
 
 def _complete(record, inbox, receipt):
     directory = _attempt_path(record)
+    started = read_json(directory / "capture-start.json")
+    exit_errors = validate_receipt(receipt, started, record["attempt_id"])
+    proof_errors = validate_receipt(receipt, started, record["attempt_id"], require_success=True)
     with (directory / "codex.jsonl").open("rb") as stream:
         raw = stream.read(CAPTURE_LIMIT + 1)
     trace = []
@@ -348,8 +349,18 @@ def _complete(record, inbox, receipt):
             trace.append(None)
     summary = assess_delivery(trace, inbox.evidence(record["event_id"]), record["event_id"],
                               receipt["codex_exit_code"], inbox.acknowledged(record["event_id"]))
+    if proof_errors:
+        summary["passed"] = False
+        summary["evidence_errors"].extend(proof_errors)
     supervisor_path = directory / "supervisor-exit.json"
     supervisor = read_json(supervisor_path) if supervisor_path.exists() else {}
+    if supervisor_path.exists() and (supervisor.get("managed") is not True
+            or supervisor.get("child_exited") is not True
+            or type(supervisor.get("remaining_owned_processes")) is not int
+            or supervisor.get("remaining_owned_processes") != 0
+            or type(supervisor.get("exit_code")) is not int):
+        summary["passed"] = False
+        summary["evidence_errors"].append("supervisor_tree_exit_unconfirmed")
     if receipt.get("forcibly_terminated") is True or supervisor.get("forcibly_terminated") is True:
         summary["passed"] = False
         summary["evidence_errors"].append("owned_tree_forcibly_terminated")
@@ -357,9 +368,9 @@ def _complete(record, inbox, receipt):
             or receipt.get("stderr_truncated") is not False):
         summary["passed"] = False
         summary["evidence_errors"].append("capture_truncated")
-    summary.update(attempt_id=record["attempt_id"], finished_at=utc(), child_exited=True)
+    summary.update(attempt_id=record["attempt_id"], finished_at=utc(), child_exited=not exit_errors)
     write_json(directory / "summary.json", summary)
-    record.update(state="complete", passed=summary["passed"], child_exited=True,
+    record.update(state="complete" if not exit_errors else "started", passed=summary["passed"], child_exited=not exit_errors,
                   codex_exit_code=receipt["codex_exit_code"], ack_verified=summary["passed"], finished_at=summary["finished_at"])
     return summary
 
@@ -496,6 +507,7 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             if event_id in archive["events"]:
                 raise LocalWaitError("acknowledged_event_reappeared")
             records = ledger["events"].get(event_id, [])
+            prior_attempts = len(records)
             if len(records) >= MAX_ATTEMPTS:
                 state.update(state="blocked_pending", reason="event_attempt_budget_exhausted")
                 break
@@ -522,11 +534,12 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                          tasks_started=state["tasks_started"] + 1)
             state["events"].append(event_id)
             _save(directory, state)
+            cli_args = command(executable, sys.executable, source, state_dir, event_id, attempt_dir, allow_live=allow_live)
             args = [sys.executable, "-B", str(ROOT / "scripts/eventguard_agent.py"), "_capture",
                     "--attempt-dir", str(attempt_dir), "--attempt-id", token,
                     "--deadline-monotonic", str(deadline), "--stop-run-dir", str(directory),
                     "--run-id", state["run_id"], "--",
-                    *command(executable, sys.executable, source, state_dir, event_id, attempt_dir, allow_live=allow_live)]
+                    *cli_args]
             # Pending reads, fsync and command preparation can consume time or
             # overlap a cooperative stop. Recheck immediately before Popen.
             if _check_stop(directory, state, cancel) or time.monotonic() >= deadline:
@@ -537,6 +550,27 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                 state.update(state="stopped" if state["stop_requested"] else "time_limit_reached",
                              child_exited=True, tasks_started=state["tasks_started"] - 1,
                              reason="stop_or_deadline_before_cli_launch")
+                state["events"].pop()
+                active = None
+                break
+            try:
+                reference = inbox.delivery_reference(event_id)
+                authority = open_authority()
+                authority.reserve(token, event_id, reference["namespace"], reference["payload_hash"],
+                                  "retry" if prior_attempts else "dispatch", existing_attempts=prior_attempts,
+                                  launch_hash=launch_hash(cli_args, PROMPT))
+                state["budget"] = authority.status()
+            except BudgetError as error:
+                # No worker has been created by this owner. A failed admission
+                # must not invent an unconfirmed source child or consume retry
+                # slots in the source ledger. Any charged global intent stays.
+                ledger["events"][event_id].remove(active)
+                if not ledger["events"][event_id]:
+                    del ledger["events"][event_id]
+                _ledger_write(ledger_path, ledger, policy)
+                write_json(attempt_dir / "not-started.json", {**active, "state": "not_started", "reason": str(error)})
+                state.update(state="blocked_pending", reason=str(error), child_exited=True,
+                             tasks_started=state["tasks_started"] - 1)
                 state["events"].pop()
                 active = None
                 break

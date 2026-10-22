@@ -263,6 +263,14 @@ class QueueInbox:
             if db is not None:
                 db.close()
 
+    def delivery_reference(self, event_id):
+        """Internal program admission metadata; never part of the MCP projection."""
+        source = self._source_record(_identifier(event_id))
+        if not source or "snapshot" not in source or source.get("delivery_status") == "ack":
+            raise QueueInboxError("pending_admission_source_required")
+        return {"event_id": event_id, "payload_hash": source["payload_hash"],
+                "namespace": "test" if source["snapshot"]["synthetic"] else "live"}
+
     def pending_event_id(self):
         """Read one due, unleased candidate ID locally; no model/tool call."""
         synthetic = "" if self.allow_live else "AND json_extract(payload,'$.synthetic')=1"

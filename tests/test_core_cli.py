@@ -26,6 +26,7 @@ class CoreTests(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root=Path(self.temp.name)
+        self.enterContext(patch("eventguard.operations._budget_status",return_value={"state":"blocked","reason":"fixture_not_initialized"}))
         for relative in ("config/default.json","playbooks/default.json","tests/fixtures/normal.json"):
             destination=self.root/relative
             destination.parent.mkdir(parents=True,exist_ok=True)

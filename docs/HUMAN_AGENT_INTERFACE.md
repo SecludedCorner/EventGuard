@@ -31,6 +31,8 @@ python -B scripts/eventguard.py report export --namespace test
 
 `inspect` 顯示發生的事件、固定觀測說明、允許的事實、coverage 與未知；只讀保存資料，不假裝目前仍是相同狀態。`report export` 回傳 JSON／HTML 位置，HTML 有可讀事件表和展開的結構化證據。兩者即使完全沒有 agent 也能使用。
 
+`status.last_report`（相容欄位 `health`）是歷史回報；`current_monitor` 才是當次單一 owner PID+建立時間與 heartbeat 的核對，沒有獨立 watchdog。`source_coverage` 分開顯示保存狀態與 freshness；future/stale/缺資料為 unknown。每個 namespace 的 DB 故障各自呈現，不以零筆冒充成功。`agent_budget` 顯示同安裝[耐久預算](AGENT_BUDGET.md)及阻塞原因，不初始化帳本。報告顯示 total/exported/truncated/limit，最多輸出 1,000 筆保存事件，不能把匯出數當總數。
+
 一般權限的實際監看仍由人類明確啟動前景程序，另一終端可查狀態或合作停止：
 
 ```powershell

@@ -1,22 +1,20 @@
 # EventGuard 現況
 
-更新：2026-10-23。分支 `feat/local-codex-acceptance`；本批 Phase 5 的程式／來源 commit 對照與測試數統一見 [EVIDENCE](docs/EVIDENCE.md)。
+更新：2026-10-23。分支 `feat/local-codex-acceptance`；本批基底 `3b0461988c6bc36f13d514e1e5263c91b4715123`。受測來源、commit、測試數與命令統一見 [EVIDENCE](docs/EVIDENCE.md)。
 
-本批讓新驗收與正式派送共用 QueueInbox、command/capture/assessor，bridge 已隔離至 contrib；舊資料格式及測試保留，舊批次 CLI 只核對既有證據。原生 coverage 與長時能力沒有在這批升格。
+核心可獨立監看、保存事件、檢視與匯出；agent 是可選介面，無事件不啟動模型。本批收斂殘留啟動入口、共用每日耐久預算與未知退出閘道，並補人類可核查的狀態，沒有啟動真模型或長期監看。
 
-| 項目 | 已具備 | 尚未證明 |
+| 項目 | 已具備 | 限制／尚未證明 |
 | --- | --- | --- |
-| 獨立使用 | 人類 CLI、確定性監看、事件檢視／查證／報告；共用 OperatorAPI | 無須 agent 即能運作，不代表全天候驗證完成 |
-| 七來源 | native／fallback 契約、結構化拒讀；Phase 1 一般權限實測 | Defender／processes partial、tasks unknown；未重驗重開機後 coverage |
-| 程序治理 | 原子加入私有 Job、寬限及 Job 內清理、退出回條、monitor_gap | gap 為 fixture 驗證，未做真登出／重啟故障注入 |
-| 容量 | ACKed 保留／清理、inbox 完成回條、dispatcher 輪替、滿載恢復 | 有限保留／去重窗；長時資源與全部歷史檔案總量未驗證 |
-| agent 介面 | 可選 SDK stdio 共用操作；舊有限 CLI 通路證據保留 | 本輪沒有真模型；不承諾續接任意桌面聊天 |
-| 開發／部署 | 單一建議驗收入口、既有 Python 3.13 解析；CI 雙 scope 設定，前景啟停、排程 dry-run | CI 未遠端執行；沒有服務／自啟，本批未啟動長期監看 |
+| 獨立操作 | CLI 與共用 OperatorAPI；保存觀察、事件綁定查證、JSON/HTML 報告 | ACK 只表示收到，不是診斷、修補或結案 |
+| 七來源 | native/fallback 契約、結構化拒讀；保留 Phase 1 一般權限證據 | Defender/processes partial、tasks unknown；本批未重掃或重驗 provider |
+| 可核查狀態 | last_report 與目前 owner 單 PID+建立時間核對分開；heartbeat/coverage freshness、逐 namespace 故障、報告 total/truncated | 無獨立 watchdog；缺資料、過期、future、拒讀為 unknown，不能證明安全 |
+| 投遞入口 | QueueInbox 共用 command/capture/assessor；legacy run/retry、generic capture CLI 退役；舊 status 純讀 | 真 agent 與任意桌面聊天續接不是本批驗收範圍 |
+| 耐久預算 | 同安裝 UTC+08 每日五次，涵蓋 dispatch/acceptance/retry；先扣帳、一次性 argv/prompt 綁定、每事件上限、全域 unknown-exit gate | 正式帳本未初始化、沒有真模型；非帳戶級防竄改；時間與容量界線見 [預算契約](docs/AGENT_BUDGET.md) |
+| 程序治理 | 私有 Job、寬限／有界清理；統一嚴格退出回條，強停不判自然成功；monitor_gap | gap 為 fixture；沒有真登出／重啟注入；不碰其他程序 |
+| 容量與保留 | pending/retry/未 ACK failed 保留；已 ACK 清理、完成帳本輪替及滿載恢復；預算保留用量與 retired-token 摘要 | 有限保留／去重窗；預算日彙總與 token 摘要滿載時明確阻擋，沒有無限歷史保證 |
+| 開發／部署 | Python 3.13 stdlib 核心、明示 mock/full scope、排程 dry-run | CI 未遠端執行；沒有服務／自啟／部署或全天候承諾 |
 
-測試數、Python、命令、commit、scope 與本機證據路徑統一見 [EVIDENCE](docs/EVIDENCE.md)。歷史時間日誌已移出本頁；不將 fixture／SDK／fake CLI 與 Windows provider、真 agent 結果互相升格。
+[24 小時 soak](docs/SOAK_PLAN.md) 與 [Phase 7 實機計畫](docs/WINDOWS_VALIDATION_PLAN.md) 尚未執行，仍需當次批准。事件、名稱與工具輸出均為不可信資料。漏洞研究保留於獨立研究目錄，本批不新增感測器。
 
-[24 小時 soak 計畫](docs/SOAK_PLAN.md) 尚未執行。事件、名稱及工具輸出均為不可信資料；未知或 partial 不代表安全，ACK 不代表診斷／結案。
-
-Phase 5 的 [路徑對照及相容界線](docs/DELIVERY_CONSOLIDATION.md) 已落地，Phase 6 閱讀入口已整理。下一步是 [Phase 7 計畫](docs/WINDOWS_VALIDATION_PLAN.md) 的當次範圍批准；未執行注入或重啟。每日五次耐久總額仍是缺口，不能把一輪最多五次寫成每日預算。
-
-本輪不呼叫模型、不提權、不開網路、不下載安裝、不動其他程序、不啟用排程；Phase 7 真實狀態注入與長時執行仍須先提出計畫並取得批准。執行資料、憑證、Codex home 與私人歷史不上傳。
+未提權、下載安裝、改安全設定、啟用排程或執行模型。執行資料、憑證、Codex home、私人歷史及完整會話不上傳；原有 docs/research/ 保留。本批驗證與失敗紀錄見 EVIDENCE，不將 fake CLI、SDK、fixture 升格為真 agent／實機採集或長期可靠性證據。
