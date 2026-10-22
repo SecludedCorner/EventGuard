@@ -27,17 +27,22 @@ flowchart LR
 py -3.13 --version
 $eventguardDemo = Join-Path (Get-Location) 'reports/quickstart-NEW'
 New-Item -ItemType Directory -Path $eventguardDemo -ErrorAction Stop | Out-Null
-New-Item -ItemType Directory -Path "$eventguardDemo/config", "$eventguardDemo/tests/fixtures" | Out-Null
+New-Item -ItemType Directory -Path "$eventguardDemo/config", "$eventguardDemo/playbooks", "$eventguardDemo/tests/fixtures" | Out-Null
 Copy-Item -LiteralPath 'config/default.json' -Destination "$eventguardDemo/config/default.json"
+Copy-Item -LiteralPath 'playbooks/default.json' -Destination "$eventguardDemo/playbooks/default.json"
 Copy-Item -LiteralPath 'tests/fixtures/normal.json' -Destination "$eventguardDemo/tests/fixtures/normal.json"
 $eventguardCli = 'import sys; from pathlib import Path; sys.path.insert(0,"src"); from eventguard.cli import main; r=Path(sys.argv.pop(1)); raise SystemExit(main(root=r))'
-py -3.13 -B -c $eventguardCli $eventguardDemo monitor --fixture tests/fixtures/normal.json --max-cycles 1
+py -3.13 -B -c $eventguardCli $eventguardDemo --format text monitor --fixture tests/fixtures/normal.json --max-cycles 1
+py -3.13 -B -c $eventguardCli $eventguardDemo --format text overview --namespace test
+py -3.13 -B -c $eventguardCli $eventguardDemo --format text sources show --source-id defender --namespace test
 $eventguardItem = py -3.13 -B -c $eventguardCli $eventguardDemo synthetic emit --scenario listener | ConvertFrom-Json
 py -3.13 -B -c $eventguardCli $eventguardDemo events inspect --namespace test --event-id $eventguardItem.event_id
+$eventguardReceipt = py -3.13 -B -c $eventguardCli $eventguardDemo --format json events receive --namespace test --event-id $eventguardItem.event_id | ConvertFrom-Json
+py -3.13 -B -c $eventguardCli $eventguardDemo events ack --namespace test --event-id $eventguardItem.event_id --query-id $eventguardReceipt.query_id
 py -3.13 -B -c $eventguardCli $eventguardDemo report export --namespace test
 ```
 
-預期 monitor 回傳 `state=stopped`；synthetic 事件可查看觀測、coverage 與未知，報告回傳 JSON／HTML 路徑。它仍是 pending，沒有模型接收或 ACK。核心只用標準庫，不需下載安裝。
+預期顯示監看已停止、七來源保存狀態及筆數；合成 Defender 有兩筆可讀觀察。事件先 pending，明確 receive 後取得 query ID，再 ACK；ACK 只代表收到，不是修復／結案。報告提供 JSON／HTML 路徑。全程沒有模型，核心只用標準庫。
 
 ## 人類操作與可選 agent
 
@@ -45,20 +50,24 @@ py -3.13 -B -c $eventguardCli $eventguardDemo report export --namespace test
 
 ```powershell
 py -3.13 -B scripts/eventguard.py monitor
-py -3.13 -B scripts/eventguard.py status
+py -3.13 -B scripts/eventguard.py overview --namespace live
+py -3.13 -B scripts/eventguard.py sources show --source-id listeners --namespace live
 py -3.13 -B scripts/eventguard.py stop
 ```
 
-`events list/inspect/diagnose` 與 `report export` 的完整操作見 [共用介面](docs/HUMAN_AGENT_INTERFACE.md)。`diagnose` 才執行事件綁定的既有唯讀查詢；inspect 只讀已保存觀察。可選 stdio 需既有 MCP SDK，缺少就停止；不永久註冊、不自行啟動模型或接續桌面聊天。
+也可在終端執行 Start／Status／Stop-EventGuard.cmd，使用可讀文字。監看逐來源回報進度／筆數；沒有 agent 也持續採集。終端預設文字，管線預設 JSON，可用 `--format text|json` 固定。
+
+`events list/inspect/diagnose/receive/ack/retry` 與報告操作見 [共用介面](docs/HUMAN_AGENT_INTERFACE.md)。inspect／sources 只讀保存觀察；diagnose 才執行事件綁定查詢。可選 stdio 需既有 MCP SDK及 client 明確連接，不永久註冊、不自行啟動模型或接續桌面聊天。
 
 ## 現況與限制
 
-- 原生 API 優先、同身分 PowerShell fallback；七來源的可讀範圍與拒讀原因見 [採集契約](docs/COLLECTOR_CONTRACT.md)。Defender／程序仍 partial，tasks 仍有 unknown；不因缺資料提權。
+- 原生 API 優先、同身分 PowerShell fallback；七來源的可讀範圍與拒讀原因見 [採集契約](docs/COLLECTOR_CONTRACT.md)。Defender／程序／監聽身分仍 partial，tasks unknown；不因缺資料提權。
 - 子程序從建立時加入私有 Job；停止先寬限，逾時只清理本工具程序樹。啟動保存 `monitor_gap`，未確認退出不報 stopped；見 [生命週期](docs/PROCESS_LIFECYCLE.md)。
+- 每來源即時保存有界觀察；過期、截斷與拒讀均顯示。退出未確認會耐久阻擋新 worker，僅能以該私有 Job 已空／銷毀的證據恢復；不靠刪鎖或重開目錄繞過。
 - ACKed 資料與完成帳本有保留、輪替及有限上限；pending／retry／未 ACK failed 保留。去重有時間與容量窗；見 [儲存政策](docs/STORAGE_RETENTION.md)。
 - [24 小時 soak](docs/SOAK_PLAN.md) 尚未執行，真實狀態注入／登出重開機仍未驗證。排程只 dry-run，沒有服務、自啟或全天候承諾。
 - 不提供 EDR／鑑識、自動處置、GUI 或 Linux 原生採集。沒有事件、ACK 或診斷都不能證明主機安全。
 - 執行資料與憑證不入 Git。歷史有限 Codex 通路驗收見 [歷史入口](docs/history/README.md)；不是正常使用的前置條件或新的模型授權。
-- 可選 CLI 共用[每日耐久預算與未知退出閘道](docs/AGENT_BUDGET.md)；未初始化或證據不足就阻擋，不因換目錄重置。這批只做合成／fake CLI 驗證，沒有真模型。
+- 可選 CLI 共用[每日耐久預算與未知退出閘道](docs/AGENT_BUDGET.md)；未初始化或證據不足就阻擋，不因換目錄重置。接收失敗可由人類接手；不把人類 ACK 升格為 agent 驗收成功。
 
 目前投遞／驗收已使用 [同一 QueueInbox 路徑](docs/DELIVERY_CONSOLIDATION.md)；Phase 7 [實機驗證計畫](docs/WINDOWS_VALIDATION_PLAN.md) 尚未執行。下一階段的範圍、完成條件與停止關卡見 [維護目標](docs/MAINTENANCE_GOAL.md)。離線開發與驗證見 [DEVELOPMENT](docs/DEVELOPMENT.md)。

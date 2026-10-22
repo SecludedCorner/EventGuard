@@ -1,16 +1,18 @@
 # EventGuard 接手
 
-先讀 [AGENTS](AGENTS.md)、[README](README.md)、[STATUS](STATUS.md)、[維護目標](docs/MAINTENANCE_GOAL.md) 與 [EVIDENCE](docs/EVIDENCE.md)。先核對工作目錄、分支、HEAD、未提交變更；保留接續，不 reset/clean。基底是 `3b0461988c6bc36f13d514e1e5263c91b4715123`，本批提交由 source-commit 回條核對。
+先讀 [AGENTS](AGENTS.md)、[README](README.md)、[STATUS](STATUS.md)、[維護目標](docs/MAINTENANCE_GOAL.md)、[使用流程實作](docs/USABILITY_IMPLEMENTATION.md) 與 [EVIDENCE](docs/EVIDENCE.md)。先核對工作目錄、分支、HEAD、未提交變更；保留接續，不 reset/clean。本批基底 `d4257437757a701874c6f00de6022340bff2bc94`，提交由 source-commit 回條核對。
 
-Phase 0–6 不重做。使用者已決定核心獨立運作，人類與可選 agent 共用 OperatorAPI；舊 A/B 等待關卡已解除。新 App goal 已由使用者更新並恢復，本批實作範圍為入口、耐久預算、未知退出閘道與可核查狀態，不能再依舊 blocked objective 停工。
+Phase 0–6 不重做。使用者已決定核心獨立運作，人類與可選 agent 共用 OperatorAPI；舊 A/B 關卡已解除。前批入口／耐久預算目標已完成；本批按「全面盤點後實踐」補實際操作、來源保存、查證綁定與停止恢復，不重新展開舊驗收框架。
 
 先看 [預算與退出契約](docs/AGENT_BUDGET.md)。正常監看不讀模型帳本也不呼叫模型；OperatorAPI.status 才顯示固定安裝 authority 的狀態，不初始化。正式 `data/agent-budget/` 未由本批初始化；缺少、損壞、busy、容量、時鐘異常或未知退出，都不能用換目錄／建空 DB 解禁。明示 bootstrap 預設當日用量未知；真 CLI 仍需當次批准。
 
 唯一建議驗收入口是 [QueueInbox 驗收](docs/DELIVERY_CONSOLIDATION.md)。legacy Python run/retry 與 generic capture CLI 已退役，舊 status 純讀。prepare/status/verify-only 不啟動模型；驗收與失敗都計入每日總額。不同來源、run/state/cwd 不能重置，同日五次不是每輪五次。全套四案例共八個短任務，不能在同一預算日完成八次真啟動。
 
-主線統一介面、共享入口、最終驗證與提交，開發子代理最多三個且檔案 ownership 不重疊；沒有各自重跑完整 suite 或提交。子代理開發授權不等於 EventGuard 真模型授權。
+使用者已授權兩層開發子代理；ownership 不重疊、受並行名額限制。主線整合與統一驗證／提交，子代理未各跑完整 suite 或提交；開發協作不是 EventGuard 真模型授權。
 
 STATUS 的 last_report/health 是歷史回報；current_monitor 才分開核對 owner 與 heartbeat。無 watchdog，monitor_gap 仍由下次啟動發現。逐來源 freshness、逐 namespace DB 狀態與 report total/truncated 都須保留；unknown/partial/denied 不代表安全，ACK 不代表案件結束。
+
+先用 overview 與 sources show 看保存資料，不需反覆採集。互動文字／管線 JSON 共用核心；人類 receive→query ID→明確 ACK 與 optional stdio 十三工具使用同一 QueueInbox。未知 query shutdown 耐久阻擋新 worker，Runner 不覆蓋未知子樹；重啟只 QUERY 記錄的私有 named Job，缺證據不刪閘道。失敗後合法 ACK 可記 received_without_agent_proof，passed 仍 false，預算不清。
 
 沿用一般權限、唯讀 Windows、Python 3.13 標準庫。不啟動真模型、不讀秘密／完整 sessions／命令列、不提權、不下載安裝、不改安全設定／執行政策、不永久註冊 MCP、不啟用服務／排程、不動其他程序。私有 Job 只管理本工具新建程序；未知退出不報 stopped，強停不判自然成功。
 

@@ -34,7 +34,7 @@
         },
         {
           "id": "interpret",
-          "type": "agent_decision",
+          "type": "review_decision",
           "branches": [
             "explained",
             "needs_evidence",
@@ -226,7 +226,7 @@
         },
         {
           "id": "interpret",
-          "type": "agent_decision",
+          "type": "review_decision",
           "branches": [
             "explained",
             "needs_evidence",
@@ -419,7 +419,7 @@
         },
         {
           "id": "interpret",
-          "type": "agent_decision",
+          "type": "review_decision",
           "branches": [
             "explained",
             "needs_evidence",
@@ -610,7 +610,7 @@
         },
         {
           "id": "interpret",
-          "type": "agent_decision",
+          "type": "review_decision",
           "branches": [
             "explained",
             "needs_evidence",

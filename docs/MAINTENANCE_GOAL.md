@@ -1,31 +1,31 @@
 # EventGuard 本輪維護目標
 
-更新：2026-10-23。使用者已更新並恢復 App goal。基底 `3b0461988c6bc36f13d514e1e5263c91b4715123`、同一 `feat/local-codex-acceptance`；保留既有工作、docs/research/ 與執行資料，不 reset/clean、不重做 Phase 0–6。
+更新：2026-10-23。依使用者「全面盤點後實踐、由上而下、兩層子代理、功能完整後統一測試」執行。本批基底 `d4257437757a701874c6f00de6022340bff2bc94`，沿用 `feat/local-codex-acceptance`，保留研究與執行資料，不 reset/clean。前批預算／入口目標已完成，本批以實際使用流程補缺口。
 
-目標是收斂既有入口、共用每日耐久預算、未知退出閘道與人類可核查狀態。核心獨立運作、無事件不啟動模型；agent 可選且與人類共用型別化介面。不新增來源、GUI、Linux 採集、雲端服務或代理平台。漏洞研究保留為未來方向。
+人類能啟動監看、看到來源進度與資料、了解事件、明確查證／接收／ACK、匯出報告、合作停止及再啟動。agent 使用同一核心，是可選介面；沒有 agent 或事件時不呼叫模型。架構、盤點與 ownership 見 [USABILITY_IMPLEMENTATION](USABILITY_IMPLEMENTATION.md)。
 
-## 完成條件與核對入口
+## 本批完成條件
 
-| 要求 | 實作／證據入口 |
+| 要求 | 實作與驗證入口 |
 | --- | --- |
-| 封閉 legacy run/retry/generic capture 旁路，舊證據可讀且不改寫 | codex_acceptance、acceptance_process；退休零 spawn 與 legacy reader fixture |
-| dispatcher 與 acceptance 共用嚴格退出驗證，矛盾／缺失／未知／強停／截斷不判自然成功 | capture_receipt；test_capture_receipt、test_launch_receipts；強停與已知失敗仍可解除已證實退出的 gate |
-| 同安裝、所有受管 CLI 共用 UTC+08 每日五次，先原子扣帳、一擊 launch digest、每事件限制、不退款 | agent_budget、capture、dispatcher、delivery_validation；[預算契約](AGENT_BUDGET.md) |
-| 換 run/source/state/cwd、換日、鎖釋放、supervisor 退出或 ACK 不解除 global unknown | 耐久 active 與完整 Job/PID+建立時間 proof；跨來源／次日負測 |
-| 未知 bootstrap、缺失／損壞／busy／滿載明確阻擋，不重建空帳本 | budget unit／集成 fixture；正式帳本不初始化 |
-| 人類與 OperatorAPI 顯示 coverage、freshness、last report/current owner、monitor_gap、pending、預算及阻塞；逐 scope 錯誤、報告 total/truncated | operations、test_operator_status、test_budget_cli；保持七欄對外 snapshot |
-| 合成測並發額度、第六次、崩潰、日界、clock、滿載恢復、未知退出、同 event/query 補收、ACK 前失敗，零事件／耗盡零新啟動 | test_agent_budget、test_budget_integration、test_agent_dispatch、test_delivery_consolidation |
-| 局部後由主線完整 Windows 與獨立 mock 驗證、集中提交、不推送 | [EVIDENCE](EVIDENCE.md)：唯一數字／命令／來源 hashes／ID／退出／commit 核對入口 |
+| 慢來源有進度、heartbeat；已返回資料不因後續停止消失 | monitor／collectors progress；test_monitor_progress、test_collector_progress |
+| 七來源保存資料可直接看，列數／截斷／拒讀／過期／unknown 分明 | Runtime.observation、overview／sources；CLI workflow 與獨立七來源唯讀 probe |
+| 人類完成事件檢視、固定查證、receive/query/ACK、retry 與報告 | 共用 OperatorAPI；實際 CLI 子程序與 SQLite ID 集合核對 |
+| persistence／resolved／listener 正確查證綁定，PID 重用不補歷史 | rules／diagnostics／native binding；test_diagnostic_guidance、test_listener_identity |
+| 文字與 JSON 都可用，保留 namespace，控制字元不影響終端 | presentation／CLI／cmd；test_cli_workflow |
+| stdio 使用相同核心並守 launcher scope | SDK adapter；真 Python stdio＋合成資料的十三工具與 EOF exit；不是 agent 驗收 |
+| 未確認子樹不覆蓋、不重開；僅 Query 私有 Job 證明退出後恢復 | Runner／耐久 shutdown gate；test_monitor_progress、test_runtime_atomic |
+| 人類接手不冒充 agent 成功、不清預算、不歸檔未知退出 | dispatcher／QueueInbox；test_dispatch_takeover、test_storage_retention |
+| 完成功能後統一 Windows/full/mock，ID／退出／commit 可對照 | scripts/verify.py；[EVIDENCE](EVIDENCE.md) 為數字／命令唯一入口 |
 
-本輪先以三個有限唯讀子代理預審，再明示互斥檔案 ownership 實作；主線負責共用入口、review、整合、完整測試及提交。子代理不遞迴擴編、不各自提交或重跑完整 suite。全部開發協作與合成 fake CLI 均不是 EventGuard 真模型授權／驗收。
+兩層互斥 ownership 開發已獲使用者授權。子代理只實作與寫案例，不各自跑整套或提交；主線整合、交叉審查、統一測試、處理實際失敗後集中提交，不推送／手動 CI。不自行建立自動喚醒或永久執行。
 
 ## 保持的界線
 
-- 一般權限、唯讀 Windows、既有 Python 3.13 標準庫；無模型輪詢。
-- 不執行真 Codex、不讀秘密或完整 sessions/命令列、不提權/UAC、不下載安裝、不改安全設定／執行政策、不永久註冊 MCP、不啟用服務／排程、不動非本工具程序。
-- pending/retry/未 ACK failed 與未知退出證據不刪；有限保留／去重窗，沒有永久 exactly-once 或帳戶級防竄改承諾。
-- 事件、名稱與工具輸出是不可信資料；未知、partial、denied、ACK 與診斷均不是安全結論。
-- Phase 7 實機注入、24 小時 soak、真模型、敏感或不可逆處置仍須當次批准；先完成其他可獨立工作，再回報具體阻塞。
-- 本輪完成須逐項有當前證據並完成集中提交，才結束本輪；不自行部署、永久執行或擴張目標。已授權正常開發不逐步詢問。
+- 一般權限、唯讀 Windows、既有 Python 3.13 標準庫；沒有真 Codex／模型、UAC、下載安裝、改安全設定或其他程序處置。
+- 不永久註冊 MCP、不啟用服務／排程／自啟；stdio 協定測試不代表目前聊天已載入工具或 agent 已收到。
+- 每日五次／全域 unknown-exit／每事件限制保留；正式預算不初始化。ACK 只代表收到，不等於修復或結案。
+- pending/retry/未 ACK failed 與未知證據保留；容量／去重／接收證據有有限窗，沒有永久 exactly-once 或防同使用者竄改承諾。
+- [Phase 7](WINDOWS_VALIDATION_PLAN.md) 注入、登出／重開機、[24 小時 soak](SOAK_PLAN.md) 與真模型未執行，需當次批准。不新增來源、GUI、Linux 原生採集、雲端服務或漏洞平台。
 
-Phase 0–6 的各批提交與 scope 保留在 [EVIDENCE](EVIDENCE.md)，不把舊 mock／fixture 數字當新實機成功。[Phase 7](WINDOWS_VALIDATION_PLAN.md) 與 [24 小時 soak](SOAK_PLAN.md) 尚未執行。
+有限流程完成後回報實際能力、證據 scope 與未驗證，不以舊測試或 synthetic 冒充實機安全／長期可靠性。

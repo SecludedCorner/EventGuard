@@ -68,8 +68,10 @@ class ControlTests(unittest.TestCase):
         token = "c" * 32
         # Shared capture owns a real private Windows Job. This is Python, not Codex.
         began = time.monotonic()
-        result = capture([sys.executable, "-B", "-c", "import time; time.sleep(.5)"],
-                         run_dir, token, "synthetic timeout fixture", timeout_seconds=.05)
+        # Durable admission is inside the deadline. Give it a real launch
+        # budget; the separate prelaunch-expiry tests cover tiny deadlines.
+        result = capture([sys.executable, "-B", "-c", "import time; time.sleep(2.25)"],
+                         run_dir, token, "synthetic timeout fixture", timeout_seconds=2)
         self.assertEqual(result, 0, "Complete capture does not itself mean successful delivery")
         self.assertLess(time.monotonic() - began, 5)
         receipt_path = run_dir / "capture-exit.json"

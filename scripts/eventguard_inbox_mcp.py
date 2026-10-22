@@ -91,15 +91,25 @@ def build_operator_server(root, namespace="test", allow_live=False, operator_api
         raise ValueError("operator_live_scope_not_authorized")
     api = operator_api or OperatorAPI(root)
     def validate(name, arguments):
-        allowed = {"capabilities": set(), "status": set(), "stop": set(), "monitor_once": set(),
-                   "list_events": {"limit"}, "inspect_event": {"event_id"}, "diagnose_event": {"event_id"}, "report": set()}
+        allowed = {"capabilities": set(), "status": set(), "overview": {"limit"},
+                   "observation": {"source_id","limit"}, "stop": set(), "monitor_once": set(),
+                   "list_events": {"limit"}, "inspect_event": {"event_id"}, "diagnose_event": {"event_id"},
+                   "receive_event": {"event_id"}, "ack_event": {"event_id","query_id","decision"},
+                   "retry_event": {"event_id"}, "report": set()}
         if name not in allowed or type(arguments) is not dict:
             raise ValueError("invalid_operator_tool_arguments")
-        if (name != "list_events" and set(arguments) != allowed[name]) or set(arguments) - allowed[name]:
+        optional = {"list_events":{"limit"}, "overview":{"limit"}, "observation":{"limit"}, "ack_event":{"decision"}}
+        if set(arguments) - allowed[name] or not (allowed[name]-optional.get(name,set())) <= set(arguments):
             raise ValueError("invalid_operator_tool_arguments")
         if "event_id" in arguments and (type(arguments["event_id"]) is not str or not _ID.fullmatch(arguments["event_id"])):
             raise ValueError("invalid_operator_tool_arguments")
-        if "limit" in arguments and (type(arguments["limit"]) is not int or not 1 <= arguments["limit"] <= 1000):
+        if "query_id" in arguments and (type(arguments["query_id"]) is not str or not _ID.fullmatch(arguments["query_id"])):
+            raise ValueError("invalid_operator_tool_arguments")
+        if "decision" in arguments and (type(arguments["decision"]) is not str or arguments["decision"] not in {"reviewed_metadata","needs_more_evidence"}):
+            raise ValueError("invalid_operator_tool_arguments")
+        if "source_id" in arguments and (type(arguments["source_id"]) is not str or arguments["source_id"] not in {"defender","listeners","processes","startup","services","tasks","versions"}):
+            raise ValueError("invalid_operator_tool_arguments")
+        if "limit" in arguments and (type(arguments["limit"]) is not int or not 1 <= arguments["limit"] <= (200 if name=="observation" else 1000)):
             raise ValueError("invalid_operator_tool_arguments")
     server = _sdk_server("EventGuard Shared Local Operator", validate)
 
@@ -110,8 +120,18 @@ def build_operator_server(root, namespace="test", allow_live=False, operator_api
 
     @server.tool()
     def status() -> dict:
-        """Read the same monitor health and coverage as the local CLI."""
-        return api.call("status")
+        """Read the local CLI overview in the launcher's fixed namespace; no cross-scope health."""
+        return api.call("overview",namespace,1)
+
+    @server.tool()
+    def overview(limit: int = 20) -> dict:
+        """Shared human overview of saved source coverage, progress and events; no rescan or model."""
+        return api.call("overview",namespace,limit)
+
+    @server.tool()
+    def observation(source_id: Literal["defender","listeners","processes","startup","services","tasks","versions"], limit: int = 20) -> dict:
+        """Read bounded saved source facts from the same API a human uses; never executes collection."""
+        return api.call("observation",source_id,namespace,limit)
 
     @server.tool()
     def stop() -> dict:
@@ -137,6 +157,21 @@ def build_operator_server(root, namespace="test", allow_live=False, operator_api
     def diagnose_event(event_id: str) -> dict:
         """Run only fixed event-bound typed read-only queries and save their result. No free query strings, ACK or remediation."""
         return api.call("diagnose_event", event_id, namespace)
+
+    @server.tool()
+    def receive_event(event_id: str) -> dict:
+        """Explicitly receive/query one saved event and return its durable query ID; does not ACK."""
+        return api.call("receive_event",event_id,namespace)
+
+    @server.tool()
+    def ack_event(event_id: str, query_id: str, decision: Literal["reviewed_metadata","needs_more_evidence"] = "reviewed_metadata") -> dict:
+        """ACK exactly the received event/query through the shared inbox. Receipt is not case closure or safety."""
+        return api.call("ack_event",event_id,query_id,decision,namespace)
+
+    @server.tool()
+    def retry_event(event_id: str) -> dict:
+        """Explicit one-event outbox retry, preserving model/source attempt limits; never starts a model."""
+        return api.call("retry_event",event_id,namespace)
 
     @server.tool()
     def report() -> dict:

@@ -15,9 +15,10 @@ import uuid
 
 from . import __version__
 from .runtime import Runtime, utc_now, read_json
-from .events.store import EventStore, event_payload_hash
+from .events.store import EventStore, StoreError, event_payload_hash
 from .events.schema import validate_event
-from .diagnostics.review import event_view, review, validate_saved_review
+from .diagnostics.review import event_view, review, validate_saved_review, row_view, event_guidance
+from .collectors.windows import coverage_metadata
 
 IDENTIFIER = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
 SOURCES = ("defender", "listeners", "processes", "startup", "services", "tasks", "versions")
@@ -151,11 +152,102 @@ def _coverage_status(runtime, health, now):
         interval = intervals.get(source)
         threshold = interval + query_timeout if type(interval) in (int, float) and interval > 0 else None
         freshness = _freshness(item.get("observed_at"), now, threshold)
-        result[source] = {"status": item.get("status", "unknown"), "observed_at": item.get("observed_at"),
+        result[source] = {**coverage_metadata({"coverage": item}),
+                          "status": item.get("status", "unknown"), "observed_at": item.get("observed_at"),
                           "last_success": item.get("last_success"), "freshness": freshness,
                           "freshness_basis": "configured_interval_plus_query_timeout",
                           "current_coverage": item.get("status", "unknown") if freshness["state"] == "fresh" else "unknown"}
+        for key in ("row_count", "usable_row_count", "elapsed_ms"):
+            value = item.get(key)
+            result[source][key] = value if type(value) is int and 0 <= value <= 2**53 - 1 else None
+        result[source]["observation_saved"] = item.get("observation_saved") is True
+        result[source]["last_persisted_at"] = item.get("last_persisted_at")
+        result[source]["evaluation_status"] = item.get("evaluation_status") if item.get("evaluation_status") in {"committed", "blocked", "not_evaluated"} else "unknown"
     return result
+
+
+def _step(operation, explanation, **parameters):
+    """Fixed local operation identifiers, never shell or untrusted instructions."""
+    mutating = operation in {"monitor", "stop", "diagnose_event", "report", "receive_event", "ack_event", "retry_event"}
+    return {"operation": operation, "parameters": parameters, "explanation": explanation,
+            "read_only": not mutating, "system_read_only": True, "local_state_mutation": mutating,
+            "requires_model": False}
+
+
+def _shutdown_status(health, namespace=None):
+    """Saved gate state only; never disclose a different scope's job identity."""
+    if namespace is not None and health.get("namespace") != namespace:
+        return None
+    saved = health.get("monitor_shutdown_gate")
+    saved = saved if isinstance(saved, dict) else {}
+    reported = health.get("state")
+    blocked = saved.get("state") == "blocked" or type(reported) is str and reported in {"blocked_previous_query", "shutdown_unconfirmed"}
+    if not saved and not blocked:
+        return None
+    reasons = {"previous_query_exit_unconfirmed", "previous_query_job_identity_unavailable",
+               "previous_owned_job_still_active", "previous_query_exit_unverifiable",
+               "previous_private_job_empty_or_destroyed", "no_unresolved_query"}
+    reason = saved.get("reason")
+    if type(reason) is not str or reason not in reasons:
+        reason = "previous_query_exit_unverifiable" if blocked else "query_exit_state_unverifiable"
+    state = "blocked" if blocked else saved.get("state")
+    if type(state) is not str or state not in {"blocked", "clear", "confirmed_exited"}:
+        state = "unknown"
+    return {"state": state, "reason": reason,
+            "evidence_scope": "saved_monitor_report; no new private_job_query",
+            "process_identity_omitted": True}
+
+
+def _operator_summary(document, namespace=None):
+    current, coverage = document["current_monitor"], document["source_coverage"]
+    namespaces = document["namespaces"]
+    selected = {namespace: namespaces[namespace]} if namespace is not None else namespaces
+    known = all(value.get("events") is not None for value in selected.values())
+    pending = sum(value.get("counts", {}).get("pending", 0) + value.get("counts", {}).get("retry", 0)
+                  for value in selected.values()) if known else None
+    failed = sum(value.get("counts", {}).get("failed", 0) for value in selected.values()) if known else None
+    fresh = sum(value["current_coverage"] == "ok" for value in coverage.values())
+    observed = sum(value["row_count"] is not None for value in coverage.values())
+    summary = {"monitor_state": current["state"], "coverage_ok_sources": fresh,
+               "coverage_source_count": len(SOURCES), "observed_source_count": observed,
+               "pending_events": pending, "failed_events": failed, "pending_count_complete": known,
+               "model_calls": 0, "agent_required": False, "incident_conclusion": "not_assessed"}
+    actions = []
+    scope = namespace or "live"
+    gate = _shutdown_status(document["last_report"], namespace)
+    if current.get("scope_matches") is False:
+        summary.update(state="other_namespace", headline="目前監看屬於其他資料範圍；此處只顯示所選範圍的保存觀察。")
+        actions.append(_step("status", "核對目前監看的 namespace；不把 fixture 觀察當成 live 採集。"))
+    elif gate is not None and gate["state"] == "blocked":
+        summary.update(state="blocked_previous_query", reason=gate["reason"], monitor_shutdown_gate=gate,
+                       headline="前次本工具查詢尚未證明退出，新的採集被耐久閘道阻擋；這不是已停止或沒有事件。")
+        actions.append(_step("overview", "查看此範圍保存的退出阻擋原因；不刪除閘道、不把鎖釋放當作退出。", namespace=scope, limit=20))
+        monitor_args = {"fixture": "tests/fixtures/normal.json", "max_cycles": 1} if scope == "test" else {}
+        actions.append(_step("monitor", "再次明確啟動時會先核對既有私有 Job 的退出證據；未確認前不開始新採集，也不停止其他程序。", **monitor_args))
+    elif current["state"] == "not_started":
+        summary.update(state="not_started", headline="尚未開始監看，尚無實際採集證據。")
+        actions.append(_step("monitor", "明確啟動本機唯讀監看；不需要 agent。"))
+    elif current["state"] == "running_verified":
+        summary.update(state="observing" if fresh == len(SOURCES) else "coverage_incomplete",
+                       headline="監看程序與近期心跳已核對。" if fresh == len(SOURCES) else "監看程序已核對；部分來源可見性不足或尚未完成。")
+    elif document["last_report"].get("state") == "stopped" and current.get("owner_state") in {"missing", "exited", "not_recorded"}:
+        summary.update(state="stopped", headline="監看已結束；目前顯示保存的歷史觀察。")
+        actions.append(_step("monitor", "要取得後續變化，需再次明確啟動監看。"))
+    else:
+        summary.update(state="unknown", headline="目前無法證明監看仍在運作；保存的報告不能當作即時狀態。")
+        actions.append(_step("status", "查看 owner、心跳及阻塞原因；不要只憑舊 running 字樣判斷。"))
+    for source in SOURCES:
+        item = coverage[source]
+        if item["current_coverage"] != "ok":
+            actions.append(_step("observation", "查看此來源已保存的筆數、時間、拒讀原因與未知；不會重新掃描。",
+                                 source_id=source, namespace=scope, limit=20))
+    for space, value in selected.items():
+        if any(value.get("counts", {}).get(state, 0) for state in ("pending", "retry", "failed")):
+            actions.append(_step("events", "有未確認接收或投遞失敗的事件；先查看保存觀察，ACK 不代表已修復。", namespace=space, limit=20))
+    if not known:
+        actions.append(_step("status", "至少一個事件資料庫無法讀取，事件數量未知；先處理本工具的儲存故障。"))
+    summary["next_steps"] = actions
+    return summary
 
 
 def _namespace_status(runtime, namespace):
@@ -198,14 +290,17 @@ def status(runtime):
     except (OSError, ValueError, TypeError):
         health = {"state": "unknown", "monitoring": None, "reason": "last_report_unavailable"}
     heartbeat = _freshness(health.get("heartbeat_at"), now, HEARTBEAT_MAX_AGE)
-    return {"tool_version": __version__, "health": health, "last_report": health,
+    result = {"tool_version": __version__, "health": health, "last_report": health,
             "heartbeat_age_seconds": heartbeat["age_seconds"],
             "liveness": "on_demand_owner_check; no independent watchdog",
             "current_monitor": _current_monitor(runtime, health, heartbeat),
+            "monitor_shutdown_gate": _shutdown_status(health),
             "source_coverage": _coverage_status(runtime, health, now),
             "namespaces": {namespace: _namespace_status(runtime, namespace) for namespace in ("live", "test")},
             "agent_budget": _budget_status(runtime),
             "agent_ingress": "not_configured", "real_agent_woken": False}
+    result["operator_summary"] = _operator_summary(result)
+    return result
 
 
 class OperatorAPI:
@@ -217,13 +312,18 @@ class OperatorAPI:
 
     def call(self, operation, *args, **kwargs):
         """Shared public error envelope: never forward an OS exception/path."""
-        if operation not in {"capabilities", "status", "stop", "monitor", "events", "inspect_event", "diagnose_event", "report"}:
+        if operation not in {"capabilities", "status", "overview", "observation", "stop", "monitor", "events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report"}:
             return {"status": "invalid_request", "error_code": "input_or_config_validation_failed", "raw_error_omitted": True}
         try:
             return getattr(self, operation)(*args, **kwargs)
         except (ValueError, TypeError, json.JSONDecodeError):
             return {"status": "invalid_request", "error_code": "input_or_config_validation_failed", "raw_error_omitted": True}
         except Exception as error:
+            if (type(error).__module__ in {"eventguard.queue_inbox", "eventguard.local_paths"}
+                    and error.args and type(error.args[0]) is str
+                    and re.fullmatch(r"[a-z][a-z0-9_]{0,95}", error.args[0])):
+                return {"status": "blocked", "reason": error.args[0], "error_code": "event_delivery_blocked",
+                        "raw_error_omitted": True, "model_started": False}
             return {"status": "error", "error_code": "capacity_or_storage_failure" if type(error).__name__ in {"CapacityError", "StoreError"} else "operation_failed", "raw_error_omitted": True}
 
     def capabilities(self):
@@ -231,13 +331,111 @@ class OperatorAPI:
         return {"tool_version": __version__, "diagnostics": DiagnosticAPI().capabilities(),
                 "monitor": "foreground, cooperative stop, singleton", "transport": ["disabled", "synthetic-only local mock"],
                 "remediation": [], "gui": False, "model_calls": 0, "real_agent_ingress": "not_configured",
-                "operator_operations": ["capabilities", "status", "stop", "events", "inspect_event", "diagnose_event", "report", "monitor"],
+                "operator_operations": ["capabilities", "status", "overview", "observation", "stop", "events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report", "monitor"],
                 "agent_required": False, "data_trust": "untrusted_data",
-                "optional_agent_ingress": {"entry": "scripts/eventguard_watch.py", "mode": "explicit_bounded_foreground",
-                                            "default_enabled": False, "projection": "fixed-minimal-v1"}}
+                "optional_agent_ingress": {"entry": "scripts/eventguard_inbox_mcp.py",
+                    "arguments": ["--operator-root", "<project-root>", "--namespace", "test"],
+                    "live_scope_arguments": ["--namespace", "live", "--allow-live"],
+                    "mode": "local_stdio_shared_operator_api", "needs_existing_sdk": True,
+                    "launches_model": False, "permanent_registration_performed": False,
+                    "client_configuration": "required_in_the_calling_client; not_performed_by_EventGuard",
+                    "state": "not_configured", "connected": False, "real_client_verified": False,
+                    "default_enabled": False},
+                "bounded_dispatch": {"entry": "scripts/eventguard_watch.py", "mode": "explicit_bounded_foreground",
+                    "default_enabled": False, "requires_separate_model_authorization": True,
+                    "projection": "fixed-minimal-v1"}}
 
     def status(self):
         return status(self.runtime)
+
+    def overview(self, namespace="live", limit=20):
+        if type(limit) is not int or not 1 <= limit <= 1000:
+            raise ValueError("event_limit_out_of_bounds")
+        self.runtime.data_dir(namespace, create=False)
+        document = self.status()
+        monitor_namespace = document["last_report"].get("namespace")
+        current = dict(document["current_monitor"], namespace=monitor_namespace,
+                       scope_matches=monitor_namespace in (None, namespace))
+        scoped = dict(document, current_monitor=current)
+        if monitor_namespace != namespace:
+            coverage = {}
+            for source in SOURCES:
+                try:
+                    item = self.observation(source, namespace, 1)
+                    observed = item["status"] != "not_observed"
+                    coverage[source] = {**item.get("coverage", {}),
+                        "status": item["status"] if observed else "not_requested",
+                        "observed_at": item.get("observed_at"), "last_success": None,
+                        "freshness": item["freshness"], "freshness_basis": "configured_interval_plus_query_timeout",
+                        "current_coverage": item.get("current_coverage", "unknown"),
+                        "row_count": item.get("row_count"),
+                        "usable_row_count": item.get("coverage", {}).get("usable_row_count"),
+                        "elapsed_ms": item.get("elapsed_ms"), "observation_saved": observed,
+                        "last_persisted_at": item.get("saved_at"), "evaluation_status": "unknown"}
+                except (OSError, ValueError, TypeError, KeyError):
+                    coverage[source] = {"status": "unknown", "current_coverage": "unknown", "row_count": None,
+                        "usable_row_count": None, "elapsed_ms": None, "freshness": _freshness(None, _now(), None),
+                        "reason": "saved_observation_unavailable", "observation_saved": False,
+                        "evaluation_status": "unknown", "observed_at": None, "last_success": None}
+            scoped["source_coverage"] = coverage
+        try:
+            listing = self.events(namespace, limit)
+        except (OSError, ValueError, TypeError, KeyError, StoreError, sqlite3.Error):
+            listing = {"namespace": namespace, "events": [], "total": None, "exported": 0,
+                       "truncated": None, "status": "unknown", "reason": "namespace_storage_unavailable"}
+        gate = _shutdown_status(document["last_report"], namespace)
+        blocked_reason = gate["reason"] if gate is not None and gate["state"] == "blocked" else None
+        last_error = document["last_report"].get("last_error") if monitor_namespace == namespace else None
+        if type(last_error) is not str or last_error not in {
+            "observation_persistence_failed", "monitor_gap_persistence_failed", "progress_persistence_failed",
+            "queue_capacity_or_storage_failure", "event_evaluation_failed", "owned_query_shutdown_failed"}:
+            last_error = blocked_reason
+        return {"tool_version": __version__, "namespace": namespace,
+                "operator_summary": _operator_summary(scoped, namespace),
+                "current_monitor": current, "monitor_namespace": monitor_namespace,
+                "source_coverage": scoped["source_coverage"],
+                "source_coverage_namespace": namespace,
+                "event_storage": document["namespaces"][namespace], "event_list": listing,
+                "agent_budget": document["agent_budget"],
+                "progress": document["last_report"].get("progress") if monitor_namespace == namespace else None,
+                "monitor_gap": document["last_report"].get("monitor_gap") if monitor_namespace == namespace else None,
+                "monitor_shutdown_gate": gate, "reason": blocked_reason, "last_error": last_error,
+                "agent_required": False, "model_calls": 0, "incident_conclusion": "not_assessed"}
+
+    def observation(self, source_id, namespace="live", limit=20):
+        if type(source_id) is not str or source_id not in SOURCES or type(limit) is not int or not 1 <= limit <= 200:
+            raise ValueError("invalid_observation_request")
+        self.runtime.data_dir(namespace, create=False)
+        value = self.runtime.observation(source_id, namespace, limit)
+        if value is None:
+            return {"namespace": namespace, "source_id": source_id, "status": "not_observed",
+                    "row_count": None, "exported": 0, "truncated": False, "rows": [],
+                    "coverage": {"status": "unknown"}, "observed_at": None,
+                    "freshness": _freshness(None, _now(), None),
+                    "explanation": "此來源尚無保存觀察，不能解讀為成功讀取零筆或沒有風險。",
+                    "system_query_executed": False, "model_calls": 0}
+        section = value["section"]
+        status_value = section.get("status")
+        if status_value not in {"ok", "partial", "denied", "unknown", "not_applicable", "error", "timeout", "cancelled", "busy", "not_requested"}:
+            status_value = "unknown"
+        try:
+            config = self.runtime.config()
+            max_age = config["interval_seconds"][source_id] + config["query_timeout_seconds"]
+        except (OSError, ValueError, TypeError, KeyError):
+            max_age = None
+        fresh = _freshness(section.get("observed_at"), _now(), max_age)
+        rows = [row_view(row) for row in section.get("rows", [])[:limit] if isinstance(row, dict)]
+        total = value.get("total")
+        total = total if type(total) is int and total >= len(rows) else None
+        return {"namespace": namespace, "source_id": source_id, "status": status_value,
+                "current_coverage": status_value if fresh["state"] == "fresh" else "unknown",
+                "row_count": total, "exported": len(rows),
+                "truncated": value.get("truncated") is True or total is not None and total > len(rows),
+                "rows": rows, "coverage": coverage_metadata(section),
+                "observed_at": section.get("observed_at"), "saved_at": value.get("saved_at"),
+                "freshness": fresh, "elapsed_ms": section.get("elapsed_ms"),
+                "explanation": "這是最後保存的唯讀來源觀察；時間、可見性與截斷限制均保留，不能證明主機安全。",
+                "system_query_executed": False, "model_calls": 0, "data_trust": "untrusted_data"}
 
     def stop(self, namespace=None):
         if namespace is not None:
@@ -254,7 +452,12 @@ class OperatorAPI:
         return Monitor(self.runtime.root).run(**kwargs)
 
     def events(self, namespace="live", limit=100):
-        return {"namespace": namespace, "events": [event_view(e) for e in read_events(self.runtime, namespace, limit)]}
+        if type(limit) is not int or not 1 <= limit <= 1000:
+            raise ValueError("event_limit_out_of_bounds")
+        events, total = _report_events(self.runtime, namespace, limit)
+        return {"namespace": namespace, "events": [event_view(e) for e in events], "total": total,
+                "exported": len(events), "truncated": total > len(events), "limit": limit,
+                "ack_meaning": "received_only_not_case_closed"}
 
     def _event(self, event_id, namespace):
         rows = read_events(self.runtime, namespace, event_id=event_id)
@@ -264,7 +467,8 @@ class OperatorAPI:
 
     def inspect_event(self, event_id, namespace="live"):
         event = self._event(event_id, namespace)
-        return {**review(event), "latest_diagnosis": saved_review(self.runtime, namespace, event), "latest_diagnosis_is_saved": True, "namespace": namespace}
+        return {**review(event), "guidance": event_guidance(event),
+                "latest_diagnosis": saved_review(self.runtime, namespace, event), "latest_diagnosis_is_saved": True, "namespace": namespace}
 
     def diagnose_event(self, event_id, namespace="live"):
         event = self._event(event_id, namespace)
@@ -282,11 +486,76 @@ class OperatorAPI:
         store(self.runtime, namespace).save_review(event_id, result["payload_hash"], result)
         return dict(result, saved=True)
 
+    @staticmethod
+    def _already_received(event, namespace):
+        return {"status": "already_received", "event_id": event["event_id"], "namespace": namespace,
+                "outbox_acknowledged": True, "new_receipt_created": False,
+                "ack_semantics": "received_only_not_case_closed", "incident_conclusion": "not_assessed",
+                "model_calls": 0, "real_agent_woken": False}
+
+    def _operator_inbox(self, event_id, namespace):
+        from .agent_dispatch import _bind_channel
+        from .queue_inbox import QueueInbox
+        source = self.runtime.data_dir(namespace, create=False)
+        state = self.runtime.path("data/agent-delivery" if namespace == "live" else "data/agent-delivery-test")
+        _bind_channel(source, state)
+        return QueueInbox(source, state, event_id=event_id, allow_live=namespace == "live",
+                          limits=self.runtime.config().get("inbox"))
+
+    def receive_event(self, event_id, namespace="live"):
+        event = self._event(event_id, namespace)
+        if event["delivery_status"] == "ack":
+            return self._already_received(event, namespace)
+        if event["delivery_status"] == "failed":
+            return {"status": "blocked", "reason": "failed_event_requires_explicit_retry",
+                    "event_id": event_id, "namespace": namespace, "outbox_acknowledged": False,
+                    "next_steps": [_step("retry_event", "明確重試此單一失敗事件；不重設每日預算，也不啟動模型。", event_id=event_id, namespace=namespace)]}
+        inbox = self._operator_inbox(event_id, namespace)
+        received = inbox.receive_event()
+        query = inbox.query_evidence(event_id)
+        return {**received, "namespace": namespace, "query_id": query["query_id"],
+                "query": query, "outbox_acknowledged": False,
+                "ack_semantics": "received_only_not_case_closed", "model_calls": 0,
+                "next_steps": [_step("inspect_event", "查看此事件的具體保存觀察與查證計畫。", event_id=event_id, namespace=namespace),
+                               _step("ack_event", "明確確認已收到；保留查證未知，不代表事件已修復或結案。",
+                                     event_id=event_id, query_id=query["query_id"], decision="reviewed_metadata", namespace=namespace)]}
+
+    def ack_event(self, event_id, query_id, decision="reviewed_metadata", namespace="live"):
+        if type(query_id) is not str or not IDENTIFIER.fullmatch(query_id) or type(decision) is not str or decision not in {"reviewed_metadata", "needs_more_evidence"}:
+            raise ValueError("invalid_event_receipt_request")
+        event = self._event(event_id, namespace)
+        if event["delivery_status"] == "ack":
+            return self._already_received(event, namespace)
+        inbox = self._operator_inbox(event_id, namespace)
+        result = inbox.ack_event(event_id, query_id, decision)
+        return {**result, "namespace": namespace, "ack_semantics": "received_only_not_case_closed",
+                "model_calls": 0, "real_agent_woken": False}
+
+    def retry_event(self, event_id, namespace="live"):
+        event = self._event(event_id, namespace)
+        if event["delivery_status"] == "ack":
+            return self._already_received(event, namespace)
+        if event["delivery_status"] != "failed":
+            return {"status": "not_applicable", "reason": "only_failed_event_can_be_retried",
+                    "event_id": event_id, "namespace": namespace, "model_calls": 0}
+        try:
+            changed = store(self.runtime, namespace).retry_failed(event_id)
+        except StoreError as error:
+            if error.args == ("replay_requires_receipt_check",):
+                return {"status": "blocked", "reason": "dedup_window_expired_requires_receipt_review",
+                        "event_id": event_id, "namespace": namespace, "budget_reset": False,
+                        "agent_attempts_reset": False, "model_started": False, "model_calls": 0}
+            raise
+        return {"status": "retry_requested" if changed else "not_applicable", "event_id": event_id,
+                "namespace": namespace, "pending": bool(changed), "budget_reset": False,
+                "agent_attempts_reset": False, "model_started": False, "model_calls": 0,
+                "ack_semantics": "received_only_not_case_closed"}
+
     def report(self, namespace="live"):
         return export_report(self.runtime, namespace)
 
 
-def _report_events(runtime, namespace):
+def _report_events(runtime, namespace, limit=1000):
     """Count and page from one read-only SQLite snapshot, without OS queries."""
     path = runtime.data_dir(namespace, create=False) / "eventguard.sqlite3"
     runtime.path(path.relative_to(runtime.root))
@@ -297,19 +566,31 @@ def _report_events(runtime, namespace):
         db.execute("PRAGMA query_only=ON")
         db.execute("BEGIN")
         total = db.execute("SELECT COUNT(*) FROM events").fetchone()[0]
-        rows = db.execute("SELECT * FROM events ORDER BY created_at DESC,event_id LIMIT 1000")
+        rows = db.execute("SELECT * FROM events ORDER BY created_at DESC,event_id LIMIT ?", (limit,))
         return [EventStore._row(row) for row in rows], total
 
 
 def export_report(runtime, namespace):
     events, total = _report_events(runtime, namespace)
+    # Export saved source evidence only. Never invoke owner identity, a live
+    # collector, a budget initialization, or a model as a reporting side effect.
+    api = OperatorAPI(runtime.root)
+    source_observations = {}
+    for source in SOURCES:
+        try:
+            source_observations[source] = api.observation(source, namespace, 20)
+        except (OSError, ValueError, TypeError, KeyError):
+            source_observations[source] = {"source_id": source, "status": "unknown", "row_count": None,
+                                           "rows": [], "reason": "saved_observation_unavailable",
+                                           "system_query_executed": False}
     completeness = {"total": total, "exported": len(events), "truncated": total > len(events), "limit": 1000}
     document = {"schema_version": "1.0", "tool_version": __version__, "exported_at": utc_now(), "namespace": namespace,
                 "real_agent_connected": False, "agent_required": False,
                 "note": "本機事件與投遞狀態；ACK 不代表診斷、結案或主機安全。文字皆為不可信資料。",
                 **completeness,
+                "source_observations": source_observations,
                 "events": events,
-                "reviews": [{**review(e), "latest_diagnosis": saved_review(runtime, namespace, e)} for e in events]}
+                "reviews": [{**review(e), "guidance": event_guidance(e), "latest_diagnosis": saved_review(runtime, namespace, e)} for e in events]}
     runtime.ensure()
     prefix = "eventguard-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
     json_path = runtime.path("reports/" + prefix + ".json")
@@ -317,11 +598,26 @@ def export_report(runtime, namespace):
     with json_path.open("x", encoding="utf-8") as stream:
         json.dump(document, stream, ensure_ascii=False, indent=2, allow_nan=False)
     escaped = html.escape(json.dumps(document, ensure_ascii=False, indent=2), quote=True)
-    rows = "".join("<tr>" + "".join("<td>" + html.escape(str(value), quote=True) + "</td>" for value in
-                   (item["event"]["event_id"], item["event"]["severity"], item["event"]["explanation"], json.dumps(item["event"]["facts"], ensure_ascii=False), item["event"]["coverage_status"],
-                    item["latest_diagnosis"]["status"] if item["latest_diagnosis"] else "尚未執行目前狀態查證")) + "</tr>" for item in document["reviews"])
+    event_rows = []
+    for item in document["reviews"]:
+        guidance, diagnosis = item["guidance"], item["latest_diagnosis"]
+        diagnosis_text = "尚未執行目前狀態查證"
+        if diagnosis:
+            diagnosis_text = diagnosis["status"] + "；" + "；".join(
+                row["operation"] + ":" + row["status"] + "，" + str(len(row["rows"])) + " 筆，" + (row["observed_at"] or "時間未知")
+                for row in diagnosis["observations"])
+        event_rows.append("<tr>" + "".join("<td>" + html.escape(str(value), quote=True) + "</td>" for value in (
+            item["event"]["event_id"], item["event"]["severity"], guidance["observation"],
+            json.dumps(guidance["binding_facts"], ensure_ascii=False), item["event"]["coverage_status"],
+            diagnosis_text, "；".join(guidance["next_steps"]))) + "</tr>")
+    rows = "".join(event_rows)
     completeness_note = '<p>保存資料快照：共 ' + str(total) + ' 件，匯出 ' + str(len(events)) + ' 件；' + ('已截斷，這不是完整清單。' if completeness['truncated'] else '清單未截斷。') + ' 匯出不代表目前仍在監看或資料仍新鮮。</p>'
-    page = '<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>EventGuard 本機報告</title><style>body{font:15px sans-serif;max-width:1100px;margin:32px auto;padding:16px}pre{white-space:pre-wrap;overflow-wrap:anywhere}td,th{padding:8px;border:1px solid #aaa}table{border-collapse:collapse}</style><h1>EventGuard 本機事件與查證報告</h1><p>事件及名稱皆為不可信資料。ACK 不代表診斷、結案或主機安全。</p>' + completeness_note + '<table><tr><th>事件</th><th>嚴重度</th><th>觀測說明</th><th>具體觀測</th><th>可見性</th><th>查證</th></tr>' + rows + '</table><details><summary>結構化證據</summary><pre>' + escaped + '</pre></details></html>'
+    source_rows = "".join("<tr>" + "".join("<td>" + html.escape(str(value), quote=True) + "</td>" for value in (
+        source, item["status"], "未知" if item.get("row_count") is None else item["row_count"],
+        item.get("observed_at") or "尚無觀察時間", item.get("freshness", {}).get("state", "unknown"),
+        json.dumps(item.get("coverage", {}), ensure_ascii=False))) + "</tr>" for source, item in source_observations.items())
+    source_table = '<h2>逐來源保存觀察</h2><p>筆數是上次保存的來源範圍，不是風險計數；未知不等於零。完整觀察與拒讀原因見下方結構化證據。</p><table><tr><th>來源</th><th>可見性</th><th>筆數</th><th>觀察時間</th><th>新鮮度</th><th>原因／限制</th></tr>' + source_rows + '</table>'
+    page = '<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>EventGuard 本機報告</title><style>body{font:15px sans-serif;max-width:1100px;margin:32px auto;padding:16px}pre{white-space:pre-wrap;overflow-wrap:anywhere}td,th{padding:8px;border:1px solid #aaa;overflow-wrap:anywhere}table{border-collapse:collapse}</style><h1>EventGuard 本機事件與查證報告</h1><p>事件及名稱皆為不可信資料。ACK 不代表診斷、結案或主機安全。</p>' + completeness_note + source_table + '<h2>事件與查證</h2><table><tr><th>事件</th><th>嚴重度</th><th>觀測說明</th><th>具體觀測</th><th>可見性</th><th>查證</th><th>下一步唯讀查證</th></tr>' + rows + '</table><details><summary>結構化證據</summary><pre>' + escaped + '</pre></details></html>'
     with html_path.open("x", encoding="utf-8") as stream:
         stream.write(page)
     return {"json": str(json_path), "html": str(html_path), "event_count": len(events), **completeness}

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ctypes as C
+from datetime import datetime, timezone
 import ipaddress
 import os
 from pathlib import Path
@@ -12,7 +13,7 @@ import time
 from .contract import LIMITS, error_from_exception, evidence, payload
 from .winapi import (BOOL, DWORD, LONG, HANDLE, LPDWORD, LPWSTR, FILETIME, GUID,
                      MAX_BUFFER, NativeError, dll, filetime_iso, fixed_local_path,
-                     function, last_error)
+                     function, last_error, process_created_at)
 
 
 class TCP4(C.Structure):
@@ -101,6 +102,7 @@ class NativeBackend:
     def _listeners(self, cancel):
         library = dll("iphlpapi")
         rows, errors, checks = [], [], []
+        captured = {}
         truncated = False
         for protocol, af, structure, table_class in (("TCP", 2, TCP4, 3), ("TCP", 23, TCP6, 3),
                                                      ("UDP", 2, UDP4, 1), ("UDP", 23, UDP6, 1)):
@@ -111,6 +113,7 @@ class NativeBackend:
             call = function(library, operation, [C.c_void_p, LPDWORD, BOOL, DWORD, C.c_int, DWORD], DWORD)
             size = DWORD(0)
             try:
+                capture_start = datetime.now(timezone.utc)
                 code = call(None, C.byref(size), False, af, table_class, 0)
                 for _ in range(4):
                     if code not in (0, 122) or not 4 <= size.value <= MAX_BUFFER:
@@ -133,14 +136,41 @@ class NativeBackend:
                         address += "%" + str(value.scope)
                     rows.append({"protocol": protocol, "address": address,
                                  "port": socket.ntohs(value.port & 0xffff), "pid": int(value.pid), "status": "ok"})
+                    captured[int(value.pid)] = min(capture_start, captured.get(int(value.pid), capture_start))
                 checks.append({"operation": operation + ("IPv4" if af == 2 else "IPv6"), "status": "ok", "count": count})
             except NativeError as error:
                 record = self._failure(error, operation)
                 errors.append(record)
                 checks.append({"operation": operation + ("IPv4" if af == 2 else "IPv6"), "status": record["status"], "count": 0})
+        identities = self._listener_identities(captured, cancel, errors)
+        for row in rows:
+            value = identities.get(row["pid"], {})
+            row["created_at"] = value.get("created_at")
+            row["process_identity_status"] = value.get("status", "unknown")
         # Successful empty tables are evidence too; do not turn a mixed empty/error into a total denial.
         status = "partial" if errors and any(c["status"] == "ok" for c in checks) else None
         return payload(rows, errors, truncated=truncated, status=status, checks=checks)
+
+    def _listener_identities(self, captured, cancel, errors):
+        """Bind only owners observed in these bounded tables; reject PID reuse."""
+        result = {}
+        for pid, capture_start in captured.items():
+            if self._cancelled(cancel):
+                break
+            try:
+                stamp = process_created_at(pid)
+                created = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+                if created.tzinfo is None or created > capture_start:
+                    errors.append(evidence("object", "listener_pid_reused", exception_type="IdentityEvidence",
+                                           operation="ListenerProcessIdentity", status="unknown"))
+                    result[pid] = {"created_at": None, "status": "unknown"}
+                else:
+                    result[pid] = {"created_at": created.astimezone(timezone.utc).isoformat(timespec="microseconds"), "status": "ok"}
+            except (NativeError, OSError, ValueError) as error:
+                record = self._failure(error, "ListenerProcessIdentity", "field")
+                errors.append(record)
+                result[pid] = {"created_at": None, "status": record["status"]}
+        return result
 
     def _processes(self, cancel):
         kernel = dll("kernel32")

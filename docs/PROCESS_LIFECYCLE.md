@@ -58,4 +58,10 @@ py -3.13 -B scripts/eventguard_schedule.py uninstall --dry-run
 
 排程腳本的 install／uninstall 都只印出候選 argv，`executed=false`；`--execute` 也拒絕（exit 2）。沒有呼叫 schtasks、建立／刪除任務。未來實際變更仍需批准並驗證既有任務身分，避免覆蓋或刪除不屬於本工具的任務。
 
-精確測試數、時間、命令、失敗修正與證據目錄以 STATUS 的本階段紀錄為準；本文件不是新授權或全天候承諾。
+## 跨來源與重啟的未知退出閘道
+
+Runner 不只查看等待執行緒是否完成；若 managed 回條尚未證明 child_exited=true 且 remaining_owned_processes 為整數 0，下一來源回 busy，不覆蓋該 Job。monitor 在釋放 singleton 前保存 `monitor-shutdown-gate.json`。再次啟動在任何新 collector 前，僅以記錄的 `Local\\EventGuard-<uuid>` 私有 Job 做 QUERY；確認 active=0 或 ERROR_FILE_NOT_FOUND 才保存 recovered 回條並清閘道。仍有程序、拒讀、其他錯誤、舊回條沒有 Job 身分，均保持 blocked_previous_query，不依 PID 強停，也不以刪鎖當恢復。
+
+每來源 launch／waiting／completed 有固定 progress 回報，慢查詢期間更新 heartbeat；每來源即保存白名單觀測與 coverage／事件交易。文字 UI 不因整輪未完而完全沉默，JSON stdout 仍為單一結果。每輪 45 秒採集預算未取消，超過後剩餘來源明示 busy 並稍後重試，不能把一輪當作七來源都已實際呼叫。
+
+精確測試數、時間、命令、失敗修正與證據目錄統一見 [EVIDENCE](EVIDENCE.md)；本文件不是新授權或全天候承諾。

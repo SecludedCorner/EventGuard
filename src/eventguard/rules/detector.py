@@ -11,6 +11,7 @@ import hashlib
 import ipaddress
 import json
 import math
+import re
 import time
 
 VERSION = "1.0.0"
@@ -222,6 +223,30 @@ def _persistence_key(section_id, row):
     return _hash(metadata, 32)
 
 
+def _listener_process_binding(row, process_section):
+    """Use identity observed in this evaluation only; never invent it from PID."""
+    candidate = row
+    if not isinstance(row.get("process_instance_ref"), str) and isinstance(process_section, dict):
+        candidates = [item for item in process_section.get("rows", [])
+                      if isinstance(item, dict) and type(item.get("pid")) is int
+                      and item["pid"] == row.get("pid")]
+        if len(candidates) == 1:
+            candidate = candidates[0]
+    ref = candidate.get("process_instance_ref")
+    if not isinstance(ref, str) or not re.fullmatch(r"proc-[a-f0-9]{24}", ref):
+        return {}
+    result = {"process_instance_ref": ref}
+    created = candidate.get("created_at", candidate.get("process_created_at"))
+    if isinstance(created, str) and len(created) <= 64:
+        try:
+            value = datetime.fromisoformat(created.replace("Z", "+00:00"))
+            if value.tzinfo is not None and value.utcoffset() is not None:
+                result["process_created_at"] = value.astimezone(timezone.utc).isoformat(timespec="microseconds")
+        except ValueError:
+            pass
+    return result
+
+
 def evaluate(sections, state=None, now=None, host_id="local-host", cooldown=300):
     """Return new state/events without mutating inputs or doing any I/O.
 
@@ -288,11 +313,16 @@ def evaluate(sections, state=None, now=None, host_id="local-host", cooldown=300)
                 if not address.is_unspecified or not 0 <= row["port"] <= 65535:
                     continue
                 pid = row.get("pid") if type(row.get("pid")) is int else None
-                identity = "listener:" + _hash([row["protocol"], str(address), row["port"], pid], 32)
+                binding = _listener_process_binding(row, chosen.get("processes"))
+                identity_parts = [row["protocol"], str(address), row["port"], pid]
+                if binding:
+                    identity_parts.append(binding["process_instance_ref"])
+                identity = "listener:" + _hash(identity_parts, 32)
                 present.add(identity)
                 evidence = {"protocol": row["protocol"], "address": str(address), "port": row["port"], "scope": "all_interfaces"}
                 if pid is not None:
                     evidence["pid"] = pid
+                evidence.update(binding)
                 _observe(current, identity, "listener.changed", "listener-diff", "warning", evidence,
                          status, instant, cooldown, generated)
             if status == "ok":
@@ -308,13 +338,13 @@ def evaluate(sections, state=None, now=None, host_id="local-host", cooldown=300)
                     current["baselines"][section_id] = {"keys": sorted(keys)}
                     if keys:
                         _observe(current, "inventory:" + section_id, "persistence.changed", "persistence-inventory", "info",
-                                 {"section": section_id, "count": len(keys), "changed_keys": sorted(keys)[:5], "reason": "initial_inventory"},
+                                 {"section": section_id, "kind": section_id, "count": len(keys), "changed_keys": sorted(keys)[:5], "reason": "initial_inventory"},
                                  status, instant, cooldown, generated, managed=False)
                 continue
             previous = set(baseline["keys"])
             for key in sorted(keys - previous):
                 _observe(current, "persistence:" + section_id + ":" + key, "persistence.changed", "persistence-diff", "warning",
-                         {"section": section_id, "count": 1, "changed_keys": [key], "reason": "added_metadata"},
+                         {"section": section_id, "kind": section_id, "count": 1, "changed_keys": [key], "reason": "added_metadata"},
                          status, instant, cooldown, generated)
             if status == "ok":
                 for identity in list(current["active"]):

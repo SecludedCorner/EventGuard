@@ -210,6 +210,7 @@ class CoreTests(unittest.TestCase):
         collector=Collectors()
         monitor=Monitor(self.root,collectors=collector)
         results=[]
+        second=None
         thread=threading.Thread(target=lambda:results.append(monitor.run(max_cycles=1,fixture="tests/fixtures/normal.json",on_cycle=lambda _:setattr(collector.runner,"pending",True))))
         thread.start()
         try:
@@ -224,6 +225,8 @@ class CoreTests(unittest.TestCase):
             second=InstanceLock(Runtime(self.root))
             self.assertFalse(second.acquire())
         finally:
+            if second is not None:
+                second.release()
             collector.runner.pending=False
             thread.join(3)
         self.assertFalse(thread.is_alive())

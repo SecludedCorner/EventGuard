@@ -291,6 +291,30 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(active["events"], {})
         self.assertEqual(set(archive["events"]), {"closed"})
 
+    def test_human_receipt_after_failed_agent_frees_capacity_without_agent_success(self):
+        from types import SimpleNamespace
+        failed = dict(self.record("human-received", True), passed=False, ack_verified=False, tree_exit_verified=True)
+        write_json(self.path, {"kind": KIND, "events": {"human-received": [failed]}})
+        receiver = SimpleNamespace(acknowledged=lambda identity: identity == "human-received")
+        active, archive, result = maintain_ledger(self.path, receiver, self.policy)
+        self.assertEqual(active["events"], {})
+        row = archive["events"]["human-received"]
+        self.assertFalse(row["passed"])
+        self.assertEqual(row["completion"], "received_without_agent_proof")
+        self.assertEqual(row["attempts"], 1)
+        self.assertEqual(result["rotated_events"], 1)
+        # The retained receipt can be re-read; a new pending event fits.
+        maintain_ledger(self.path, receiver, self.policy)
+        _ledger_write(self.path, {"kind": KIND, "events": {"next": [self.record("next")]}}, limits("dispatcher", self.policy))
+
+    def test_ack_never_archives_a_child_with_unconfirmed_exit(self):
+        from types import SimpleNamespace
+        write_json(self.path, {"kind": KIND, "events": {"unknown-exit": [self.record("unknown-exit")]}})
+        active, archive, result = maintain_ledger(self.path, SimpleNamespace(acknowledged=lambda _: True), self.policy)
+        self.assertEqual(set(active["events"]), {"unknown-exit"})
+        self.assertEqual(archive["events"], {})
+        self.assertEqual(result["rotated_events"], 0)
+
     def test_bytes_full_archive_rollover_and_ttl_keep_active_unchanged(self):
         policy = limits("dispatcher", {"max_completed": 2, "max_bytes": 65536})
         huge = {"kind": KIND, "events": {"pending": [{**self.record("pending"), "run_dir": "x"*33000}]}}
@@ -314,7 +338,7 @@ class LedgerTests(unittest.TestCase):
         state = self.root/"state"
         state.mkdir()
         old = self.record("failed")
-        old.update(state="complete", passed=False, child_exited=True)
+        old.update(state="complete", passed=False, child_exited=True, tree_exit_verified=True)
         write_json(state/self.path.name, {"kind": KIND, "events": {"failed": [old]}})
         backend = SimpleNamespace(acknowledged=lambda _: False, pending_event_id=lambda: "new-pending")
         with patch("eventguard.agent_dispatch._inbox", return_value=backend), patch("eventguard.agent_dispatch.shutil.which", return_value=sys.executable), patch("eventguard.agent_dispatch.importlib.util.find_spec", return_value=True), patch("eventguard.agent_dispatch.command") as command, patch("eventguard.agent_dispatch.spawn") as spawn:

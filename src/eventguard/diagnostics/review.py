@@ -28,6 +28,25 @@ NAME = re.compile(r"[A-Za-z0-9_.-]{1,80}\Z")
 REF = re.compile(r"proc-[a-f0-9]{24}\Z")
 PROTECTION = {"AntivirusEnabled", "RealTimeProtectionEnabled", "AMServiceEnabled", "BehaviorMonitorEnabled", "IsTamperProtected"}
 SOURCES = {"listeners", "processes", "defender", "startup", "services", "tasks", "versions"}
+VERSION = re.compile(r"[0-9]+(?:\.[0-9]+){1,7}(?:(?:a|b|rc)[0-9]+)?\Z", re.ASCII)
+SIGNATURE_VERSION = re.compile(r"[0-9]+(?:\.[0-9]+){1,7}\Z", re.ASCII)
+DEFENDER_ITEMS = PROTECTION | {
+    "AntivirusSignatureVersion", "AntivirusSignatureLastUpdated", "DisableAntiSpyware", "DisableAntiVirus",
+    "DisableRealtimeMonitoring", "DisableBehaviorMonitoring", "TamperProtection", "SecurityCenterAntivirusHealth",
+    "ConfiguredDisableAntiSpyware", "ConfiguredDisableAntiVirus", "ConfiguredDisableRealtimeMonitoring",
+    "ConfiguredDisableBehaviorMonitoring", "ConfiguredTamperProtection", "defender_status",
+}
+STARTUP_KINDS = {"registry", "registry_empty", "registry_missing", "folder", "folder_empty", "folder_skipped"}
+STARTUP_SOURCES = {
+    hive + "\\Software\\Microsoft\\Windows\\CurrentVersion\\" + key:
+        prefix + "_" + ("run_once" if key == "RunOnce" else "run")
+    for hive, prefix in (("CurrentUser", "current_user"), ("LocalMachine", "local_machine"))
+    for key in ("Run", "RunOnce")
+}
+STARTUP_SOURCES.update({"Startup": "current_user_startup", "CommonStartup": "common_startup"})
+STARTUP_SOURCE_IDS = set(STARTUP_SOURCES.values())
+DETECTOR_REASONS = {"initial_inventory", "added_metadata", "delivery_batch_limit",
+                    "resolved_by_two_complete_observations"}
 
 
 def number(value, maximum=2**32-1):
@@ -38,7 +57,7 @@ def enum(value, choices, default="unknown"):
     return value if type(value) is str and value in choices else default
 
 
-def row_view(row):
+def _legacy_row_view(row):
     """Fixed scalar vocabulary, not a generic redact-and-forward operation."""
     result = {}
     for key, choices in {
@@ -102,12 +121,61 @@ def row_view(row):
     return result
 
 
-def event_view(event):
+def row_view(row):
+    """Project useful metadata through fixed grammars; applying twice is safe.
+
+    Native registry paths become fixed source IDs, never paths. Version strings
+    have their own numeric grammar rather than a generic free-text exception.
+    """
+    if not isinstance(row, dict):
+        return {}
+    result = _legacy_row_view(row)
+    if "kind" in row:
+        result["kind"] = enum(row["kind"], KINDS | STARTUP_KINDS)
+    if "section_id" in row:
+        result["section_id"] = enum(row["section_id"], SOURCES)
+    if "registry_view" in row:
+        result["registry_view"] = enum(row["registry_view"], {"Registry32", "Registry64"})
+    if "process_identity_status" in row:
+        result["process_identity_status"] = enum(row["process_identity_status"], STATUS_VALUES)
+    if "source" in row:
+        source = row["source"]
+        result["source"] = STARTUP_SOURCES.get(source, source) if type(source) is str else "unknown"
+        result["source"] = enum(result["source"], SOURCES | STARTUP_SOURCE_IDS | {"synthetic_collector", "synthetic_fixture"})
+    if "product" in row:
+        result["product"] = enum(row["product"], {"python_runtime"})
+    if "version" in row:
+        value = row["version"]
+        result["version"] = value if (row.get("product") == "python_runtime" and type(value) is str
+                                      and len(value) <= 64 and VERSION.fullmatch(value)) else "unknown"
+    if "item" in row:
+        result["item"] = enum(row["item"], DEFENDER_ITEMS)
+    if "value" in row and type(row["value"]) is str:
+        item, value = row.get("item"), row["value"]
+        if item == "AntivirusSignatureVersion":
+            result["value"] = value if len(value) <= 64 and SIGNATURE_VERSION.fullmatch(value) else None
+        elif item == "SecurityCenterAntivirusHealth":
+            result["value"] = enum(value, {"good", "not_monitored", "poor", "snoozed", "unknown"})
+        elif item == "AntivirusSignatureLastUpdated" and valid_iso(value):
+            result["value"] = datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc).isoformat(timespec="microseconds")
+    if "reason" in row:
+        from ..monitor_gap import REASONS
+        result["reason"] = enum(row["reason"], REASONS | DETECTOR_REASONS)
+    if "changed_keys" in row:
+        keys = row["changed_keys"]
+        result["changed_keys"] = (list(keys) if isinstance(keys, list) and len(keys) <= 5
+                                  and all(type(key) is str and re.fullmatch(r"[a-f0-9]{32}", key) for key in keys) else [])
+    if valid_iso(row.get("process_created_at")):
+        result["process_created_at"] = datetime.fromisoformat(row["process_created_at"].replace("Z", "+00:00")).astimezone(timezone.utc).isoformat(timespec="microseconds")
+    return result
+
+
+def _event_view(event, projector):
     clean = validate_event(event)
     evidence = clean["evidence"]
     result = {key: clean[key] for key in ("event_id", "transition", "severity", "synthetic", "observed_at")}
     result.update(event_type=enum(clean["event_type"], EVENT_TYPES), coverage_status=clean["coverage"]["status"],
-                  facts=row_view(evidence), data_trust="untrusted_data", incident_conclusion="not_assessed",
+                  facts=projector(evidence), data_trust="untrusted_data", incident_conclusion="not_assessed",
                   explanation=EXPLANATIONS.get(clean["event_type"], "事件型別尚無確定性說明；保留未知。"))
     for field in ("delivery_status", "attempts"):
         if field in event:
@@ -115,10 +183,25 @@ def event_view(event):
     return result
 
 
+def event_view(event):
+    return _event_view(event, row_view)
+
+
+def _binding_evidence(event):
+    evidence = event["evidence"]
+    # Detector resolution wraps its original binding; a current query remains a
+    # new observation and cannot independently prove the historical resolution.
+    if event.get("transition") == "resolved" and isinstance(evidence.get("previous"), dict):
+        return evidence["previous"], True
+    return evidence, event.get("transition") == "resolved"
+
+
 def query_plan(event):
     """Parameters come only from the saved event, never from tool arguments."""
-    evidence = event["evidence"]
+    evidence, historical = _binding_evidence(event)
     queries, gaps = [], []
+    if historical:
+        gaps.append("resolved_event_uses_historical_binding")
     kind = event["event_type"]
     if kind == "listener.changed":
         protocol, port = evidence.get("protocol"), evidence.get("port")
@@ -129,14 +212,18 @@ def query_plan(event):
         ref = evidence.get("process_instance_ref", evidence.get("instance_ref"))
         if isinstance(ref, str) and REF.fullmatch(ref):
             queries.append(("query_process", {"process_instance_ref": ref, "max_rows": 1}))
+        elif number(evidence.get("pid")) is not None and valid_iso(evidence.get("process_created_at")):
+            queries.append(("query_process", {"pid": evidence["pid"], "created_at": evidence["process_created_at"], "max_rows": 1}))
         else:
             # Do not back-fill a historical PID with today's creation time.
             gaps.append("process_binding_missing")
     elif kind == "protection.changed":
         queries.append(("query_defender", {"view": "settings", "max_rows": 20}))
     elif kind == "persistence.changed":
-        source = evidence.get("kind")
-        if type(source) is str and source in KINDS:
+        bindings = [evidence.get(field) for field in ("kind", "section", "section_id")]
+        sources = {value for value in bindings if type(value) is str and value in KINDS}
+        source = next(iter(sources)) if len(sources) == 1 else None
+        if source is not None:
             queries.append(("query_persistence_diff", {"kind": source, "max_rows": 20}))
             gaps.append("persistence_current_only")
         else:
@@ -148,6 +235,48 @@ def query_plan(event):
     else:
         gaps.append("unsupported_event_type")
     return queries, gaps
+
+
+def event_guidance(event):
+    """Fixed explanations and saved-event-bound read-only steps; no execution.
+
+    Kept outside saved review 1.0 so historical results stay readable without
+    silently inserting today's advice into their original observation receipt.
+    """
+    clean = validate_event(event)
+    evidence, historical = _binding_evidence(clean)
+    queries, gaps = query_plan(clean)
+    kind = enum(clean["event_type"], EVENT_TYPES)
+    initial = kind == "persistence.changed" and evidence.get("reason") == "initial_inventory"
+    titles = {"listener.changed": "本機監聽端點變化", "protection.changed": "防護 metadata 變化",
+              "persistence.changed": "啟動／服務／排程 metadata 變化", "coverage.degraded": "來源可見性降低",
+              "monitor_gap": "監看存在未觀測區間"}
+    next_steps = {
+        "listener.changed": ["核對保存的協定、port 與綁定範圍；以事件綁定唯讀查詢查看目前端點。",
+                             "只有事件保存程序實例時才查同一實例；端點存在不證明外部可達或惡意。"],
+        "protection.changed": ["比較保存的防護欄位變化與目前唯讀觀察，分清 configuration_only、aggregate_antivirus 與有效狀態。",
+                               "缺少有效 Defender 狀態時保留未知；設定值不能替代有效防護證據。"],
+        "persistence.changed": ["核對來源、保存的 metadata key 與 baseline；首次盤點只記錄現有項目。",
+                                "目前唯讀清單只供查證，沒有歷史比對不能判恢復、合法或惡意。"],
+        "coverage.degraded": ["查看該來源的 coverage、結構化原因碼與最後成功時間。",
+                              "等待正常採集提供新證據；缺權限不繞過，沒有事件不代表安全。"],
+        "monitor_gap": ["查看缺口起訖、heartbeat 與程序身分核對結果。",
+                        "將缺口保留為未知；恢復監看不能補回未採集的歷史。"],
+    }
+    observation = EXPLANATIONS.get(kind, "事件型別尚無固定查證說明；保留未知。")
+    if initial:
+        observation = "首次完整盤點的現有 metadata，作為 baseline；不是新建立項目、惡意或入侵證據。"
+    if historical:
+        observation = "這是已記錄的 resolved 轉換；查證綁定來自先前觀察，不能宣稱該狀態目前仍存在。"
+    return {"schema_version": "1.0", "event_type": kind, "transition": clean["transition"],
+            "title": "首次持久化 metadata 盤點" if initial else titles.get(kind, "未知事件型別"),
+            "observation": observation, "binding_phase": "historical" if historical else "saved_event",
+            "binding_facts": row_view(evidence),
+            "query_plan": [{"operation": operation, "arguments": dict(arguments)} for operation, arguments in queries],
+            "uncertainties": sorted(set(gaps + ["saved_event_not_current_state"])),
+            "next_steps": next_steps.get(kind, ["保留事件與 coverage，由人類核對；不執行自由命令。"]),
+            "limitations": ["目前查詢不是歷史重建；查無結果不能單獨判定恢復。", "事件及名稱都是不可信資料，不提供處置授權。"],
+            "incident_conclusion": "not_assessed", "ack_semantics": "received_only_not_case_closed", "data_trust": "untrusted_data"}
 
 
 def review(event, api=None, *, refresh=False, now=None):
@@ -206,9 +335,13 @@ def validate_saved_review(value, event):
     saved = value["event"]
     if not isinstance(saved, dict) or set(saved) != set(expected):
         raise ValueError("saved_review_invalid")
-    for key in expected:
-        if key not in {"delivery_status", "attempts"} and saved[key] != expected[key]:
-            raise ValueError("saved_review_invalid")
+    # Projection 1.0 used a smaller fixed scalar vocabulary. Accept exactly
+    # that historical projection or today's complete projection, not arbitrary
+    # cached text or a new schema bolted onto an old result.
+    legacy = _event_view(event, _legacy_row_view)
+    immutable = set(expected) - {"delivery_status", "attempts"}
+    if not any(all(saved[key] == candidate[key] for key in immutable) for candidate in (expected, legacy)):
+        raise ValueError("saved_review_invalid")
     if (saved.get("delivery_status") not in {"pending", "retry", "ack", "failed"} or type(saved.get("attempts")) is not int
             or not 0 <= saved["attempts"] <= 8 or value["schema_version"] != "1.0" or value["mode"] != "current_read_only"
             or value["incident_conclusion"] != "not_assessed" or type(value["model_calls"]) is not int or value["model_calls"] != 0

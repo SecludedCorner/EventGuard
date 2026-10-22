@@ -8,7 +8,7 @@ from typing import Protocol
 class CollectorBackend(Protocol):
     name: str
 
-    def collect(self, section_id: str, cancel=None) -> dict:
+    def collect(self, section_id: str, cancel=None, progress=None) -> dict:
         """Return a backend payload; WindowsCollectors validates the shared envelope."""
         ...
 
@@ -18,7 +18,7 @@ STAGES = frozenset({"launch", "provider", "object", "field", "policy"})
 LIMITS = {"defender": 20, "listeners": 1000, "processes": 2000, "startup": 1000, "services": 500, "tasks": 300, "versions": 10}
 FIELDS = {
     "defender": {"item", "value", "status", "authority"},
-    "listeners": {"protocol", "address", "port", "pid", "scope", "status"},
+    "listeners": {"protocol", "address", "port", "pid", "scope", "status", "created_at", "process_instance_ref", "process_identity_status"},
     "processes": {"pid", "name", "path", "path_status", "created_at", "process_instance_ref", "status"},
     "startup": {"source", "name", "registry_view", "kind", "status"},
     "services": {"name", "state", "start_mode", "status"},

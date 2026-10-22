@@ -3,8 +3,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import json
 import os
+import re
 from pathlib import Path
 import tempfile
+import time
 import uuid
 
 
@@ -46,7 +48,17 @@ def atomic_json(path, value, limit=65536):
             stream.write(encoded)
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary, path)
+        for attempt in range(20):
+            try:
+                os.replace(temporary, path)
+                break
+            except OSError as error:
+                # A concurrent Windows JSON reader can briefly withhold delete
+                # sharing. Retry this replace only, for at most 190 ms of
+                # waiting; never change ACLs or hide persistent access denial.
+                if os.name != "nt" or getattr(error, "winerror", None) not in (5, 32, 33) or attempt == 19:
+                    raise
+                time.sleep(.01)
         temporary = None
     finally:
         if temporary is not None:
@@ -118,6 +130,110 @@ class Runtime:
         if document.get("namespace") in {"live", "test"}:
             keys = {"pid", "process_created_at", "instance_id", "namespace", "state", "monitoring", "started_at", "heartbeat_at", "stopped_at"}
             atomic_json(self.path("data/" + document["namespace"] + "/monitor-checkpoint.json"), {key: document[key] for key in keys if key in document})
+
+    def save_observation(self, section, namespace="live", instance_id=None):
+        """Persist a bounded, typed projection, never raw names, paths or errors."""
+        from .collectors.contract import SECTION_IDS, STATUSES
+        from .collectors.windows import coverage_metadata
+        from .diagnostics.review import row_view
+        source_id = section.get("id") if isinstance(section, dict) else None
+        if source_id not in SECTION_IDS or namespace not in ("live", "test"):
+            raise ValueError("invalid_observation_source")
+        rows = section.get("rows")
+        if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+            raise ValueError("invalid_observation_rows")
+        safe_rows = [row_view(row) for row in rows[:200]]
+        total = len(rows)
+        status = section.get("status") if section.get("status") in STATUSES else "unknown"
+        duration = section.get("elapsed_ms")
+        duration = duration if type(duration) is int and 0 <= duration <= 2**31-1 else None
+        coverage = coverage_metadata(section)
+        saved_at = utc_now()
+        value = {"schema_version": "1.0", "namespace": namespace, "instance_id": instance_id,
+                 "saved_at": saved_at, "total": total, "exported": len(safe_rows),
+                 "truncated": len(safe_rows) < total or coverage.get("truncated", False),
+                 "data_trust": "untrusted_data", "incident_conclusion": "not_assessed",
+                 "section": {"id": source_id, "status": status, "observed_at": section.get("observed_at"),
+                             "elapsed_ms": duration, "coverage": coverage, "rows": safe_rows}}
+        atomic_json(self.path("data/" + namespace + "/observations/" + source_id + ".json"), value, 1024*1024)
+        return {"saved_at": saved_at, "total": total, "exported": len(safe_rows), "truncated": value["truncated"]}
+
+    def observation(self, source_id, namespace="live", limit=20):
+        """Read a saved projection only; absence never starts a query or creates data."""
+        from .collectors.contract import SECTION_IDS
+        if source_id not in SECTION_IDS or namespace not in ("live", "test"):
+            raise ValueError("invalid_observation_source")
+        if type(limit) is not int or not 1 <= limit <= 200:
+            raise ValueError("invalid_observation_limit")
+        path = self.path("data/" + namespace + "/observations/" + source_id + ".json")
+        if not path.exists():
+            return None
+        value = read_json(path, 1024*1024)
+        section = value.get("section") if isinstance(value, dict) else None
+        if (not isinstance(value, dict) or value.get("schema_version") != "1.0" or value.get("namespace") != namespace
+                or not isinstance(section, dict) or section.get("id") != source_id
+                or not isinstance(section.get("rows"), list)
+                or type(value.get("total")) is not int or value["total"] < len(section["rows"])):
+            raise ValueError("invalid_saved_observation")
+        section["rows"] = section["rows"][:limit]
+        value["exported"] = len(section["rows"])
+        value["truncated"] = value.get("truncated") is True or value["exported"] < value["total"]
+        return value
+
+    def block_monitor_shutdown(self, document):
+        """Keep the last private query job unresolved across owner/lock exit."""
+        from .collectors.windows import process_metadata
+        process = process_metadata(document.get("query_shutdown", {}))
+        value = {"kind": "eventguard-monitor-shutdown-gate-v1", "recorded_at": utc_now(),
+                 "instance_id": document.get("instance_id"), "namespace": document.get("namespace"),
+                 "owner_pid": document.get("pid"), "owner_created_at": document.get("process_created_at"),
+                 "process": process}
+        atomic_json(self.path("data/monitor-shutdown-gate.json"), value)
+        return {"state": "blocked", "reason": "previous_query_exit_unconfirmed", "process": process}
+
+    def monitor_shutdown_gate(self, *, recover=False):
+        """Query only this marker's private job; never stop or enumerate processes.
+
+        Lock ownership and a missing owner PID do not prove subtree exit. A
+        named Job remains queryable while processes/handles keep it alive; an
+        explicit missing-object result or active=0 proves this job is clear.
+        """
+        path = self.path("data/monitor-shutdown-gate.json")
+        if not path.exists():
+            return {"state": "clear", "reason": "no_unresolved_query"}
+        try:
+            value = read_json(path)
+            process = value.get("process") if isinstance(value, dict) else None
+            if (not isinstance(value, dict) or value.get("kind") != "eventguard-monitor-shutdown-gate-v1"
+                    or not isinstance(process, dict) or process.get("managed") is not True):
+                raise ValueError("invalid_monitor_shutdown_gate")
+            name = process.get("job_name")
+            if not isinstance(name, str) or not re.fullmatch(r"Local\\EventGuard-[a-f0-9]{32}", name):
+                return {"state": "blocked", "reason": "previous_query_job_identity_unavailable", "process": process}
+            from .processes import current_job_active
+            try:
+                active = current_job_active(name)
+            except OSError as error:
+                if getattr(error, "winerror", None) != 2:  # ERROR_FILE_NOT_FOUND only.
+                    raise
+                active = 0
+            if type(active) is not int or active < 0:
+                raise ValueError("private_job_query_unknown")
+            if active:
+                return {"state": "blocked", "reason": "previous_owned_job_still_active",
+                        "remaining_owned_processes": active, "process": process}
+            result = {"state": "confirmed_exited", "reason": "previous_private_job_empty_or_destroyed",
+                      "remaining_owned_processes": 0, "process": process}
+            if recover:
+                # Preserve the recovery evidence before clearing the barrier.
+                atomic_json(self.path("data/monitor-shutdown-recovered.json"),
+                            {"kind": "eventguard-monitor-shutdown-recovered-v1", "verified_at": utc_now(),
+                             "previous": value, "verification": result})
+                path.unlink()
+                result["state"] = "clear"
+            return result
+        except (OSError, ValueError, TypeError, AttributeError, RuntimeError):
+            return {"state": "blocked", "reason": "previous_query_exit_unverifiable", "raw_error_omitted": True}
 
     def log(self, code, details=None):
         """Fixed operational codes only; no raw exceptions, event evidence or commands."""

@@ -11,6 +11,7 @@ import time
 import sys
 
 from .runner import Runner
+from .progress import Progress, invoke_with_progress
 from .contract import (SECTION_IDS, STATUSES, FIELDS, LIMITS, MAX_ERRORS,
                        clean_errors, evidence, error_from_exception)
 
@@ -237,14 +238,30 @@ def optional_absence(section_id, row):
     return section_id == "startup" and row.get("kind") == "registry_missing" and row.get("status") == "not_applicable"
 
 
+def process_reference(pid, created_at):
+    """Canonical PID plus creation instant shared by process and listener rows."""
+    if type(pid) is not int or not isinstance(created_at, str):
+        return None, None
+    try:
+        stamp = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        if stamp.tzinfo is None:
+            return None, None
+        created = stamp.astimezone(timezone.utc).isoformat(timespec="microseconds")
+    except ValueError:
+        return None, None
+    key = str(pid) + "\0" + created
+    return created, "proc-" + hashlib.sha256(key.encode("utf-8")).hexdigest()[:24]
+
+
 class PowerShellBackend:
     name = "powershell"
 
     def __init__(self, runner, timeout=15):
         self.runner, self.timeout = runner, timeout
 
-    def collect(self, section_id, cancel=None):
-        raw = self.runner.run(SCRIPTS[section_id], timeout=self.timeout, cancel=cancel)
+    def collect(self, section_id, cancel=None, progress=None):
+        raw = invoke_with_progress(self.runner.run, SCRIPTS[section_id], timeout=self.timeout, cancel=cancel,
+                                   progress=progress, source_id=section_id)
         if not isinstance(raw, dict):
             raise ValueError("invalid_runner_output")
         if raw.get("status") == "ok":
@@ -273,7 +290,7 @@ class WindowsCollectors:
             native = NativeWorker(evidence_sink=evidence_sink, timeout=timeout, runner=self.runner)
         self.native = native
 
-    def collect(self, section_id, cancel=None):
+    def collect(self, section_id, cancel=None, progress=None):
         if section_id not in SCRIPTS:
             raise ValueError("unsupported_section")
         started = time.monotonic()
@@ -286,7 +303,14 @@ class WindowsCollectors:
             while names:
                 name = names.pop(0)
                 before = time.monotonic()
-                data = (self.native if name == "native" else self.powershell).collect(section_id, cancel=cancel)
+                observer = Progress(progress, section_id, name)
+                observer.emit("launch")
+                try:
+                    data = invoke_with_progress(
+                        (self.native if name == "native" else self.powershell).collect,
+                        section_id, cancel=cancel, progress=observer.forward if progress is not None else None)
+                finally:
+                    observer.emit("completed")
                 if not isinstance(data, dict) or data.get("status") not in STATUSES or not isinstance(data.get("rows"), list):
                     raise ValueError("invalid_backend_output")
                 errors = clean_errors(data.get("errors"))
@@ -319,31 +343,38 @@ class WindowsCollectors:
                     safe["scope"] = classify_address(safe.get("address"))
                     if safe["status"] == "ok" and (safe["scope"] == "unknown" or type(safe.get("port")) is not int or not 0 <= safe["port"] <= 65535 or safe.get("protocol") not in ("TCP", "UDP")):
                         safe["status"] = "unknown"
+                    # Only this collection's identity proof may bind the PID.
+                    # Missing fallback metadata stays an explicit field gap.
+                    identity_status = safe.get("process_identity_status")
+                    identity_status = identity_status if identity_status in STATUSES else "unknown"
+                    created, reference = process_reference(safe.get("pid"), safe.get("created_at"))
+                    if identity_status != "ok" or created is None:
+                        created, reference = None, None
+                        if identity_status == "ok":
+                            identity_status = "unknown"
+                    safe.update(created_at=created, process_instance_ref=reference, process_identity_status=identity_status)
                 elif section_id == "processes":
                     if not safe.get("path"):
                         if safe.get("path_status") not in ("denied", "not_applicable", "error"):
                             safe["path_status"] = "unknown"
                         if safe["status"] == "ok":
                             safe["status"] = "unknown"
-                    if type(safe.get("pid")) is int and isinstance(safe.get("created_at"), str) and safe["created_at"]:
-                        try:
-                            stamp = datetime.fromisoformat(safe["created_at"].replace("Z", "+00:00"))
-                            if stamp.tzinfo is None:
-                                raise ValueError("missing_timezone")
-                            safe["created_at"] = stamp.astimezone(timezone.utc).isoformat(timespec="microseconds")
-                        except ValueError:
-                            safe["created_at"] = None
-                    if type(safe.get("pid")) is int and safe.get("created_at"):
-                        key = str(safe["pid"]) + "\0" + safe["created_at"]
-                        safe["process_instance_ref"] = "proc-" + hashlib.sha256(key.encode("utf-8")).hexdigest()[:24]
-                    else:
-                        safe["process_instance_ref"] = None
+                    created, reference = process_reference(safe.get("pid"), safe.get("created_at"))
+                    safe.update(created_at=created, process_instance_ref=reference)
+                    if reference is None:
                         if safe["status"] == "ok":
                             safe["status"] = "unknown"
                 result["rows"].append(safe)
             if result["status"] == "ok" and (truncated or errors or any(r["status"] != "ok" and not optional_absence(section_id, r) for r in result["rows"])):
                 result["status"] = "partial"
             result["coverage"]["truncated"] = truncated
+            if section_id == "listeners":
+                total = len(result["rows"])
+                bound = sum(row.get("process_instance_ref") is not None for row in result["rows"])
+                result["coverage"]["process_identity_status"] = "ok" if bound == total else "partial" if bound else "unknown"
+                result["coverage"]["process_identity_missing_count"] = total-bound
+                if bound < total:
+                    result["coverage"]["process_identity_reason"] = "listener_process_identity_unavailable"
         except (ValueError, TypeError, KeyError, UnicodeError):
             result["status"] = "error"
             result["rows"] = []
@@ -360,6 +391,14 @@ class WindowsCollectors:
                                     "exception_type": type(error).__name__, "exception_text": str(error)[:8192],
                                     "traceback": traceback.format_exc(limit=12)[:16384]})
         result["coverage"]["status"] = result["status"]
+        result["coverage"]["row_count"] = len(result["rows"])
+        result["coverage"]["usable_row_count"] = sum(
+            row["status"] in ("ok", "partial") and any(value is not None for key, value in row.items() if key != "status")
+            for row in result["rows"])
+        result["coverage"]["error_count"] = max(
+            len(result["coverage"]["errors"]), result["coverage"].get("error_count", 0))
+        if result["coverage"]["errors"] and "reason" not in result["coverage"]:
+            result["coverage"]["reason"] = result["coverage"]["errors"][0]["reason_code"]
         result["elapsed_ms"] = int((time.monotonic() - started) * 1000)
         return result
 
@@ -383,18 +422,23 @@ def coverage_metadata(section):
               "truncated": source.get("truncated") is True}
     if source.get("process"):
         result["process"] = process_metadata(source["process"])
-    for key in ("error_count", "row_limit"):
+    for key in ("error_count", "row_limit", "row_count", "usable_row_count", "process_identity_missing_count"):
         value = source.get(key)
         if type(value) is int and 0 <= value <= 2**31-1:
             result[key] = value
     result["errors_truncated"] = source.get("errors_truncated") is True
+    if source.get("process_identity_status") in STATUSES:
+        result["process_identity_status"] = source["process_identity_status"]
+    if source.get("process_identity_reason") == "listener_process_identity_unavailable":
+        result["process_identity_reason"] = source["process_identity_reason"]
     if source.get("backend") in ("native", "powershell"):
         result["backend"] = source["backend"]
     reason = source.get("reason")
     if isinstance(reason, str) and re.fullmatch(r"[a-z][a-z0-9_]{0,95}", reason):
         result["reason"] = reason
     attempts = source.get("attempts", [])
-    result["attempts"] = [{"backend": a["backend"], "status": a["status"], "errors": clean_errors(a.get("errors"))}
+    result["attempts"] = [{"backend": a["backend"], "status": a["status"], "errors": clean_errors(a.get("errors")),
+                           **({"elapsed_ms": a["elapsed_ms"]} if type(a.get("elapsed_ms")) is int and 0 <= a["elapsed_ms"] <= 2**31-1 else {})}
                           for a in (attempts[:2] if isinstance(attempts, list) else []) if isinstance(a, dict)
                           and a.get("backend") in ("native", "powershell") and a.get("status") in STATUSES]
     return result
@@ -404,6 +448,8 @@ def process_metadata(value):
     if not isinstance(value, dict):
         return {}
     result = {key: value[key] for key in ("managed", "child_exited", "forcibly_terminated") if type(value.get(key)) is bool}
+    if isinstance(value.get("job_name"), str) and re.fullmatch(r"Local\\EventGuard-[a-f0-9]{32}", value["job_name"]):
+        result["job_name"] = value["job_name"]
     for key in ("pid", "remaining_owned_processes", "exit_code"):
         if type(value.get(key)) is int and 0 <= value[key] <= 2**32-1:
             result[key] = value[key]

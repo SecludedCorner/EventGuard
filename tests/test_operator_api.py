@@ -266,11 +266,11 @@ class OperatorMCPTests(unittest.IsolatedAsyncioTestCase):
         api = OperatorAPI(self.root, DiagnosticAPI(Fixtures()))
         server = self.module.build_operator_server(self.root, operator_api=api)
         tools = await server.list_tools()
-        self.assertEqual({tool.name for tool in tools}, {"capabilities", "status", "stop", "monitor_once", "list_events", "inspect_event", "diagnose_event", "report"})
+        self.assertEqual({tool.name for tool in tools}, {"capabilities", "status", "overview", "observation", "stop", "monitor_once", "list_events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report"})
         for tool, args in (("list_events", {"limit": True}), ("list_events", {"limit": "1"}), ("diagnose_event", {"event_id": event["event_id"], "port": 80}), ("inspect_event", {"event_id": event["event_id"], "namespace": "live"}), ("monitor_once", {"shell": "run"})):
             with self.assertRaisesRegex(ValueError, "invalid_operator_tool_arguments"):
                 await server.call_tool(tool, args)
-        for tool, args, expected in (("list_events", {}, api.events("test")), ("inspect_event", {"event_id": event["event_id"]}, api.inspect_event(event["event_id"], "test")), ("capabilities", {}, api.capabilities())):
+        for tool, args, expected in (("list_events", {}, api.events("test")), ("inspect_event", {"event_id": event["event_id"]}, api.inspect_event(event["event_id"], "test")), ("capabilities", {}, api.capabilities()), ("status", {}, api.overview("test",1))):
             self.assertEqual(self.unpack(await server.call_tool(tool, args)), expected)
         diagnosed = self.unpack(await server.call_tool("diagnose_event", {"event_id": event["event_id"]}))
         self.assertTrue(diagnosed["saved"])
@@ -299,10 +299,16 @@ class OperatorMCPTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(initialized["id"], 1)
             send({"jsonrpc": "2.0", "method": "notifications/initialized"})
             transcript.append(initialized)
-            operations = [("capabilities", {}), ("monitor_once", {}), ("status", {}), ("list_events", {}),
+            operations = [("capabilities", {}), ("monitor_once", {}), ("status", {}), ("overview", {}),
+                          ("observation", {"source_id":"listeners"}), ("list_events", {}),
                           ("inspect_event", {"event_id": event["event_id"]}), ("diagnose_event", {"event_id": event["event_id"]}),
+                          ("retry_event", {"event_id":event["event_id"]}), ("receive_event", {"event_id":event["event_id"]}),
+                          ("ack_event", {"event_id":event["event_id"]}),
                           ("report", {}), ("stop", {})]
+            query_id=None
             for request_id, (tool, args) in enumerate(operations, 2):
+                if tool == "ack_event":
+                    args=dict(args,query_id=query_id)
                 request = {"jsonrpc": "2.0", "id": request_id, "method": "tools/call", "params": {"name": tool, "arguments": args}}
                 requests.append(request)
                 send(request)
@@ -318,6 +324,17 @@ class OperatorMCPTests(unittest.IsolatedAsyncioTestCase):
                 elif tool == "monitor_once":
                     self.assertEqual(result["state"], "stopped")
                     self.assertEqual(result["model_calls"], 0)
+                elif tool == "status":
+                    self.assertEqual(result["namespace"],"test")
+                    self.assertNotIn("namespaces",result)
+                    self.assertNotIn("last_report",result)
+                elif tool == "receive_event":
+                    self.assertEqual(result["event_id"],event["event_id"])
+                    query_id=result["query_id"]
+                    self.assertEqual(EventStore(self.root / "data/test").stats()["pending"],1)
+                elif tool == "ack_event":
+                    self.assertTrue(result["outbox_acknowledged"])
+                    self.assertEqual(result["query_id"],query_id)
         finally:
             process.stdin.close()
             await asyncio.to_thread(process.wait, timeout=10)  # Wait only; no kill/terminate.
@@ -327,8 +344,9 @@ class OperatorMCPTests(unittest.IsolatedAsyncioTestCase):
             process.stderr.close()
         self.assertEqual(process.returncode, 0, stderr.decode(errors="replace")[-200:])
         self.assertFalse(thread.is_alive())
-        self.assertEqual(len(transcript), 9)
-        self.assertEqual(EventStore(self.root / "data/test").stats()["pending"], 1)
+        self.assertEqual(len(transcript), 14)
+        self.assertEqual(EventStore(self.root / "data/test").stats()["pending"], 0)
+        self.assertEqual(EventStore(self.root / "data/test").stats()["receipt_count"], 1)
         self.evidence = {"scope": "real_stdio_protocol_synthetic_fixture_no_agent", "requests": requests, "responses": transcript,
                          "child_pid": process.pid, "child_exit_code": process.returncode, "reader_thread_exited": not thread.is_alive(),
                          "remaining_owned_children": int(process.returncode is None), "model_calls": 0, "native_provider_queries": 0}

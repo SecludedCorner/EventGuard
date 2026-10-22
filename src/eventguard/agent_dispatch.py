@@ -277,7 +277,9 @@ def _completed_ledger(path, policy):
         raise LocalWaitError("invalid_dispatch_archive")
     for identity, row in value["events"].items():
         if (not _ID.fullmatch(identity) or not isinstance(row, dict) or row.get("event_id") != identity
-                or row.get("passed") is not True or row.get("child_exited") is not True
+                or (row.get("passed") is not True and not (row.get("passed") is False
+                    and row.get("completion") == "received_without_agent_proof" and row.get("ack_verified") is True))
+                or row.get("child_exited") is not True
                 or not isinstance(row.get("finished_at"), str)):
             raise LocalWaitError("invalid_dispatch_archive")
         try:
@@ -289,7 +291,7 @@ def _completed_ledger(path, policy):
 
 
 def maintain_ledger(path, inbox, policy=None, now=None):
-    """Archive only verified terminal attempts, before removing active records.
+    """Archive received events only after every owned attempt has exited.
 
     Caller owns the source dispatcher lease. Capture evidence is never deleted.
     The two bounded files together use at most max_bytes (half each).
@@ -305,17 +307,26 @@ def maintain_ledger(path, inbox, policy=None, now=None):
         if not all(r.get("state") in {"complete", "not_started"} and r.get("child_exited") is True for r in records):
             continue
         passed = [r for r in records if r.get("passed") is True]
-        if not passed:
-            continue  # Never erase uncertain/failed attempts or reset their budget.
-        last = passed[-1]
-        proof = last.get("ack_verified") is True
+        if not passed and not any(r.get("state") == "complete" and r.get("tree_exit_verified") is True for r in records):
+            continue  # A never-started reservation is not a failed agent delivery.
+        if not passed and not all(r.get("tree_exit_verified") is True or r.get("state") == "not_started" for r in records):
+            continue  # A root exit or a receipt alone never proves the supervisor tree exited.
+        last = passed[-1] if passed else records[-1]
+        proof = bool(passed) and last.get("ack_verified") is True
         if not proof:
             proof = inbox.acknowledged(identity)  # Legacy records need original proof.
         if not proof:
             continue
         archive["events"][identity] = {"event_id": identity, "attempt_id": last["attempt_id"],
             "finished_at": last.get("finished_at", utc()), "attempts": len(records),
-            "passed": True, "child_exited": True}
+            "passed": bool(passed), "child_exited": True}
+        if not passed:
+            # A human/shared API may receive an event after an agent failure.
+            # Receipt is terminal for delivery, never proof of an agent trace.
+            # Original attempts/captures and the independent daily budget stay.
+            archive["events"][identity].update(completion="received_without_agent_proof", ack_verified=True)
+            archive["events"][identity]["attempt_refs"] = [
+                {key: record[key] for key in ("attempt_id", "run_id", "run_dir")} for record in records]
         moved.append(identity)
     ordered = sorted(archive["events"], key=lambda key: (archive["events"][key]["finished_at"], key))
     for identity in ordered:
@@ -354,11 +365,12 @@ def _complete(record, inbox, receipt):
         summary["evidence_errors"].extend(proof_errors)
     supervisor_path = directory / "supervisor-exit.json"
     supervisor = read_json(supervisor_path) if supervisor_path.exists() else {}
-    if supervisor_path.exists() and (supervisor.get("managed") is not True
+    supervisor_invalid = supervisor_path.exists() and (supervisor.get("managed") is not True
             or supervisor.get("child_exited") is not True
             or type(supervisor.get("remaining_owned_processes")) is not int
             or supervisor.get("remaining_owned_processes") != 0
-            or type(supervisor.get("exit_code")) is not int):
+            or type(supervisor.get("exit_code")) is not int)
+    if supervisor_invalid:
         summary["passed"] = False
         summary["evidence_errors"].append("supervisor_tree_exit_unconfirmed")
     if receipt.get("forcibly_terminated") is True or supervisor.get("forcibly_terminated") is True:
@@ -368,9 +380,11 @@ def _complete(record, inbox, receipt):
             or receipt.get("stderr_truncated") is not False):
         summary["passed"] = False
         summary["evidence_errors"].append("capture_truncated")
-    summary.update(attempt_id=record["attempt_id"], finished_at=utc(), child_exited=not exit_errors)
+    tree_exited = not exit_errors and not supervisor_invalid
+    summary.update(attempt_id=record["attempt_id"], finished_at=utc(), child_exited=tree_exited)
     write_json(directory / "summary.json", summary)
-    record.update(state="complete" if not exit_errors else "started", passed=summary["passed"], child_exited=not exit_errors,
+    record.update(state="complete" if tree_exited else "started", passed=summary["passed"], child_exited=tree_exited,
+                  tree_exit_verified=tree_exited,
                   codex_exit_code=receipt["codex_exit_code"], ack_verified=summary["passed"], finished_at=summary["finished_at"])
     return summary
 
@@ -378,11 +392,20 @@ def _complete(record, inbox, receipt):
 def _bind_channel(source, state_dir):
     expected = {"kind": KIND, "state_dir_sha256": hashlib.sha256(str(state_dir).casefold().encode("utf-8")).hexdigest()}
     path = source / "agent-channel.json"
-    if path.exists():
-        if read_json(path) != expected:
-            raise LocalWaitError("dispatch_source_already_bound_to_other_state")
-    else:
-        write_json(path, expected)
+    # Human receipt operations share the canonical inbox without holding the
+    # dispatcher's long-lived source lease. Serialize this short binding step
+    # so two initial consumers cannot overwrite one another's channel identity.
+    lease = FileLease(source / "agent-channel.lock")
+    if not lease.acquire():
+        raise LocalWaitError("dispatch_source_binding_busy")
+    try:
+        if path.exists():
+            if read_json(path) != expected:
+                raise LocalWaitError("dispatch_source_already_bound_to_other_state")
+        else:
+            write_json(path, expected)
+    finally:
+        lease.release()
 
 
 def _check_stop(directory, state, cancel):
@@ -459,7 +482,8 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
         # A prior supervisor may have ended while its capture still drains.
         for records in ledger["events"].values():
             for record in records:
-                if record["state"] == "started":
+                if record["state"] == "started" or (record["state"] == "complete" and record.get("passed") is not True
+                                                     and record.get("tree_exit_verified") is not True):
                     if _skipped(record):
                         record.update(state="not_started", child_exited=True, cli_started=False,
                                       reason="capture_launch_not_started", finished_at=utc())
@@ -472,12 +496,10 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                         return 3
                     _complete(record, inbox, receipt)
                     _ledger_write(ledger_path, ledger, policy)
-            if (any(record.get("state") == "complete" for record in records)
-                    and not any(record.get("passed") is True for record in records)
-                    and inbox.acknowledged(records[0]["event_id"])):
-                state.update(state="blocked", reason="prior_ack_without_valid_delivery_proof")
-                _save(directory, state)
-                return 2
+                    if record.get("tree_exit_verified") is not True:
+                        state.update(state="blocked", reason="prior_child_exit_unconfirmed", child_exited=False)
+                        _save(directory, state)
+                        return 3
         ledger, archive, retention = maintain_ledger(ledger_path, inbox, policy)
         state["retention"] = retention
         if hasattr(inbox, "maintain"):
@@ -611,7 +633,11 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                 return 3
             summary = _complete(active, inbox, receipt)
             _ledger_write(ledger_path, ledger, policy)
-            state.update(child_exited=True, codex_exit_code=receipt["codex_exit_code"])
+            state.update(child_exited=summary["child_exited"], codex_exit_code=receipt["codex_exit_code"])
+            if not summary["child_exited"]:
+                state.update(state="pending_child_exit", reason="supervisor_tree_exit_unconfirmed")
+                _save(directory, state)
+                return 3
             if not summary["passed"]:
                 state.update(state="blocked_pending", reason="delivery_evidence_failed_no_automatic_retry")
                 break
@@ -656,6 +682,14 @@ def status(directory):
         record = {"run_dir": str(directory), "run_id": state["run_id"], "attempt_id": token}
         receipt = _receipt(record)
         if receipt:
+            supervisor_path = _attempt_path(record) / "supervisor-exit.json"
+            supervisor = read_json(supervisor_path) if supervisor_path.exists() else None
+            if supervisor is not None and (supervisor.get("managed") is not True
+                    or supervisor.get("child_exited") is not True
+                    or type(supervisor.get("remaining_owned_processes")) is not int
+                    or supervisor["remaining_owned_processes"] != 0
+                    or type(supervisor.get("exit_code")) is not int):
+                return {**state, "child_exited": False, "reason": "supervisor_tree_exit_unconfirmed"}
             state = {**state, "child_exited": True, "codex_exit_code": receipt["codex_exit_code"],
                      "receipt_available": True, "delivery_assessment_pending": True}
         elif _skipped(record):

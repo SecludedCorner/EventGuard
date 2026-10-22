@@ -19,7 +19,7 @@ SEVERITIES = {"info", "warning", "high", "critical"}
 TRANSITIONS = {"new", "escalated", "resolved"}
 FORBIDDEN_KEYS = {"shell", "command", "commandline", "script", "exec", "eval", "powershell", "python", "webhook", "url", "credential", "password", "token"}
 OPERATIONS = {"capabilities", "health", "query_listener", "query_process", "query_defender", "query_persistence_diff", "query_version", "query_event_metadata", "verify_signature_offline", "read_evidence"}
-NODE_TYPES = {"tool", "agent_decision", "approval_gate", "allowlisted_action", "verification", "case_result", "retain_case_and_ask_user"}
+NODE_TYPES = {"tool", "review_decision", "agent_decision", "approval_gate", "allowlisted_action", "verification", "case_result", "retain_case_and_ask_user"}
 RULE_FIELDS = {
     "rule_id", "version", "enabled", "title", "event_type", "event_filter", "severity", "priority", "exclusive_group",
     "investigation_steps", "edges", "tool_io", "decision_basis", "allowed_actions", "approval_gate", "timeout_retry",
@@ -208,7 +208,7 @@ def validate_playbooks(path_or_dict):
                     issues.append(_issue("invalid_tool_limit", rid))
                 if type(node.get("deadline_ms")) is not int or not 1 <= node["deadline_ms"] <= 15000:
                     issues.append(_issue("invalid_tool_limit", rid))
-            if node.get("type") == "agent_decision" and (not _text_list(node.get("branches"), maximum=10) or not all(ID.fullmatch(x) for x in node.get("branches", []))):
+            if node.get("type") in {"review_decision", "agent_decision"} and (not _text_list(node.get("branches"), maximum=10) or not all(ID.fullmatch(x) for x in node.get("branches", []))):
                 issues.append(_issue("invalid_decision_branches", rid))
             if node.get("type") == "allowlisted_action" and node.get("when_no_allowed_action") != "blocked":
                 issues.append(_issue("unsafe_action_fallback", rid))
@@ -297,5 +297,6 @@ def simulate(event, playbooks):
     base["approval_policy"] = copy.deepcopy(selected["approval_gate"])
     base["expected_evidence"] = list(selected["expected_evidence"])
     base["unknown_route"] = selected["on_unknown"]
-    return dict(base, status="planned", requires_agent_decision=True,
+    return dict(base, status="planned", requires_agent_decision=False,
+                decision_actor="human_or_optional_agent", review_required=True,
                 conclusion="僅列出已驗證規則的調查計畫；沒有工具執行、批准或系統處置。")

@@ -36,9 +36,11 @@ mutation 使用專用跨程序 FileLease，和 stdio owner lock 分開；busy �
 
 ## dispatcher 帳本
 
-`dispatcher-attempts.json` 保存 active／不確定的 attempts。只有所有 attempts 都已終止、至少一次交付通過且 ACK 已核實，才能移到 `dispatcher-completed.json`。新紀錄在完成交付核對後保存 `ack_verified`；舊紀錄缺此欄位時須查原 inbox ACK。
+`dispatcher-attempts.json` 保存 active／不確定的 attempts。成功交付須所有 attempts 已終止、至少一次交付通過且 ACK 已核實，才以 passed=true 移到 `dispatcher-completed.json`。新紀錄在完成交付核對後保存 `ack_verified`；舊紀錄缺此欄位時須查原 inbox ACK。
 
-先原子保存 compact archive，再改寫 active；若兩步間失敗，重跑仍讀得到原 active，重複壓縮同 ID 不增加嘗試。archive 只有已完成摘要，可依 TTL／count／byte 輪替；新 pending、未知退出與失敗嘗試不受影響。開始 child 前預留 terminal update 的 byte 大小，不以子程序已啟動後才發現無法寫帳本。
+人類／共用接收者可在 agent 失敗後明確 receive/query/ACK。同 ID 已合法 ACK，且各 capture 與 supervisor 子樹均證明退出，允許以 `completion=received_without_agent_proof` 歸檔；passed 仍 false，最多三份 attempt_refs 保留原 run/attempt 位置。這不是 agent 通路通過，不清每日用量、事件次數或 unknown-exit。缺樹退出證據仍保留 active；若 inbox 完成證據已先輪替而無法重證 ACK，也保持 active／明確容量背壓，不能以核心 receipt 存在就猜成功。
+
+先原子保存 compact archive，再改寫 active；若兩步間失敗，重跑仍讀得到原 active，重複壓縮同 ID 不增加嘗試。archive 只有已完成摘要，可依 TTL／count／byte 輪替；pending、未知退出與未 ACK 失敗嘗試不受影響。開始 child 前預留 terminal update 的 byte 大小，不以子程序已啟動後才發現無法寫帳本。
 
 idle 只 poll 佇列；維護在啟動／有候選事件時執行，archive 未改變時不反覆 fsync。這不是長時 CPU／RAM 保證，仍待 soak 量測。
 

@@ -22,14 +22,22 @@ flowchart LR
 以下在專案根目錄、既有 Python 3.13 執行。這組只做 fixture／合成事件，不查 Windows 來源、不啟動模型：
 
 ```powershell
-python -B scripts/eventguard.py monitor --fixture tests/fixtures/normal.json --max-cycles 1
-$eventguardItem = python -B scripts/eventguard.py synthetic emit --scenario listener | ConvertFrom-Json
-python -B scripts/eventguard.py events list --namespace test
-python -B scripts/eventguard.py events inspect --namespace test --event-id $eventguardItem.event_id
-python -B scripts/eventguard.py report export --namespace test
+py -3.13 -B scripts/eventguard.py monitor --fixture tests/fixtures/normal.json --max-cycles 1
+py -3.13 -B scripts/eventguard.py overview --namespace test
+py -3.13 -B scripts/eventguard.py sources show --source-id defender --namespace test
+$eventguardItem = py -3.13 -B scripts/eventguard.py synthetic emit --scenario listener | ConvertFrom-Json
+py -3.13 -B scripts/eventguard.py events list --namespace test
+py -3.13 -B scripts/eventguard.py events inspect --namespace test --event-id $eventguardItem.event_id
+$eventguardReceipt = py -3.13 -B scripts/eventguard.py --format json events receive --namespace test --event-id $eventguardItem.event_id | ConvertFrom-Json
+py -3.13 -B scripts/eventguard.py events ack --namespace test --event-id $eventguardItem.event_id --query-id $eventguardReceipt.query_id
+py -3.13 -B scripts/eventguard.py report export --namespace test
 ```
 
 `inspect` 顯示發生的事件、固定觀測說明、允許的事實、coverage 與未知；只讀保存資料，不假裝目前仍是相同狀態。`report export` 回傳 JSON／HTML 位置，HTML 有可讀事件表和展開的結構化證據。兩者即使完全沒有 agent 也能使用。
+
+互動終端預設可讀文字，管線預設單一 JSON；`--format text|json` 可放子命令前後。文字監看進度寫 stderr（慢來源最多每五秒提示），JSON stdout 不混入進度。`sources show` 只讀各來源最後保存的白名單投影，最多保存 200 列／1 MiB，回傳 total／exported／truncated 及 freshness。已保存可讀但過期時，目前可見性仍 unknown。
+
+`receive` 先以共用 QueueInbox 保存最小 snapshot/query，回傳同 event/query ID，但事件仍 pending；`ack` 才產生一次耐久回條，重複 ACK 不新增回條。`retry` 僅明確重試單一 failed outbox，不清每日預算或來源三次上限，也不啟動模型。ACK 是「收到」，與診斷、處置及案件結束分開。
 
 `status.last_report`（相容欄位 `health`）是歷史回報；`current_monitor` 才是當次單一 owner PID+建立時間與 heartbeat 的核對，沒有獨立 watchdog。`source_coverage` 分開顯示保存狀態與 freshness；future/stale/缺資料為 unknown。每個 namespace 的 DB 故障各自呈現，不以零筆冒充成功。`agent_budget` 顯示同安裝[耐久預算](AGENT_BUDGET.md)及阻塞原因，不初始化帳本。報告顯示 total/exported/truncated/limit，最多輸出 1,000 筆保存事件，不能把匯出數當總數。
 
@@ -63,17 +71,24 @@ python -B scripts/eventguard_inbox_mcp.py --operator-root . --namespace test
 | 操作 | 人類 CLI | stdio tool／共同核心 |
 | --- | --- | --- |
 | 能力 | capabilities | capabilities → OperatorAPI.capabilities |
-| 狀態／逐來源 coverage | status | status → OperatorAPI.status |
+| 全域狀態 | status | stdio status → OperatorAPI.overview（固定 launcher namespace，limit=1） |
+| 操作總覽／逐來源 coverage | overview --namespace … | overview → OperatorAPI.overview |
+| 保存來源觀察 | sources show --source-id … --namespace … | observation → OperatorAPI.observation |
 | 一輪監看 | monitor --max-cycles 1 --max-seconds 30（test 另加固定 fixture） | monitor_once → OperatorAPI.monitor；test 固定 normal.json，live 需 launcher opt-in |
 | 合作停止 | stop --namespace test 或 live | stop → OperatorAPI.stop；只能停止 namespace 與 instance 均相符的本工具 owner |
 | 事件清單 | events list --namespace … --limit … | list_events → OperatorAPI.events |
 | 保存觀察與最近診斷 | events inspect --event-id … --namespace … | inspect_event → OperatorAPI.inspect_event |
 | 目前唯讀查證 | events diagnose --event-id … --namespace … | diagnose_event → OperatorAPI.diagnose_event |
+| 接收／取得 query ID | events receive --event-id … --namespace … | receive_event → OperatorAPI.receive_event |
+| 明確 ACK | events ack --event-id … --query-id … --namespace … | ack_event → OperatorAPI.ack_event |
+| 單一失敗重試 | events retry --event-id … --namespace … | retry_event → OperatorAPI.retry_event |
 | 人類可讀報告 | report export --namespace … | report → OperatorAPI.report |
 
 同一 scope 的事件清單／檢視使用完全相同的結構化資料，沒有為 agent 把「重讀摘要」改名成診斷。CLI 與 MCP 的新公開操作也共用固定錯誤 envelope，不回傳原始 OS 例外或私人錯誤路徑。
 
 長期前景監看仍用 CLI；MCP `monitor_once` 一次一輪，避免讓模型靠永久工具等待維持監看。Phase 3 已將 native 呼叫移入私有 Job worker；到期／取消先留寬限，再只清理本工具 Job，保存實際退出或未確認狀態。清理本身另有有限等待，30 秒不是硬即時總上限，詳見 [生命週期](PROCESS_LIFECYCLE.md)。未驗證全天候、任意既有聊天接續或將工具載入目前 agent。
+
+未知退出會保存跨重啟閘道；Runner 也不會覆蓋同輪上一個未知子樹。再次啟動先僅 QUERY 記錄的私有 named Job，確認為空／已銷毀才恢復，拒讀與缺失身分保持 blocked。已接收而無成功 agent trace 的事件可在全部子樹確認退出後以 `received_without_agent_proof` 歸檔，passed 仍 false；完整 evidence 位置與 attempts 留存，不清預算。如果 receiver 證據已先輪替而無法重證則保持背壓，不能猜成功。
 
 ## 查證與信任邊界
 

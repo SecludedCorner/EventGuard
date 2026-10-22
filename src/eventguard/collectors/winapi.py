@@ -72,6 +72,26 @@ def filetime_iso(value):
     return (datetime(1601, 1, 1, tzinfo=timezone.utc) + timedelta(microseconds=ticks // 10)).isoformat(timespec="microseconds")
 
 
+def process_created_at(pid):
+    """Read one observed owner's creation time, never enumerate or read commands."""
+    if type(pid) is not int or not 1 <= pid <= 2**32-1:
+        raise NativeError("ListenerProcessIdentity", 87, "object")
+    kernel = dll("kernel32")
+    opened = function(kernel, "OpenProcess", [DWORD, BOOL, DWORD], HANDLE)
+    times = function(kernel, "GetProcessTimes", [HANDLE, *([C.POINTER(FILETIME)] * 4)])
+    close = function(kernel, "CloseHandle", [HANDLE])
+    handle = opened(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION only.
+    if not handle:
+        raise last_error("ListenerOpenProcess", "object")
+    try:
+        created, exited, system, user = FILETIME(), FILETIME(), FILETIME(), FILETIME()
+        if not times(handle, C.byref(created), C.byref(exited), C.byref(system), C.byref(user)):
+            raise last_error("ListenerGetProcessTimes", "field")
+        return filetime_iso(created)
+    finally:
+        close(handle)
+
+
 class GUID(C.Structure):
     _fields_ = [("data1", DWORD), ("data2", C.c_uint16), ("data3", C.c_uint16), ("data4", C.c_ubyte * 8)]
 

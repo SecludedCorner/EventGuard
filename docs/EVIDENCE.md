@@ -2,7 +2,41 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
-## 2026-10-23：共用耐久預算、退出閘道與操作狀態
+## 2026-10-23：由使用流程完成實作與統一驗證
+
+基底 `d4257437757a701874c6f00de6022340bff2bc94`、同一 feature 分支。按使用者要求全面盤點、兩層互斥 ownership 平行開發；子代理只實作及寫案例，所有功能完成並交叉審查後才由主線統一測試。架構、功能斷點與整合決策見 [USABILITY_IMPLEMENTATION](USABILITY_IMPLEMENTATION.md)。沒有真 Codex／模型、部署、永久 MCP 註冊、提權、服務／排程、Phase 7 注入或長期監看，原有研究目錄保留。
+
+**目前完整數字唯一來源**：`reports/usability-001/full-002/verification-summary.json`。命令 `py -3.13 -B scripts/verify.py --run-dir reports/usability-001/full-002 --timeout-seconds 600 --scope full`；Windows／Python **3.13.3**，2026-10-22T22:58:41.264908+00:00：**528 discovered、526 passed、0 failure/error、2 symlink 權限 skip、105 AST**；238.956 秒、exit **0**。passed_checks/source_unchanged=true、per_test_residuals=[]；guardian child_exited=true、exit0、remaining_owned_processes=0、forcibly_terminated=false。scope 為 fixture／SDK／Python fake CLI 與分列真 Windows owned Job API，不是 provider 採集或真 agent。新增停止、同輪閘道、資料保存、綁定、namespace、控制字元、容量及原子替換案例均納入。
+
+命令 `py -3.13 -B scripts/verify.py --run-dir reports/usability-001/mock-final --timeout-seconds 180 --scope mock`：**104/104 通過**、0 failure/error/skip，10.12 秒、exit0、source_unchanged=true、無殘留。mock 是 full 子集，不相加，不代表 Linux 原生支援或遠端 CI。full/mock source-manifest 相同；本地 source-commit.json 將受測來源與本批文件綁定實際 Git tree，執行資料不提交。
+
+命令 `py -3.13 -B reports/usability-001/workflow_probe.py workflow 003` exit **0**。使用實際分開的 CLI 程序、隔離 root 與三幀 fixture，由確定性規則真正產生 protection/listener/persistence **3 個不同事件**；生成／接收／query／ACK／SQLite receipts 的 ID 集合與計數相符。每件 receive 後取得 query ID，明確 ACK，再重複 ACK 不新增回條；missing=[]、duplicate_closures=[]，report 共三件、再啟動 stopped、owner record 已移除、所有 managed 子程序自然退出／remaining0。重啟另產生一件預期的 planned monitor_gap，保持 pending；它未參與前面三個規則事件的 ACK。SQLite 讀回確認總共四件、三 ACK／一 gap pending，沒有把新 gap 忽略或自動結案。這是人類 CLI 的合成工作流程，沒有真模型。原始 argv、exit、stdout/stderr、Job 回條、觀察、HTML/JSON、SQLite 及集合比對留在 `workflow-003/`，不提交。
+
+完整 suite 的 `test_operator_api.OperatorMCPTests.test_real_stdio_protocol_views_and_eof_exit_without_agent` 以**真 Python stdio＋已安裝 SDK**呼叫十三個 operator tools，包含 scoped status/overview、observation、事件診斷、receive→query ID→ACK、report、stop，EOF 自然退出0。`full-002/lifecycle-evidence.json` 保存全部 request／response、同 event/query、單一 SQLite receipt；與 CLI 共用核心。不是 agent、模型、工具已載入目前聊天或新自動喚醒證明。原三工具接收契約保持相容。
+
+命令 `py -3.13 -B reports/usability-001/workflow_probe.py native` exit **0**，**一般權限固定七來源各呼叫一次**，透過新版本 native worker／Runner，保存安全來源投影，再由真 CLI sources/overview/report 讀取。這不是持續 monitor、狀態注入或 agent；全部 owned worker 自然退出、remaining0、無 owner 殘留。證據在 `native/collection-attempts.json`、`native-summary.json`、`collector-exit.json`、commands 與 data/live/observations，原始主機 metadata 留本機。
+
+| 來源 | 實際狀態／總列數 | 限制或拒讀證據 |
+| --- | --- | --- |
+| Defender | partial／11 | effective_defender_status_unavailable；可讀設定不等於有效防護，部分 optional registry Win32 2 |
+| listeners | partial／190 | 表可讀；部分 ListenerOpenProcess object/access_denied/Win32 5，身分未知 |
+| processes | partial／615 | 部分 OpenProcess object/access_denied/Win32 5；PID 0 object_unavailable/87 |
+| startup | ok／21 | 本輪來源可讀，不是惡意／安全結論 |
+| services | ok／315 | 本輪來源可讀，不表示已判斷服務暴露或漏洞 |
+| tasks | unknown／0 | TaskGetFolder object/COMError HRESULT -2147024893（0x80070003）；不能當作主機沒有工作 |
+| versions | ok／1 | 固定 allowlist 的版本資料，不是全機軟體／修補適用性證明 |
+
+上述是採集總列數；每來源只保存最多200列，CLI本次預設顯示20列，total/exported/truncated明示。listeners較舊 Phase 1 的 success 改為 partial，是本次新增當次程序身分查核發現拒讀，不是把端點表讀取改成失敗。fallback 未在本輪重跑；舊 H1–H5 證據的界線保留，未定案 ACL／token 根因。
+
+首輪 `full-001/` 保留 **4 failures、2 errors、2 skips** 的原始紀錄，source_unchanged=true、guardian 自然退出、remaining0。發現 Windows reader／os.replace 的 WinError5 瞬時共享衝突導致 monitor thread 提早退出；修正為僅5/32/33最多190ms重試，永久錯誤仍失敗，另修測試在失敗時釋放第二把鎖。dispatcher 初版把全 not_started 的 mocked ACK 當失敗投遞歸檔，已限縮為至少一筆有完整樹退出證據的 complete attempt，保留未啟動語義。capture 的50ms測試回4可確定是耐久 admission 後、spawn前逾時；100ms測試先讀回條掩蓋返回碼，當次檔案已隨temp清理，不能完全排除其他原因。兩項改用2秒的實際啟動預算、保留原自然／強停／零殘留斷言，產品 deadline 不放寬，短deadline no-spawn測試仍保留。
+
+最初 workflow probe 假設中文字 stdout 是UTF-8，實際為Windows既有編碼，讀檔失敗；`workflow/`的CLI原始輸出保留，僅修證據腳本的解碼，沒有改系統編碼。`workflow-002/`已通過；後續原子替換／dispatcher修正後，以最終來源重跑上面的003。沒有用失敗或舊綠燈替代最終結果。
+
+命令 `py -3.13 -B reports/usability-001/audit_evidence.py` exit0：重讀保留 SQLite／request-response／每份 Job 回條，核對 **115 份當前受測來源 hashes**、十三工具、七來源、三規則事件與額外 gap 的待收狀態、README **73行**及本批十份文件的相對連結；結果在 `completion-audit.json`。最初只讀 evidence reader 誤假設 event_type 是 SQLite 欄位，已改從保存 payload 取型別再驗，沒有修改資料庫或重造事件。這是證據重讀，不是新的模型／採集／狀態注入。
+
+限制：沒有24小時soak、實機listener/HKCU注入、登出／重啟、真模型或目前聊天工具接入驗收。未知shutdown只在命名私有Job可證明空／銷毀時恢復；legacy缺Job身分、inbox完成證據先輪替等仍明示阻擋，不能刪marker／帳本假裝恢復。正式agent預算未初始化；沒有持續背景程序、排程／服務、自啟、推送或手動CI。
+
+## 歷史：2026-10-23 共用耐久預算、退出閘道與操作狀態
 
 基底 `3b0461988c6bc36f13d514e1e5263c91b4715123`、同一 feature 分支；三個有限子代理的預審保存在 `reports/parallel-preflight-001/`。主線整合共享入口，子代理沒有各自提交或重跑整套。正式 agent 帳本未初始化，沒有真 Codex／模型、全機採集、網路部署、提權、排程或 Phase 7 注入。
 

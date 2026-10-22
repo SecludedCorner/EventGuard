@@ -217,9 +217,9 @@ class JobTests(FixtureRoot):
         self.evidence = {"scope": "real_windows_job_hanging_fixture_not_provider", "case": "monitor_stop", "state": results[0]["state"], "remaining_owned": 0, "query_shutdown": receipt}
 
     def test_capture_timeout_with_blocked_stdin_has_exit_receipt(self):
-        code = capture([sys.executable, "-B", "-c", "import time;time.sleep(60)"], self.root, "c"*32, "x"*262144, timeout_seconds=.1)
-        result = json.loads((self.root / "capture-exit.json").read_text())
+        code = capture([sys.executable, "-B", "-c", "import time;time.sleep(60)"], self.root, "c"*32, "x"*262144, timeout_seconds=2)
         self.assertEqual(code, 0, "capture completion is separate from child success")
+        result = json.loads((self.root / "capture-exit.json").read_text())
         self.assertTrue(result["forcibly_terminated"])
         self.assertTrue(result["child_exited"])
         self.assertNotEqual(result["codex_exit_code"], 0)

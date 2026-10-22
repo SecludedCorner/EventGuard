@@ -20,7 +20,8 @@ OPERATIONS = {
 
 
 def valid_iso(value):
-    if not isinstance(value, str) or not 1 <= len(value) <= 64:
+    if (not isinstance(value, str) or not 1 <= len(value) <= 64 or not value.isascii()
+            or any(ord(character) < 32 or ord(character) == 127 for character in value)):
         return False
     try:
         return datetime.fromisoformat(value.replace("Z", "+00:00")).tzinfo is not None
@@ -112,8 +113,12 @@ class DiagnosticAPI:
                 safe_rows.append({key: redact(value) for key, value in row.items() if key in FIELDS[section] and isinstance(value, (str, int, float, bool, type(None)))})
             rows = safe_rows
             if sample["status"] not in ("ok", "partial"):
-                result["rows"] = rows[:max_rows]
-                result["truncated"] = len(rows) > max_rows
+                # A failed section can contain partial/provider placeholder
+                # rows. Never return unbound rows before applying the port or
+                # process identity boundary. The failure remains observable in
+                # coverage and a fixed error code, with no data expansion.
+                result["rows"] = []
+                result["truncated"] = sample.get("coverage", {}).get("truncated") is True
                 return finish(code="source_" + sample["status"])
             if operation == "query_listener":
                 rows = [row for row in rows if row.get("protocol") == args["protocol"] and row.get("port") == args["port"]]

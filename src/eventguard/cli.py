@@ -11,9 +11,22 @@ from .operations import OperatorAPI, store as _store, status, export_report
 
 def parser():
     p=argparse.ArgumentParser(prog="eventguard",description="EventGuard 本機唯讀 headless 監看；有界 agent 接線另用 eventguard_watch.py")
+    p.add_argument("--format",choices=("auto","json","text"),default="auto",
+                   help="auto: 終端可讀文字、管線JSON；text: 人類摘要；json: 機器介面")
     sub=p.add_subparsers(dest="command",required=True)
     sub.add_parser("capabilities")
     sub.add_parser("status")
+    overview=sub.add_parser("overview",help="監看、來源與事件的操作總覽；不重掃")
+    overview.add_argument("--namespace",choices=("live","test"),default="live")
+    overview.add_argument("--limit",type=int,default=20)
+    sources=sub.add_parser("sources",help="查看已保存的七來源觀察；不重新查Windows")
+    sourcesub=sources.add_subparsers(dest="source_command",required=True)
+    source_list=sourcesub.add_parser("list")
+    source_list.add_argument("--namespace",choices=("live","test"),default="live")
+    source_show=sourcesub.add_parser("show")
+    source_show.add_argument("--namespace",choices=("live","test"),default="live")
+    source_show.add_argument("--source-id",choices=("defender","listeners","processes","startup","services","tasks","versions"),required=True)
+    source_show.add_argument("--limit",type=int,default=20)
     budget=sub.add_parser("budget",help="本安裝共用耐久預算；不啟動模型")
     budgetsub=budget.add_subparsers(dest="budget_command",required=True)
     budgetsub.add_parser("status")
@@ -37,10 +50,15 @@ def parser():
     listing=eventsub.add_parser("list")
     listing.add_argument("--namespace",choices=("live","test"),default="live")
     listing.add_argument("--limit",type=int,default=100)
-    for name in ("inspect", "diagnose"):
+    for name in ("inspect", "diagnose", "receive", "retry"):
         event_operation=eventsub.add_parser(name,help="查看已存事件／明確執行事件綁定唯讀查證；不 ACK")
         event_operation.add_argument("--namespace",choices=("live","test"),default="live")
         event_operation.add_argument("--event-id",required=True)
+    acknowledge=eventsub.add_parser("ack",help="確認同event/query已收到；不是修補或結案")
+    acknowledge.add_argument("--namespace",choices=("live","test"),default="live")
+    acknowledge.add_argument("--event-id",required=True)
+    acknowledge.add_argument("--query-id",required=True)
+    acknowledge.add_argument("--decision",choices=("reviewed_metadata","needs_more_evidence"),default="reviewed_metadata")
     synth=sub.add_parser("synthetic")
     synthsub=synth.add_subparsers(dest="synthetic_command",required=True)
     emit=synthsub.add_parser("emit")
@@ -66,7 +84,7 @@ def parser():
     return p
 
 
-def execute(args,runtime):
+def execute(args,runtime,progress=None):
     operator=OperatorAPI(runtime.root)
     if args.command=="budget":
         from .agent_budget import BudgetAuthority, BudgetError, public_status
@@ -90,10 +108,15 @@ def execute(args,runtime):
         return operator.call("capabilities")
     if args.command=="status":
         return operator.call("status")
+    if args.command=="overview":
+        return operator.call("overview",args.namespace,args.limit)
+    if args.command=="sources":
+        return operator.call("overview",args.namespace,1) if args.source_command=="list" else operator.call("observation",args.source_id,args.namespace,args.limit)
     if args.command=="stop":
         return operator.call("stop",args.namespace)
     if args.command=="monitor":
-        return operator.call("monitor",max_cycles=args.max_cycles,fixture=args.fixture,fixture_interval=args.fixture_interval,max_seconds=args.max_seconds)
+        return operator.call("monitor",max_cycles=args.max_cycles,fixture=args.fixture,fixture_interval=args.fixture_interval,
+                             max_seconds=args.max_seconds,on_progress=progress)
     if args.command=="query":
         if len(args.args.encode("utf-8"))>8192:
             raise ValueError("query_input_limit")
@@ -103,6 +126,12 @@ def execute(args,runtime):
         from .diagnostics.api import DiagnosticAPI
         return DiagnosticAPI().query(args.operation,values)
     if args.command=="events":
+        if args.event_command=="receive":
+            return operator.call("receive_event",args.event_id,args.namespace)
+        if args.event_command=="ack":
+            return operator.call("ack_event",args.event_id,args.query_id,args.decision,args.namespace)
+        if args.event_command=="retry":
+            return operator.call("retry_event",args.event_id,args.namespace)
         if args.event_command=="inspect":
             return operator.call("inspect_event",args.event_id,args.namespace)
         if args.event_command=="diagnose":
@@ -145,25 +174,56 @@ def execute(args,runtime):
     raise ValueError("unknown_command")
 
 
+def _format_args(argv):
+    # Accept this presentation option before or after a subcommand. There is no
+    # shell interpretation or arbitrary command tail in this CLI.
+    values=list(sys.argv[1:] if argv is None else argv)
+    options,remaining=[],[]
+    i=0
+    while i<len(values):
+        value=values[i]
+        if value=="--format" and i+1<len(values):
+            options=["--format",values[i+1]]
+            i+=2
+        elif value.startswith("--format="):
+            options=[value]
+            i+=1
+        else:
+            remaining.append(value)
+            i+=1
+    return options+remaining
+
+
 def main(argv=None,root=None):
-    args=parser().parse_args(argv)
+    args=parser().parse_args(_format_args(argv))
     root=Path(root) if root else Path(__file__).resolve().parents[2]
+    human=args.format=="text" or args.format=="auto" and bool(getattr(sys.stdout,"isatty",lambda:False)())
+    def show(value):
+        if human:
+            from .presentation import render
+            operation=getattr(args,"event_command",getattr(args,"source_command",""))
+            print(render(value,args.command,operation))
+        else:
+            print(json.dumps(value,ensure_ascii=True,allow_nan=False))
     try:
-        result=execute(args,Runtime(root))
-        print(json.dumps(result,ensure_ascii=True,allow_nan=False))
+        from .presentation import ProgressPrinter
+        result=execute(args,Runtime(root),ProgressPrinter(sys.stderr) if human and args.command=="monitor" else None)
+        show(result)
         if isinstance(result,dict):
             if result.get("valid") is False or result.get("status") in {"invalid_request","invalid_playbooks","invalid_event","conflict"} or result.get("error_code") in {"invalid_request","process_instance_required","product_not_allowlisted"}:
                 return 2
             if result.get("status")=="busy":
                 return 3
+            if result.get("status")=="blocked":
+                return 3 if "busy" in str(result.get("reason","")) else 2
             if result.get("status")=="error":
                 return 4
             if result.get("status") in {"partial","denied","unknown","timeout"} or result.get("healthy") is False:
                 return 5
         return 0
     except (ValueError,TypeError,json.JSONDecodeError):
-        print(json.dumps({"status":"invalid_request","error_code":"input_or_config_validation_failed","raw_error_omitted":True}))
+        show({"status":"invalid_request","error_code":"input_or_config_validation_failed","raw_error_omitted":True})
         return 2
     except Exception as error:
-        print(json.dumps({"status":"error","error_code":"capacity_or_storage_failure" if type(error).__name__ in ("CapacityError","StoreError") else "operation_failed","raw_error_omitted":True}))
+        show({"status":"error","error_code":"capacity_or_storage_failure" if type(error).__name__ in ("CapacityError","StoreError") else "operation_failed","raw_error_omitted":True})
         return 4

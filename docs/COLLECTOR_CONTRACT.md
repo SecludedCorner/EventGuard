@@ -109,6 +109,10 @@ python -B reports/phase1-collectors-001/verify.py
 
 ## H1–H5 對照
 
+操作流程補強後，listener 原生查詢對本次四個 OWNER_PID 表中的有限 PID 讀建立時間；只有建立時間早於表開始取得時刻才綁定 process_instance_ref。PID 重用、拒讀或缺時間皆未知；不補讀完整程序清單，也不以未來程序冒充事件當時身分。PowerShell fallback 沒有此身分則明示缺口。processes 與 listeners 共用同一 UTC 微秒身分正規化。
+
+collector 可回報固定 launch／waiting／completed progress；舊注入 fixture 的無 progress 簽名仍可使用，但 provider 的 TypeError 不得重跑呼叫。每來源完成即保存最多 200 列／1 MiB 的安全 row_view 投影供 sources show／stdio observation 共用；完整採集列數與截斷、coverage／原因碼另列，保存投影不等於完整原始證據或即時重新採集。
+
 | 假說 | 本次證據可支持／排除的範圍 |
 | --- | --- |
 | H1 token／上下文差異 | 已讀取本工具 token 的匿名 metadata：非 elevated、has_restrictions、非 AppContainer；未比較一般桌面 shell 的 token，不能宣稱兩者相同或確認所有限制的根因 |
