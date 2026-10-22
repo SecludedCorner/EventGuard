@@ -139,6 +139,8 @@ python -B scripts/eventguard.py deliver --adapter disabled
 
 ## 按需診斷與目前限制
 
+Phase 1 的監看採集已改為標準庫原生 API 優先，保留同身分 PowerShell fallback；拒讀階段、原因碼與 coverage 會傳到 `status`。本機一輪驗證中，listeners／Startup／services／版本可讀，processes 與 Defender 部分可讀，tasks 的排程根仍不可讀。兩種 backend 的範圍、測試及限制見 [採集契約](docs/COLLECTOR_CONTRACT.md)；agent 的 query 仍只讀保存摘要，尚未接上原生診斷。
+
 先讀 `capabilities`，只用列出的型別化白名單操作。例如有理由且已授權的 Windows 單項查詢：
 
 ```powershell

@@ -227,3 +227,29 @@ python -B scripts/eventguard_watch.py run --run-dir reports/msi-live-001 --codex
 發布前只讀審查涵蓋遠端 main 與 feature 的全部可達內容：9 commits、143 個 unique blobs，均來自與私人舊歷史分離的 publication root；`fd45578` 不在遠端可達祖先中。未發現執行目錄、原始會話、憑證、資料庫或封存檔被追蹤；三處路徑命中均為明示匿名 synthetic 隱私測試 fixture。GitHub 端未有 Actions run／artifact、issue、PR 或 release／附件。本機原始資料與未推送分支保留，不使用 --all／--mirror／force。
 
 本批驗證為既有證據核對、MIT 標準文字比對、Markdown 本地連結與 git diff --check；不把這些文件檢查當成新模型或長時間驗收。Git 作者 metadata 的公開範圍另依 PUBLISHING 檢查，不因原始碼掃描通過而忽略。透過指定 feature 與 PR 更新 main，公開可見性與 MIT 辨識結果以 GitHub API 發布後回讀為準。
+
+## 2026-10-22 18:35 台北：Phase 1 原生採集與拒讀證據
+
+來源基準 `dbac91b`，分支 `feat/local-codex-acceptance`；使用者明確確認 Phase 1、一般權限唯讀實作及逐來源驗證。本節對應的 Phase 1 提交以 Git 記錄及本機 `reports/phase1-collectors-001/source-commit.json` 核對；驗證另存精確 source hashes。不 fetch／push、不啟動真 Codex／模型、不提權／UAC、不下載安裝、不改系統政策、不做 Phase 7 狀態注入。
+
+本批實作：標準庫 ctypes／winreg 的七來源 native backend、同一封裝契約的 PowerShell fallback、stage／exception_type／HRESULT／Win32／provider_code／category 原因碼；錯誤與 coverage 經 monitor 保存後可由 status／DiagnosticAPI 讀取。原生有 partial／denied／unknown 等結果時不自動重試另一途徑。Defender 設定與 Security Center 彙總不升格成即時防護狀態；tasks 只讀 COM Name／Path／State。契約與七來源範圍見 [COLLECTOR_CONTRACT](docs/COLLECTOR_CONTRACT.md)。
+
+實際命令（全在本機忽略 reports；probe 腳本及原始資料不提交）：
+
+```powershell
+python -B reports/phase1-collectors-001/monitor_probe.py
+python -B reports/phase1-collectors-001/probe.py --backend powershell --label powershell-final
+python -B reports/phase1-collectors-001/verify.py
+```
+
+第一條在隔離 runtime 做一輪真實七來源，18:33 台北完成：listeners／startup／services／versions 為 ok；processes partial（OpenProcess 有 Win32 5 等逐物件缺口）；Defender partial（設定／彙總可讀，七個有效防護欄位仍 unknown）；tasks unknown，object 階段 COM HRESULT 0x80070003／object_unavailable，OS 原文「系統找不到指定的路徑。」。另一次 `schtasks /query /fo csv /nh` 同樣找不到路徑、exit 1；不把該結果改寫成沒有排程或已證明權限拒絕。
+
+第二條同上下文逐來源一次對照：五個 provider 明確 CimException、provider_code=AccessDenied／category=PermissionDenied／HRESULT 0x80131500；startup／versions 為 ok。七個 PowerShell 子程序均實際啟動並自然 exit 0，CLI 正常退出不等於來源成功。新 native 主路徑因此取得多個原先 CIM 拒讀來源的 metadata；不推定桌面 shell 與本工具 token 等價。匿名 token metadata 為非 elevated／has_restrictions／非 AppContainer，沒有讀帳號或私人 SID。
+
+實機證據：`monitor-final/source-*.json`、`monitor-result.json`、實際 CLI 回傳 `status.json`、`exit-receipt.json`；`powershell-final/*/command.json`、`raw-evidence.jsonl`（真 stdout／stderr）、`process-exit.json`、`manifest.json`；`schtasks-evaluation` 保留比較的 argv／原始輸出與退出。全部在 `reports/phase1-collectors-001`。原始 OS 訊息標記為 FormatMessage 來源，不冒充 provider Exception.Message。隔離 monitor stopped、monitoring=false、runner_pending=false、singleton 可重新取得；probe／monitor／全套測試各程序 exit 0。沒有新常駐監看／模型程序；不宣稱已清理歷史已知 orphan。
+
+測試數單一來源為 `full-summary.json`：Python 3.13.3，全套 287 discovered、285 passed、0 failure/error、2 symlink 建立權限 skip；69 個 Python AST 無錯，86.771 秒，source hashes 全程不變。範圍為 fixture／SDK stdio／fake CLI，與上述真實 Windows 採集分開；沒有真模型。相關 collector／core／rules 的 84 項亦全通過，見 `targeted-final-summary.json`。
+
+本輪修正中保留的失敗：初輪 tasks 的 OS 訊息格式化將有號 HRESULT 轉成超出 C long 的數值，遮住原錯誤；修正後取得真 0x80070003，再加入回歸測試。native 版本初輪拿到 Windows build tuple，已改讀與 fallback 相同的 ProductVersion；PID 時刻亦統一 UTC 微秒。大型 coverage 測試發現原 health 64 KiB 寫入限制不容新安全證據，現 health 讀寫同為 2 MiB；config 等其他限制不變。status 的 SQLite 唯讀連線未明確 close 所造成的測試分享衝突已修正。初輪 source／目標測試失敗證據均保留，不算通過。
+
+尚未做到：tasks 的成功讀取、Defender 七個有效狀態、所有程序欄位可讀；H1–H5 的可支持／未排除範圍見契約。原生／COM 單一 OS 呼叫永不返回的硬性停止、Job Object、monitor_gap、長期容量／soak、背景自啟及 agent 診斷均仍屬後續 phase；本批不證明全天候或整機安全。AUDIT 不覆寫，時間歷史與 README 全面收斂留 Phase 6。

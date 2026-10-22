@@ -1,6 +1,7 @@
 """Typed local CLI. There is no shell-execution, remediation or external endpoint option."""
 from __future__ import annotations
 import argparse
+from contextlib import closing
 from datetime import datetime, timezone
 import html
 import json
@@ -68,7 +69,7 @@ def _readonly_stats(runtime,namespace):
     runtime.path(path.relative_to(runtime.root))
     if not path.is_file():
         return {"state":"not_created","events":0}
-    with sqlite3.connect(path.as_uri()+"?mode=ro",uri=True,timeout=1) as connection:
+    with closing(sqlite3.connect(path.as_uri()+"?mode=ro",uri=True,timeout=1)) as connection:
         rows=connection.execute("SELECT delivery_status,COUNT(*) FROM events GROUP BY delivery_status").fetchall()
     return {"state":"available","counts":dict(rows),"events":sum(row[1] for row in rows)}
 

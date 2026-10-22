@@ -99,16 +99,19 @@ class Runtime:
             minimum = 30 if key in ("defender", "listeners", "processes") else (3600 if key == "versions" else 300)
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not minimum <= value <= 86400:
                 raise ValueError("interval_out_of_bounds")
+        timeout=config.get("query_timeout_seconds",15)
+        if type(timeout) not in (int,float) or not 0<timeout<=60:
+            raise ValueError("query_timeout_out_of_bounds")
         if config.get("transport", {}).get("adapter", "disabled") != "disabled":
             raise ValueError("real_transport_not_configured_or_authorized")
         return config
 
     def health(self):
         path = self.path("data/health.json")
-        return read_json(path) if path.exists() else {"state":"not_started", "monitoring":False, "real_agent_connected":False}
+        return read_json(path,2*1024*1024) if path.exists() else {"state":"not_started", "monitoring":False, "real_agent_connected":False}
 
     def save_health(self, document):
-        atomic_json(self.path("data/health.json"), document)
+        atomic_json(self.path("data/health.json"), document,limit=2*1024*1024)
 
     def log(self, code, details=None):
         """Fixed operational codes only; no raw exceptions, event evidence or commands."""

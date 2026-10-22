@@ -112,7 +112,7 @@ class Monitor:
             state=store.load_detector_state()
             if self.collectors is None and not fixture:
                 from .collectors.windows import WindowsCollectors
-                self.collectors=WindowsCollectors()
+                self.collectors=WindowsCollectors(timeout=config.get("query_timeout_seconds",15))
             health["priority"]=self._own_low_priority()
             self.runtime.log("monitor_started",{"namespace":namespace,"instance_id":lock.instance_id})
             next_heartbeat=self.clock()
@@ -155,7 +155,8 @@ class Monitor:
                         if key in self.coverage:
                             status=section.get("status","unknown")
                             old=self.coverage[key].get("last_success")
-                            self.coverage[key]={"status":status,"observed_at":section.get("observed_at"),"last_success":utc_now() if status in SUCCESS else old}
+                            from .collectors.windows import coverage_metadata
+                            self.coverage[key]={**coverage_metadata(section),"status":status,"observed_at":section.get("observed_at"),"last_success":utc_now() if status in SUCCESS else old}
                     try:
                         new_state,events=evaluate(sections,state,host_id=host_id,cooldown=config.get("cooldown_seconds",300))
                         for event in events:

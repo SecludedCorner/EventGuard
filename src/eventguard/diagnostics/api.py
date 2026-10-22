@@ -6,7 +6,7 @@ import re
 import time
 import uuid
 
-from ..collectors.windows import WindowsCollectors, SECTION_IDS, FIELDS, STATUSES, redact, utc_now
+from ..collectors.windows import WindowsCollectors, SECTION_IDS, FIELDS, STATUSES, redact, utc_now, coverage_metadata
 
 MAX_ROWS = 100
 OPERATIONS = {
@@ -102,6 +102,7 @@ class DiagnosticAPI:
             result["source"] = section
             result["observed_at"] = sample.get("observed_at") if valid_iso(sample.get("observed_at")) else result["observed_at"]
             result["status"] = sample["status"]
+            result["coverage"].update(coverage_metadata(sample))
             result["coverage"]["source_status"] = sample["status"]
             result["coverage"]["source_scope"] = "local_metadata_only"
             safe_rows = []
@@ -121,7 +122,9 @@ class DiagnosticAPI:
                     rows = [row for row in rows if row.get("process_instance_ref") == args["process_instance_ref"]]
                 else:
                     matching_pid = [row for row in rows if row.get("pid") == args["pid"]]
-                    rows = [row for row in matching_pid if row.get("created_at") == args["created_at"]]
+                    wanted = datetime.fromisoformat(args["created_at"].replace("Z", "+00:00"))
+                    rows = [row for row in matching_pid if valid_iso(row.get("created_at"))
+                            and datetime.fromisoformat(row["created_at"].replace("Z", "+00:00")) == wanted]
                     if matching_pid and not rows:
                         result["rows"] = []
                         return finish("unknown", "stale_process_instance")
