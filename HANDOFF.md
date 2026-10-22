@@ -1,5 +1,7 @@
 # EventGuard 接手與下一任務
 
+**Phase 2 決策報告（2026-10-22 21:53 台北）：** 已恢復並核對 `088be75`、原分支及乾淨工作樹；完成無模型的同一合成事件／fixture 元件比較。建議 A（確定性 playbook＋本機報告），理由與 B 的必要閘道見 [AGENT_ROLE_DECISION](docs/AGENT_ROLE_DECISION.md)。18 項相關測試通過；query 比 receive 新增觀察為 0。兩案皆尚未實作，等待使用者選 A／B；不自行啟動真模型、長期監看或後續 phase。
+
 **Phase 1 更新（2026-10-22）：** 使用者已確認優先完成原生唯讀採集、拒讀證據與 native／fallback 契約；本批未啟動模型。實作、來源差異及本機證據見 [COLLECTOR_CONTRACT](docs/COLLECTOR_CONTRACT.md) 與 STATUS 的 Phase 1 節。原生六來源至少部分可讀；tasks 根物件不可見，不能改寫成無排程。隔離 monitor 驗證已結束，沒有啟用長期背景監看。以下 CLI agent 結果屬歷史通路驗收；Phase 2 A/B 需先交比較再由使用者選，不因本批採集改善自動取得模型執行權。
 
 **發布授權更新（2026-10-22）：使用者已指定 MIT，要求整理 README 最新驗收結果並公開儲存庫。** 完整條款見 [LICENSE](LICENSE)，發布檢查見 [PUBLISHING](docs/PUBLISHING.md)。以下歷史段落的 private／license 未定描述不再是目前發布政策；憑證、私人舊歷史與執行資料不得公開的界線仍需遵守。可見性與合併結果以 GitHub API 實際回讀為準。

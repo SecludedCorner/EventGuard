@@ -253,3 +253,13 @@ python -B reports/phase1-collectors-001/verify.py
 本輪修正中保留的失敗：初輪 tasks 的 OS 訊息格式化將有號 HRESULT 轉成超出 C long 的數值，遮住原錯誤；修正後取得真 0x80070003，再加入回歸測試。native 版本初輪拿到 Windows build tuple，已改讀與 fallback 相同的 ProductVersion；PID 時刻亦統一 UTC 微秒。大型 coverage 測試發現原 health 64 KiB 寫入限制不容新安全證據，現 health 讀寫同為 2 MiB；config 等其他限制不變。status 的 SQLite 唯讀連線未明確 close 所造成的測試分享衝突已修正。初輪 source／目標測試失敗證據均保留，不算通過。
 
 尚未做到：tasks 的成功讀取、Defender 七個有效狀態、所有程序欄位可讀；H1–H5 的可支持／未排除範圍見契約。原生／COM 單一 OS 呼叫永不返回的硬性停止、Job Object、monitor_gap、長期容量／soak、背景自啟及 agent 診斷均仍屬後續 phase；本批不證明全天候或整機安全。AUDIT 不覆寫，時間歷史與 README 全面收斂留 Phase 6。
+
+## 2026-10-22 21:53 台北：Phase 2 角色比較，等待選案
+
+使用者說「繼續」後恢復目標，先核對工作目錄、分支 `feat/local-codex-acceptance`、HEAD `088be7561c5ead1bb4e289ad3b4ef6ce03748398` 及乾淨工作樹；保留已完成 Phase 1，不重跑七來源或模型。此批只新增 [AGENT_ROLE_DECISION](docs/AGENT_ROLE_DECISION.md) 與交接紀錄，未修改程式、測試、設定或 playbook，兩候選執行路徑皆未實作。
+
+實際命令 `python -B reports/phase2-role-001/compare.py`，Python 3.13.3，exit 0；程式建立一件專用 synthetic listener 事件，直接呼叫既有 playbook、QueueInbox 與 fixture DiagnosticAPI。receive/query 的七欄 snapshot 相同，query 新增觀察 0；ACK 及重播的 result ID 相同、SQLite receipt 一筆、incident_conclusion=not_assessed、real_agent_wake_verified=false。兩次相同型別化 fixture 查詢的觀察相同，不需要模型取得；不是已完成 B 或真 agent 測量。程序名的指令式文字仍可出現在 DiagnosticAPI 輸出，控制字元會去除；B 不能直接暴露這份結果。
+
+測試數以 `reports/phase2-role-001/summary.json` 為準：相關既有 fixture 18 項通過、0 failure/error/skip，0.9717 秒；另有 18 個探針斷言，不和測試數相加。未重跑全套。原始碼 hashes 前後一致；該探針 model_calls=0、real_codex_tasks=0、native_provider_queries=0、external_attempts=[]。單次元件計時不是完整 A/B 效能評比；模型品質／延遲／token／金額均未測。原始回傳、synthetic event、SQLite 回條與 tests.txt 全留忽略 reports，不提交。
+
+建議 A：確定性 playbook＋本機報告，agent 降為可選；B 的事件綁定、字串 projection 與可量增益要求已寫入比較報告。依原請求等待使用者選 A／B 後才實作；選 B 亦不自動批准真模型。Phase 1 的 tasks／Defender／程序 coverage 限制仍在；Job Object、容量、長期驗證及實機注入尚未進行。本批不啟動背景監看、不建立排程、不提權、不下載安裝、不操作網路、不推送。
