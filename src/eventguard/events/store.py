@@ -5,7 +5,7 @@ only durable receiver acceptance and never claims agent execution or case closur
 """
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import contextmanager, closing
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -23,9 +23,7 @@ MAX_FILE_BYTES = 8 * 1024 * 1024
 MAX_STATE_BYTES = 4 * 1024 * 1024
 MAX_ATTEMPTS = 8
 LEASE_SECONDS = 60
-FAILED_RETENTION = 7 * 86400
 DEDUP_RETENTION = 30 * 86400
-RECEIPT_LIMIT = 4000
 
 
 class StoreError(RuntimeError):
@@ -92,16 +90,29 @@ def validate_receipt(event_id, receipt):
 
 
 class EventStore:
-    def __init__(self, data_dir, max_events=1000, max_bytes=MAX_FILE_BYTES):
-        if type(max_events) is not int or not 1 <= max_events <= 1000:
-            raise StoreError("invalid_event_capacity")
-        if type(max_bytes) is not int or not 65536 <= max_bytes <= MAX_FILE_BYTES:
-            raise StoreError("invalid_storage_capacity")
+    def __init__(self, data_dir, max_events=None, max_bytes=None, *, acked_retention_seconds=None,
+                 receipt_retention_seconds=None, receipt_limit=None):
         self.directory = _guard(Path(data_dir))
         self.directory.mkdir(parents=True, exist_ok=True)
         self.path = _guard(self.directory / "eventguard.sqlite3")
-        self.max_events, self.max_bytes = max_events, max_bytes
-        self.ack_reserve_bytes=min(2*1024*1024,max_bytes//4)
+        supplied = {key: value for key, value in locals().copy().items() if key in
+                    {"max_events", "max_bytes", "acked_retention_seconds", "receipt_retention_seconds", "receipt_limit"} and value is not None}
+        previous = {}
+        if self.path.exists():
+            try:
+                with closing(sqlite3.connect(self.path.as_uri()+"?mode=ro", uri=True, timeout=3)) as db:
+                    if db.execute("SELECT 1 FROM sqlite_master WHERE name='meta'").fetchone():
+                        row = db.execute("SELECT value FROM meta WHERE key='storage_policy'").fetchone()
+                        previous = json.loads(row[0]) if row else {}
+            except (sqlite3.Error, ValueError):
+                raise StoreError("store_policy_unreadable") from None
+        from ..storage_policy import limits
+        try:
+            self.policy = limits("outbox", {**limits("outbox", previous), **supplied})
+        except (ValueError, TypeError):
+            raise StoreError("invalid_storage_policy") from None
+        self.max_events, self.max_bytes = self.policy["max_events"], self.policy["max_bytes"]
+        self.ack_reserve_bytes=min(2*1024*1024,self.max_bytes//4)
         self._lock = threading.RLock()
         try:
             if self.path.exists() and self.path.stat().st_size > self.max_bytes:
@@ -125,6 +136,8 @@ class EventStore:
                 for row in db.execute("SELECT event_id,payload FROM events WHERE payload_hash=''").fetchall():
                     db.execute("UPDATE events SET payload_hash=? WHERE event_id=?",(event_payload_hash(json.loads(row["payload"])),row["event_id"]))
                 db.execute("UPDATE receipts SET payload_hash=COALESCE((SELECT payload_hash FROM events WHERE events.event_id=receipts.event_id),'') WHERE payload_hash=''")
+                if previous != self.policy:
+                    db.execute("INSERT OR REPLACE INTO meta VALUES('storage_policy',?)", (json.dumps(self.policy),))
         except (sqlite3.Error, OSError,ValueError) as exc:
             raise StoreError("store_initialization_failed") from exc
 
@@ -157,20 +170,37 @@ class EventStore:
         db.execute("INSERT OR REPLACE INTO meta(key,value) VALUES(?,?)", (key, str(count + amount)))
 
     def _prune(self, db, now, slots=1):
+        self._expire(db, now)
         count = db.execute("SELECT COUNT(*) FROM events").fetchone()[0]
         needed = max(0, count + slots - self.max_events)
         if needed:
             rows = db.execute("""SELECT event_id,delivery_status FROM events
-                WHERE delivery_status='ack' OR (delivery_status='failed' AND updated_at < ?)
-                ORDER BY updated_at,event_id LIMIT ?""", (now - FAILED_RETENTION, needed)).fetchall()
+                WHERE delivery_status='ack'
+                ORDER BY updated_at,event_id LIMIT ?""", (needed,)).fetchall()
             has_reviews = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_reviews'").fetchone()
             for row in rows:
                 if has_reviews:
                     db.execute("DELETE FROM event_reviews WHERE event_id=?", (row["event_id"],))
                 db.execute("DELETE FROM events WHERE event_id=?", (row["event_id"],))
                 self._increment(db, "rotated_" + row["delivery_status"], 1)
-        db.execute("""DELETE FROM receipts WHERE event_id IN (
-            SELECT event_id FROM receipts ORDER BY acked_at DESC,event_id DESC LIMIT -1 OFFSET ?)""", (RECEIPT_LIMIT,))
+
+    def _expire(self, db, now):
+        rows = db.execute("SELECT event_id,delivery_status FROM events WHERE delivery_status='ack' AND updated_at<?",
+                          (now-self.policy["acked_retention_seconds"],)).fetchall()
+        self._delete_completed(db, rows)
+        removed = db.execute("DELETE FROM receipts WHERE acked_at<?", (now-self.policy["receipt_retention_seconds"],)).rowcount
+        removed += db.execute("""DELETE FROM receipts WHERE event_id IN (
+            SELECT event_id FROM receipts ORDER BY acked_at DESC,event_id DESC LIMIT -1 OFFSET ?)""", (self.policy["receipt_limit"],)).rowcount
+        if removed:
+            self._increment(db, "expired_receipts", removed)
+
+    def _delete_completed(self, db, rows):
+        has_reviews = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_reviews'").fetchone()
+        for row in rows:
+            if has_reviews:
+                db.execute("DELETE FROM event_reviews WHERE event_id=?", (row["event_id"],))
+            db.execute("DELETE FROM events WHERE event_id=? AND delivery_status='ack'", (row["event_id"],))
+            self._increment(db, "rotated_ack", 1)
 
     def _insert(self, db, event, now):
         event_id = event["event_id"]
@@ -190,6 +220,9 @@ class EventStore:
         estimated=((len(payload.encode("utf-8"))+page_size-1)//page_size+1)*page_size
         if self._used_bytes(db)+estimated+self.ack_reserve_bytes>self.max_bytes:
             self._rotate_completed(db,now)
+            for _ in range(16):
+                if self._used_bytes(db)+estimated+self.ack_reserve_bytes <= self.max_bytes or not self._trim_receipts(db):
+                    break
             if self._used_bytes(db)+estimated+self.ack_reserve_bytes>self.max_bytes:
                 raise CapacityError("event_bytes_full_ack_space_reserved_pending_preserved")
         db.execute("INSERT INTO events(event_id,payload,delivery_status,created_at,updated_at,payload_hash) VALUES(?,?,'pending',?,?,?)", (event_id, payload, now, now,payload_hash))
@@ -200,21 +233,34 @@ class EventStore:
         return (db.execute("PRAGMA page_count").fetchone()[0]-db.execute("PRAGMA freelist_count").fetchone()[0])*db.execute("PRAGMA page_size").fetchone()[0]
 
     def _rotate_completed(self,db,now):
-        rows=db.execute("""SELECT event_id,delivery_status FROM events WHERE delivery_status='ack'
-            OR (delivery_status='failed' AND updated_at<?) ORDER BY updated_at,event_id LIMIT 100""",(now-FAILED_RETENTION,)).fetchall()
-        has_reviews = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_reviews'").fetchone()
-        for row in rows:
-            if has_reviews:
-                db.execute("DELETE FROM event_reviews WHERE event_id=?", (row["event_id"],))
-            db.execute("DELETE FROM events WHERE event_id=?",(row["event_id"],))
-            self._increment(db,"rotated_"+row["delivery_status"],1)
+        rows=db.execute("SELECT event_id,delivery_status FROM events WHERE delivery_status='ack' ORDER BY updated_at,event_id LIMIT 100").fetchall()
+        self._delete_completed(db, rows)
         return len(rows)
+
+    def _trim_receipts(self, db):
+        count = db.execute("SELECT COUNT(*) FROM receipts").fetchone()[0]
+        if count <= 1:
+            return 0
+        removed = db.execute("""DELETE FROM receipts WHERE event_id IN (
+            SELECT event_id FROM receipts ORDER BY acked_at,event_id LIMIT ?)""", (max(1,count//2),)).rowcount
+        self._increment(db, "pressure_rotated_receipts", removed)
+        return removed
+
+    def maintain(self, now=None):
+        """Expire ACKed payloads/receipts only; free pages stay reusable, no VACUUM."""
+        try:
+            with self._lock, self._connect() as db:
+                db.execute("BEGIN IMMEDIATE")
+                self._prune(db, _epoch(now), slots=0)
+            return self.stats()
+        except sqlite3.Error as exc:
+            raise self._sqlite_error(exc) from exc
 
     def _reclaim_completed(self, now):
         """Bounded rotation when byte pressure occurs before the event-count cap."""
         with self._connect() as db:
             db.execute("BEGIN IMMEDIATE")
-            return self._rotate_completed(db,now)
+            return self._rotate_completed(db,now) + self._trim_receipts(db)
 
     def _commit_batch(self, clean, state=None):
         now=time.time()
@@ -305,6 +351,9 @@ class EventStore:
                               receipt_count=db.execute("SELECT COUNT(*) FROM receipts").fetchone()[0],
                               rotated_ack=rotated.get("rotated_ack",0),rotated_failed=rotated.get("rotated_failed",0),
                               real_agent_connected=False)
+                counts.update(retention=dict(self.policy), used_bytes=self._used_bytes(db),
+                              reusable_bytes=db.execute("PRAGMA freelist_count").fetchone()[0]*db.execute("PRAGMA page_size").fetchone()[0],
+                              receipt_rotation=dict(db.execute("SELECT key,value FROM meta WHERE key IN ('expired_receipts','pressure_rotated_receipts')")))
                 return counts
         except (sqlite3.Error,OSError) as exc:
             raise StoreError("store_status_failed") from exc
@@ -347,21 +396,35 @@ class EventStore:
     def _ack(self, db, event_id, receipt, now):
         clean = validate_receipt(event_id, receipt)
         encoded = json.dumps(clean, ensure_ascii=False, separators=(",", ":"))
-        row = db.execute("SELECT payload_hash FROM events WHERE event_id=?",(event_id,)).fetchone()
+        row = db.execute("SELECT payload_hash,delivery_status,receipt FROM events WHERE event_id=?",(event_id,)).fetchone()
         if not row:
-            return db.execute("SELECT 1 FROM receipts WHERE event_id=?",(event_id,)).fetchone() is not None
+            previous = db.execute("SELECT receipt FROM receipts WHERE event_id=?",(event_id,)).fetchone()
+            if previous and json.loads(previous[0]) != clean:
+                raise StoreError("ack_receipt_identity_conflict")
+            return previous is not None
+        if row["delivery_status"] == "ack":
+            if json.loads(row["receipt"]) != clean:
+                raise StoreError("ack_receipt_identity_conflict")
+            return True
         db.execute("UPDATE events SET delivery_status='ack',receipt=?,updated_at=?,reason='receiver_persisted',next_retry_at=NULL,lease_until=NULL,lease_token=NULL WHERE event_id=?",(encoded,now,event_id))
         db.execute("INSERT OR IGNORE INTO receipts(event_id,receipt,acked_at,payload_hash) VALUES(?,?,?,?)",(event_id,encoded,now,row["payload_hash"]))
         self._prune(db,now,slots=0)
         return True
 
     def acknowledge(self, event_id, receipt):
-        try:
-            with self._lock, self._connect() as db:
-                db.execute("BEGIN IMMEDIATE")
-                return self._ack(db,str(event_id),receipt,time.time())
-        except sqlite3.Error as exc:
-            raise self._sqlite_error(exc) from exc
+        for attempt in range(2):
+            try:
+                with self._lock, self._connect() as db:
+                    db.execute("BEGIN IMMEDIATE")
+                    return self._ack(db,str(event_id),receipt,time.time())
+            except sqlite3.Error as exc:
+                if attempt == 0 and getattr(exc, "sqlite_errorcode", None) == sqlite3.SQLITE_FULL:
+                    try:
+                        if self._reclaim_completed(time.time()):
+                            continue
+                    except sqlite3.Error as maintenance:
+                        raise self._sqlite_error(maintenance) from maintenance
+                raise self._sqlite_error(exc) from exc
 
     @staticmethod
     def _recover(db, now):

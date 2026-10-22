@@ -49,9 +49,9 @@ def utc():
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
 
 
-def _inbox(source, state, event_id=None, allow_live=False):
+def _inbox(source, state, event_id=None, allow_live=False, limits=None):
     from .queue_inbox import QueueInbox
-    return QueueInbox(source, state, event_id=event_id, allow_live=allow_live)
+    return QueueInbox(source, state, event_id=event_id, allow_live=allow_live, limits=limits)
 
 
 def command(codex, python, source, state, event_id, evidence, *, allow_live=False):
@@ -252,6 +252,84 @@ def _ledger(path):
     return value
 
 
+def _ledger_policy(value=None):
+    from .storage_policy import limits
+    return limits("dispatcher", value)
+
+
+def _ledger_write(path, ledger, policy):
+    if (len(ledger["events"]) > policy["max_events"]
+            or len(json.dumps(ledger, indent=2, allow_nan=False).encode()) > policy["max_bytes"]//2):
+        raise LocalWaitError("dispatch_ledger_capacity_pending_preserved")
+    write_json(path, ledger)
+
+
+def _completed_ledger(path, policy):
+    if not path.exists():
+        return {"kind": "eventguard-dispatch-completed-v1", "events": {}}
+    value = read_json(path)
+    if (set(value) != {"kind", "events"} or value.get("kind") != "eventguard-dispatch-completed-v1"
+            or not isinstance(value.get("events"), dict) or len(value["events"]) > MAX_EVENTS):
+        raise LocalWaitError("invalid_dispatch_archive")
+    for identity, row in value["events"].items():
+        if (not _ID.fullmatch(identity) or not isinstance(row, dict) or row.get("event_id") != identity
+                or row.get("passed") is not True or row.get("child_exited") is not True
+                or not isinstance(row.get("finished_at"), str)):
+            raise LocalWaitError("invalid_dispatch_archive")
+        try:
+            if datetime.fromisoformat(row["finished_at"]).tzinfo is None:
+                raise ValueError()
+        except ValueError:
+            raise LocalWaitError("invalid_dispatch_archive") from None
+    return value
+
+
+def maintain_ledger(path, inbox, policy=None, now=None):
+    """Archive only verified terminal attempts, before removing active records.
+
+    Caller owns the source dispatcher lease. Capture evidence is never deleted.
+    The two bounded files together use at most max_bytes (half each).
+    """
+    policy = _ledger_policy(policy)
+    ledger = _ledger(path)
+    archive_path = path.with_name("dispatcher-completed.json")
+    archive = _completed_ledger(archive_path, policy)
+    before_archive = json.dumps(archive, sort_keys=True)
+    now = time.time() if now is None else now
+    moved = []
+    for identity, records in ledger["events"].items():
+        if not all(r.get("state") in {"complete", "not_started"} and r.get("child_exited") is True for r in records):
+            continue
+        passed = [r for r in records if r.get("passed") is True]
+        if not passed:
+            continue  # Never erase uncertain/failed attempts or reset their budget.
+        last = passed[-1]
+        proof = last.get("ack_verified") is True
+        if not proof:
+            proof = inbox.acknowledged(identity)  # Legacy records need original proof.
+        if not proof:
+            continue
+        archive["events"][identity] = {"event_id": identity, "attempt_id": last["attempt_id"],
+            "finished_at": last.get("finished_at", utc()), "attempts": len(records),
+            "passed": True, "child_exited": True}
+        moved.append(identity)
+    ordered = sorted(archive["events"], key=lambda key: (archive["events"][key]["finished_at"], key))
+    for identity in ordered:
+        expired = now-datetime.fromisoformat(archive["events"][identity]["finished_at"]).timestamp() > policy["completed_retention_seconds"]
+        if (expired or len(archive["events"]) > policy["max_completed"]
+                or len(json.dumps(archive, indent=2).encode()) > policy["max_bytes"]//2):
+            del archive["events"][identity]
+    # Commit the compact proof first. Crash/replay before active deletion is safe.
+    if json.dumps(archive, sort_keys=True) != before_archive:
+        write_json(archive_path, archive)
+    for identity in moved:
+        del ledger["events"][identity]
+    if moved:
+        _ledger_write(path, ledger, policy)
+    return ledger, archive, {"rotated_events": len(moved), "active_events": len(ledger["events"]),
+                            "completed_events": len(archive["events"]), "limits": policy}
+
+
 def _complete(record, inbox, receipt):
     directory = _attempt_path(record)
     with (directory / "codex.jsonl").open("rb") as stream:
@@ -276,7 +354,7 @@ def _complete(record, inbox, receipt):
     summary.update(attempt_id=record["attempt_id"], finished_at=utc(), child_exited=True)
     write_json(directory / "summary.json", summary)
     record.update(state="complete", passed=summary["passed"], child_exited=True,
-                  codex_exit_code=receipt["codex_exit_code"])
+                  codex_exit_code=receipt["codex_exit_code"], ack_verified=summary["passed"], finished_at=summary["finished_at"])
     return summary
 
 
@@ -306,7 +384,7 @@ def _check_stop(directory, state, cancel):
 
 def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-delivery", *,
         codex="codex", max_seconds=3600, max_tasks=5, allow_live=False, execute=False, poll_seconds=.5,
-        cancel=None, deadline_monotonic=None):
+        cancel=None, deadline_monotonic=None, storage_limits=None):
     began = time.monotonic()
     if (type(max_seconds) not in (int, float) or not 0 < max_seconds <= 3600
             or type(max_tasks) is not int or not 1 <= max_tasks <= 5
@@ -354,10 +432,13 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
         return 3
     active, child = None, None
     try:
+        from .runtime import Runtime
+        config = Runtime(ROOT).config()
+        policy = _ledger_policy(storage_limits if storage_limits is not None else config.get("dispatcher"))
         _bind_channel(source, state_dir)
-        inbox = _inbox(source, state_dir, allow_live=allow_live)
+        inbox = _inbox(source, state_dir, allow_live=allow_live, limits=config.get("inbox"))
         ledger_path = state_dir / "dispatcher-attempts.json"
-        ledger = _ledger(ledger_path)
+        ledger, _, state["retention_startup"] = maintain_ledger(ledger_path, inbox, policy)
         # A prior supervisor may have ended while its capture still drains.
         for records in ledger["events"].values():
             for record in records:
@@ -365,7 +446,7 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                     if _skipped(record):
                         record.update(state="not_started", child_exited=True, cli_started=False,
                                       reason="capture_launch_not_started", finished_at=utc())
-                        write_json(ledger_path, ledger)
+                        _ledger_write(ledger_path, ledger, policy)
                         continue
                     receipt = _receipt(record)
                     if receipt is None:
@@ -373,13 +454,17 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                         _save(directory, state)
                         return 3
                     _complete(record, inbox, receipt)
-                    write_json(ledger_path, ledger)
+                    _ledger_write(ledger_path, ledger, policy)
             if (any(record.get("state") == "complete" for record in records)
                     and not any(record.get("passed") is True for record in records)
                     and inbox.acknowledged(records[0]["event_id"])):
                 state.update(state="blocked", reason="prior_ack_without_valid_delivery_proof")
                 _save(directory, state)
                 return 2
+        ledger, archive, retention = maintain_ledger(ledger_path, inbox, policy)
+        state["retention"] = retention
+        if hasattr(inbox, "maintain"):
+            state["inbox_retention"] = inbox.maintain()
         state.update(state="waiting", reason=None)
         _save(directory, state)
         while state["tasks_started"] < max_tasks:
@@ -396,23 +481,36 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             if event_id is None:
                 time.sleep(min(poll_seconds, max(.01, deadline - time.monotonic())))
                 continue
+            ledger, archive, retention = maintain_ledger(ledger_path, inbox, policy)
+            state["retention"] = retention
+            if hasattr(inbox, "maintain"):
+                state["inbox_retention"] = inbox.maintain()
             if not isinstance(event_id, str) or not _ID.fullmatch(event_id):
                 raise LocalWaitError("invalid_pending_event_id")
+            if event_id in archive["events"]:
+                raise LocalWaitError("acknowledged_event_reappeared")
             records = ledger["events"].get(event_id, [])
             if len(records) >= MAX_ATTEMPTS:
                 state.update(state="blocked_pending", reason="event_attempt_budget_exhausted")
                 break
-            if len(ledger["events"]) >= MAX_EVENTS and event_id not in ledger["events"]:
+            if len(ledger["events"]) >= policy["max_events"] and event_id not in ledger["events"]:
                 raise LocalWaitError("dispatch_ledger_capacity")
             if any(record.get("passed") for record in records):
                 raise LocalWaitError("acknowledged_event_reappeared")
+            # Reserve room for the terminal update BEFORE starting a child.
+            prospective = {"kind": KIND, "events": {**ledger["events"], event_id: records + [
+                {"event_id": event_id, "attempt_id": "0"*32, "run_id": state["run_id"], "run_dir": str(directory),
+                 "state": "complete", "started_at": utc(), "finished_at": utc(), "child_exited": True,
+                 "codex_exit_code": 4294967295, "passed": False, "ack_verified": False}]}}
+            if len(json.dumps(prospective, indent=2).encode()) > policy["max_bytes"]//2:
+                raise LocalWaitError("dispatch_ledger_bytes_full_pending_preserved")
             token = uuid.uuid4().hex
             attempt_dir = directory / "attempts" / token
             attempt_dir.mkdir(parents=True, exist_ok=False)
             active = {"event_id": event_id, "attempt_id": token, "run_id": state["run_id"],
                       "run_dir": str(directory), "state": "started", "started_at": utc()}
             ledger["events"].setdefault(event_id, []).append(active)
-            write_json(ledger_path, ledger)  # Fail-closed crash window BEFORE Popen.
+            _ledger_write(ledger_path, ledger, policy)  # Fail-closed crash window BEFORE Popen.
             write_json(attempt_dir / "attempt.json", active)
             state.update(state="running", active_attempt_id=token, child_exited=False,
                          tasks_started=state["tasks_started"] + 1)
@@ -429,7 +527,7 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                 active.update(state="not_started", child_exited=True, cli_started=False,
                               reason="stop_or_deadline_before_cli_launch", finished_at=utc())
                 write_json(attempt_dir / "not-started.json", active)
-                write_json(ledger_path, ledger)
+                _ledger_write(ledger_path, ledger, policy)
                 state.update(state="stopped" if state["stop_requested"] else "time_limit_reached",
                              child_exited=True, tasks_started=state["tasks_started"] - 1,
                              reason="stop_or_deadline_before_cli_launch")
@@ -458,7 +556,7 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                 if _skipped(active):
                     active.update(state="not_started", child_exited=True, cli_started=False,
                                   reason="capture_launch_not_started", finished_at=utc())
-                    write_json(ledger_path, ledger)
+                    _ledger_write(ledger_path, ledger, policy)
                     _check_stop(directory, state, cancel)
                     state.update(state="stopped" if state["stop_requested"] else
                                  "time_limit_reached" if time.monotonic() >= deadline else "blocked",
@@ -472,7 +570,7 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                 _save(directory, state)
                 return 3
             summary = _complete(active, inbox, receipt)
-            write_json(ledger_path, ledger)
+            _ledger_write(ledger_path, ledger, policy)
             state.update(child_exited=True, codex_exit_code=receipt["codex_exit_code"])
             if not summary["passed"]:
                 state.update(state="blocked_pending", reason="delivery_evidence_failed_no_automatic_retry")

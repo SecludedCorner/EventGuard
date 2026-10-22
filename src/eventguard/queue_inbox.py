@@ -26,6 +26,7 @@ KIND = "eventguard-bound-minimal-inbox-v1"
 MAX_RECORD_BYTES = 16 * 1024
 MAX_STATE_BYTES = 8 * 1024 * 1024
 MAX_EVENTS = 1000
+STAGE_RESERVE = 4096
 EVENT_TYPES = frozenset({"coverage.degraded", "listener.changed", "persistence.changed", "protection.changed", "monitor_gap"})
 DECISIONS = frozenset({"reviewed_metadata", "needs_more_evidence"})
 _ID = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
@@ -103,7 +104,7 @@ def _validate_snapshot(snapshot, identity):
 
 
 class QueueInbox:
-    def __init__(self, source_dir, state_dir, event_id=None, allow_live=False):
+    def __init__(self, source_dir, state_dir, event_id=None, allow_live=False, limits=None):
         if type(allow_live) is not bool:
             raise QueueInboxError("invalid_live_profile")
         self.source_dir = _guard(source_dir)
@@ -118,18 +119,124 @@ class QueueInbox:
         self._store = None
         self.state_dir.mkdir(parents=True, exist_ok=True)
         self.marker_path = _guard(self.state_dir / "inbox-state.json")
+        self.policy_path = _guard(self.state_dir / "inbox-limits.json")
         marker = {"kind": KIND, "source_key": _digest(os.path.normcase(str(self.source_dir))),
                   "allow_live": allow_live, "projection": "fixed-minimal-v1"}
         with _REGISTRY_LOCK:
             self._lock = _LOCKS.setdefault(os.path.normcase(str(self.state_dir)), threading.RLock())
-        with self._lock:
+        with self._mutation():
             existing = self._read_json(self.marker_path)
             if existing is None:
-                if any(item.name != "inbox-owner.lock" for item in self.state_dir.iterdir()):
+                if any(item.name not in {"inbox-owner.lock", "inbox-mutation.lock"} for item in self.state_dir.iterdir()):
                     raise QueueInboxError("dedicated_empty_inbox_state_required")
-                self._immutable(self.marker_path, marker)
+                from .runtime import atomic_json
+                atomic_json(self.marker_path, marker, MAX_RECORD_BYTES)
             elif existing != marker:
                 raise QueueInboxError("inbox_source_profile_conflict")
+            from .storage_policy import limits as validated
+            previous = self._read_json(self.policy_path)
+            self.policy = validated("inbox", limits if limits is not None else previous)
+            if previous != self.policy:
+                from .runtime import atomic_json
+                atomic_json(self.policy_path, self.policy, MAX_RECORD_BYTES)
+
+    @contextmanager
+    def _mutation(self):
+        from .acceptance_control import FileLease
+        with self._lock:
+            lease = FileLease(self.state_dir / "inbox-mutation.lock")
+            if not lease.acquire():
+                raise QueueInboxError("inbox_state_busy")
+            try:
+                yield
+            finally:
+                lease.release()
+
+    def _completed(self, identity):
+        value = self._read_json(self._path("completed", identity))
+        if value is None:
+            return None
+        if (set(value) != {"kind", "snapshot", "query", "result", "acked_at"}
+                or value.get("kind") != "inbox-completed-v1"
+                or any(not isinstance(value.get(k), dict) for k in ("snapshot", "query", "result"))
+                or any(value[k].get("event_id") != identity for k in ("snapshot", "query", "result"))):
+            raise QueueInboxError("inbox_completed_record_invalid")
+        _timestamp(value["acked_at"])
+        return value
+
+    def _usage(self):
+        return sum(_guard(p).stat().st_size for p in self.state_dir.iterdir() if p.is_file())
+
+    def _reserve(self, replacing=None):
+        total = 0
+        for path in self.state_dir.glob("snapshot-*.json"):
+            record = self._read_json(path)
+            identity = _identifier(record.get("event_id"))
+            if self._completed(identity) is not None:
+                continue
+            for stage in ("query", "result", "completed"):
+                candidate = self._path(stage, identity)
+                if candidate != replacing and not candidate.exists():
+                    total += STAGE_RESERVE
+        return total
+
+    def _maintain(self, now=None, needed=0, reserve_extra=0, completed_slots=0, protect=None):
+        now = time.time() if now is None else now
+        candidates = []
+        removed = 0
+        # Upgrade legacy ACKed triples only with the original matching ACK.
+        for path in self.state_dir.glob("snapshot-*.json"):
+            snapshot = self._read_json(path)
+            identity = _identifier(snapshot.get("event_id"))
+            if self._completed(identity) is None:
+                record, source = self._checked_record(identity)
+                if source["delivery_status"] == "ack":
+                    query, _ = self._query_record(identity, record)
+                    result = self._result_record(identity, record, query)
+                    if result is not None and self._ack_matches(source, result):
+                        self._immutable(self._path("completed", identity), {"kind": "inbox-completed-v1",
+                            "snapshot": record, "query": query, "result": result, "acked_at": result["recorded_at"]})
+            if self._completed(identity) is not None:
+                record, source = self._checked_record(identity)
+                query, _ = self._query_record(identity, record)
+                result = self._result_record(identity, record, query)
+                if result is None or not self._ack_matches(source, result):
+                    raise QueueInboxError("inbox_completed_ack_unconfirmed")
+                for stage in ("snapshot", "query", "result"):
+                    self._path(stage, identity).unlink(missing_ok=True)
+        for path in self.state_dir.glob("completed-*.json"):
+            raw = self._read_json(path)
+            if not isinstance(raw.get("snapshot"), dict):
+                raise QueueInboxError("inbox_completed_record_invalid")
+            identity = _identifier(raw["snapshot"].get("event_id"))
+            if path != self._path("completed", identity):
+                raise QueueInboxError("inbox_completed_record_invalid")
+            entry = self._completed(identity)
+            candidates.append((_timestamp(entry["acked_at"]), identity, path))
+        candidates.sort()
+        usage, reserve = self._usage(), self._reserve()
+        for stamp, identity, path in candidates:
+            if identity == protect:
+                continue
+            expired = now-datetime.fromisoformat(stamp).timestamp() > self.policy["completed_retention_seconds"]
+            pressure = usage+reserve+needed+reserve_extra > min(MAX_STATE_BYTES, self.policy["max_bytes"])
+            if expired or len(candidates)-removed+completed_slots > self.policy["max_completed"] or pressure:
+                record, source = self._checked_record(identity)
+                query, _ = self._query_record(identity, record)
+                result = self._result_record(identity, record, query)
+                if result is None or not self._ack_matches(source, result):
+                    raise QueueInboxError("inbox_completed_ack_unconfirmed")
+                size = _guard(path).stat().st_size
+                _guard(path).unlink()
+                usage -= size
+                removed += 1
+        return {"completed_removed": removed, "storage_bytes": self._usage(), "reserved_bytes": self._reserve(),
+                "active_events": len(list(self.state_dir.glob("snapshot-*.json"))),
+                "completed_events": len(list(self.state_dir.glob("completed-*.json"))), "limits": dict(self.policy)}
+
+    def maintain(self, now=None):
+        with self._mutation():
+            return self._maintain(now)
 
     @property
     def store(self):
@@ -205,8 +312,12 @@ class QueueInbox:
                 if existing != value:
                     raise QueueInboxError("inbox_immutable_record_conflict")
                 return
-            files = [_guard(item) for item in self.state_dir.iterdir()]
-            if sum(item.stat().st_size for item in files if item.is_file()) + len(encoded) > MAX_STATE_BYTES:
+            if path.name.startswith(("query-", "result-", "completed-")) and len(encoded) > STAGE_RESERVE:
+                raise QueueInboxError("inbox_stage_reserve_exceeded")
+            # Existing legacy triples may exceed the new reservation budget;
+            # still let them make progress while actual bytes fit. New receive
+            # admissions account for all missing stages before storing data.
+            if self._usage() + len(encoded) > min(MAX_STATE_BYTES, self.policy["max_bytes"]):
                 raise QueueInboxError("inbox_state_capacity_pending_preserved")
             fd, name = tempfile.mkstemp(prefix=".inbox-", suffix=".tmp", dir=self.state_dir)
             temporary = Path(name)
@@ -244,6 +355,11 @@ class QueueInbox:
                 receipt = db.execute("SELECT payload_hash,receipt FROM receipts WHERE event_id=?", (identity,)).fetchone()
                 if receipt:
                     return {"payload_hash": receipt["payload_hash"], "delivery_status": "ack", "receipt": receipt["receipt"]}
+                entry = self._completed(identity)
+                if entry is not None:
+                    return {"payload_hash": entry["snapshot"].get("payload_hash"), "delivery_status": "ack",
+                            "receipt": json.dumps({"ack_type": "receiver_persisted", "event_id": identity,
+                                                   "receiver_receipt_id": entry["result"].get("result_id")})}
                 raise QueueInboxError("bound_event_missing")
         try:
             if type(row["payload"]) is not str:
@@ -263,7 +379,10 @@ class QueueInbox:
     def _snapshot_record(self, identity):
         record = self._read_json(self._path("snapshot", identity))
         if record is None:
-            return None
+            completed = self._completed(identity)
+            record = completed["snapshot"] if completed else None
+            if record is None:
+                return None
         if (set(record) != {"event_id", "payload_hash", "snapshot", "received_at"}
                 or record.get("event_id") != identity
                 or type(record.get("payload_hash")) is not str or not _HASH.fullmatch(record["payload_hash"])):
@@ -279,22 +398,28 @@ class QueueInbox:
         if record is None:
             raise QueueInboxError("receive_event_required")
         source = self._source_record(identity)
+        if self._completed(identity) is not None and source["delivery_status"] != "ack":
+            raise QueueInboxError("inbox_completed_event_reappeared_pending_preserved")
         if source["payload_hash"] != record["payload_hash"] or ("snapshot" in source and source["snapshot"] != record["snapshot"]):
             raise QueueInboxError("inbox_source_identity_conflict")
         return record, source
 
     def receive_event(self):
         identity = self._bound()
-        with self._lock:
+        with self._mutation():
+            self._maintain()
             record = self._snapshot_record(identity)
             if record is None:
                 source = self._source_record(identity)
                 if "snapshot" not in source or source["delivery_status"] not in {"pending", "retry"}:
                     raise QueueInboxError("bound_event_not_pending")
-                if len(list(self.state_dir.glob("snapshot-*.json"))) >= MAX_EVENTS:
+                if len(list(self.state_dir.glob("snapshot-*.json"))) >= min(MAX_EVENTS, self.policy["max_events"]):
                     raise QueueInboxError("inbox_event_capacity_pending_preserved")
                 record = {"event_id": identity, "payload_hash": source["payload_hash"],
                           "snapshot": source["snapshot"], "received_at": _utc()}
+                self._maintain(needed=len(_bytes(record)), reserve_extra=3*STAGE_RESERVE)
+                if self._usage()+len(_bytes(record))+self._reserve()+3*STAGE_RESERVE > min(MAX_STATE_BYTES, self.policy["max_bytes"]):
+                    raise QueueInboxError("inbox_state_capacity_pending_preserved")
                 self._immutable(self._path("snapshot", identity), record)
             else:
                 self._checked_record(identity)
@@ -303,6 +428,9 @@ class QueueInbox:
 
     def _query_record(self, identity, snapshot):
         query = self._read_json(self._path("query", identity))
+        if query is None:
+            completed = self._completed(identity)
+            query = completed["query"] if completed else None
         expected = "query-" + _digest([identity, snapshot["payload_hash"]])[:40]
         if query is not None:
             if set(query) != {"event_id", "payload_hash", "query_id", "queried_at"} or query.get("event_id") != identity or query.get("payload_hash") != snapshot["payload_hash"] or query.get("query_id") != expected:
@@ -312,7 +440,7 @@ class QueueInbox:
 
     def query_evidence(self, event_id):
         identity = self._bound(event_id)
-        with self._lock:
+        with self._mutation():
             record, _ = self._checked_record(identity)
             query, expected = self._query_record(identity, record)
             if query is None:
@@ -325,6 +453,9 @@ class QueueInbox:
 
     def _result_record(self, identity, snapshot, query):
         result = self._read_json(self._path("result", identity))
+        if result is None:
+            completed = self._completed(identity)
+            result = completed["result"] if completed else None
         if result is not None:
             fields = {"status", "event_id", "query_id", "decision", "result_id", "recorded_at", "incident_conclusion", "real_agent_wake_verified"}
             if (query is None or set(result) != fields or result.get("status") != "review_recorded"
@@ -357,7 +488,7 @@ class QueueInbox:
         identity, query_id = self._bound(event_id), _identifier(query_id)
         if type(decision) is not str or decision not in DECISIONS:
             raise QueueInboxError("invalid_metadata_decision")
-        with self._lock:
+        with self._mutation():
             record, source = self._checked_record(identity)
             query, _ = self._query_record(identity, record)
             if query is None or query["query_id"] != query_id:
@@ -381,6 +512,14 @@ class QueueInbox:
                         raise QueueInboxError("outbox_ack_failed_result_preserved")
                 except StoreError:
                     raise QueueInboxError("outbox_ack_failed_result_preserved") from None
+            completed = {"kind": "inbox-completed-v1", "snapshot": record, "query": query, "result": result,
+                         "acked_at": result["recorded_at"]}
+            self._immutable(self._path("completed", identity), completed)
+            # Keep this freshly ACKed record for idempotent immediate replay;
+            # older completed records rotate on the next receive/maintenance.
+            for stage in ("snapshot", "query", "result"):
+                self._path(stage, identity).unlink(missing_ok=True)
+            self._maintain(protect=identity)
             return {**result, "outbox_acknowledged": True}
 
     def evidence(self, event_id):

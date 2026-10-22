@@ -24,8 +24,7 @@ IDENTIFIER = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
 
 def store(runtime, namespace):
     limits = runtime.config().get("outbox", {})
-    return EventStore(runtime.data_dir(namespace), max_events=limits.get("max_events", 1000),
-                      max_bytes=limits.get("max_bytes", 8388608))
+    return EventStore(runtime.data_dir(namespace), **limits)
 
 
 def read_events(runtime, namespace, limit=100, event_id=None):
@@ -80,7 +79,12 @@ def status(runtime):
         if path.is_file():
             with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=1)) as db:
                 counts = dict(db.execute("SELECT delivery_status,COUNT(*) FROM events GROUP BY delivery_status"))
-            namespaces[namespace] = {"state": "available", "counts": counts, "events": sum(counts.values())}
+                policy = db.execute("SELECT value FROM meta WHERE key='storage_policy'").fetchone()
+                receipts = db.execute("SELECT COUNT(*) FROM receipts").fetchone()[0]
+                rotation = dict(db.execute("SELECT key,value FROM meta WHERE key IN ('rotated_ack','expired_receipts','pressure_rotated_receipts')"))
+            namespaces[namespace] = {"state": "available", "counts": counts, "events": sum(counts.values()),
+                                     "storage_bytes": path.stat().st_size, "receipt_count": receipts,
+                                     "retention": json.loads(policy[0]) if policy else None, "rotation": rotation}
         else:
             namespaces[namespace] = {"state": "not_created", "events": 0}
     return {"tool_version": __version__, "health": health, "heartbeat_age_seconds": age,

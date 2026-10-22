@@ -12,7 +12,9 @@
   "query_timeout_seconds": 15,
   "cooldown_seconds": 300,
   "max_events_per_evaluation": 20,
-  "outbox": {"max_events": 1000, "max_bytes": 8388608},
+  "outbox": {"max_events": 1000, "max_bytes": 8388608, "acked_retention_seconds": 604800, "receipt_retention_seconds": 2592000, "receipt_limit": 4000},
+  "inbox": {"max_events": 1000, "max_bytes": 8388608, "max_completed": 1000, "completed_retention_seconds": 2592000},
+  "dispatcher": {"max_events": 128, "max_bytes": 262144, "max_completed": 128, "completed_retention_seconds": 2592000},
   "transport": {"adapter": "disabled"},
   "privacy": {"profile": "minimal-v1"}
 }

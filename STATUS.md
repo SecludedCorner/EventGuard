@@ -1,6 +1,20 @@
 # EventGuard 狀態與驗收缺口
 
-## 目前：Phase 3 已實作並驗證（2026-10-23 02:32 台北）
+## 目前：Phase 4 容量／保留已實作（2026-10-23 03:11 台北）
+
+基底 `677fe2a6b78e7f961be45693c8e95d00a5f2a88f`，同一 feature 分支。ACKed payload／review 的 TTL 與壓力清理、有限 receipt 去重窗、inbox 完成回條合併／輪替、dispatcher 已核實 terminal 帳本壓縮及上限已接入；設定見 `config/default.json` 與 [STORAGE_RETENTION](docs/STORAGE_RETENTION.md)。pending／retry／未 ACK failed 都不清除，移除舊七天 failed 自動清除邏輯。上限存在 SQLite／inbox 專用政策，ACK opener 沿用；status 顯示 outbox 實際政策及輪替數。inbox admission 預留收尾空間；帳本開始 child 前預留終態更新大小。
+
+唯一完整測試數來源：`reports/phase4-capacity-001/verified/verification-summary.json`。命令 `C:\Python313\python.exe -B scripts/verify.py --run-dir reports/phase4-capacity-001/verified --timeout-seconds 600`；Windows／Python **3.13.3**，2026-10-22T19:11:31.019298Z：**343 discovered、341 passed、0 failure/error、2 symlink 權限 skip、80 AST**，131.775 秒，exit **0**。`passed_checks=true`、`source_unchanged=true`、`per_test_residuals=[]`；guardian `child_exited=true`、exit **0**、`remaining_owned_processes=0`、`forcibly_terminated=false`。scope 含 fixture／SDK／fake CLI 與分開標示的真 Windows Job API，沒有模型或七來源全機採集。
+
+新增 17 項容量測試覆蓋：count／byte 失敗回滾、ACK 後恢復、TTL 與 review 清理、未 ACK failed 保留、政策跨 opener、ACK 不改寫／衝突拒絕、inbox 同 query／result 重播及 mutation busy、completion 寫入失敗修復、來源 pending 與完成檔衝突、帳本 archive 前後寫入／中斷恢復、byte／count／TTL 輪替，以及 **64 KiB 下 100 次入列／ACK 循環仍保留指定 pending hash**。首次 targeted 測試的唯一錯誤是新 review fixture 缺少既有 API 必需的 payload_hash；補齊 fixture 後 17 項通過，未放寬來源比對。另有既有 73 項相關測試通過；不能與完整數重複相加。
+
+保留實體證據的命令 `python -B reports/phase4-capacity-001/capacity_probe.py` exit **0**：`probe/manifest.json` 的 **5 個案例全部 passed、missing=[]**，涵蓋 outbox count／bytes、inbox count／bytes 與 dispatcher 帳本。manifest 核對原始 offered／accepted／ACK／恢復 event ID、前後 pending hashes、同 query、實際回傳與真 SQLite receipts；各 source DB／inbox 完成檔／帳本均保存在相鄰 probe 子目錄。沒有直接讀取或清理正式 data。帳本的 terminal child／交付成功欄位是明示的合成 fixture，不能升格成真 agent 或真 child exit 證據。
+
+完整 suite 輸出、source hashes、每案例 lifecycle evidence、guardian 退出回條都在 verified 子目錄；提交後 `source-commit.json` 對照本次提交與所有受測來源位元組。執行資料／manifest／DB／完整 trace 仍在 Git 忽略目錄，未提交或推送。
+
+**尚未驗證與限制：** [24 小時 soak 計畫](docs/SOAK_PLAN.md) 已寫，**尚未執行**；也未跑長時 provider、登出／重啟、Phase 7 注入或新真 agent。去重與已完成歷史有有限保留窗，壓力可提前輪替；不承諾永久 exactly-once。SQLite free pages 重用而不自動縮檔，journal／原子寫入暫存／檔案系統開銷及完整 reports 另計。全是未解決資料時維持明確背壓，不能藉清 pending 假裝恢復。本輪未啟動模型、長期背景程序或排程，未提權、下載安裝、改安全設定、處理其他程序或推送。Phase 5 收斂尚未開始。
+
+## 前一階段：Phase 3 已實作並驗證（2026-10-23 02:32 台北）
 
 本批基底 `c09f396745fe835df45b3986ae704c0213054c43`，同一 `feat/local-codex-acceptance` 分支；保留既有歷史與執行資料。新增 Windows 私有 Job Object：子程序在建立時原子加入，協作寬限後只回收本工具 Job，保存 PID＋建立時間、強停原因、退出碼與剩餘數。native 查詢改成固定 section 的 Python worker，與 PowerShell fallback 共用 Runner；monitor、capture、dispatcher／驗收 supervisor、watch、smoke 入口已接入。AGENTS 的強停限制已限縮為不得處理非本工具啟動的程序。契約及界線見 [PROCESS_LIFECYCLE](docs/PROCESS_LIFECYCLE.md)。
 

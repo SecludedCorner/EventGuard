@@ -1,0 +1,41 @@
+# 24 小時 soak 計畫（尚未執行）
+
+Phase 4 先提交計畫；本輪只執行有限的合成容量測試。這份計畫不授權常駐、排程、模型、提權、真實狀態注入或登出／重開機。執行完整 soak 前另行確認開始時間、目錄及範圍，前景執行、使用既有 Python 3.13 標準庫及本工具 Job。
+
+## 範圍與隔離
+
+- 全新 `reports/soak-NEW/source`，只放 synthetic 事件與 fixture 設定，不沿用正式 data、Codex home 或既有證據。
+- consumer 以 QueueInbox 的 receive/query/ACK 操作，明示 synthetic harness，不能宣稱 agent 收到。dispatcher 帳本只使用已標示的合成退出／交付 fixture，不啟動 CLI 或模型。
+- 以提交碼與 source hashes 固定版本；保存 Python／Windows 版本、政策設定、起訖 UTC／monotonic 時間、manifest、容量錯誤、ACK 與每個 Job 的退出回條。
+- 不讀取系統其他程序或完整命令列；只測試本工具程序／其 Job 的 CPU、RAM、handle。OS provider 長時採集另屬未執行的實機驗證範圍。
+
+## 預算與負載
+
+總上限 24 小時；一般每 30 秒生成 1 件，最多 2,880 件；壓力階段改成同樣總量內的有界批次。每件先把 ID／hash／sequence 耐久寫入 producer manifest，入列被拒絕則保留 producer 待重試，不改 ID、不把未接受事件算作已入列。只使用公開合成 enum／數值／ID。
+
+縮小容量以在有限負載下反覆輪替：outbox 32 件／256 KiB；inbox 16 active／16 completed／256 KiB；dispatcher 8 active／8 completed／128 KiB。ACKed payload 保留與完成回條 TTL 用測試設定另行記錄；accelerated clock 測試與真實 24 小時時間分開。每個 JSON／SQLite 主檔都有上限；journal 與原子替換暫存另計，整輪 reports 預算 64 MiB。不能以清理 pending 換取達標。
+
+| 時段 | 負載／故障 | 必須觀測 |
+| --- | --- | --- |
+| 0–1h | idle，無模型 | 等待程序的資源基準、heartbeat；零接收／ACK |
+| 1–4h | 穩定產生及 synthetic ACK | ID 集合一致、無重複結案、完成資料輪替 |
+| 4–5h | 暫停 consumer，填滿 outbox／inbox；producer 保留被拒事件 | 明確容量錯誤，pending payload/hash 不變；恢復後補收同 ID |
+| 5–12h | 穩定交付，分別填滿帳本及 byte cap | 未確認 child／失敗交付不被輪替；完成證據保存後才能恢復 |
+| 12–13h | 專用測試檔案寫入／fsync／replace 故障 fixture | 交易回滾、原資料保留；解除故障後恢復，不改權限或真磁碟 |
+| 13–23h | steady＋定時合作停止／重新開啟本工具 | 同 ID／query、ACK 去重、planned monitor_gap；不是主機重開機證據 |
+| 23–24h | 停止 producer，排空可交付事件、正常收尾 | manifest／SQLite／inbox／帳本集合核對，Job active=0 |
+
+## 每分鐘採樣
+
+用標準庫 ctypes 對自己的 process handle 讀 `GetProcessTimes`、`GetProcessMemoryInfo`、`GetProcessHandleCount`，加 `time.monotonic()`；整個 Job 的 CPU／峰值另取 Job accounting，不能把 parent RAM 當全程序樹 RAM。記錄 private bytes、working set、handle 數、累積 CPU 秒及區間 CPU；采不到記 unknown，不填 0。
+
+同時記錄 SQLite 主檔／journal／freelist／used pages 大小、outbox 各狀態數、receipt 數及輪替數；inbox active／completed／actual＋reserved bytes；dispatcher active／completed 與兩個檔案大小；producer 未入列清單與最老 pending 年齡。以 JSONL append，定時 flush/fsync；採樣錯誤只存固定原因碼。
+
+## 通過與停止條件
+
+- 任一時間：所有未 ACK 的 pending／retry／failed event ID 與 payload hash 都可在 outbox 或尚未接受的 producer 清單找到；已接受集合＝仍未 ACK＋唯一 ACK，交集為空。輪替後的完整 ACK 證據以本輪 harness manifest 保留，不要求產品無限保存歷史。
+- 重收只能是同 event/query；唯一 ACK 集合與成功接收查證集合一致；額外／缺漏／非預期重複為空。每次滿載後至少有一次解除阻塞及後續新事件成功入列／ACK 的證據。
+- 主檔與狀態上限不超政策；原子替換／SQLite DELETE journal 暫存另列峰值。每一輪 active 回落且 completed 輪替，不能只看最後筆數。
+- idle 最後 30 分鐘 CPU 平均目標 <1%（以單核心比例）、private bytes 相對首個 idle 窗增幅 <32 MiB、handle 增幅 <20；steady 相同工作量窗不得連續四窗單調增加。這些是待測目標，不是現有效能保證；記錄主機背景負載的不確定性。
+- 卡住、容量無法恢復、任何 accepted ID/hash 不見、紀錄超額或資源持續上升即停止新產生；合作停止後只清理本工具 Job，保留失敗證據，禁止刪除資料讓測試變綠。
+- 最後保存所有子程序 exit code、`forcibly_terminated`、Job 剩餘數、scope 與未驗證項。未跑滿 24 小時只能報有限時長；主機登出／重開機與真 agent 仍不得升格為通過。

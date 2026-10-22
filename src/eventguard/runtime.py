@@ -104,6 +104,9 @@ class Runtime:
             raise ValueError("query_timeout_out_of_bounds")
         if config.get("transport", {}).get("adapter", "disabled") != "disabled":
             raise ValueError("real_transport_not_configured_or_authorized")
+        from .storage_policy import limits
+        for section in ("outbox", "inbox", "dispatcher"):
+            limits(section, config.get(section))
         return config
 
     def health(self):

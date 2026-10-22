@@ -133,7 +133,8 @@ class Monitor:
             if fixture:
                 host_id="fixture-"+host_id
             limits=config.get("outbox",{})
-            store=EventStore(self.runtime.data_dir(namespace),max_events=limits.get("max_events",1000),max_bytes=limits.get("max_bytes",8388608))
+            store=EventStore(self.runtime.data_dir(namespace), **limits)
+            store.maintain()
             try:
                 from .monitor_gap import persist
                 health["monitor_gap"] = persist(self.runtime, namespace, host_id, store)
