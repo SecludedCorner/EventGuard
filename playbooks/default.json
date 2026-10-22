@@ -1,0 +1,775 @@
+{
+  "schema_version": "1.0",
+  "playbooks": [
+    {
+      "rule_id": "pb-listener-change",
+      "version": "1.0.0",
+      "enabled": true,
+      "title": "新監聽埠調查",
+      "event_type": [
+        "listener.changed"
+      ],
+      "event_filter": {
+        "transition_in": [
+          "new",
+          "escalated",
+          "resolved"
+        ]
+      },
+      "severity": "warning",
+      "priority": 100,
+      "exclusive_group": "listener",
+      "investigation_steps": [
+        {
+          "id": "collect",
+          "type": "tool",
+          "operation": "query_listener",
+          "input_from": [
+            "evidence.protocol",
+            "evidence.port"
+          ],
+          "output_schema": "diagnostic-result-1.0",
+          "max_rows": 100,
+          "deadline_ms": 15000
+        },
+        {
+          "id": "interpret",
+          "type": "agent_decision",
+          "branches": [
+            "explained",
+            "needs_evidence",
+            "propose_action"
+          ]
+        },
+        {
+          "id": "ask",
+          "type": "retain_case_and_ask_user"
+        },
+        {
+          "id": "approve",
+          "type": "approval_gate"
+        },
+        {
+          "id": "action",
+          "type": "allowlisted_action",
+          "when_no_allowed_action": "blocked"
+        },
+        {
+          "id": "verify",
+          "type": "verification"
+        },
+        {
+          "id": "close",
+          "type": "case_result"
+        }
+      ],
+      "edges": [
+        {
+          "from": "collect",
+          "on": [
+            "ok",
+            "partial"
+          ],
+          "to": "interpret"
+        },
+        {
+          "from": "collect",
+          "on": [
+            "denied",
+            "unknown",
+            "error",
+            "timeout",
+            "cancelled",
+            "busy"
+          ],
+          "to": "ask"
+        },
+        {
+          "from": "interpret",
+          "on": [
+            "explained"
+          ],
+          "to": "verify"
+        },
+        {
+          "from": "interpret",
+          "on": [
+            "needs_evidence"
+          ],
+          "to": "ask"
+        },
+        {
+          "from": "interpret",
+          "on": [
+            "propose_action"
+          ],
+          "to": "approve"
+        },
+        {
+          "from": "approve",
+          "on": [
+            "approved"
+          ],
+          "to": "action"
+        },
+        {
+          "from": "approve",
+          "on": [
+            "denied",
+            "expired",
+            "unknown"
+          ],
+          "to": "ask"
+        },
+        {
+          "from": "action",
+          "on": [
+            "completed"
+          ],
+          "to": "verify"
+        },
+        {
+          "from": "action",
+          "on": [
+            "blocked",
+            "failed",
+            "unknown"
+          ],
+          "to": "ask"
+        },
+        {
+          "from": "verify",
+          "on": [
+            "verified"
+          ],
+          "to": "close"
+        },
+        {
+          "from": "verify",
+          "on": [
+            "failed",
+            "unknown"
+          ],
+          "to": "ask"
+        }
+      ],
+      "tool_io": {
+        "input_schema": "event-2.0",
+        "output_schema": "case-result-1.0"
+      },
+      "decision_basis": [
+        "match_same_process_instance",
+        "baseline_diff",
+        "all_interfaces_is_not_internet_exposure",
+        "unknown_path_is_coverage_gap"
+      ],
+      "allowed_actions": [],
+      "approval_gate": {
+        "required_for_sensitive_actions": true,
+        "authority_source": "separate_valid_user_approval",
+        "missing_or_expired": "do_not_execute"
+      },
+      "timeout_retry": {
+        "query_deadline_ms": 15000,
+        "active_diagnosis_budget_ms": 60000,
+        "read_only_retries": 1
+      },
+      "expected_evidence": [
+        "endpoint_metadata",
+        "process_instance_or_explicit_unknown",
+        "source_time_and_coverage"
+      ],
+      "completion_conditions": [
+        "result_persisted_with_source_time_and_coverage",
+        "close_only_with_verified_evidence_or_documented_benign_change"
+      ],
+      "recovery_conditions": [
+        "two_complete_successful_observations_no_longer_matching",
+        "partial_unknown_or_denied_is_not_recovery"
+      ],
+      "on_failure": "bounded_read_only_then_ask",
+      "on_unknown": "bounded_read_only_then_ask",
+      "audit": {
+        "change_ref": "bundled-example-1.0.0",
+        "execution_authority": "none"
+      },
+      "supersedes": null
+    },
+    {
+      "rule_id": "pb-protection-change",
+      "version": "1.0.0",
+      "enabled": true,
+      "title": "防護狀態與防毒訊號調查",
+      "event_type": [
+        "protection.changed",
+        "antivirus.signal"
+      ],
+      "event_filter": {
+        "transition_in": [
+          "new",
+          "escalated",
+          "resolved"
+        ]
+      },
+      "severity": "high",
+      "priority": 100,
+      "exclusive_group": "protection",
+      "investigation_steps": [
+        {
+          "id": "collect",
+          "type": "tool",
+          "operation": "query_defender",
+          "input_from": [],
+          "output_schema": "diagnostic-result-1.0",
+          "max_rows": 100,
+          "deadline_ms": 15000
+        },
+        {
+          "id": "interpret",
+          "type": "agent_decision",
+          "branches": [
+            "explained",
+            "needs_evidence",
+            "propose_action"
+          ]
+        },
+        {
+          "id": "ask",
+          "type": "retain_case_and_ask_user"
+        },
+        {
+          "id": "approve",
+          "type": "approval_gate"
+        },
+        {
+          "id": "action",
+          "type": "allowlisted_action",
+          "when_no_allowed_action": "blocked"
+        },
+        {
+          "id": "verify",
+          "type": "verification"
+        },
+        {
+          "id": "close",
+          "type": "case_result"
+        }
+      ],
+      "edges": [
+        {
+          "from": "collect",
+          "on": [
+            "ok",
+            "partial"
+          ],
+          "to": "interpret"
+        },
+        {
+          "from": "collect",
+          "on": [
+            "denied",
+            "unknown",
+            "error",
+            "timeout",
+            "cancelled",
+            "busy"
+          ],
+          "to": "ask"
+        },
+        {
+          "from": "interpret",
+          "on": [
+            "explained"
+          ],
+          "to": "verify"
+        },
+        {
+          "from": "interpret",
+          "on": [
+            "needs_evidence"
+          ],
+          "to": "ask"
+        },
+        {
+          "from": "interpret",
+          "on": [
+            "propose_action"
+          ],
+          "to": "approve"
+        },
+        {
+          "from": "approve",
+          "on": [
+            "approved"
+          ],
+          "to": "action"
+        },
+        {
+          "from": "approve",
+          "on": [
+            "denied",
+            "expired",
+            "unknown"
+          ],
+          "to": "ask"
+        },
+        {
+          "from": "action",
+          "on": [
+            "completed"
+          ],
+          "to": "verify"
+        },
+        {
+          "from": "action",
+          "on": [
+            "blocked",
+            "failed",
+            "unknown"
+          ],
+          "to": "ask"
+        },
+        {
+          "from": "verify",
+          "on": [
+            "verified"
+          ],
+          "to": "close"
+        },
+        {
+          "from": "verify",
+          "on": [
+            "failed",
+            "unknown"
+          ],
+          "to": "ask"
+        }
+      ],
+      "tool_io": {
+        "input_schema": "event-2.0",
+        "output_schema": "case-result-1.0"
+      },
+      "decision_basis": [
+        "explicit_boolean_settings_only",
+        "separate_historical_inactive_from_active_threat",
+        "missing_action_success_or_date_is_unknown",
+        "no_event_does_not_prove_safety"
+      ],
+      "allowed_actions": [],
+      "approval_gate": {
+        "required_for_sensitive_actions": true,
+        "authority_source": "separate_valid_user_approval",
+        "missing_or_expired": "do_not_execute"
+      },
+      "timeout_retry": {
+        "query_deadline_ms": 15000,
+        "active_diagnosis_budget_ms": 60000,
+        "read_only_retries": 1
+      },
+      "expected_evidence": [
+        "defender_settings_or_bounded_threat_metadata",
+        "source_time_and_coverage",
+        "action_status_or_explicit_unknown"
+      ],
+      "completion_conditions": [
+        "result_persisted_with_source_time_and_coverage",
+        "close_only_with_verified_evidence_or_documented_benign_change"
+      ],
+      "recovery_conditions": [
+        "two_complete_successful_observations_no_longer_matching",
+        "partial_unknown_or_denied_is_not_recovery"
+      ],
+      "on_failure": "bounded_read_only_then_ask",
+      "on_unknown": "bounded_read_only_then_ask",
+      "audit": {
+        "change_ref": "bundled-example-1.0.0",
+        "execution_authority": "none"
+      },
+      "supersedes": null
+    },
+    {
+      "rule_id": "pb-persistence-change",
+      "version": "1.0.0",
+      "enabled": true,
+      "title": "啟動項、服務或排程變更調查",
+      "event_type": [
+        "persistence.changed"
+      ],
+      "event_filter": {
+        "transition_in": [
+          "new",
+          "escalated",
+          "resolved"
+        ]
+      },
+      "severity": "warning",
+      "priority": 100,
+      "exclusive_group": "persistence",
+      "investigation_steps": [
+        {
+          "id": "collect",
+          "type": "tool",
+          "operation": "query_persistence_diff",
+          "input_from": [
+            "evidence.kind"
+          ],
+          "output_schema": "diagnostic-result-1.0",
+          "max_rows": 100,
+          "deadline_ms": 15000
+        },
+        {
+          "id": "interpret",
+          "type": "agent_decision",
+          "branches": [
+            "explained",
+            "needs_evidence",
+            "propose_action"
+          ]
+        },
+        {
+          "id": "ask",
+          "type": "retain_case_and_ask_user"
+        },
+        {
+          "id": "approve",
+          "type": "approval_gate"
+        },
+        {
+          "id": "action",
+          "type": "allowlisted_action",
+          "when_no_allowed_action": "blocked"
+        },
+        {
+          "id": "verify",
+          "type": "verification"
+        },
+        {
+          "id": "close",
+          "type": "case_result"
+        }
+      ],
+      "edges": [
+        {
+          "from": "collect",
+          "on": [
+            "ok",
+            "partial"
+          ],
+          "to": "interpret"
+        },
+        {
+          "from": "collect",
+          "on": [
+            "denied",
+            "unknown",
+            "error",
+            "timeout",
+            "cancelled",
+            "busy"
+          ],
+          "to": "ask"
+        },
+        {
+          "from": "interpret",
+          "on": [
+            "explained"
+          ],
+          "to": "verify"
+        },
+        {
+          "from": "interpret",
+          "on": [
+            "needs_evidence"
+          ],
+          "to": "ask"
+        },
+        {
+          "from": "interpret",
+          "on": [
+            "propose_action"
+          ],
+          "to": "approve"
+        },
+        {
+          "from": "approve",
+          "on": [
+            "approved"
+          ],
+          "to": "action"
+        },
+        {
+          "from": "approve",
+          "on": [
+            "denied",
+            "expired",
+            "unknown"
+          ],
+          "to": "ask"
+        },
+        {
+          "from": "action",
+          "on": [
+            "completed"
+          ],
+          "to": "verify"
+        },
+        {
+          "from": "action",
+          "on": [
+            "blocked",
+            "failed",
+            "unknown"
+          ],
+          "to": "ask"
+        },
+        {
+          "from": "verify",
+          "on": [
+            "verified"
+          ],
+          "to": "close"
+        },
+        {
+          "from": "verify",
+          "on": [
+            "failed",
+            "unknown"
+          ],
+          "to": "ask"
+        }
+      ],
+      "tool_io": {
+        "input_schema": "event-2.0",
+        "output_schema": "case-result-1.0"
+      },
+      "decision_basis": [
+        "baseline_and_current_metadata",
+        "known_approved_change_or_unknown",
+        "names_are_not_commands",
+        "incomplete_source_is_not_recovery"
+      ],
+      "allowed_actions": [],
+      "approval_gate": {
+        "required_for_sensitive_actions": true,
+        "authority_source": "separate_valid_user_approval",
+        "missing_or_expired": "do_not_execute"
+      },
+      "timeout_retry": {
+        "query_deadline_ms": 15000,
+        "active_diagnosis_budget_ms": 60000,
+        "read_only_retries": 1
+      },
+      "expected_evidence": [
+        "bounded_names_and_kind_diff",
+        "baseline_reference",
+        "source_time_and_coverage"
+      ],
+      "completion_conditions": [
+        "result_persisted_with_source_time_and_coverage",
+        "close_only_with_verified_evidence_or_documented_benign_change"
+      ],
+      "recovery_conditions": [
+        "two_complete_successful_observations_no_longer_matching",
+        "partial_unknown_or_denied_is_not_recovery"
+      ],
+      "on_failure": "bounded_read_only_then_ask",
+      "on_unknown": "bounded_read_only_then_ask",
+      "audit": {
+        "change_ref": "bundled-example-1.0.0",
+        "execution_authority": "none"
+      },
+      "supersedes": null
+    },
+    {
+      "rule_id": "pb-monitor-fault",
+      "version": "1.0.0",
+      "enabled": true,
+      "title": "監看與採集覆蓋故障調查",
+      "event_type": [
+        "coverage.degraded"
+      ],
+      "event_filter": {
+        "transition_in": [
+          "new",
+          "escalated",
+          "resolved"
+        ]
+      },
+      "severity": "warning",
+      "priority": 100,
+      "exclusive_group": "coverage",
+      "investigation_steps": [
+        {
+          "id": "collect",
+          "type": "tool",
+          "operation": "health",
+          "input_from": [],
+          "output_schema": "diagnostic-result-1.0",
+          "max_rows": 100,
+          "deadline_ms": 15000
+        },
+        {
+          "id": "interpret",
+          "type": "agent_decision",
+          "branches": [
+            "explained",
+            "needs_evidence",
+            "propose_action"
+          ]
+        },
+        {
+          "id": "ask",
+          "type": "retain_case_and_ask_user"
+        },
+        {
+          "id": "approve",
+          "type": "approval_gate"
+        },
+        {
+          "id": "action",
+          "type": "allowlisted_action",
+          "when_no_allowed_action": "blocked"
+        },
+        {
+          "id": "verify",
+          "type": "verification"
+        },
+        {
+          "id": "close",
+          "type": "case_result"
+        }
+      ],
+      "edges": [
+        {
+          "from": "collect",
+          "on": [
+            "ok",
+            "partial"
+          ],
+          "to": "interpret"
+        },
+        {
+          "from": "collect",
+          "on": [
+            "denied",
+            "unknown",
+            "error",
+            "timeout",
+            "cancelled",
+            "busy"
+          ],
+          "to": "ask"
+        },
+        {
+          "from": "interpret",
+          "on": [
+            "explained"
+          ],
+          "to": "verify"
+        },
+        {
+          "from": "interpret",
+          "on": [
+            "needs_evidence"
+          ],
+          "to": "ask"
+        },
+        {
+          "from": "interpret",
+          "on": [
+            "propose_action"
+          ],
+          "to": "approve"
+        },
+        {
+          "from": "approve",
+          "on": [
+            "approved"
+          ],
+          "to": "action"
+        },
+        {
+          "from": "approve",
+          "on": [
+            "denied",
+            "expired",
+            "unknown"
+          ],
+          "to": "ask"
+        },
+        {
+          "from": "action",
+          "on": [
+            "completed"
+          ],
+          "to": "verify"
+        },
+        {
+          "from": "action",
+          "on": [
+            "blocked",
+            "failed",
+            "unknown"
+          ],
+          "to": "ask"
+        },
+        {
+          "from": "verify",
+          "on": [
+            "verified"
+          ],
+          "to": "close"
+        },
+        {
+          "from": "verify",
+          "on": [
+            "failed",
+            "unknown"
+          ],
+          "to": "ask"
+        }
+      ],
+      "tool_io": {
+        "input_schema": "event-2.0",
+        "output_schema": "case-result-1.0"
+      },
+      "decision_basis": [
+        "last_success_and_current_coverage",
+        "queue_storage_transport_are_separate",
+        "single_failure_is_not_compromise",
+        "all_processes_stopped_cannot_self_alert"
+      ],
+      "allowed_actions": [],
+      "approval_gate": {
+        "required_for_sensitive_actions": true,
+        "authority_source": "separate_valid_user_approval",
+        "missing_or_expired": "do_not_execute"
+      },
+      "timeout_retry": {
+        "query_deadline_ms": 15000,
+        "active_diagnosis_budget_ms": 60000,
+        "read_only_retries": 1
+      },
+      "expected_evidence": [
+        "local_health_metadata",
+        "fixed_error_code_or_explicit_unknown",
+        "last_success_time"
+      ],
+      "completion_conditions": [
+        "result_persisted_with_source_time_and_coverage",
+        "close_only_with_verified_evidence_or_documented_benign_change"
+      ],
+      "recovery_conditions": [
+        "two_complete_successful_observations_no_longer_matching",
+        "partial_unknown_or_denied_is_not_recovery"
+      ],
+      "on_failure": "bounded_read_only_then_ask",
+      "on_unknown": "bounded_read_only_then_ask",
+      "audit": {
+        "change_ref": "bundled-example-1.0.0",
+        "execution_authority": "none"
+      },
+      "supersedes": null
+    }
+  ]
+}

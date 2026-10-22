@@ -1,0 +1,11 @@
+{
+  "sections": [
+    {"id":"defender","status":"ok","rows":[{"property":"AntivirusEnabled","value":true,"status":"ok"},{"property":"RealTimeProtectionEnabled","value":true,"status":"ok"}],"observed_at":"2026-10-22T00:00:00Z","coverage":{"status":"ok"}},
+    {"id":"listeners","status":"ok","rows":[],"coverage":{"status":"ok"}},
+    {"id":"processes","status":"ok","rows":[],"coverage":{"status":"ok"}},
+    {"id":"startup","status":"ok","rows":[],"coverage":{"status":"ok"}},
+    {"id":"services","status":"ok","rows":[],"coverage":{"status":"ok"}},
+    {"id":"tasks","status":"ok","rows":[],"coverage":{"status":"ok"}},
+    {"id":"versions","status":"ok","rows":[],"coverage":{"status":"ok"}}
+  ]
+}

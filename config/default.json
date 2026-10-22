@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "interval_seconds": {
+    "defender": 120,
+    "listeners": 120,
+    "processes": 120,
+    "startup": 600,
+    "services": 600,
+    "tasks": 600,
+    "versions": 21600
+  },
+  "query_timeout_seconds": 15,
+  "cooldown_seconds": 300,
+  "max_events_per_evaluation": 20,
+  "outbox": {"max_events": 1000, "max_bytes": 8388608},
+  "transport": {"adapter": "disabled"},
+  "privacy": {"profile": "minimal-v1"}
+}
