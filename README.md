@@ -10,7 +10,13 @@ EventGuard 目前是**尚未完成目標的工程預覽**。它提供無 GUI 的
 
 本機固定基準 `fd45578` 與 frozen ZIP 保留不變；目前 `main` 已另加 MCP Events 接線程式，新增結果以當前 commit 與測試為準。這不修改舊 MVP，也不把歷史測試升格為平台接通證據。
 
-## MCP Events 接線程式：已實作，未部署
+## 目前優先：直接本機 MCP 等待實驗
+
+使用者目前選定本機方案。已新增 `scripts/eventguard_local_mcp.py`：本機 stdio 三個工具 `wait_for_event`、`query_evidence`、`ack_event`。它們只處理專用目錄中的合成事件，沒有網路服務、proxy、憑證或模型呼叫；**尚未做真實 Codex 模型續跑驗證，也不能承諾永久等待**。Codex 官方工具逾時預設 60 秒、可設定；不得用模型重複等待代替事件驅動。
+
+讀 [最小實驗與單次批准範圍](docs/LOCAL_MCP_EXPERIMENT.md)。入口只使用已安裝的可選 Python MCP SDK；缺少時報錯退出，不下載。正式監看、正式資料傳輸及持續模型權限仍未啟用。
+
+## 歷史候選：雲端 MCP Events 接線程式（停用，不是前置需求）
 
 目前新增 authenticated WSGI `/mcp`、durable 訂閱／事件投遞、callback 驗證、Standard Webhooks HMAC、獨立 producer HTTPS adapter，以及只讀取已保存合成證據的工具與 CAS 結果回條。**僅接受 synthetic 事件**；不執行原生採集、模型或系統處置。`received` 只代表 callback 收到，`agent_result_recorded` 只代表已驗證呼叫端提交回條，不自證平台回合或主機安全。
 
@@ -32,7 +38,7 @@ python -B scripts/eventguard_bridge.py --config config/bridge.example.json check
 
 ## 執行需求與平台範圍
 
-- Python **3.13**，使用標準函式庫，無第三方套件依賴；不需要 pip 安裝或自動下載。
+- Python **3.13**；核心使用標準函式庫，無須安裝。可選本機 stdio 實驗另外使用既有 `mcp` SDK（已驗版本 1.6.0）；缺少時停止，不自動下載。這不是核心監看依賴。
 - 原生採集對象是 Windows，依賴本機可用的 Windows PowerShell／系統來源。一般權限拒讀、來源不存在或資料不全必須呈現 coverage，不能為補齊資料提權。
 - 雲端工作區可做原始碼／文件檢查及純 mock／fixture 驗證；沒有存取目標 Windows 主機時，不能驗證其實際 Defender、程序、UAC、桌面或遠端可操作性。
 - **尚未證明 cloud 預設完整 suite 跨平台通過，不宣稱 Linux 原生採集受支援。** Windows 原生結果、跨程序測試、純 mock 結果須分開記錄。

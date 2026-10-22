@@ -1,5 +1,7 @@
 # EventGuard 接手與下一任務
 
+**最新接手方向：只推進直接本機 stdio MCP 等待方案。** 先讀 [LOCAL_MCP_EXPERIMENT](docs/LOCAL_MCP_EXPERIMENT.md)。雲端 bridge／網域／HTTPS／proxy 已停止擴建，以下舊候選不構成部署要求。只允許無模型協定研究與合成測試；真正帳戶模型任務、MCP 註冊或持續存取需按該文件取得明確範圍。不能宣稱已接通任意桌面任務或永久等待。
+
 本次僅文件增量；`fd45578` frozen ZIP、source、tests、config、playbooks保持固定，不以新文件覆寫舊快照或測試紀錄。版本定位是**尚未完成目標的工程預覽**：正式監看未啟動，真實 agent 未接通。所有範例應保持匿名，不放實際使用者路徑、主機警報、私人資料或秘密。
 
 先讀 [AGENTS](AGENTS.md)、[README](README.md)、[STATUS](STATUS.md) 及 [DEVELOPMENT](docs/DEVELOPMENT.md)。實作主檔 [ARCHITECTURE](docs/ARCHITECTURE.md)、[AGENT_CONTRACT](docs/AGENT_CONTRACT.md)、[OPERATIONS](docs/OPERATIONS.md)、[TARGET_DESIGN](docs/TARGET_DESIGN.md)、[INGRESS_CHECK](docs/INGRESS_CHECK.md) 保留原有定位；目標規格不是已完成證明。

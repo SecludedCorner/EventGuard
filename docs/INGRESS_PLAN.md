@@ -1,5 +1,7 @@
 # EventGuard 真正 agent 事件入口調研與接線計畫
 
+目前唯一優先接線改為 [本機 stdio MCP 最小實驗](LOCAL_MCP_EXPERIMENT.md)。本頁其餘內容是歷史候選，不要求 host／HTTPS／proxy，也不授權部署。
+
 研究／增量更新日期：2026-10-22 UTC。狀態：**官方路徑已辨識；本輪新增 synthetic-only authenticated MCP bridge 工程；尚未部署或連平台，真正 agent 喚醒與端到端驗收未完成**。本輪介面、範例及待選部署見 [MCP_BRIDGE_DEPLOYMENT](MCP_BRIDGE_DEPLOYMENT.md) 與第9節。
 
 本文件保留先前可審查的整合研究，並記錄本輪工程增量；不增加憑證、外部 webhook、常駐程序或模型呼叫，也不構成未來傳輸或處置的授權。先前研究只有官方文件與公開 CLI help；本輪另有離線、in-process fake HTTP 的實作與測試工作，確切驗證結果見 STATUS。未讀登入檔、原始 sessions 或秘密，未啟動 app-server、列出任務或傳送實際訊息。
