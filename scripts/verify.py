@@ -1,38 +1,130 @@
-"""Reproducible synthetic unit suite and syntax checks. No machine scan."""
+"""Fixture suite in an owned Windows guardian job; no scan/model or installation."""
+from __future__ import annotations
+import argparse
 import ast
 import contextlib
-from datetime import datetime,timezone
-import io
+from datetime import datetime, timezone
+import hashlib
 import json
+import os
 from pathlib import Path
+import platform
 import sys
 import time
 import unittest
+import uuid
 
-ROOT=Path(__file__).resolve().parent.parent
-sys.path.insert(0,str(ROOT/"src"))
-started=time.monotonic()
-output=ROOT/"reports"
-output.mkdir(exist_ok=True)
-syntax=[]
-sources=[p for directory in ("src","scripts","tests") for p in (ROOT/directory).rglob("*.py")]
-for path in sources:
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+from eventguard.processes import spawn, finish, cleanup_owned, current_job_members
+from eventguard.runtime import safe_child, atomic_json
+
+
+def sources():
+    return {str(p.relative_to(ROOT)).replace("\\", "/"): hashlib.sha256(p.read_bytes()).hexdigest()
+            for folder in ("src", "scripts", "tests", "config", "playbooks")
+            for p in sorted((ROOT / folder).rglob("*")) if p.is_file() and p.suffix in {".py", ".json"}}
+
+
+def worker(output, guardian_name):
+    evidence, residuals, syntax = [], [], []
+    baseline = {}
+    files = [p for folder in ("src", "scripts", "tests") for p in (ROOT / folder).rglob("*.py")]
+    for file in files:
+        try:
+            ast.parse(file.read_text(encoding="utf-8"), filename=str(file.relative_to(ROOT)))
+        except SyntaxError as error:
+            syntax.append({"file": str(file.relative_to(ROOT)), "line": error.lineno})
+    class Result(unittest.TextTestResult):
+        def addSuccess(self, test):
+            if hasattr(test, "evidence"):
+                evidence.append({"test": test.id(), **test.evidence})
+            super().addSuccess(test)
+
+        def stopTest(self, test):
+            receipts = cleanup_owned(grace=.1)
+            forced = [r for r in receipts if r.get("forcibly_terminated")]
+            members = current_job_members(guardian_name) if os.name == "nt" else {}
+            extra = {pid: stamp for pid, stamp in members.items() if baseline.get(pid) != stamp or stamp is None}
+            until = time.monotonic()+1
+            while extra and time.monotonic() < until:
+                time.sleep(.01)
+                members = current_job_members(guardian_name)
+                extra = {pid: stamp for pid, stamp in members.items() if baseline.get(pid) != stamp or stamp is None}
+            if forced or extra:
+                residuals.append({"test": test.id(), "unexpected_job_members": extra, "cleanup_receipts": receipts})
+                try:
+                    raise AssertionError("owned test cleanup was required or descendants remain")
+                except AssertionError:
+                    self.addFailure(test, sys.exc_info())
+                if extra:
+                    self.stop()
+            super().stopTest(test)
+    tick = time.monotonic()
+    with (output / "unit-tests.txt").open("x", encoding="utf-8") as log, contextlib.redirect_stdout(log), contextlib.redirect_stderr(log):
+        suite = unittest.defaultTestLoader.discover(str(ROOT / "tests"), pattern="test_*.py")
+        # Windows may attach a conhost to the test worker during SDK imports.
+        # Account for the exact pre-test PID+creation identities, never a count.
+        baseline = current_job_members(guardian_name) if os.name == "nt" else {}
+        result = unittest.TextTestRunner(stream=log, verbosity=2, resultclass=Result).run(suite)
+    value = {"verified_at_utc": datetime.now(timezone.utc).isoformat(), "python": platform.python_version(),
+             "tests_run": result.testsRun, "passed": result.testsRun-len(result.failures)-len(result.errors)-len(result.skipped),
+             "failures": [test.id() for test, _ in result.failures], "errors": [test.id() for test, _ in result.errors],
+             "skipped": [{"test": test.id(), "reason": reason} for test, reason in result.skipped],
+             "python_files": len(files), "syntax_errors": syntax, "duration_seconds": round(time.monotonic()-tick, 3),
+             "per_test_residuals": residuals, "scope": "fixture/SDK/fake CLI plus labelled real Windows owned-job APIs; no inventory scan/model",
+             "guardian_baseline_identities": baseline,
+             "machine_scan_executed": False, "real_agent_woken": False, "model_calls": 0}
+    atomic_json(output / "worker-summary.json", value, 2*1024*1024)
+    atomic_json(output / "lifecycle-evidence.json", evidence, 4*1024*1024)
+    return 0 if result.wasSuccessful() and not syntax and not residuals else 1
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--run-dir", type=Path)
+    parser.add_argument("--timeout-seconds", type=float, default=900)
+    parser.add_argument("--_worker", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--guardian-job-name", help=argparse.SUPPRESS)
+    args = parser.parse_args(argv)
+    if not 1 <= args.timeout_seconds <= 1800:
+        parser.error("test budget must be 1..1800 seconds")
+    path = args.run_dir or Path("reports") / ("verify-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8])
+    absolute = path.absolute()
+    if not absolute.is_relative_to(ROOT / "reports"):
+        parser.error("verification output must be inside this project's reports")
+    output = safe_child(ROOT, absolute.relative_to(ROOT))
+    if args._worker:
+        return worker(output, args.guardian_job_name)
+    output.mkdir(parents=True, exist_ok=False)
+    before = sources()
+    atomic_json(output / "source-manifest.json", before, 2*1024*1024)
+    child, receipt = None, None
     try:
-        ast.parse(path.read_text(encoding="utf-8"),filename=str(path.relative_to(ROOT)))
-    except SyntaxError as error:
-        syntax.append({"file":str(path.relative_to(ROOT)),"line":error.lineno})
-stream=io.StringIO()
-printed=io.StringIO()
-with contextlib.redirect_stdout(printed):
-    suite=unittest.defaultTestLoader.discover(str(ROOT/"tests"),pattern="test_*.py")
-    result=unittest.TextTestRunner(stream=stream,verbosity=2).run(suite)
-(output/"unit-tests.txt").write_text(stream.getvalue()+"\nFixed test progress output:\n"+printed.getvalue(),encoding="utf-8")
-summary={"verified_at_utc":datetime.now(timezone.utc).isoformat(timespec="seconds"),"tests_run":result.testsRun,
-         "failures":len(result.failures),"errors":len(result.errors),"skipped":len(result.skipped),
-         "python_files":len(sources),"syntax_errors":syntax,"duration_seconds":round(time.monotonic()-started,3),
-         "test_data":"synthetic/mocked only","machine_scan_executed":False,"real_agent_woken":False,"model_calls":0}
-(output/"verification-summary.json").write_text(json.dumps(summary,indent=2),encoding="utf-8")
-print(json.dumps(summary))
-if syntax or not result.wasSuccessful():
-    print(stream.getvalue())
-    raise SystemExit(1)
+        with (output / "worker.stdout.txt").open("xb") as stdout, (output / "worker.stderr.txt").open("xb") as stderr:
+            job_name = "Local\\EventGuard-" + uuid.uuid4().hex
+            child = spawn([sys.executable, "-B", str(Path(__file__).resolve()), "--_worker", "--run-dir", str(output), "--guardian-job-name", job_name],
+                          **({"job_name": job_name} if os.name == "nt" else {}), stdout=stdout, stderr=stderr)
+            deadline = time.monotonic()+args.timeout_seconds
+            while child.poll() is None and time.monotonic() < deadline:
+                time.sleep(.1)
+            receipt = finish(child, "timeout" if child.poll() is None else "descendants_remaining", grace=.5)
+    finally:
+        if child is not None:
+            receipt = finish(child, "owner_exception", grace=.1)
+            atomic_json(output / "guardian-exit.json", receipt)
+    worker_path = output / "worker-summary.json"
+    value = json.loads(worker_path.read_text(encoding="utf-8")) if worker_path.exists() else {"worker_summary_missing": True}
+    value.update(source_unchanged=before == sources(), guardian=receipt,
+                 command="python -B scripts/verify.py --run-dir " + str(output.relative_to(ROOT)), output_dir=str(output.relative_to(ROOT)),
+                 passed_checks=bool(receipt and receipt.get("child_exited") and receipt.get("exit_code") == 0
+                     and not receipt.get("forcibly_terminated") and receipt.get("remaining_owned_processes", 0) == 0
+                     and before == sources() and not value.get("worker_summary_missing")
+                     and not value.get("failures") and not value.get("errors") and not value.get("per_test_residuals")))
+    atomic_json(output / "verification-summary.json", value, 2*1024*1024)
+    print(json.dumps(value, ensure_ascii=True))
+    return 0 if value["passed_checks"] else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

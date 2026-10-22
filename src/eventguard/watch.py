@@ -115,7 +115,7 @@ def run(directory, *, root=ROOT, codex="codex", max_seconds=3600, max_tasks=5,
     agent_done = threading.Event()
 
     def follow_stop():
-        # Active CLI work continues naturally; stop only changes future work.
+        # Notify the owner; it applies EOF grace and only its private-job cleanup.
         while not agent_done.wait(.2):
             try:
                 if requested():
@@ -174,7 +174,7 @@ def run(directory, *, root=ROOT, codex="codex", max_seconds=3600, max_tasks=5,
             try:
                 worker.join(.5)
             except KeyboardInterrupt:
-                pass  # No process signals, including during pending query exit.
+                pass  # The collector owns job cleanup; never target the thread/PID.
         state["monitor_exited"] = True
         final = observation.get("final", {})
         if ready.is_set() or final.get("cycles", 0) > 0:
@@ -183,11 +183,15 @@ def run(directory, *, root=ROOT, codex="codex", max_seconds=3600, max_tasks=5,
             state["native_collection_started"] = False
         state["monitor_stop_reason"] = final.get("stop_reason", "cooperative_stop")
         state["monitor_cycles"] = final.get("cycles", 0)
+        if final.get("query_shutdown"):
+            state["query_shutdown"] = final["query_shutdown"]
         state["coverage"] = {key: row.get("status", "unknown") for key, row in final.get("coverage", {}).items()}
         if failure:
             state.update(state="monitor_failed", reason=failure[0])
-        write_json(directory / "watch.json", state)
-        lease.release()
+        try:
+            write_json(directory / "watch.json", state)
+        finally:
+            lease.release()
     return status(directory)
 
 

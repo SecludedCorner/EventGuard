@@ -15,8 +15,9 @@ from ..collectors.windows import coverage_metadata
 from ..events.schema import validate_event, STATUS_VALUES
 from ..events.store import event_payload_hash
 
-EVENT_TYPES = {"listener.changed", "protection.changed", "persistence.changed", "coverage.degraded"}
+EVENT_TYPES = {"listener.changed", "protection.changed", "persistence.changed", "coverage.degraded", "monitor_gap"}
 EXPLANATIONS = {
+    "monitor_gap": "監看曾中斷或有未觀測區間；此期間不能判定沒有事件。",
     "listener.changed": "觀測到本機端點變化；全介面綁定不代表 Internet 可達。",
     "protection.changed": "觀測到防護 metadata 變化；需區分設定與實際有效狀態。",
     "persistence.changed": "觀測到啟動／服務／排程 metadata 變化；不能單憑新增判惡意。",
@@ -60,6 +61,11 @@ def row_view(row):
     for key, maximum in (("port", 65535), ("pid", 2**32-1), ("count", 2**31-1), ("changed_count", 2**31-1)):
         if key in row:
             result[key] = number(row[key], maximum)
+    if "gap_seconds" in row:
+        result["gap_seconds"] = number(row["gap_seconds"])
+    if "reason" in row:
+        from ..monitor_gap import REASONS
+        result["reason"] = enum(row["reason"], REASONS)
     if "value" in row:
         value = row["value"]
         result["value"] = value if value is None or type(value) is bool else number(value)
@@ -137,6 +143,8 @@ def query_plan(event):
             gaps.append("persistence_binding_missing")
     elif kind == "coverage.degraded":
         gaps.append("coverage_event_no_automatic_source_rescan")
+    elif kind == "monitor_gap":
+        gaps.append("unobserved_monitor_interval")
     else:
         gaps.append("unsupported_event_type")
     return queries, gaps

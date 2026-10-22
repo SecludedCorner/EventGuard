@@ -1,5 +1,7 @@
 # EventGuard 接手與下一任務
 
+**Phase 3 已完成本批（2026-10-23 02:32 台北）：** 本工具新子程序在 CreateProcessW 時原子加入私有 Windows Job；native worker／fallback、capture／supervisor、watch 及測試 teardown 已接入有界停止與退出回條。啟動產生耐久 `monitor_gap`；保存失敗保留同 ID marker 並阻擋採集。一般 token 的 Windows Job 實測與 fixture gap 測試分開記錄，詳見 [PROCESS_LIFECYCLE](docs/PROCESS_LIFECYCLE.md) 與 STATUS 本階段。完整測試唯一數字來源為忽略的 `reports/phase3-process-005/verification-summary.json`；提交後的 source-commit 回條對照實際 commit。排程 install／uninstall 僅 dry-run，`--execute` 仍拒絕；無真模型、提權、provider 全機重掃、服務或長駐啟用。下階段 Phase 4 容量／保留尚未開始；Phase 7 真實狀態／重開機注入仍須先交計畫並取得當次批准。以下 Phase 2 的「OS hang 可能卡住」與歷史 universal no-kill 描述已由本批私有 Job 契約取代，不授權碰其他程序。
+
 **Phase 2 已依使用者新方向實作（2026-10-22 22:32 台北）：** 不再等待 A／B；核心獨立運作，人類 CLI 與可選 agent stdio tools 共用 OperatorAPI 的狀態、事件檢視、事件綁定唯讀查證、報告及合作式控制。新診斷保存 observations／coverage／uncertainties，不 ACK、不下安全結論；合成事件預設不能查原生來源。入口、命令與限制見 [HUMAN_AGENT_INTERFACE](docs/HUMAN_AGENT_INTERFACE.md)。本輪全套 304 discovered／302 passed／2 symlink skip／0 failure/error，72 AST；真 SDK stdio 八工具＋自然 EOF exit 已驗，沒有真模型或本輪 Windows provider 重驗。精確數字及 source hashes 見忽略的 `reports/phase2-operator-001/verified/summary.json`。下一階段依原順序為 Phase 3 子程序治理；目前 OS hang 仍可能卡住，尚未啟用常駐、自啟或排程。
 
 **Phase 2 決策報告（2026-10-22 21:53 台北）：** 已恢復並核對 `088be75`、原分支及乾淨工作樹；完成無模型的同一合成事件／fixture 元件比較。建議 A（確定性 playbook＋本機報告），理由與 B 的必要閘道見 [AGENT_ROLE_DECISION](docs/AGENT_ROLE_DECISION.md)。18 項相關測試通過；query 比 receive 新增觀察為 0。兩案皆尚未實作，等待使用者選 A／B；不自行啟動真模型、長期監看或後續 phase。

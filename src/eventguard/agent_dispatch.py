@@ -25,6 +25,7 @@ from .acceptance_evidence import _tool_result
 from .acceptance_process import CAPTURE_LIMIT, capture
 from .local_wait import LocalWaitError, _guard
 from .queue_inbox import QueueInboxError
+from .processes import spawn, finish, JobPopen
 
 ROOT = Path(__file__).resolve().parents[2]
 KIND = "eventguard-bounded-agent-dispatch-v1"
@@ -263,6 +264,11 @@ def _complete(record, inbox, receipt):
             trace.append(None)
     summary = assess_delivery(trace, inbox.evidence(record["event_id"]), record["event_id"],
                               receipt["codex_exit_code"], inbox.acknowledged(record["event_id"]))
+    supervisor_path = directory / "supervisor-exit.json"
+    supervisor = read_json(supervisor_path) if supervisor_path.exists() else {}
+    if receipt.get("forcibly_terminated") is True or supervisor.get("forcibly_terminated") is True:
+        summary["passed"] = False
+        summary["evidence_errors"].append("owned_tree_forcibly_terminated")
     if (len(raw) > CAPTURE_LIMIT or receipt.get("stdout_truncated") is not False
             or receipt.get("stderr_truncated") is not False):
         summary["passed"] = False
@@ -346,7 +352,7 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
         state.update(state="blocked", reason="dispatch_source_busy")
         _save(directory, state)
         return 3
-    active = None
+    active, child = None, None
     try:
         _bind_channel(source, state_dir)
         inbox = _inbox(source, state_dir, allow_live=allow_live)
@@ -430,15 +436,23 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                 state["events"].pop()
                 active = None
                 break
-            child = subprocess.Popen(args, cwd=ROOT, stdin=subprocess.DEVNULL,
+            child = spawn(args, popen_factory=subprocess.Popen, cwd=ROOT, stdin=subprocess.DEVNULL,
                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             while child.poll() is None:
                 _check_stop(directory, state, cancel)
-                if time.monotonic() >= deadline:
+                if time.monotonic() >= deadline or (state["stop_requested"] and isinstance(child, JobPopen)):
+                    if isinstance(child, JobPopen):
+                        lifecycle = finish(child, "cancelled" if state["stop_requested"] else "timeout", grace=5)
+                        write_json(attempt_dir / "supervisor-exit.json", lifecycle)
+                        state.update(supervisor_process=lifecycle, child_exited=lifecycle["child_exited"])
+                        break
                     state.update(state="pending_child_exit", reason="time_limit_no_process_signal")
                     _save(directory, state)
                     return 3
                 time.sleep(.1)
+            if isinstance(child, JobPopen):
+                state["supervisor_process"] = finish(child, "descendants_remaining", grace=.2)
+                write_json(attempt_dir / "supervisor-exit.json", state["supervisor_process"])
             receipt = _receipt(active)
             if receipt is None:
                 if _skipped(active):
@@ -453,7 +467,8 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                     state["events"].pop()
                     active = None
                     break
-                state.update(state="pending_child_exit", reason="complete_owned_exit_receipt_missing")
+                state.update(state="blocked" if child.poll() is not None else "pending_child_exit",
+                             child_exited=child.poll() is not None, reason="complete_owned_exit_receipt_missing")
                 _save(directory, state)
                 return 3
             summary = _complete(active, inbox, receipt)
@@ -486,7 +501,13 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
         _save(directory, state)
         return 3 if state["state"] == "pending_child_exit" else 2
     finally:
-        source_lease.release()
+        try:
+            if child is not None and isinstance(child, JobPopen):
+                lifecycle = finish(child, "owner_exception", grace=.2)
+                state["supervisor_process"] = lifecycle
+                _save(directory, state)
+        finally:
+            source_lease.release()
 
 
 def status(directory):
@@ -547,7 +568,8 @@ def main(argv=None):
                 return False
 
         return capture(args.command, args.attempt_dir, args.attempt_id, PROMPT,
-                       start_allowed=start_allowed)
+                       start_allowed=start_allowed, stop_requested=lambda: not start_allowed(),
+                       deadline_monotonic=args.deadline_monotonic)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("run", "status", "stop"))
     parser.add_argument("--run-dir", type=Path, required=True)

@@ -15,7 +15,7 @@ PROTOCOL_VERSION = "2026-07-28"
 EVENT_NAME = "eventguard.security_change"
 MAX_ENVELOPE_BYTES = 8192
 EVENT_TYPES = (
-    "coverage.degraded", "listener.changed", "persistence.changed", "protection.changed",
+    "coverage.degraded", "listener.changed", "persistence.changed", "protection.changed", "monitor_gap",
 )
 OPERATIONS = ("health", "query_listener", "query_defender", "query_persistence")
 DECISIONS = ("needs_more_evidence", "benign_change", "requires_user_approval")
@@ -105,7 +105,7 @@ def event_definition():
         "inputSchema": _object_schema({
             "host_ref": _id_schema(),
             "event_types": {"type": "array", "items": {"type": "string", "enum": list(EVENT_TYPES)},
-                            "maxItems": 4, "uniqueItems": True, "default": []},
+                            "maxItems": len(EVENT_TYPES), "uniqueItems": True, "default": []},
         }, ["host_ref"]),
         "payloadSchema": _payload_schema(),
     }
@@ -115,7 +115,7 @@ def validate_arguments(args):
     """Validate subscription arguments without coercion or unknown fields."""
     args = _object(args, ("host_ref",), ("event_types",))
     types = args.get("event_types", [])
-    if not isinstance(types, list) or len(types) > 4:
+    if not isinstance(types, list) or len(types) > len(EVENT_TYPES):
         raise ProtocolValidationError("invalid_event_types")
     for value in types:
         _enum(value, EVENT_TYPES)

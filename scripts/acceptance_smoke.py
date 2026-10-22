@@ -14,6 +14,7 @@ ROOT=Path(__file__).resolve().parent.parent
 sys.path.insert(0,str(ROOT/"src"))
 from eventguard.cli import main
 from eventguard.events.store import EventStore
+from eventguard.processes import spawn, finish
 
 
 def call(root,*args):
@@ -65,20 +66,33 @@ def main_smoke():
         wrapper=root/"run.py"
         wrapper.write_text("import sys\nfrom pathlib import Path\nsys.path.insert(0,"+repr(str(ROOT/"src"))+")\nfrom eventguard.cli import main\nraise SystemExit(main(root=Path(__file__).parent))\n",encoding="utf-8")
         flags=getattr(subprocess,"CREATE_NO_WINDOW",0)
-        child=subprocess.Popen([sys.executable,"-B",str(wrapper),"monitor","--fixture","tests/fixtures/normal.json","--max-cycles","12","--fixture-interval","0.1"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,creationflags=flags)
-        deadline=time.monotonic()+5
-        while not (root/"data/monitor-owner.json").exists() and child.poll() is None and time.monotonic()<deadline:
-            time.sleep(.02)
-        second=subprocess.Popen([sys.executable,"-B",str(wrapper),"monitor","--fixture","tests/fixtures/normal.json","--max-cycles","1"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,creationflags=flags)
-        second_out,second_err=second.communicate(timeout=10)
-        assert second.returncode==3,(second.returncode,second_out,second_err)
-        stop=call(root,"stop")
-        assert stop["status"]=="stop_requested"
-        stdout,stderr=child.communicate(timeout=15)
-        assert child.returncode==0,(child.returncode,stdout,stderr)
-        stopped=json.loads(stdout.decode("utf-8"))
-        assert stopped["state"]=="stopped" and not (root/"data/monitor-owner.json").exists()
-        steps.append({"step":"cross_process_singleton_and_stop","second_exit":3,"first_exit":0,"stop":"cooperative","child_exited":child.poll() is not None,"process_signal_sent":False})
+        children=[]
+        try:
+            child=spawn([sys.executable,"-B",str(wrapper),"monitor","--fixture","tests/fixtures/normal.json","--max-cycles","12","--fixture-interval","0.1"],stdout=subprocess.PIPE,stderr=subprocess.PIPE,creationflags=flags)
+            children.append(child)
+            deadline=time.monotonic()+5
+            while not (root/"data/monitor-owner.json").exists() and child.poll() is None and time.monotonic()<deadline:
+                time.sleep(.02)
+            second=spawn([sys.executable,"-B",str(wrapper),"monitor","--fixture","tests/fixtures/normal.json","--max-cycles","1"],stdout=subprocess.PIPE,stderr=subprocess.PIPE,creationflags=flags)
+            children.append(second)
+            second_out,second_err=second.communicate(timeout=10)
+            assert second.returncode==3,(second.returncode,second_out,second_err)
+            stop=call(root,"stop")
+            assert stop["status"]=="stop_requested"
+            stdout,stderr=child.communicate(timeout=15)
+            assert child.returncode==0,(child.returncode,stdout,stderr)
+            stopped=json.loads(stdout.decode("utf-8"))
+            assert stopped["state"]=="stopped" and not (root/"data/monitor-owner.json").exists()
+            receipts=[finish(item, "descendants_remaining", grace=.1) for item in children]
+            assert not any(receipt.get("forcibly_terminated") for receipt in receipts)
+            assert all(receipt.get("child_exited") and not receipt.get("remaining_owned_processes",0) for receipt in receipts)
+            steps.append({"step":"cross_process_singleton_and_stop","second_exit":3,"first_exit":0,"stop":"cooperative","child_exited":child.poll() is not None,"process_signal_sent":False,"process_receipts":receipts})
+        finally:
+            for item in children:
+                finish(item,"test_teardown",grace=.1)
+                for pipe in (item.stdout,item.stderr):
+                    if pipe is not None and not pipe.closed:
+                        pipe.close()
     summary={"verified_at_utc":datetime.now(timezone.utc).isoformat(timespec="seconds"),"passed":True,"steps":steps,
              "machine_scan_executed":False,"external_transport":False,"model_calls":0,"real_agent_woken":False,
              "remaining_test_processes":0,"note":"Local synthetic receiver contract only; no actual Codex/dot ingress was exercised."}

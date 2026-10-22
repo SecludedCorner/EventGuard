@@ -112,6 +112,9 @@ class Runtime:
 
     def save_health(self, document):
         atomic_json(self.path("data/health.json"), document,limit=2*1024*1024)
+        if document.get("namespace") in {"live", "test"}:
+            keys = {"pid", "process_created_at", "instance_id", "namespace", "state", "monitoring", "started_at", "heartbeat_at", "stopped_at"}
+            atomic_json(self.path("data/" + document["namespace"] + "/monitor-checkpoint.json"), {key: document[key] for key in keys if key in document})
 
     def log(self, code, details=None):
         """Fixed operational codes only; no raw exceptions, event evidence or commands."""
@@ -138,7 +141,7 @@ class Runtime:
             raise ValueError("invalid_owner_record")
         atomic_json(self.path("data/stop-request.json"), {"instance_id":instance,"requested_at":utc_now()})
         return {"status":"stop_requested", "instance_id":instance, "process_terminated":False,
-                "note":"Cooperative stop only; an existing read-only query exits naturally."}
+                "note":"Cooperative stop first; owned Windows query jobs receive a grace period then job-only cleanup."}
 
 
 class InstanceLock:
@@ -146,6 +149,7 @@ class InstanceLock:
         self.runtime = runtime
         self.instance_id = uuid.uuid4().hex
         self.stream = None
+        self.process_identity = None
 
     def acquire(self):
         self.runtime.ensure()
@@ -168,7 +172,9 @@ class InstanceLock:
             self.stream = None
             return False
         try:
-            atomic_json(self.runtime.path("data/monitor-owner.json"), {"pid":os.getpid(),"instance_id":self.instance_id,"started_at":utc_now()})
+            from .processes import identity
+            self.process_identity = identity()
+            atomic_json(self.runtime.path("data/monitor-owner.json"), {"pid":os.getpid(), "process_created_at": self.process_identity.get("created_at"), "instance_id":self.instance_id,"started_at":utc_now()})
         except Exception:
             self._unlock()
             raise

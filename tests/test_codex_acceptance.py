@@ -160,6 +160,17 @@ class AcceptanceTests(unittest.TestCase):
         self.assertTrue(read_json(self.root / "attempts/0002/summary.json")["passed"])
         self.assertEqual(len(read_json(self.root / "summary.json")["waits"]), 1)
 
+    def test_forced_supervisor_prevents_fake_delivery_being_classified_passed(self):
+        from eventguard.codex_acceptance import _complete
+        with self.fake_cli():
+            self.assertEqual(run(self.root, idle_seconds=.1, deadline_seconds=8), 0)
+        state = read_json(self.root / "status.json")
+        state["supervisor_process"] = {"forcibly_terminated": True}
+        receipt = read_json(self.root / "capture-exit.json")
+        self.assertEqual(_complete(self.root, state, receipt), 1)
+        self.assertFalse(read_json(self.root / "summary.json")["passed"])
+        self.assertEqual(read_json(self.root / "summary.json")["failure_reason"], "owned_tree_forcibly_terminated")
+
     def test_retry_reuses_result_persisted_before_ack_failure(self):
         with self.fake_cli("fail_ack"):
             self.assertEqual(run(self.root, idle_seconds=.1, deadline_seconds=8), 1)

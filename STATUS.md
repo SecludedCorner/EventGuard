@@ -1,5 +1,23 @@
 # EventGuard 狀態與驗收缺口
 
+## 目前：Phase 3 已實作並驗證（2026-10-23 02:32 台北）
+
+本批基底 `c09f396745fe835df45b3986ae704c0213054c43`，同一 `feat/local-codex-acceptance` 分支；保留既有歷史與執行資料。新增 Windows 私有 Job Object：子程序在建立時原子加入，協作寬限後只回收本工具 Job，保存 PID＋建立時間、強停原因、退出碼與剩餘數。native 查詢改成固定 section 的 Python worker，與 PowerShell fallback 共用 Runner；monitor、capture、dispatcher／驗收 supervisor、watch、smoke 入口已接入。AGENTS 的強停限制已限縮為不得處理非本工具啟動的程序。契約及界線見 [PROCESS_LIFECYCLE](docs/PROCESS_LIFECYCLE.md)。
+
+啟動先核對前次 checkpoint／heartbeat／PID 建立時間，建立 unknown coverage 的 `monitor_gap`。滿佇列或保存失敗時保留同 ID marker、停止新採集並顯示 `blocked_monitor_gap`；恢復後再耐久入列。查詢無法確認退出時顯示 `shutdown_unconfirmed`，不宣稱 stopped。ACK 與診斷的原有語義保留，強停樹不能通過投遞驗收。
+
+**本輪唯一完整測試數來源：** `reports/phase3-process-005/verification-summary.json`。命令 `C:\Python313\python.exe -B scripts/verify.py --run-dir reports/phase3-process-005 --timeout-seconds 600`；Windows／Python **3.13.3**，2026-10-22T18:32:43.540422Z：**326 discovered、324 passed、0 failure/error、2 symlink 權限 skip、78 AST**，87.502 秒，exit **0**，`passed_checks=true`、`source_unchanged=true`、`per_test_residuals=[]`。guardian PID＋建立時間及實際回條在 `guardian-exit.json`：`child_exited=true`、exit **0**、`remaining_owned_processes=0`、`forcibly_terminated=false`。此數字不可與歷史測試數相加。
+
+證據留本機忽略目錄：同目錄 `source-manifest.json`、`unit-tests.txt`、`worker-summary.json`、`lifecycle-evidence.json`、worker stdout/stderr、guardian 回條；提交後的 `source-commit.json` 核對測試 source hashes 與實際提交。實測分界：一般 token 的真 Windows Job／孫程序／巢狀 Job／owner 異常退出／外部於目標 Job 的合成 sentinel；hanging Python fixture 的 Runner、capture stdin、monitor stop 與全域期限；固定 Python executable 版本 worker smoke。`monitor_gap` 的 stale／identity／時鐘／損壞 checkpoint、滿載與同 ID 恢復是 **fixture＋SQLite**，不是登出／重開機實測。
+
+排程命令 `python -B scripts/eventguard_schedule.py install --dry-run` 與 `uninstall --dry-run` 都 exit **0**、`executed=false`；`install --execute` 仍 exit **2**、`approval_required`、`executed=false`。輸出與三個乾淨退出回條在 `reports/phase3-schedule-001/manifest.json` 及鄰接 stdout/stderr。沒有執行 schtasks 或建立／刪除排程。
+
+保留失敗證據：`phase3-process-001/002` 是 guardian baseline 尚未辨識 discovery 建立的 conhost 而失敗，改為比對固定 Job 成員 PID＋建立時間；`003` 找出新增事件類型上限、未受管 fake stop 相容性與舊 pending timeout 預期；`004` 只剩新增測試使用低於既有最小值的 duration。修正後才跑 `005`，沒有覆寫前次證據。`003/004` 的逐項殘留都為空、最終 guardian 剩餘 **0**；超短期限實際 runner 的失敗交付與自然退出診斷見 `reports/phase3-timeout-diagnostic-001/`，未冒充真模型驗收。
+
+**尚未驗證／與 AUDIT 差異：** 原先無法停止卡住 OS 查詢的限制已改由 worker Job 隔離並以 hanging fixture 驗證；native 一輪改為七個短期 Python worker，增加的性能成本未量測。沒有重跑七來源 provider 採集、真模型、登出／重開機、Phase 7 狀態注入或長時 soak；兩個 symlink 測試仍略過。沒有啟用長期監看、自啟、服務或排程；沒有提權、網路、下載安裝、修改安全政策、強停非本工具程序或推送。下一階段為 Phase 4 容量／保留；本次交付停在 Phase 3。
+
+以下保留歷史紀錄，其舊限制與舊測試數不代表目前實作。
+
 更新：2026-10-22 UTC。本檔只記錄工程事實，不包含真實主機的警報、路徑或安全結論，也不授予操作權限。
 
 **本機耐久佇列已接通專用 Codex CLI agent；完整產品仍為工程預覽。** 有限合成 A／B1／B2／C，以及新增前景入口的合成與有界實機佇列接收試跑均已有真工具證據；本輪已退出，目前沒有持續監看。完整 coverage、長期可靠性及原生診斷仍未驗收。最新證據見本檔末節與 [LIVE_CHANNEL](docs/LIVE_CHANNEL.md)；以下保留各時間點歷史，不以 mock 或舊測試冒充新結果。

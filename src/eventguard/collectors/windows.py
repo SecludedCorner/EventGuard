@@ -249,10 +249,12 @@ class PowerShellBackend:
             raise ValueError("invalid_runner_output")
         if raw.get("status") == "ok":
             data = raw.get("data")
-            return json.loads(data) if isinstance(data, str) else data
+            data = json.loads(data) if isinstance(data, str) else data
+            data["process"] = raw.get("process", {})
+            return data
         state = raw.get("status") if raw.get("status") in STATUSES else "unknown"
         errors = clean_errors(raw.get("errors")) or [evidence("provider", "runner_reason_unavailable", status=state)]
-        return {"status": state, "rows": [], "errors": errors, "truncated": False}
+        return {"status": state, "rows": [], "errors": errors, "truncated": False, "process": raw.get("process", {})}
 
 
 class WindowsCollectors:
@@ -267,8 +269,8 @@ class WindowsCollectors:
         self.evidence_sink = evidence_sink
         self.powershell = PowerShellBackend(self.runner, timeout)
         if native is None:
-            from .native import NativeBackend
-            native = NativeBackend(evidence_sink=evidence_sink, timeout=timeout)
+            from .worker import NativeWorker
+            native = NativeWorker(evidence_sink=evidence_sink, timeout=timeout, runner=self.runner)
         self.native = native
 
     def collect(self, section_id, cancel=None):
@@ -300,6 +302,7 @@ class WindowsCollectors:
                         and not any(r.get("status") in ("ok", "partial") for r in data["rows"])):
                     names.append("powershell")
             result["status"] = data["status"]
+            result["coverage"]["process"] = process_metadata(data.get("process"))
             result["coverage"]["errors"] = errors
             result["coverage"]["error_count"] = max(len(errors), data.get("error_count", 0)) if type(data.get("error_count", 0)) is int else len(errors)
             result["coverage"]["errors_truncated"] = data.get("errors_truncated") is True
@@ -378,6 +381,8 @@ def coverage_metadata(section):
         source = {}
     result = {"errors": clean_errors(source.get("errors")), "checks": clean_checks(source.get("checks")),
               "truncated": source.get("truncated") is True}
+    if source.get("process"):
+        result["process"] = process_metadata(source["process"])
     for key in ("error_count", "row_limit"):
         value = source.get(key)
         if type(value) is int and 0 <= value <= 2**31-1:
@@ -392,4 +397,24 @@ def coverage_metadata(section):
     result["attempts"] = [{"backend": a["backend"], "status": a["status"], "errors": clean_errors(a.get("errors"))}
                           for a in (attempts[:2] if isinstance(attempts, list) else []) if isinstance(a, dict)
                           and a.get("backend") in ("native", "powershell") and a.get("status") in STATUSES]
+    return result
+
+
+def process_metadata(value):
+    if not isinstance(value, dict):
+        return {}
+    result = {key: value[key] for key in ("managed", "child_exited", "forcibly_terminated") if type(value.get(key)) is bool}
+    for key in ("pid", "remaining_owned_processes", "exit_code"):
+        if type(value.get(key)) is int and 0 <= value[key] <= 2**32-1:
+            result[key] = value[key]
+    for key in ("reason", "shutdown_requested_reason"):
+        if value.get(key) in {"timeout", "cancelled", "owner_exception", "descendants_remaining", "test_teardown", "launch_failure", "natural_exit", "fixture_or_non_windows"}:
+            result[key] = value[key]
+    if isinstance(value.get("created_at"), str) and len(value["created_at"]) <= 64:
+        try:
+            stamp = datetime.fromisoformat(value["created_at"])
+            if stamp.tzinfo is not None:
+                result["created_at"] = stamp.astimezone(timezone.utc).isoformat(timespec="microseconds")
+        except ValueError:
+            pass
     return result

@@ -29,6 +29,7 @@ META_FIELDS = frozenset({
     "scope", "source_status", "change", "entry_ref", "changed_count",
     "section", "changed_keys", "suppression_count", "expected_count",
     "missing_count",
+    "gap_seconds", "process_created_at",
 })
 FORBIDDEN_PARTS = ("command", "message", "xml", "password", "token", "secret",
                    "credential", "authorization", "username", "user_id",

@@ -46,7 +46,8 @@ class ControlTests(unittest.TestCase):
         self.assertEqual((self.root / "codex.jsonl").stat().st_size, 1024)
         self.assertEqual((self.root / "codex.stderr.txt").stat().st_size, 1024)
 
-    def test_capture_receipt_survives_actual_runner_process_exit(self):
+    @unittest.skipUnless(os.name == "nt", "real Windows Job Object timeout behavior")
+    def test_owned_timeout_runner_waits_for_receipt_and_exits_without_residuals(self):
         run_dir = self.root / "run"
         script = self.root / "runner.py"
         source = '''import sys
@@ -59,7 +60,7 @@ with patch("eventguard.codex_acceptance.command",return_value=[sys.executable,"-
         script.write_text(source)
         result = subprocess.run([sys.executable, "-B", str(script), str(run_dir)],
                                 env=dict(os.environ, PYTHONPATH=str(ROOT / "src")), timeout=5)
-        self.assertEqual(result.returncode, 3)
+        self.assertEqual(result.returncode, 1, "Owned timeout is terminal; synthetic output must fail delivery evidence")
         receipt_path = run_dir / "capture-exit.json"
         deadline = time.monotonic() + 5
         while not receipt_path.exists() and time.monotonic() < deadline:
@@ -67,6 +68,15 @@ with patch("eventguard.codex_acceptance.command",return_value=[sys.executable,"-
         receipt = read_json(receipt_path)
         self.assertTrue(receipt["capture_complete"])
         self.assertEqual(receipt["codex_exit_code"], 0)
+        if os.name == "nt":
+            self.assertTrue(receipt["child_exited"])
+            self.assertEqual(receipt["process"]["remaining_owned_processes"], 0)
+            state = read_json(run_dir / "status.json")
+            self.assertEqual(state["state"], "failed")
+            self.assertTrue(state["supervisor_process"]["child_exited"])
+            self.assertEqual(state["supervisor_process"]["remaining_owned_processes"], 0)
+            self.assertFalse(read_json(run_dir / "summary.json")["passed"])
+            self.evidence = {"scope": "real_windows_job_synthetic_python_not_codex", "case": "runner_timeout_receipt", "capture": receipt, "supervisor": state["supervisor_process"]}
         lease = FileLease(run_dir / "capture.lock")
         deadline = time.monotonic() + 3
         while not lease.acquire() and time.monotonic() < deadline:

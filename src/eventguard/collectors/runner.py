@@ -1,8 +1,4 @@
-"""Single in-flight PowerShell query, with cooperative cancellation.
-
-Timeout/cancellation never terminates a process. Output continues to drain until
-the child exits naturally, and another query is refused during that interval.
-"""
+"""One query at a time; Windows-owned jobs get an EOF grace then bounded cleanup."""
 from __future__ import annotations
 
 import json
@@ -13,6 +9,7 @@ import threading
 import time
 
 from .contract import evidence, error_from_exception
+from ..processes import spawn, finish, JobPopen
 
 MAX_OUTPUT_BYTES = 4 * 1024 * 1024
 
@@ -30,6 +27,11 @@ class Runner:
     def pending(self):
         with self._lock:
             return bool(self._active and not self._active["done"].is_set())
+
+    @property
+    def last_process(self):
+        with self._lock:
+            return dict(self._active.get("process", {})) if self._active else {}
 
     @staticmethod
     def _drain(stream, job, key):
@@ -61,13 +63,17 @@ class Runner:
             thread.start()
         try:
             job["returncode"] = job["child"].wait()
+            if isinstance(job["child"], JobPopen):
+                job["process"] = finish(job["child"], "descendants_remaining", grace=.2)
         except Exception:
             job["read_error"] = True
         for thread in readers:
-            thread.join()
+            thread.join(timeout=3)
+            if thread.is_alive():
+                job["read_error"] = True
         job["done"].set()
 
-    def run(self, script, timeout=15, cancel=None):
+    def run(self, script, timeout=15, cancel=None, _argv=None):
         started = time.monotonic()
         job, argv = None, None
 
@@ -77,7 +83,8 @@ class Runner:
                 "policy" if status in ("busy", "cancelled", "timeout") else "provider", note,
                 exception_type="RunnerState", operation="PowerShellQuery", status=status)
             if self.evidence_sink is not None:
-                self.evidence_sink({"kind": "powershell_process", "argv": argv,
+                self.evidence_sink({"kind": "native_worker_process" if _argv else "powershell_process", "argv": argv,
+                    "process": job.get("process", {}) if job else {},
                     "status": status, "reason_code": note, "elapsed_ms": elapsed,
                     "process_started": job is not None,
                     "child_exited": job is not None and job["done"].is_set(),
@@ -87,6 +94,7 @@ class Runner:
                     "stderr": job.get("stderr", b"").decode("utf-8-sig", errors="replace") if job else "",
                     "exception_text": str(error)[:8192] if error else None})
             return {"status": status, "data": data, "note": note, "elapsed_ms": elapsed,
+                    "process": job.get("process", {}) if job else {},
                     "errors": [] if status == "ok" else [problem]}
 
         if not isinstance(script, str) or not script or len(script) > 24000:
@@ -100,8 +108,8 @@ class Runner:
                 return result("busy", "prior_query_finishing_naturally")
             try:
                 prefix = "[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false); $ProgressPreference='SilentlyContinue'; "
-                argv = [self.executable, "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", prefix + script]
-                child = self._popen(argv,
+                argv = _argv or [self.executable, "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", prefix + script]
+                child = spawn(argv, popen_factory=self._popen,
                                     stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), shell=False)
             except PermissionError as error:
@@ -115,8 +123,16 @@ class Runner:
             threading.Thread(target=self._watch, args=(job,), daemon=True).start()
         while not job["done"].wait(0.025):
             if cancel is not None and cancel.is_set():
+                if isinstance(child, JobPopen):
+                    job["process"] = finish(child, "cancelled")
+                    job["done"].wait(3)
+                    return result("cancelled", "cancelled_owned_job_stopped")
                 return result("cancelled", "cancelled_no_process_termination")
             if time.monotonic() - started >= timeout:
+                if isinstance(child, JobPopen):
+                    job["process"] = finish(child, "timeout")
+                    job["done"].wait(3)
+                    return result("timeout", "deadline_exceeded_owned_job_stopped")
                 return result("timeout", "deadline_exceeded_no_process_termination")
         if cancel is not None and cancel.is_set():
             return result("cancelled", "late_output_ignored")
@@ -124,6 +140,8 @@ class Runner:
             return result("error", "query_output_limit_exceeded")
         if job.get("read_error") or job.get("returncode") != 0:
             return result("error", "query_failed_without_raw_error")
+        if job.get("process", {}).get("forcibly_terminated"):
+            return result("error", "owned_descendants_forcibly_stopped")
         try:
             data = json.loads(job.get("stdout", b"").decode("utf-8-sig"))
             if not isinstance(data, dict) or not isinstance(data.get("rows"), list):
@@ -131,3 +149,12 @@ class Runner:
         except (ValueError, UnicodeError):
             return result("error", "invalid_query_output")
         return result("ok", "query_complete", data)
+
+    def shutdown(self, grace=2):
+        with self._lock:
+            job = self._active
+        if job and isinstance(job["child"], JobPopen):
+            job["process"] = finish(job["child"], "cancelled", grace=grace)
+            job["done"].wait(3)
+            return job["process"]
+        return {"managed": False, "child_exited": not self.pending, "forcibly_terminated": False}

@@ -50,14 +50,33 @@ class Monitor:
 
     def _finish(self,health,cycles,namespace):
         runner=getattr(self.collectors,"runner",None) if self.collectors else None
+        if runner and getattr(runner, "last_process", None):
+            health["query_shutdown"] = runner.last_process
+        if health.get("state") == "blocked_monitor_gap":
+            health.update(monitoring=False, healthy=False)
+            self.runtime.save_health(health)
+            return
         if runner and runner.pending:
             health.update(state="stopping_pending_query",monitoring=False,heartbeat_at=utc_now(),cycles=cycles)
             try:
                 self.runtime.save_health(health)
             except (OSError,ValueError):
                 health["persistence_failure"]=True
-            print('{"status":"stopping_pending_query","monitoring":false,"note":"Waiting for the existing read-only query to exit naturally; singleton lock remains held."}',flush=True)
+            print('{"status":"stopping_pending_query","monitoring":false,"note":"Owned Windows jobs receive a bounded shutdown grace; unmanaged fixtures wait naturally. Singleton remains held until exit is confirmed."}',flush=True)
             heartbeat=self.clock()
+            if hasattr(runner, "shutdown"):
+                try:
+                    receipt = runner.shutdown()
+                except (OSError, ValueError, RuntimeError):
+                    health.update(state="shutdown_unconfirmed", healthy=False, last_error="owned_query_shutdown_failed")
+                    self.runtime.save_health(health)
+                    return
+                health["query_shutdown"] = receipt
+                if receipt.get("managed"):
+                    if not receipt.get("child_exited") or receipt.get("remaining_owned_processes", 0):
+                        health.update(state="shutdown_unconfirmed", healthy=False)
+                        self.runtime.save_health(health)
+                        return
             while runner.pending:
                 try:
                     time.sleep(.25)
@@ -70,6 +89,11 @@ class Monitor:
                     except (OSError,ValueError):
                         health["persistence_failure"]=True
                     heartbeat=self.clock()
+        receipt = health.get("query_shutdown", {})
+        if receipt.get("managed") and (not receipt.get("child_exited") or receipt.get("remaining_owned_processes", 0)):
+            health.update(state="shutdown_unconfirmed", monitoring=False, healthy=False)
+            self.runtime.save_health(health)
+            return
         health.update(state="stopped",monitoring=False,stopped_at=utc_now(),heartbeat_at=utc_now(),cycles=cycles)
         self.runtime.save_health(health)
         self.runtime.log("monitor_stopped",{"namespace":namespace,"count":cycles})
@@ -97,6 +121,7 @@ class Monitor:
         if not lock.acquire():
             return {"status":"busy","reason":"single_instance_lock_held","cycles":0}
         health={"state":"starting","monitoring":True,"namespace":namespace,"instance_id":lock.instance_id,
+                "pid":os.getpid(), "process_created_at":lock.process_identity.get("created_at") if lock.process_identity else None,
                 "started_at":utc_now(),"heartbeat_at":utc_now(),"last_success":None,"last_attempt":None,
                 "healthy":None,"coverage":copy.deepcopy(self.coverage),"real_agent_connected":False,
                 "delivery":"unconfigured: local events only; no real agent ingress", "model_calls":0,"synthetic":bool(fixture),"cycles":0}
@@ -109,6 +134,18 @@ class Monitor:
                 host_id="fixture-"+host_id
             limits=config.get("outbox",{})
             store=EventStore(self.runtime.data_dir(namespace),max_events=limits.get("max_events",1000),max_bytes=limits.get("max_bytes",8388608))
+            try:
+                from .monitor_gap import persist
+                health["monitor_gap"] = persist(self.runtime, namespace, host_id, store)
+            except (OSError, ValueError, RuntimeError) as error:
+                health.update(state="blocked_monitor_gap", healthy=False, last_error="monitor_gap_persistence_failed")
+                return health
+            self.runtime.save_health(health)
+            monitor = self
+            class QueryCancel:
+                def is_set(self):
+                    return monitor.cancel.is_set() or lock.stop_requested() or (deadline is not None and monitor.clock() >= deadline)
+            query_cancel = QueryCancel()
             state=store.load_detector_state()
             if self.collectors is None and not fixture:
                 from .collectors.windows import WindowsCollectors
@@ -144,11 +181,12 @@ class Monitor:
                                 self.last[key]=stamp
                                 self.not_before.pop(key,None)
                                 try:
-                                    section=self.collectors.collect(key,cancel=self.cancel)
+                                    section=self.collectors.collect(key,cancel=query_cancel)
                                 except Exception:
                                     section={"id":key,"status":"error","rows":[],"observed_at":utc_now(),"coverage":{"status":"error","reason":"collector_exception"}}
                             sections.append(section)
-                    if self.cancel.is_set():
+                    if self.cancel.is_set() or lock.stop_requested():
+                        self.cancel.set()
                         break
                     for section in sections:
                         key=section.get("id")

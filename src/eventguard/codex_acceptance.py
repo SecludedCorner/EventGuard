@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 import shutil
 import subprocess
+from .processes import spawn, finish, JobPopen
 import sys
 import time
 
@@ -148,6 +149,8 @@ def _complete(directory, state, receipt):
         acknowledged = bool(record and record.get("delivery_status") == "ack")
     summary = assess(trace, ledger, identity, receipt["codex_exit_code"], acknowledged,
                      wait_ids_before=state.get("wait_ids_before", []))
+    if receipt.get("forcibly_terminated") is True or state.get("supervisor_process", {}).get("forcibly_terminated") is True:
+        summary.update(passed=False, failure_reason="owned_tree_forcibly_terminated")
     truncated = (len(raw) > CAPTURE_LIMIT or receipt.get("stdout_truncated") is not False
                  or receipt.get("stderr_truncated") is not False)
     if truncated:
@@ -181,6 +184,7 @@ def _attempt(directory, state, idle_seconds, deadline_seconds, codex):
             backend.store.enqueue(event)  # Recover a crash between fixture persistence and enqueue.
         state["event_id"] = event["event_id"]
     state.update(state="preflight", cli_started=False, stop_requested=False)
+    state.pop("supervisor_process", None)
     _save_state(directory, state)
     codex_path = shutil.which(codex)
     if importlib.util.find_spec("mcp") is None or codex_path is None:
@@ -196,12 +200,12 @@ def _attempt(directory, state, idle_seconds, deadline_seconds, codex):
     waiting_since = None
     try:
         args = [sys.executable, "-B", str(ROOT / "scripts/acceptance_capture.py"),
-                "--attempt-dir", str(evidence), "--attempt-id", state["attempt_id"], "--",
+                "--attempt-dir", str(evidence), "--attempt-id", state["attempt_id"], "--timeout-seconds", str(deadline_seconds), "--",
                 *command(codex_path, sys.executable, runtime, evidence_dir=evidence)]
         # Persist unsafe-to-retry BEFORE starting a process, including the crash window.
         state.update(state="starting", cli_started=True)
         _save_state(directory, state)
-        child = subprocess.Popen(args, cwd=ROOT, stdin=subprocess.DEVNULL,
+        child = spawn(args, popen_factory=subprocess.Popen, cwd=ROOT, stdin=subprocess.DEVNULL,
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         state.update(state="running", supervisor_pid=child.pid)
         _save_state(directory, state)
@@ -221,14 +225,22 @@ def _attempt(directory, state, idle_seconds, deadline_seconds, codex):
                         backend.store.enqueue(event)
                         state.update(event_id=event["event_id"], emitted_at=utc(), idle_seconds=idle_seconds)
                         _save_state(directory, state)
-            if time.monotonic() - began >= deadline_seconds:
+            if time.monotonic() - began >= deadline_seconds or (state["stop_requested"] and isinstance(child, JobPopen)):
+                if isinstance(child, JobPopen):
+                    lifecycle = finish(child, "cancelled" if state["stop_requested"] else "timeout", grace=5)
+                    write_json(_path(evidence, "supervisor-exit.json"), lifecycle)
+                    state["supervisor_process"] = lifecycle
+                    break
                 state.update(state="pending_child_exit", note="Capture worker continues; no process signal or model retry.")
                 _save_state(directory, state)
                 return 3
             time.sleep(.1)
+        if isinstance(child, JobPopen):
+            state["supervisor_process"] = finish(child, "descendants_remaining", grace=.2)
         receipt = _receipt(directory, state)
         if receipt is None:
-            state.update(state="pending_child_exit", note="No complete owned exit receipt; retry refused.")
+            state.update(state="failed_runner" if child.poll() is not None else "pending_child_exit",
+                         child_exited=child.poll() is not None, note="No complete owned exit receipt; retry refused.")
             _save_state(directory, state)
             return 3
         return _complete(directory, state, receipt)
@@ -237,6 +249,10 @@ def _attempt(directory, state, idle_seconds, deadline_seconds, codex):
                      note="Inspect owned evidence; no process signal or automatic retry.")
         _save_state(directory, state)
         return 3 if state.get("cli_started") else 2
+    finally:
+        if child is not None and isinstance(child, JobPopen):
+            state["supervisor_process"] = finish(child, "owner_exception", grace=.2)
+            _save_state(directory, state)
 
 
 def run(directory, idle_seconds=3, deadline_seconds=180, codex="codex"):

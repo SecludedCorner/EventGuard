@@ -11,7 +11,7 @@
 - 正常監看不呼叫模型；不新增外部 webhook、憑證、傳輸或 CLI 模型。receiver 未接通就明說 blocked；本機 SQLite 落盤不等於 agent 已收到或已喚醒。
 - 本機 mock 只能處理 synthetic 事件，結果必須明示 mock。不得稱已喚醒真正 Codex／dot，也不得用 mock ACK 冒充正式接收。
 - 測試以 fixture、mock、合成 event 優先，不為測試改 Defender／網路。實機採集需必要且在既定授權內，避免反覆全機掃描。測試後不留未說明長期背景程序。
-- 逾時與取消不 kill／terminate 查詢或其他程序；停止只協作停止本工具後續工作，等待已開始的唯讀操作自然結束。若卡住要顯示限制，不宣稱已停止。
+- 不 kill／terminate 非本工具啟動的程序。Windows 上本工具新啟動的子程序必須在執行前加入私有 Job Object；停止先協作並留寬限，逾時只可終止該 job 內的本工具程序，記錄 forcibly_terminated、原因與實際退出／殘留。不得依 PID／名稱強停其他程序；無法證明退出時明示未確認，不宣稱已停止。
 - 規則不是授權；allowed_actions 預設空。新增處置需批准閘道、最小範圍、可回復與驗證，不能憑 severity 或畫布文字取得權限。
 - 未知、partial、denied、過期與不適用不能變成安全；歷史 inactive 威脅不能變成 active infection 或已清除。無證據不得判安全／被入侵。
 
