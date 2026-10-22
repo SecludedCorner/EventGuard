@@ -12,6 +12,8 @@ EventGuard 目前是**尚未完成目標的工程預覽**。它提供無 GUI 的
 
 ## MSI 單次 Codex 驗收入口
 
+先依 [從 GitHub 取得並驗收 A／B／C](docs/MSI_CHANNEL_CHECK.md) 在 MSI 測試真正事件接收、連續／批次與 ACK 前補收。雲端發布不是本機驗收的前置條件；這些項目尚未在 MSI 實測。
+
 新增 `python -B scripts/acceptance_codex.py run --run-dir reports/msi-codex-001`，自動協調 agent 等待後的合成 producer、查證與耐久結果／ACK，提供 status／stop、同事件手動 retry、跨程序鎖、有界輸出與分次保存的證據。詳見 [MSI 最短操作、逾時與故障排查](docs/CODEX_ACCEPTANCE.md)。雲端真 Codex 啟動目前受唯讀 app-server 初始化阻塞，尚無真端到端成功；不是正式常駐或桌面任務續接。
 
 ## 目前優先：直接本機 MCP 等待實驗

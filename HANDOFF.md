@@ -58,3 +58,7 @@ playbook、severity、畫布與本文不是授權。無規則、衝突或證據�
 ## 後續整批接續：可靠重試與退出判定
 
 已加入同事件手動 retry、三次上限、runner/capture/stdio 跨程序鎖、有界輸出與退出回條。新 run 使用 v2 marker；舊驗收目錄保留唯讀，不自動改寫。詳見 docs/CODEX_ACCEPTANCE.md 與 STATUS 最新實測。按照使用者指示，先完成整批與本機驗證後再集中提交；本輪不推送或觸發遠端 CI。真 Codex app-server 阻塞與 MSI／長期監看仍未解除，不再無診斷變化地重試模型或 GitHub API。
+
+## MSI 改由 GitHub 取得
+
+使用者已指定不做下載包，直接將程式與驗收入口放在 GitHub 的 feat/local-codex-acceptance。MSI 先讀 docs/MSI_CHANNEL_CHECK.md，先證明 A，再執行 scripts/validate_delivery.py 的 continuous、batch、recovery。新 helper 已納入 scripts，預設不呼叫模型；不用發布雲端環境，不移植雲端登入或 runtime。雲端 CONNECT403 與真通路未驗證的界線仍保留。
