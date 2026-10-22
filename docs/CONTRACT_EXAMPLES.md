@@ -1,6 +1,6 @@
 # 可驗證的契約與合成範例
 
-本檔補充 [AGENT_CONTRACT](AGENT_CONTRACT.md)，以目前程式欄位為準。以下全部是合成資料，不是主機警報。`synthetic=true` 不得轉成真實事件，也不代表模型或處置已執行。正式 ingress 尚未接通；實作候選見 [INGRESS_PLAN](INGRESS_PLAN.md)。
+本檔補充 [AGENT_CONTRACT](AGENT_CONTRACT.md)，以目前程式欄位為準。以下全部是合成資料，不是主機警報。`synthetic=true` 不得轉成真實事件，也不代表模型或處置已執行。可選的共用操作介面見 [HUMAN_AGENT_INTERFACE](HUMAN_AGENT_INTERFACE.md)；歷史有限 CLI 通路及目前限制見 [EVIDENCE](EVIDENCE.md)。雲端 [INGRESS_PLAN](INGRESS_PLAN.md) 是停用的歷史候選，不是本機前置條件。
 
 ## 事件、狀態與冪等
 

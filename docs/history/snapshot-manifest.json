@@ -1,0 +1,58 @@
+[
+  {
+    "source": "README.md",
+    "source_commit": "1e90a5398c5d4c555924bffb70bb77cb429dd782",
+    "original_sha256": "a32be6c9a132b958fa3cd90dee7b78e00017b965b4925c0d297c7b1ede638e4a",
+    "archive": "docs/history/README_before-docs-20261023.md",
+    "archive_sha256": "1252e9573dd33f5ad694787281345865b45fdcf2f3580f4804e48f840b61861b",
+    "transform": "history notice and relative link relocation only"
+  },
+  {
+    "source": "STATUS.md",
+    "source_commit": "1e90a5398c5d4c555924bffb70bb77cb429dd782",
+    "original_sha256": "21051c4972c391af09d17f361bf3dfa7fb47aacc5f10bc4991428c7818349876",
+    "archive": "docs/history/STATUS_before-docs-20261023.md",
+    "archive_sha256": "3eddd7c108c93555352138f9a53f700476c69c5119a4357505b73fe61fd3ccb3",
+    "transform": "history notice and relative link relocation only"
+  },
+  {
+    "source": "HANDOFF.md",
+    "source_commit": "1e90a5398c5d4c555924bffb70bb77cb429dd782",
+    "original_sha256": "0f8f6d814ad8fca7a57191106d9d74e616a71f1bce491e3629d172b8d173edd3",
+    "archive": "docs/history/HANDOFF_before-docs-20261023.md",
+    "archive_sha256": "3bebfc704915598af501ac81c93bdc7d77d93d56efa641c81e06ce1e9edcb6bd",
+    "transform": "history notice and relative link relocation only"
+  },
+  {
+    "source": "docs/DEVELOPMENT.md",
+    "source_commit": "1e90a5398c5d4c555924bffb70bb77cb429dd782",
+    "original_sha256": "546e3b6632e0368e5632dc456570f4ef1f046f93c879d0c2adcf5646a101af4f",
+    "archive": "docs/history/DEVELOPMENT_before-docs-20261023.md",
+    "archive_sha256": "3155e4e5ca5e1e39ebc1810ae31f8010a91edaee3065c52736a64e91c7b6b496",
+    "transform": "history notice and relative link relocation only"
+  },
+  {
+    "source": "docs/OPERATIONS.md",
+    "source_commit": "1e90a5398c5d4c555924bffb70bb77cb429dd782",
+    "original_sha256": "fe47b8f38d28f8974e4dc52a011a0e2b302fbb4e8645959167e213dab0529c28",
+    "archive": "docs/history/OPERATIONS_before-docs-20261023.md",
+    "archive_sha256": "3bde1dc4bfd07b3309e80f5dd1623cf6a5f258d9c615246f0493f584c931f945",
+    "transform": "history notice and relative link relocation only"
+  },
+  {
+    "source": "docs/ARCHITECTURE.md",
+    "source_commit": "1e90a5398c5d4c555924bffb70bb77cb429dd782",
+    "original_sha256": "da2561945b462ababce6c5c0fef70dce2a3ffa6d9e7c3cf22d838e1239199bac",
+    "archive": "docs/history/ARCHITECTURE_before-docs-20261023.md",
+    "archive_sha256": "d7193fa6cd1e4e578db8e736f87ee0163545d7ca0599b698ea0949d42db6b46f",
+    "transform": "history notice and relative link relocation only"
+  },
+  {
+    "source": "docs/AGENT_CONTRACT.md",
+    "source_commit": "1e90a5398c5d4c555924bffb70bb77cb429dd782",
+    "original_sha256": "1ea4844516622dbf1139b7e67d2ad02da2553f958c0aec1f7e03675797212e32",
+    "archive": "docs/history/AGENT_CONTRACT_before-docs-20261023.md",
+    "archive_sha256": "8fb337256d0b9bb92658f8dfd27da5060592b21838c6f6204f6da751fdf65177",
+    "transform": "history notice and relative link relocation only"
+  }
+]

@@ -1,49 +1,32 @@
-# EventGuard 操作與故障排除
+# 本機操作與故障排除
 
-從專案根目錄使用既有 `C:\Python313\python.exe -B scripts/eventguard.py`。不需安裝依賴、管理員或執行政策變更。本版沒有GUI；命令的實際子命令／能力以 `--help`、`capabilities` 及本版STATUS為準。
+先用 [README](../README.md) 的隔離 fixture，再看 [共用介面](HUMAN_AGENT_INTERFACE.md)。以下使用既有 Python 3.13，一般權限，不安裝依賴、不啟動模型。
 
-## 首次使用
+## 前景監看與事件
 
-先讀README／AGENTS／STATUS，確認本次主機與唯讀範圍。先執行capabilities與status，不以測試之名反覆全機掃描。正式receiver尚未接通時維持disabled；不新增webhook／金鑰或模型程序。
+```powershell
+py -3.13 -B scripts/eventguard.py capabilities
+py -3.13 -B scripts/eventguard.py status
+py -3.13 -B scripts/eventguard.py monitor
+```
 
-優先用README的synthetic流程：emit → playbook validate／simulate → deliver mock → mock process → report export。每一步記錄同一event_id、receipt、mockcase結果；mock_closed不是實機agent結案。不要為測試開真埠、關防毒或修改啟動項。
+monitor 需要由人類明確啟動；另一同專案終端 `py -3.13 -B scripts/eventguard.py stop` 合作停止自己的 instance。子查詢在私有 Job，寬限後只清理本工具程序樹；是否退出查回條，不能只看 stop 請求。沒有 watchdog、自啟或已執行的長時保證。
 
-## 開始、停止與狀態
+`events list --namespace live` 查看已存 ID，`events inspect --namespace live --event-id EVENT_ID` 查看當時事實。只有明確 `events diagnose` 才執行事件綁定唯讀查詢；不接受自由命令。合成資料用 test namespace，不拿 test 結果判真主機安全。`report export` 只寫本機 JSON／HTML。
 
-`monitor` 是使用者明確啟動的前景長期程序；它持續做本機低頻規則檢查，不呼叫模型。`--max-cycles N` 用於有界運行；`--fixture path` 使用合成快照而非實機採集。fixtures須以本版實際檔案與格式為準，不能把任意檔案當指令。
+## 故障與資料保留
 
-同專案另一終端的`stop`提出合作式停止；不taskkill。停止排新工作後，已開始的唯讀操作自然結束。`status`應分開本機監看、資料新鮮度、coverage、事件佇列與接收端；歷史heartbeat不保證程序仍活著，也不是主機安全狀態。停止後查事件是否pending／retry、mock是否仍未處理，不自動刪資料。
+| 觀察 | 查證／恢復 |
+| --- | --- |
+| partial／denied／unknown | 看逐來源 coverage.errors 的 stage／原因碼；不改權限或把空資料當安全 |
+| stopping_pending_query／shutdown_unconfirmed | 看 query_shutdown、Job child exit／剩餘數；未確認時不宣稱 stopped，不強停外部 PID |
+| blocked_monitor_gap | 保留同 ID gap marker；解除容量／保存錯誤後重新啟動才補送，不刪 marker 假裝無缺口 |
+| outbox／inbox 容量錯誤 | 保留 pending／retry／未 ACK failed；由合法 consumer 完成既有 ACK，讓已完成資料依政策輪替 |
+| prior_child_exit_unconfirmed／失敗交付帳本 | 檢視原 attempt 與回條；不刪紀錄重置預算，也不自動重試模型 |
+| inbox_state_busy | 另一 mutation owner 正在工作；不要強停 owner 或改鎖檔；正常退出後重試 |
 
-真實監看寫data/live；`monitor --fixture tests/fixtures/normal.json --max-cycles 1`寫data/test且不採集系統。`synthetic emit`、`deliver --adapter mock`及`mock process`強制test。查看合成事件與報告時明確用`events list --namespace test`、`playbook simulate --namespace test --event-id EVENT_ID`、`report export --namespace test`；不能把合成驗收當真實主機狀態。
+[生命週期](PROCESS_LIFECYCLE.md) 與 [儲存政策](STORAGE_RETENTION.md) 列出具體界線。status 是最後監看報告與目前本機佇列視圖，不是獨立存活偵測或安全結論。
 
-未批准持久啟動時，登出／重啟後需使用者重新啟動。不得因希望自動恢復就自行建立服務、排程、自啟或watchdog。
+真正 agent CLI 僅在新的明確範圍批准後使用 [可選通路](LIVE_CHANNEL.md)。當前維護不呼叫模型、不改 MCP 設定、不啟用排程；歷史有限成功不延伸成永久批准。排程僅 dry-run，soak 與 Phase 7 仍未執行。
 
-## 按需診斷
-
-只用capabilities列出的操作與型別化args。先查事件涉及的單一來源／埠／程序實例，不先跑全機。程序身分使用PID與建立時間，防止重用；資料過期時重新確認，不對新的PID套用舊結論。查詢限15秒、列數上限與資料最小化由工具驗證，拒絕任意shell／未知欄位。
-
-對`partial / denied / unknown / not_applicable / error / timeout`分別說明，不能把空結果當安全。歷史inactive防毒訊號缺日期／處置結果時，只保留背景與缺口，不猜active infection或清除。
-
-## 常見故障
-
-| 現象 | 先查什麼 | 安全處理 |
-| --- | --- | --- |
-| 沒有事件 | 來源時間、基線、規則filter、coverage | 正常可能零事件；不可僅因此說安全，不用頻繁模型輪詢 |
-| coverage降級 | 固定錯誤碼、來源權限、最後成功時間 | 保留未知；不提權繞過，不修改系統設定 |
-| pending累積 | adapter是否disabled、receiver是否真已選定 | disabled是未接通，不是假故障；不要把mock接收當正式送達 |
-| retry／failed | 嘗試數、lease、ACK與目的路由 | 不確定先查收據；同event_id續送，不盲目新增事件 |
-| 佇列／磁碟滿 | 容量、已ACK／failed保留、實際寫入錯誤 | 不靜默刪pending；降級／背壓；清理與刪除需授權 |
-| 診斷不符合程序 | PID與建立時間是否一致 | 標stale／unknown，不對另一程序處置 |
-| playbook衝突／缺規則 | rule_id／version、節點、filter、allowed_actions | 安全採證後提問；規則不是授權，沒有允許動作就不處置 |
-| 程序全部停止 | 本機無法自我報告 | 不假裝已有獨立watchdog或遠端已收到 |
-| 遠端連線但UAC不可見 | 當前桌面與安全桌面能力 | connected非可操作；不關閉UAC／不繞過／不恢復暫停修補 |
-
-## 維護與移除
-
-規則修改先驗證與dry-run；版本、變更理由及回復點都要保存。宣告式畫布是後續可選層，不改變runtime批准檢查。更新程式前先停止本工具排程並保留執行資料；不要與正在更新的程式衝突。
-
-移除前呈現未送事件及未完成案件，使用者決定保留／匯出；本版不自動刪資料。不曾建立服務／排程／自啟時，不能宣稱已卸載那些項目。不要動舊MVP或既有閱讀入口。
-
-## 驗證紀錄
-
-本版測試以mock／fixture／安全合成event優先，測試結束停止自己的監看程序。整合者把實際命令、時間、成功／失敗數、輸出檔與限制寫到STATUS。長時CPU／RAM／I/O／電池數字要量測，不能因單元測試通過就宣稱達標；正式agent E2E未接通則維持blocked。
+驗證與時間記錄只寫 [EVIDENCE](EVIDENCE.md)，保持 [STATUS](../STATUS.md) 一頁現況；不得上傳原始事件、SQLite、完整 trace 或憑證。

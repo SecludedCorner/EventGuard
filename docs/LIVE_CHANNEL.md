@@ -1,5 +1,7 @@
 # 有界本機監看與真正 agent 接收
 
+這是需要當次真模型批准的可選通路，不是正常監看的前置條件；本次文件整理沒有啟動此入口。一般使用見 [共用介面](HUMAN_AGENT_INTERFACE.md)，現況與歷史實測見 [EVIDENCE](EVIDENCE.md)。
+
 入口 `scripts/eventguard_watch.py` 在前景執行：既有 Windows 唯讀監看器先把事件耐久保存到 `data/live/eventguard.sqlite3`，純 Python worker 等待佇列；有 pending 事件才以既有登入啟動一次真正 Codex CLI。每個任務只能接收一個綁定事件、查最小 snapshot、保存結果並 ACK，完成後才取下一件。沒有事件不啟動模型。
 
 這會建立專用短期 CLI agent 任務，不接續目前桌面聊天，也不需要永久註冊 MCP。沒有服務、排程、開機自啟、額外登入或憑證。關閉／登出後不會自動恢復。
@@ -27,7 +29,7 @@ python -B scripts/eventguard_watch.py status --run-dir reports/watch-001
 python -B scripts/eventguard_watch.py stop --run-dir reports/watch-001
 ```
 
-停止／到期阻止後續採集與新任務，已開始的 OS 查詢或 CLI 自然返回；不 kill／terminate。若它們卡住，狀態會保留 pending／等待退出，不能把時間上限解讀為強制終止保證。首輪尚未完成時，`native_collection_started=null` 表示不能確認採集是否已開始；不把 unknown 當成未採集。
+停止／到期阻止後續採集與新任務。Phase 3 起，新啟動的 query／CLI／capture 由私有 Job 管理，先留協作寬限、再只清理本工具 Job；保存 child_exited、forcibly_terminated、原因及剩餘數。未確認退出時明示，不將強停當驗收成功；見 [PROCESS_LIFECYCLE](PROCESS_LIFECYCLE.md)。首輪尚未完成時，`native_collection_started=null` 表示不能確認採集是否已開始。
 
 ## 對外資料與結果語義
 

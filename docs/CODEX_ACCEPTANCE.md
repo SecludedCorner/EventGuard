@@ -1,6 +1,6 @@
 # MSI：單次真實 Codex 合成驗收
 
-此入口驗證一次本機 stdio 的真 agent 等待 → 事件 → 查證 → 結果／ACK；不是常駐監看、桌面任務續接或 Windows 原生採集驗收。正式產品仍 BLOCKED。沒有新增網路服務、MCP 永久設定、憑證、排程或模型 polling。核心正常監看仍不呼叫模型。
+此入口驗證一次本機 stdio 的真 agent 等待 → 事件 → 查證 → 結果／ACK；不是常駐監看、桌面任務續接或 Windows 原生採集驗收。它需要當次明確模型範圍批准，本次維護不執行。完整產品仍為工程預覽，現況與歷史證據見 [EVIDENCE](EVIDENCE.md)。核心正常監看不呼叫模型，沒有永久 MCP 設定或新憑證。
 
 ## 最短操作
 
@@ -27,7 +27,7 @@ python -B scripts/acceptance_codex.py status --run-dir reports/msi-codex-001
 python -B scripts/acceptance_codex.py stop --run-dir reports/msi-codex-001
 ```
 
-`status` 讀取有界狀態與本次擷取程序的退出回條，若回條完整可補完先前逾時的判定；不以 PID 存在猜測模型或 MCP 存活。`stop` 只合作停止後續 producer；已開始的工具等待／模型請求自然返回，不 kill／terminate、不宣稱已取消遠端請求。等待工具本身最多 30 秒，本機入口允許 180 秒觀測整個 CLI；超時回 `pending_child_exit`、exit 3，獨立的本機 capture worker 繼續排空輸出、等待 CLI 自然退出並寫入有 fsync 的回條。它只擷取這次 CLI，不是常駐服務；模型停滯時仍不能保證有界退出。沒有完整退出回條，或 capture／stdio 鎖仍被持有時，`retry` 會拒絕；`status` 不會啟動模型。
+`status` 讀取有界狀態及擷取回條，不以 PID 存在猜測模型或 MCP 存活。`stop` 先合作停止 producer；Phase 3 起，正式 Windows 子程序由私有 Job 管理，期限／取消後留寬限、再只回收本工具程序樹並保存實際回條，不能據此宣稱取消遠端模型請求。強停不能通過交付驗收；缺少完整回條或鎖仍被持有時不重試。顯式注入的 unmanaged fake／非 Windows fixture 仍保留舊 pending 等自然退出契約，不可當正式 Job 行為。清理與失敗狀態詳見 [PROCESS_LIFECYCLE](PROCESS_LIFECYCLE.md)；`status` 不會啟動模型。
 
 ## 證據與判定
 

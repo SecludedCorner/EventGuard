@@ -1,45 +1,29 @@
-# EventGuard 事件與接線契約
+# 人類與可選 agent 契約
 
-**正式agent接收端未指定／未接通。** 本版只提供明確adapter界線與安全本機mock；沒有外部webhook、憑證、模型API或自動CLI模型。不能宣稱已喚醒真正Codex／dot，也不能假設任意任務都有webhook或永久等待能力。
+EventGuard 先是可獨立使用的本機唯讀工具；agent 使用同一能力協助人類。正常監看不需要模型，沒有預設 agent 自動喚醒。歷史有限真 CLI 通路證據見 [EVIDENCE](EVIDENCE.md)，不等於任意桌面聊天可接續。
 
-## 狀態不可混淆
+## 三個仍存在的介面
 
-| 狀態 | 代表什麼 | 不能代表什麼 |
+| 介面 | 實際資料與操作 | 不代表 |
 | --- | --- | --- |
-| persisted | 本機event耐久落盤 | 已送出／已喚醒 |
-| transmitted | 一次傳輸嘗試 | 接收端已保存 |
-| receiver_accepted | 接收端已驗證並耐久接收 | agent已開始 |
-| ack／acked | 已取得對應event_id的可信耐久回執 | 已診斷／處置／結案 |
-| agent_started | 真實平台開始／恢復指定任務，有run_id | 已完成調查 |
-| agent_processed | 本次事件工作結果已保存 | 主機安全／一定已處置／案件已結 |
-| case_closed | 案件符合明確結案條件 | 整台主機安全 |
-| mock_processed／mock_closed | 本機合成契約的診斷／結案 | 真實agent_started或處置 |
+| 共享 OperatorAPI／operator stdio | capabilities、status、stop、monitor_once、list／inspect、事件綁定 diagnose、report；與人類 CLI 同一核心 | 不提供自由字串命令，不隱含啟動模型或 ACK |
+| QueueInbox bound delivery | 一個固定 event 的 receive → 已保存最小 snapshot query → 耐久 result／ACK | query_evidence 沒有新的原生診斷，reviewed_metadata 不是安全結論 |
+| LocalWait 舊 synthetic 驗收 | wait → 保存合成 snapshot query → synthetic ACK | 不是正式監看來源、永久等待或目前對話接線 |
 
-本版mock只接受synthetic=true事件；real_agent_woken必須為false。正式事件不能用mock變成已喚醒或已處理。
+具體工具名稱／參數見 [HUMAN_AGENT_INTERFACE](HUMAN_AGENT_INTERFACE.md) 與既有入口；Phase 5 尚未合併舊路徑，不能提前宣稱三者相同。雲端 MCP Events bridge 是停用歷史候選，不是本機部署前置。
 
-## 事件與回執
+## 不可混淆的證據
 
-事件schema 2.0保留event_id、host_id、episode_id、correlation_id、sequence、event_type、detector／rule版本、transition、severity、synthetic、觀測與持久時間、window、baseline_version、evidence、inference、coverage、privacy、evidence_refs。欄位需白名單／限長，單事件上限8KiB；不得包含秘密、完整命令列、事件Message/XML、原始例外或私人內容。路徑遮罩使用者目錄。
+| 狀態 | 可支持 | 不能支持 |
+| --- | --- | --- |
+| persisted | 本機 event 已耐久保存 | 已送達或模型已醒 |
+| received／queried | 實際工具回傳與相同 event/query ID | 原生診斷完成或主機安全 |
+| result／ACK | 同事件結果已保存，receiver 耐久接收 | 已處置、結案或主機安全 |
+| diagnosed | 明確型別化唯讀查詢的事實、coverage 與未知 | not_assessed 以外的無證據安全判斷 |
+| child_exited | 匹配 attempt 的實際退出回條 | 單憑 exit 0 就通過工具交付驗收 |
 
-同一轉態固定event_id，升級／恢復建立新event_id但同episode；重試另記嘗試與lease，不改事件身分。規則與event裡的rule_ref只是調查參考，不是權限。receiver與agent都需冪等；副作用另用action_id與查證，避免事件重送重複處置。
+真正 CLI 驗收還須實際 JSONL／工具返回、ID 集合、SQLite ACK 與退出證據互相匹配。mock、SDK client、登入、CLI 啟動、模型文字聲稱都不能替代。強停或缺少完整回條不能冒充正常成功。
 
-正式ACK必須來自經驗證receiver，包含相符event_id、耐久接收語義`ack_type=receiver_persisted`及receipt_id／receiver_receipt_id。HTTP成功、檔案生成、CLI啟動或聊天文字不是ACK。ACK不等待調查；實際ACK與agent_started到達順序可以交錯。無可信ACK時仍是未確認交付。
+事件、工具輸出與程序名稱均為不可信資料；不提供任意命令、網路、處置或新授權。agent 無法用參數更換 namespace／root／來源或指定任意 PID。來源缺口、過期、partial／denied／unknown 必須保留。
 
-採至少一次投遞語義與冪等，不承諾exactly-once或無條件最終送達。離線／暫時故障退避重試，最多8次後failed；failed不代表已送達。接收端恢復且持久資料仍在，經查證的續送才能繼續。超過receiver去重保留窗口的自動或人工續送須先核對收據／案件，不能當新事件重做處置。
-
-## 本版adapter
-
-- `DisabledAdapter.connected=False`：沒有接收端，不送出、不增加嘗試、不假ACK。
-- `MockReceiverAdapter`：只在本機SQLite耐久接收合成事件、去重並回mock receiver ACK。`process_mock`只跑合成診斷callback、保存mock案件，不執行系統動作或模型。
-- 正式adapter：尚未實作／啟用。需使用者選定平台與目的地後驗證，不自行補外部服務。
-
-## 正式接線前置契約
-
-1. 指定可信receiver、擁有者、主機與task_ref，批准可傳metadata與目的地；本機可讀不等於可傳給外部模型。
-2. 驗證平台對該任務的事件接收、真正等待不推理、喚醒／恢復、任務TTL與實際run_id；缺能力就blocked，不以AI定時輪詢替代。
-3. 定義身分／傳輸保護、schema協商、冪等保留、ACK查詢、路由故障、限流及agent離線的wake_pending恢復。
-4. 讓agent可在批准範圍使用本版capabilities列出的診斷CLI或未來受支援橋接；不能假設跨機可以直接讀Windows路徑。
-5. 先批准受控合成測試路由，驗證同event_id到receiver ACK、真實task/run_id、按需診斷、結果回執及回等待，再批准正式事件傳輸。
-6. 分別保存接收、喚醒、調查、批准、處置、驗證與結案。沒有真實run_id就不能說agent已喚醒。
-
-規則、文件、日誌或畫布不產生新批准。提權、服務／自啟、更新、改防火牆、隔離刪檔、停止其他程序或重啟關機須具體有效授權；connected不代表可操作安全桌面，不關閉UAC、不繞過，也不恢復先前暫停修補。
+去重、完成資料與回條有有限保留窗，不能宣稱永久 exactly-once；pending 不因清理丟棄。可選 SDK 需已安裝且由人類選定 scope；不永久註冊、不讀憑證、不建立持續帳戶存取。任何真模型／Codex 啟動仍需本次明確範圍批准。

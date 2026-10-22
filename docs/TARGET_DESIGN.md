@@ -1,4 +1,4 @@
-> 本檔是前輪完整目標設計與歷史MVP基準的唯讀複本，不是EventGuard已完成能力清單。新版實作、入口與驗證以本專案README、STATUS及ARCHITECTURE為準；其中舊MVP路徑、測試數、舊入口及文件指涉保持原始歷史範圍。
+> 本檔是前輪完整目標設計與歷史MVP基準的唯讀複本，不是EventGuard已完成能力清單。新版實作、入口與驗證以本專案README、STATUS及ARCHITECTURE為準；其中舊MVP路徑、測試數、舊入口及文件指涉保持原始歷史範圍。下列「尚未接通」亦屬原文；最新目標見 [MAINTENANCE_GOAL](MAINTENANCE_GOAL.md)，實測範圍見 [EVIDENCE](EVIDENCE.md)。
 >
 > EventGuard是全新獨立專案；本輪不修改舊MVP或既有閱讀入口。正式agent接收端仍未指定／接通，不能把mock當真實喚醒。
 

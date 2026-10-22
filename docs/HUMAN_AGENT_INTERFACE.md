@@ -71,7 +71,7 @@ python -B scripts/eventguard_inbox_mcp.py --operator-root . --namespace test
 
 同一 scope 的事件清單／檢視使用完全相同的結構化資料，沒有為 agent 把「重讀摘要」改名成診斷。CLI 與 MCP 的新公開操作也共用固定錯誤 envelope，不回傳原始 OS 例外或私人錯誤路徑。
 
-長期前景監看仍用 CLI；MCP `monitor_once` 一次一輪，避免讓模型靠永久工具等待維持監看。原生呼叫卡住時 30 秒只阻止後續工作，仍不是硬性退出期限；背景子程序治理留 Phase 3。此處沒有宣稱完整長期啟停管理、任意既有聊天接續或已把工具載入目前的 agent。
+長期前景監看仍用 CLI；MCP `monitor_once` 一次一輪，避免讓模型靠永久工具等待維持監看。Phase 3 已將 native 呼叫移入私有 Job worker；到期／取消先留寬限，再只清理本工具 Job，保存實際退出或未確認狀態。清理本身另有有限等待，30 秒不是硬即時總上限，詳見 [生命週期](PROCESS_LIFECYCLE.md)。未驗證全天候、任意既有聊天接續或將工具載入目前 agent。
 
 ## 查證與信任邊界
 
@@ -84,10 +84,10 @@ python -B scripts/eventguard_inbox_mcp.py --operator-root . --namespace test
 - inspect 中 latest_diagnosis 是有時間戳的已保存結果，不會因讀取而重新採集；要新觀察必須明確 diagnose。保存值重新驗證 schema／字串／payload，不把 hash 當成對抗同使用者篡改的安全邊界。
 - HTML 的原始事件 metadata 只作本機證據且 escape；SDK 工具僅回本機報告位置，不自動外傳檔案。公開文件不含本機執行資料。
 
-## 本階段驗證範圍
+## Phase 2 的歷史驗證範圍
 
 `tests/test_operator_api.py` 覆蓋 CLI／API／SDK view 等價、無 SDK 核心 fixture 監看、唯讀視圖不建資料庫、事件綁定、PID 重用、名稱／控制字元／超長／Unicode 對抗案例、拒讀／截斷／空列、容量回滾、保存與重啟讀取、篡改拒絕、namespace 停止範圍及公開錯誤最小化。
 
 另以真 Python stdio 子程序、已安裝 SDK 與合成資料實際呼叫八個 operator tools，保存 request／response 與自然 EOF exit 回條。這是協定測試，**沒有真 Codex／模型，也沒有本輪 Windows 採集成功證明**。舊三工具驗收測試保留。
 
-本輪精確測試數、Python／來源 hashes、命令、輸出及 SDK trace 留在忽略的 `reports/phase2-operator-001/verified`，以該次 summary.json 為準：304 discovered／302 passed／2 symlink skip／0 failure/error，72 AST，Python 3.13.3。demo-final 另保存獨立 CLI／fixture 診斷及三事件報告，0 ACK。歷史真 agent 通路結果不變；本階段沒有新增真 agent 診斷／效益證據。
+該次 Python／來源 hashes、命令、輸出及 SDK trace 留在忽略的 `reports/phase2-operator-001/verified`。demo-final 另保存獨立 CLI／fixture 診斷及三事件報告，0 ACK。最新與歷史測試數統一查 [EVIDENCE](EVIDENCE.md)；本節不代表新真 agent 診斷／效益證據。

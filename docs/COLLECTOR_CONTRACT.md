@@ -31,7 +31,7 @@ fallback = WindowsCollectors(backend="powershell") # 明確比較／原生 API �
 | not_applicable（n-a） | 指定 API／允許的物件不存在或不適用；不是 denied |
 | unknown | 已執行但證據不足以分類為完整、拒絕或不適用。例如排程根物件不可見，不能改寫成「沒有排程」 |
 | error | 啟動、契約或查詢失敗；不等同 denied |
-| timeout/cancelled/busy | 停止後續工作或等待尚未結束的操作；不是 OS 操作已被強制中止的證據 |
+| timeout/cancelled/busy | 查詢結果分類；是否強停、退出或仍未確認，另查 coverage.process 的實際回條，不能由狀態字樣推定 |
 
 每個錯誤的白名單欄位：
 
@@ -80,15 +80,15 @@ SecurityCenterAntivirusHealth 是 aggregate_antivirus，可能包含其他防毒
 
 ### Tasks 路徑評估
 
-已比較 COM 與一次固定 `schtasks /query /fo csv /nh`：COM 不需子程序、可取型別化 state；CSV 需子程序與本地化文字解析，且不加 /V 才能避免取得任務命令等其他內容。本次兩者都無法讀取排程根，COM 有 HRESULT／object 階段證據，保留為主路徑；**不是已證明 COM 在所有主機比較快**。本機時間及原始 CLI 輸出留在 reports。
+Phase 1 已比較 COM 與一次固定 `schtasks /query /fo csv /nh`：COM 呼叫本身不需 schtasks 子程序，可取型別化 state；CSV 需子程序與本地化文字解析，且不加 /V 才能避免取得任務命令等其他內容。當次兩者都無法讀取排程根，COM 有 HRESULT／object 階段證據，保留為主路徑；**不是已證明 COM 在所有主機比較快**。Phase 3 起 COM 與其他 native 來源一起在 Python worker 隔離；本機比較證據仍是原 Phase 1 範圍。
 
 COM 遞迴最多 4096 個可見資料夾、深度 32，含可見的 hidden tasks，300 列以後明示 truncated。無權限的隱藏物件是否存在仍未知；不從「未列出」推定不存在。
 
 ## 成本、取消與尚未具備的保證
 
-所有 native API handle／COM reference 在 finally 釋放。native 正常輪詢七來源不啟動 PowerShell；auto fallback 最多再一次，同一 Runner 僅一個 in-flight PowerShell。原有七來源間隔不變；query_timeout_seconds 現在實際套用，驗證為 (0,60] 秒。
+所有 native API handle／COM reference 在 finally 釋放。Phase 3 起，每個 native section 在一個短期 Python worker／私有 Job 內執行；正常七來源不啟動 PowerShell，但會有七個循序 Python 子程序。auto fallback 最多再一次，同一 Runner 只有一個 in-flight 查詢。原有間隔不變，query_timeout_seconds 範圍為 (0,60] 秒。
 
-native 的時間預算／取消只在 API 呼叫之間檢查；單一 OS／COM 呼叫永不返回時，尚無硬性退出期限。PowerShell timeout 仍排空並等原查詢自然結束。Job Object、強制清理自啟程序、monitor_gap、排程／長期 soak 均留後續 phase；本版不宣稱解決任意 hang 或全天候。
+單一 OS／COM 呼叫卡住時，父 Runner 可在期限或取消後留寬限，再只清理私有 Job；coverage.process 包含實際 child exit／強停／殘留證據。詳見 [PROCESS_LIFECYCLE](PROCESS_LIFECYCLE.md)。這項行為以真 Job API 與 hanging fixture 驗證，不等於每種 provider 故障或全天候驗證。排程仍 dry-run、soak 尚未執行。
 
 ## 測試與本機證據
 
