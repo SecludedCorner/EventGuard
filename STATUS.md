@@ -2,7 +2,7 @@
 
 更新：2026-10-22 UTC。本檔只記錄工程事實，不包含真實主機的警報、路徑或安全結論，也不授予操作權限。
 
-**MSI 本機有限合成事件真通路 A／B1／B2／C 已通過；完整產品仍為工程預覽。** 正式監看未啟動，長期 ingress／原生診斷仍未驗證。最新本機證據見本檔末節；以下保留各時間點歷史，不以 mock 或舊測試冒充真通路。
+**本機耐久佇列已接通專用 Codex CLI agent；完整產品仍為工程預覽。** 有限合成 A／B1／B2／C，以及新增前景入口的合成與有界實機佇列接收試跑均已有真工具證據；本輪已退出，目前沒有持續監看。完整 coverage、長期可靠性及原生診斷仍未驗收。最新證據見本檔末節與 [LIVE_CHANNEL](docs/LIVE_CHANNEL.md)；以下保留各時間點歷史，不以 mock 或舊測試冒充新結果。
 
 ## 歷史協定基準：本機 stdio MCP 等待（04:16 UTC）
 
@@ -64,7 +64,7 @@
 | 並行／優先序 | 單原生查詢，監看程序嘗試 below-normal；增量規則，不做 AI heartbeat | 邏輯已測；整體 CPU／I/O 效果未量測 |
 | CPU／RAM／I/O／電池 | 完整目標在 TARGET_DESIGN，需 idle 與高負載基準、電池／插電情境及分位數 | **未量測，不聲稱達標** |
 | 儲存 | outbox 1000 事件／8 MiB 等預設，日誌輪替與背壓 | 容量／失敗案例已測；長時／磁碟故障實機驗收未做 |
-| 真 ingress | 無事等待不推理，只有事件開啟必要回合 | **blocked，尚無實際接收端** |
+| 真 ingress | 無事等待不推理，只有事件開啟必要回合 | 有界 CLI 接收已通過，見末節；長期運作未驗收 |
 
 ## 下一步與完成定義
 
@@ -186,3 +186,34 @@ C 第一階段只執行 wait/query，CLI 正常退出；`read-before-ack/pending
 - 全套以 `python -B -` stdin harness 執行 `unittest.defaultTestLoader.discover('tests')` 與 `ast.parse`，獨立輸出目錄避免覆寫既有 reports 基準。06:53:15Z：231 discovered、229 passed、0 failure/error、2 symlink 權限 skip，55 Python AST 通過，53.809 秒，exit 0。證據 `reports/msi-channel-001/unit-tests.txt`、`unit-summary.json`。未為略過項提權；無模型、網路服務或實機掃描。
 
 以上只完成本階段的有限公開合成事件工具接收、耐久保存及補收 ACK 驗收，不是任意既有桌面對話接續、Windows 原生採集、長期 dispatcher／監看服務、永久等待、帳戶零閒置用量或完整主機安全的驗證。正常監看仍不呼叫模型；既有 bridge 保持停用。所有 manifest、JSONL、工具回傳、SQLite、runtime 與本輪診斷保留本機忽略 reports，不納入 Git。
+
+## 2026-10-22 08:13 UTC／16:13 台北：前景事件入口與有界實機接收通過
+
+本批接續 `f093c2df531c7bbfc732e134cf718f00ebbfd22f`，仍在 `feat/local-codex-acceptance`。初始無未提交變更；集中提交前 fetch 再核對遠端與 HEAD 相同，沒有 reset、clean 或覆寫。使用者要求把事件接上，另明確批准一輪前景試運轉：最多一小時／五個 agent 任務，只送最小摘要。實際採更小的 300 秒／最多兩個實機任務；加上一次公開合成通路，共三個真 CLI 任務，沒有自動重試模型。先前 A／B／C 的結果保留，未重跑或重複計數。
+
+實作可直接使用的 `scripts/eventguard_watch.py`（run/status/stop），整合既有 Monitor 與 `agent_dispatch.py`，不擴充來源、GUI 或原生診斷。Monitor 新增時限與共享合作停止；首輪保存後才交給 dispatcher。純 Python 等待原 live outbox，有 due/pending 事件才啟動專用 CLI；未執行時只是 preflight。停止／截止在實際 native Popen 前再次核對，根本未啟動者另記 capture-skipped；已開始 CLI／查詢自然退出，沒有 kill／terminate。
+
+`queue_inbox.py` 只投影固定七欄 snapshot：event ID／類型／轉態／severity／synthetic／觀測時間／coverage status，不回程序或產品名稱、路徑、PID、事件全文、任意 evidence／reason／gaps。三工具 receive/query/ACK 只綁定一件事件，prompt 不帶 ID／內容；query 僅查同一保存摘要，結果為 `reviewed_metadata`、`incident_conclusion=not_assessed`。MCP 設定與逐工具批准只屬單次 CLI，保留 read-only／shell 關閉，使用正常本機 home 與既有登入，未永久註冊、建立登入、讀取或複製憑證。
+
+耐久 snapshot/query/result ID 與原 outbox ACK 互相核對，結果先保存再 ACK；同 ID 重收沿用同 query/result，已 ACK 不重複結案。來源全域鎖與固定 state 綁定阻止平行 receiver 或換目錄繞過未知退出；每事件最多三次明確嘗試、失敗不自動重開模型。容量／保存失敗明確 blocked，不清除 pending。詳見 [LIVE_CHANNEL](docs/LIVE_CHANNEL.md) 的容量、啟動與恢復限制。
+
+本輪使用既有 Python 3.13.3／MCP 1.6.0／原生 Codex 0.163.0-alpha.11.1，程序環境明確指向正常 home，`$codexExe` 為既有原生執行檔。真執行命令：
+
+```powershell
+python -B scripts/eventguard_agent.py run --run-dir reports/msi-queue-synthetic-001/dispatch --source-dir reports/msi-queue-synthetic-001/source --state-dir reports/msi-queue-synthetic-001/inbox --codex-executable $codexExe --max-seconds 180 --max-tasks 1 --execute
+python -B scripts/eventguard_watch.py run --run-dir reports/msi-live-001 --codex-executable $codexExe --max-seconds 300 --max-tasks 2 --execute --allow-live
+```
+
+第一條為程式生成的一件公開合成事件，source/inbox 均隔離；真工具 receive→query→ACK、三 ID 及 SQLite receipt 匹配，任務上限正常退出，runner／CLI exit 0。合成 source 刻意放入不應傳出的名稱／路徑／指令誘餌，實際工具返回沒有洩出，snapshot 僅七欄。證據 `reports/msi-queue-synthetic-001`，07:51:56–07:53:29 UTC。
+
+第二條為本輪已授權的實機前景試運轉，08:07:15 UTC 開始監看，兩輪後於 08:10:23 UTC 合作停止。達任務上限後 watch=completed、monitor_exited=true、agent=task_limit_reached、child_exited=true，runner／各 CLI exit 0，完整未截斷退出回條及所有本輪 owner 鎖釋放。獨立審查以 SQLite mode=ro 的最小欄位與實際 JSONL 確認事件在本輪觀測／保存，非舊 backlog；收到/query/結果/ACK/receipt ID 集合匹配，交給 agent 的集合無缺漏、額外或非預期重複。任務上限外事件仍耐久 pending，沒有假稱全部佇列已交付；完整實機數量及 ID 只留本機忽略 audit，不納入 Git。部分來源仍 partial，沒有把 ACK 解讀為安全或完整 coverage。
+
+獨立核對命令 `python -B reports/live-channel-evidence-001/audit_live_delivery.py`，08:12:31 UTC exit 0、passed=true，保存 `delivery-audit.json`。審查直接解析三個真 CLI 的工具返回及 receipt，未以 agent 文字或 summary 取代；另核對 watch／Monitor／source dispatcher／stdio inbox／capture 鎖已釋放。沒有讀取原始 native evidence、Codex sessions 或將 stderr／runtime 上傳。
+
+必要測試與問題保留：
+
+- 全套以 `python -B reports/live-channel-evidence-001/verify_source.py` 執行，08:03:39 UTC：269 discovered、267 passed、0 failure/error、2 symlink 建立權限 skip，64 Python AST 通過，84.916 秒，exit 0；逐檔雜湊確認跑測試期間 source 未變動。`final-unit-tests.txt`／`final-unit-summary.json` 留忽略目錄。此 suite 是 fixture／fake CLI／SDK 檢查，模型呼叫與實機掃描均為零，與上述真任務分開。
+- 首輪 suite 的 1 failure／1 error 留在 `unit-tests.txt`／`unit-summary.json`：分別為停止閘道改動後的競時 fixture 與 Windows 狀態檔共享衝突。已修正 fixture、在 JSON 原子 replace 加僅限指定 Windows 錯誤的有界重試（最多 190 ms）；持續拒絕仍失敗並保留舊值，未更改權限。
+- 較早的一次合成 EOF 測試在關閉 stdin 後，SDK 預設工作群未退出，父測試 exit 1，留一個已核對的 Python 測試程序。修正 stdio 工作群的 EOF 合作取消後，新 EOF 測試自然 exit 0，inbox 18 項測試通過；但舊程序仍存在，且沒有強停批准，未 kill／terminate，不能宣稱所有測試程序皆已退出。身分／啟動時間與檢查證據只留 `reports/live-channel-evidence-001/known-test-orphan.json`。該程序不是本輪實機監看或模型任務，沒有採集系統資料。
+
+本輪前景試跑已結束，目前沒有持續監看；再次執行需當次有效範圍。已接通的是本機事件到專用短期 CLI agent，沒有證明任意桌面對話自動接續、完整 Windows coverage、原生診斷／處置、長期低負載、休眠／崩潰恢復或永久等待。舊 MVP、私人歷史、憑證與 runtime 未推送；集中提交只含審查後 source／tests／操作文件，指定 feature 分支，[skip ci]，不手動觸發 CI。

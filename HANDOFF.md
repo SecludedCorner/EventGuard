@@ -1,14 +1,16 @@
 # EventGuard 接手與下一任務
 
-**最新結果：MSI 本機有限 stdio MCP 真通路 A／B1／B2／C 全部通過。** 從 `4ffc86c1b931a8706d26723c676e974dba4fbc1d` 接續，修正非互動 CLI 的逐工具單次批准；7 個唯一公開合成事件、8 次接收／query、7 次 ACK，無缺漏或重複結案。先讀 [MSI_CHANNEL_CHECK](docs/MSI_CHANNEL_CHECK.md)、[CODEX_ACCEPTANCE](docs/CODEX_ACCEPTANCE.md) 及 STATUS 最新紀錄。雲端 bridge 保持停用，無須部署雲端環境。
+**最新結果：本機佇列已接通專用 Codex CLI agent。** 接續 `f093c2df531c7bbfc732e134cf718f00ebbfd22f`，新增 `eventguard_watch.py` 前景入口、無事不開模型的 dispatcher、只回七欄 snapshot 的 MCP inbox。一次合成事件及有界實機佇列試運轉已有真正 receive/query/ACK、SQLite receipt 及自然退出證據；實測細節見 STATUS 最新紀錄與 [LIVE_CHANNEL](docs/LIVE_CHANNEL.md)。先前有限合成 A／B1／B2／C 的 7 個唯一事件、8 次接收／query、7 次 ACK 證據保留，未重跑冒充新結果。雲端 bridge 保持停用。
 
-本輪使用者只批准有限公開合成驗收，另明確批准 Git 與驗收程式以一般使用者執行的限定 sandbox 例外；這不是未來永久授權。正常 Codex home／既有登入保留，未讀取或複製憑證內容、未永久註冊 MCP、未觸發 UAC。舊 MVP、`fd45578` frozen ZIP 與私人歷史不動；完整 trace／SQLite／runtime 只在忽略的 reports。正式監看與完整產品仍未完成，不能宣稱接續任意桌面聊天、Windows 原生採集或永久等待。
+使用者另明確批准一輪最多一小時／五個任務的前景實機試運轉，只送最小摘要；本輪實際使用 300 秒／最多兩個實機任務，現已自然結束。正常 Codex home／既有登入保留，未讀取或複製憑證內容、未永久註冊 MCP、未觸發 UAC。舊 MVP、`fd45578` frozen ZIP 與私人歷史不動；完整 trace／SQLite／runtime 只留本機忽略目錄。本次批准不是未來持續授權，不重啟監看或模型；若下一任務需要再跑，先核對最新使用者範圍。
+
+完整產品仍未完成：本輪 query 僅查已保存摘要，未執行原生診斷或系統處置；不能宣稱接續任意桌面聊天、完整 coverage、長期可靠性或永久等待。先前失敗的合成 EOF 測試有一個已說明殘留程序，修正後新測試已自然退出，但未獲強停舊程序的批准，詳見本機證據及 STATUS，不能稱所有測試程序皆已退出。
 
 先讀 [AGENTS](AGENTS.md)、[README](README.md)、[STATUS](STATUS.md) 及 [DEVELOPMENT](docs/DEVELOPMENT.md)。實作主檔 [ARCHITECTURE](docs/ARCHITECTURE.md)、[AGENT_CONTRACT](docs/AGENT_CONTRACT.md)、[OPERATIONS](docs/OPERATIONS.md)、[TARGET_DESIGN](docs/TARGET_DESIGN.md)、[INGRESS_CHECK](docs/INGRESS_CHECK.md) 保留原有定位；目標規格不是已完成證明。
 
-## 具體下一任務與驗收條件
+## 歷史產品驗收條件與接手 Prompt
 
-完整產品驗收仍為 BLOCKED；以下是歷史產品範圍與舊接手 Prompt，本輪有限合成通路的成功以最新 STATUS 為準。正式採集 coverage、長期 ingress 與原生診斷閉環仍需後續具體任務及授權，不能由本文件自動擴展。不將全程序提權作為補齊 coverage 的預設方案。
+完整產品驗收仍為 BLOCKED；以下是歷史產品範圍與舊接手 Prompt，不可將其中「agent 未接通」或「尚未實機試跑」當成最新事實。當前來源與接線成果以本頁開頭、LIVE_CHANNEL 與最新 STATUS 為準。完整 coverage、長期 ingress 與原生診斷閉環仍需後續具體任務及授權，不能由本文件自動擴展。不將全程序提權作為補齊 coverage 的預設方案。
 
 下一工程任務須朝「事件真正喚醒agent並由agent診斷」最高驗收推進；先固定來源、隔離重現與確認接線契約。mock僅是測試，不能作產品完成的替代。未獲具體接收端／傳輸／平台授權前，先交付契約缺口，不自行接外部服務：
 

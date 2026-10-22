@@ -228,6 +228,24 @@ class CoreTests(unittest.TestCase):
         self.assertFalse(thread.is_alive())
         self.assertEqual(results[0]["state"],"stopped")
 
+    def test_duration_limit_stops_new_queries_and_commits_finished_observation(self):
+        tick=[100.0]
+        calls=[]
+        class Collectors:
+            def collect(self,key,cancel=None):
+                calls.append(key)
+                tick[0]+=2
+                return {"id":key,"status":"denied","rows":[],"observed_at":"2026-10-22T00:00:00Z"}
+        result=Monitor(self.root,collectors=Collectors(),clock=lambda:tick[0]).run(max_seconds=1)
+        self.assertEqual(calls,["defender"])
+        self.assertEqual(result["stop_reason"],"duration_limit")
+        self.assertEqual(result["state"],"stopped")
+        self.assertEqual(result["coverage"]["defender"]["status"],"denied")
+        self.assertGreaterEqual(EventStore(self.root/"data/live").stats()["pending"],1)
+        for invalid in (True,0,-1,float('nan'),float('inf'),3601):
+            with self.assertRaisesRegex(ValueError,"invalid_max_seconds"):
+                Monitor(self.root).run(max_seconds=invalid)
+
     def test_html_export_escapes_and_does_not_overwrite(self):
         event=make_synthetic()
         event["inference"]["summary"]="<script>alert('x')</script> &"

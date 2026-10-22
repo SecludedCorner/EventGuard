@@ -1,6 +1,7 @@
 """Foreground headless scheduler. No service, model, external transport or daemon install."""
 from __future__ import annotations
 import copy
+import math
 import os
 from pathlib import Path
 import threading
@@ -73,12 +74,20 @@ class Monitor:
         self.runtime.save_health(health)
         self.runtime.log("monitor_stopped",{"namespace":namespace,"count":cycles})
 
-    def run(self,max_cycles=None,fixture=None,fixture_interval=0.1,on_cycle=None):
+    def run(self,max_cycles=None,fixture=None,fixture_interval=0.1,on_cycle=None,max_seconds=None,deadline_monotonic=None):
         from .events.store import EventStore
         from .transport.adapters import DisabledAdapter
         from .rules.detector import evaluate
         if max_cycles is not None and (type(max_cycles) is not int or not 1<=max_cycles<=100000):
             raise ValueError("invalid_max_cycles")
+        if max_seconds is not None and (type(max_seconds) not in (int,float)
+                or not math.isfinite(max_seconds) or not 1<=max_seconds<=3600):
+            raise ValueError("invalid_max_seconds")
+        deadline=self.clock()+max_seconds if max_seconds is not None else None
+        if deadline_monotonic is not None:
+            if type(deadline_monotonic) not in (int,float) or not math.isfinite(deadline_monotonic):
+                raise ValueError("invalid_deadline")
+            deadline=min(deadline,deadline_monotonic) if deadline is not None else deadline_monotonic
         if fixture and (max_cycles is None or not 0.05<=fixture_interval<=5):
             raise ValueError("fixture_requires_bounded_cycles")
         config=self.runtime.config()
@@ -91,6 +100,8 @@ class Monitor:
                 "started_at":utc_now(),"heartbeat_at":utc_now(),"last_success":None,"last_attempt":None,
                 "healthy":None,"coverage":copy.deepcopy(self.coverage),"real_agent_connected":False,
                 "delivery":"unconfigured: local events only; no real agent ingress", "model_calls":0,"synthetic":bool(fixture),"cycles":0}
+        if max_seconds is not None:
+            health["max_seconds"]=max_seconds
         cycles=0
         try:
             host_id=self.runtime.identity()
@@ -107,15 +118,22 @@ class Monitor:
             next_heartbeat=self.clock()
             while not self.cancel.is_set() and not lock.stop_requested():
                 stamp=self.clock()
+                if deadline is not None and stamp>=deadline:
+                    health["stop_reason"]="duration_limit"
+                    break
                 due=list(SECTIONS) if fixture else [key for key in SECTIONS if stamp>=self.not_before.get(key,0) and (key not in self.last or stamp-self.last[key]>=config["interval_seconds"][key])]
                 if due:
                     health["last_attempt"]=utc_now()
                     round_start=self.clock()
                     sections=[]
+                    duration_limit=False
                     if fixture:
                         sections=copy.deepcopy(frames[min(cycles,len(frames)-1)]["sections"])
                     else:
                         for key in due:
+                            if deadline is not None and self.clock()>=deadline:
+                                duration_limit=True
+                                break
                             if self.cancel.is_set() or lock.stop_requested():
                                 self.cancel.set()
                                 break
@@ -162,6 +180,9 @@ class Monitor:
                     self.runtime.save_health(health)
                     if on_cycle:
                         on_cycle(copy.deepcopy(health))
+                    if duration_limit or (deadline is not None and self.clock()>=deadline):
+                        health["stop_reason"]="duration_limit"
+                        break
                     if max_cycles is not None and cycles>=max_cycles:
                         break
                     if fixture:

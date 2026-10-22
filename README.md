@@ -2,25 +2,37 @@
 
 私人儲存庫：[SecludedCorner/EventGuard](https://github.com/SecludedCorner/EventGuard)。儲存庫建立不代表雲端開發環境或 agent 接收端已接通。
 
-**本機有限合成事件通路已通過；完整產品驗收仍為 BLOCKED。** 2026-10-22 MSI 的真正 Codex CLI agent 已通過單件、連續兩件、批次三件及 ACK 前退出補收：7 個唯一事件、8 次接收／查證、7 次耐久 ACK，無缺漏或重複結案。正式 Windows 採集覆蓋、長期事件啟動與診斷閉環仍待驗證，不可因此提升整個程序權限。[COVERAGE_PLAN](docs/COVERAGE_PLAN.md) 與 [INGRESS_PLAN](docs/INGRESS_PLAN.md) 保留其歷史計畫定位；本輪實測見 [STATUS](STATUS.md)。
+**本機事件已接到專用 Codex CLI agent；完整產品仍為工程預覽。** 2026-10-22 MSI 的有限合成 A／B1／B2／C 已通過：7 個唯一事件、8 次接收／查證、7 次耐久 ACK。新增前景入口亦完成一次合成事件及有界實機佇列試運轉，真正 agent 經工具接收、query、ACK 並自然退出。完整 Windows 採集覆蓋、長期可靠性與原生診斷閉環仍待驗證；實測範圍與證據見 [STATUS](STATUS.md)。
 
-EventGuard 目前是**尚未完成目標的工程預覽**。它提供無 GUI 的本機唯讀監看核心：一般權限背景程式採集有限 metadata，以確定性規則判斷變化，僅異常轉態建立耐久事件；正常週期不呼叫模型。最高產品驗收是事件真正喚醒指定長期任務 agent，再由 agent 按需使用同工具診斷 CLI，不能用mock替代。
+EventGuard 提供無 GUI 的本機唯讀監看核心：一般權限程式採集有限 metadata，以確定性規則判斷變化，僅異常轉態建立耐久事件；正常週期不呼叫模型。可選有界 worker 等待佇列，有事件才啟動專用 CLI agent。原生診斷及案件處理仍屬後續產品驗收，不能由接收 ACK 推定完成。
 
-**正式監看尚未啟動。** 本版有限驗收已證明程式產生的公開 synthetic event 可由真正 Codex agent 透過本機 MCP 收到、查證並 ACK；mock 流程仍只算 mock。事件落盤、已傳輸、接收 ACK、agent 開始與案件結案不可混為一談。這不代表既有桌面聊天會自動接續或已建成長期監看。
+**有界實機試運轉已結束，目前沒有持續監看。** 新入口使用既有登入、正常 Codex home 與本次 CLI 的 MCP 設定，只傳七欄事件 snapshot。事件落盤、接收 ACK、agent 開始與案件結案各有證據和語義；這不代表既有桌面聊天會自動接續或已建成長期監看。
 
 本機固定基準 `fd45578` 與 frozen ZIP 保留不變；目前 `main` 已另加 MCP Events 接線程式，新增結果以當前 commit 與測試為準。這不修改舊 MVP，也不把歷史測試升格為平台接通證據。
 
-## MSI 單次 Codex 驗收入口
+## 可使用的前景事件入口
+
+依 [本機監看與真正 agent 接收](docs/LIVE_CHANNEL.md) 在當次有效授權內執行：
+
+```powershell
+$env:CODEX_HOME = Join-Path $env:USERPROFILE '.codex'
+$codexExe = (Get-Command codex.exe -CommandType Application -ErrorAction Stop).Source
+python -B scripts/eventguard_watch.py run --run-dir reports/watch-001 --codex-executable $codexExe --max-seconds 3600 --max-tasks 5 --execute --allow-live
+```
+
+純 Python 等候原耐久佇列，有 pending 事件才啟動模型；每個任務只接收一件、query 保存的最小摘要並 ACK。最多一小時／五個任務，可縮小上限。每次使用全新 run 目錄，沒有服務或自動恢復；另有 `status`、`stop`。到期或停止只阻止後續工作，已開始操作自然退出。ACK 表示摘要已接收，沒有主機安全或處置結論。
+
+## MSI 單次合成 Codex 驗收入口
 
 依 [從 GitHub 取得並驗收 A／B／C](docs/MSI_CHANNEL_CHECK.md) 使用有限驗收入口。MSI 本輪 A／B1／B2／C 已真正通過；雲端發布不是本機驗收的前置條件。
 
 `python -B scripts/acceptance_codex.py run --run-dir reports/msi-codex-001 --codex-executable <既有原生路徑>` 自動協調 agent 等待後的合成 producer、查證與耐久結果／ACK，提供 status／stop、同事件手動 retry、跨程序鎖、有界輸出與分次保存的證據。三工具批准只作用於本次執行，不永久註冊 MCP。詳見 [MSI 最短操作、逾時與故障排查](docs/CODEX_ACCEPTANCE.md)。雲端先前的網路與初始化阻塞保留為該環境紀錄，不影響本輪 MSI 已核實的有限成功。
 
-## 目前優先：直接本機 MCP 等待實驗
+## 歷史合成實驗：直接本機 MCP 等待
 
 使用者目前選定本機方案。`scripts/eventguard_local_mcp.py` 提供本機 stdio 三個工具 `wait_for_event`、`query_evidence`、`ack_event`。server 本身只處理專用目錄中的合成事件，沒有網路服務、proxy、憑證或模型呼叫；有限驗收由外層明確啟動真正 Codex。真實等待後續跑及 ACK 前補收已有本輪證據，永久等待仍無保證。入口明設工具 timeout 60 秒、server wait 30 秒；不得用模型重複等待代替事件驅動。
 
-讀 [最小實驗與單次批准範圍](docs/LOCAL_MCP_EXPERIMENT.md)。入口只使用已安裝的可選 Python MCP SDK；缺少時報錯退出，不下載。正式監看、正式資料傳輸及持續模型權限仍未啟用。
+讀 [最小實驗與單次批准範圍](docs/LOCAL_MCP_EXPERIMENT.md)。此舊入口仍限合成事件；新的有界 live 入口另見 [LIVE_CHANNEL](docs/LIVE_CHANNEL.md)。只使用已安裝的可選 Python MCP SDK；缺少時報錯退出，不下載。本輪批准不延伸為持續模型權限。
 
 ## 歷史候選：雲端 MCP Events 接線程式（停用，不是前置需求）
 
@@ -132,7 +144,7 @@ python -B scripts/eventguard.py query query_listener --args '{"protocol":"TCP","
 
 閱讀順序：[AGENTS](AGENTS.md)、[STATUS](STATUS.md)、[HANDOFF](HANDOFF.md)。實作與規格主檔仍保留：[ARCHITECTURE](docs/ARCHITECTURE.md)、[AGENT_CONTRACT](docs/AGENT_CONTRACT.md)、[OPERATIONS](docs/OPERATIONS.md)、[TARGET_DESIGN](docs/TARGET_DESIGN.md)、[INGRESS_CHECK](docs/INGRESS_CHECK.md)。[DEVELOPMENT](docs/DEVELOPMENT.md) 說明固定快照、隔離重現與 review。
 
-完整合成格式見 [CONTRACT_EXAMPLES](docs/CONTRACT_EXAMPLES.md)，發布與歷史界線見 [PUBLISHING](docs/PUBLISHING.md)。正式接線按 [INGRESS_PLAN](docs/INGRESS_PLAN.md) 核實，真實 E2E 仍未通過。
+完整合成格式見 [CONTRACT_EXAMPLES](docs/CONTRACT_EXAMPLES.md)，發布與歷史界線見 [PUBLISHING](docs/PUBLISHING.md)。[INGRESS_PLAN](docs/INGRESS_PLAN.md) 保留歷史設計定位；目前有界 CLI 接收通路見 [LIVE_CHANNEL](docs/LIVE_CHANNEL.md)，完整原生診斷閉環仍未驗收。
 
 ## 證據與尚未驗證範圍
 

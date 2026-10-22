@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import time
 
 from .local_wait import _guard, LocalWaitError
 
@@ -35,8 +36,18 @@ def write_json(path, value):
             stream.write(encoded)
             stream.flush()
             os.fsync(stream.fileno())
-        _guard(path)
-        os.replace(temporary, path)
+        for attempt in range(20):
+            _guard(path)
+            try:
+                os.replace(temporary, path)
+                break
+            except PermissionError as error:
+                # Windows JSON readers can briefly deny rename/delete sharing.
+                # Retry only this local replace, with a 190 ms total wait cap;
+                # persistent denial still fails closed without changing rights.
+                if os.name != "nt" or getattr(error, "winerror", None) not in (5, 32, 33) or attempt == 19:
+                    raise
+                time.sleep(.01)
     finally:
         temporary.unlink(missing_ok=True)
 

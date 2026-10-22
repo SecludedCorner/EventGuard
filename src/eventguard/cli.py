@@ -14,13 +14,14 @@ from .runtime import Runtime, read_json, utc_now
 
 
 def parser():
-    p=argparse.ArgumentParser(prog="eventguard",description="EventGuard 本機唯讀 headless 監看；正式 agent 尚未接通")
+    p=argparse.ArgumentParser(prog="eventguard",description="EventGuard 本機唯讀 headless 監看；有界 agent 接線另用 eventguard_watch.py")
     sub=p.add_subparsers(dest="command",required=True)
     sub.add_parser("capabilities")
     sub.add_parser("status")
     sub.add_parser("stop")
     monitor=sub.add_parser("monitor",help="前景持續監看；Ctrl+C 或另一終端 stop")
     monitor.add_argument("--max-cycles",type=int)
+    monitor.add_argument("--max-seconds",type=int,help="停止後續採集的總秒數（1..3600）；已開始查詢自然退出")
     monitor.add_argument("--fixture",help="僅 tests/fixtures 內的合成資料")
     monitor.add_argument("--fixture-interval",type=float,default=0.1)
     query=sub.add_parser("query")
@@ -110,14 +111,16 @@ def execute(args,runtime):
         from .diagnostics.api import DiagnosticAPI
         return {"tool_version":__version__,"diagnostics":DiagnosticAPI().capabilities(),
                 "monitor":"foreground, cooperative stop, singleton", "transport":["disabled","synthetic-only local mock"],
-                "remediation":[],"gui":False,"model_calls":0,"real_agent_ingress":"not_configured"}
+                "remediation":[],"gui":False,"model_calls":0,"real_agent_ingress":"not_configured",
+                "optional_agent_ingress":{"entry":"scripts/eventguard_watch.py","mode":"explicit_bounded_foreground",
+                                          "default_enabled":False,"projection":"fixed-minimal-v1"}}
     if args.command=="status":
         return status(runtime)
     if args.command=="stop":
         return runtime.request_stop()
     if args.command=="monitor":
         from .monitor import Monitor
-        return Monitor(runtime.root).run(max_cycles=args.max_cycles,fixture=args.fixture,fixture_interval=args.fixture_interval)
+        return Monitor(runtime.root).run(max_cycles=args.max_cycles,fixture=args.fixture,fixture_interval=args.fixture_interval,max_seconds=args.max_seconds)
     if args.command=="query":
         if len(args.args.encode("utf-8"))>8192:
             raise ValueError("query_input_limit")

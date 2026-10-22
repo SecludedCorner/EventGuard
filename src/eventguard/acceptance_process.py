@@ -14,7 +14,7 @@ from .local_wait import _guard
 CAPTURE_LIMIT = 4 * 1024 * 1024
 
 
-def capture(argv, directory, token, prompt, limit=CAPTURE_LIMIT):
+def capture(argv, directory, token, prompt, limit=CAPTURE_LIMIT, start_allowed=None):
     directory = _guard(directory)
     lease = FileLease(directory / "capture.lock")
     if not lease.acquire():
@@ -25,6 +25,14 @@ def capture(argv, directory, token, prompt, limit=CAPTURE_LIMIT):
     try:
         paths = [_guard(directory / name) for name in ("codex.jsonl", "codex.stderr.txt")]
         with paths[0].open("xb") as output, paths[1].open("xb") as errors:
+            if start_allowed is not None and start_allowed() is not True:
+                output.flush()
+                errors.flush()
+                os.fsync(output.fileno())
+                os.fsync(errors.fileno())
+                write_json(directory / "capture-skipped.json", {
+                    "attempt_id": token, "launch_not_started": True, "capture_complete": False})
+                return 4  # No child, no invented exit receipt.
             child = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE)
             result["codex_pid"] = child.pid

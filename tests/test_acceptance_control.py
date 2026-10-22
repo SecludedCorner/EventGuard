@@ -82,6 +82,30 @@ with patch("eventguard.codex_acceptance.command",return_value=[sys.executable,"-
         with self.assertRaisesRegex(LocalWaitError, "parent_path"):
             _guard(self.root / "child" / "..")
 
+    @unittest.skipUnless(os.name == "nt", "Windows metadata sharing")
+    def test_metadata_replace_retries_transient_sharing_but_preserves_persistent_denial(self):
+        path = self.root / "shared.json"
+        original = os.replace
+        sharing = PermissionError("synthetic metadata sharing")
+        sharing.winerror = 32
+        calls = []
+        def transient(source, destination):
+            calls.append(True)
+            if len(calls) == 1:
+                raise sharing
+            return original(source, destination)
+        with patch("eventguard.acceptance_control.os.replace", side_effect=transient):
+            write_json(path, {"version": 1})
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(read_json(path), {"version": 1})
+        with patch("eventguard.acceptance_control.os.replace", side_effect=sharing) as replace, \
+             patch("eventguard.acceptance_control.time.sleep"):
+            with self.assertRaises(PermissionError):
+                write_json(path, {"version": 2})
+            self.assertEqual(replace.call_count, 20)
+        self.assertEqual(read_json(path), {"version": 1})
+        self.assertEqual(list(self.root.glob(".acceptance-*.tmp")), [])
+
     def test_symlink_write_and_capture_never_follow_leaf(self):
         target = self.root / "unrelated.txt"
         target.write_text("PRIVATE_SENTINEL")

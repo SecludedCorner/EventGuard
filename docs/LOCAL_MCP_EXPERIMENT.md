@@ -1,8 +1,8 @@
 # 本機 MCP 等待：最小能力實驗
 
-新增可直接執行的 [MSI 單次驗收入口](CODEX_ACCEPTANCE.md)，取代人工協調 producer。2026-10-22 核對 Codex 0.163.0 官方 source 預設工具 timeout 已為 300 秒；下文 60 秒屬舊版交接描述，不作當前版本保證。新入口明確設為 60 秒、server wait 30 秒；真 Codex 逾時／取消及 MSI 驗收仍未通過。
+新增可直接執行的 [MSI 單次驗收入口](CODEX_ACCEPTANCE.md)，取代人工協調 producer。2026-10-22 核對 Codex 0.163.0 官方 source 預設工具 timeout 已為 300 秒；下文 60 秒屬舊版交接描述，不作當前版本保證。新入口明確設為 60 秒、server wait 30 秒；MSI 有限 A／B／C 已通過，真 Codex 逾時／取消仍未完成專項驗收。
 
-這是目前唯一優先接線方向：本機程式保存事件，Codex 呼叫本機 stdio MCP 工具等待；事件出現後工具返回，agent 再查證並留下同一事件的結果。不需要網域、HTTPS、proxy、雲端服務或新增憑證。既有雲端 bridge 保留為停用的歷史候選，不是部署前置要求。
+本頁是早期接線方向：本機程式保存事件，Codex 呼叫本機 stdio MCP 工具等待；事件出現後工具返回，agent 再查證並留下同一事件的結果。後續可用入口改由純 Python 等待原佇列，有事件才啟動專用 CLI agent，見 [LIVE_CHANNEL](LIVE_CHANNEL.md)。不需要網域、HTTPS、proxy、雲端服務或新增憑證。既有雲端 bridge 保留為停用的歷史候選，不是部署前置要求。
 
 **本頁保留早期無模型協定研究；2026-10-22 MSI 有限真 Codex 通路 A／B1／B2／C 已通過，詳見 [CODEX_ACCEPTANCE](CODEX_ACCEPTANCE.md) 與 [STATUS](../STATUS.md)。** 永久等待仍未證明。工具只接受合成事件，查證只讀取保存的合成 snapshot，不查 Windows；SDK 協定證據與真正 CLI 工具接收證據分開。
 
