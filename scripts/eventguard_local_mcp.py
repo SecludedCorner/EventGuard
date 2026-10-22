@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT / "src"))
 _ID = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
 
 
-def build_server(data_dir):
+def build_server(data_dir, single_wait=False):
     """Use the already-installed SDK. No dependency download or configuration."""
     import anyio
     from mcp.server.fastmcp import FastMCP
@@ -55,7 +55,10 @@ def build_server(data_dir):
                     raise ValueError("invalid_local_tool_arguments")
             if name != "wait_for_event":
                 return await super().call_tool(name, arguments)
-            request_id = self.get_context().request_id
+            if single_wait and self._wait_consumed:
+                raise ValueError("single_wait_consumed_end_this_experiment")
+            self._wait_consumed = True
+            request_id = str(self.get_context().request_id)
             with anyio.CancelScope() as scope:
                 self._wait_scopes[request_id] = scope
                 try:
@@ -78,7 +81,7 @@ def build_server(data_dir):
                 async def forward_replies():
                     async with reply_receiver, outgoing:
                         async for reply in reply_receiver:
-                            reply_id = getattr(reply.root, "id", None)
+                            reply_id = getattr(getattr(reply, "message", reply).root, "id", None)
                             if type(reply_id) in (int, str) and str(reply_id) in self._cancelled_replies:
                                 self._cancelled_replies.discard(str(reply_id))
                                 continue  # A cancelled request produces no model-visible result.
@@ -91,12 +94,16 @@ def build_server(data_dir):
                     try:
                         async with sender:
                             async for message in incoming:
+                                if isinstance(message, Exception):
+                                    await sender.send(message)
+                                    continue
+                                payload = getattr(message, "message", message)
                                 # SDK 1.6.0's cancellation path can close its
                                 # session after one cancelled request. Own only
                                 # our async wait scope instead; unknown/finished
                                 # request cancellation is a harmless no-op.
-                                if getattr(message.root, "method", None) == "notifications/cancelled":
-                                    params = getattr(message.root, "params", None)
+                                if getattr(payload.root, "method", None) == "notifications/cancelled":
+                                    params = getattr(payload.root, "params", None)
                                     request_id = params.get("requestId") if isinstance(params, dict) else None
                                     if type(request_id) in (int, str):
                                         scope = self._wait_scopes.get(str(request_id))
@@ -111,6 +118,7 @@ def build_server(data_dir):
     server = LocalStdioMCP("EventGuard Local Synthetic Wait")
     server._wait_scopes = {}
     server._cancelled_replies = set()
+    server._wait_consumed = False
 
     async def wait_for_event(timeout_seconds: int = 30) -> dict:
         """Wait locally for a synthetic EventGuard event (1..45s). No model polling or system scan."""
@@ -138,6 +146,8 @@ def main(argv=None):
                         help="Dedicated synthetic experiment directory, initially empty or absent.")
     parser.add_argument("--emit-synthetic", action="store_true",
                         help="Enqueue a public synthetic listener fixture and exit; does not run MCP or a model.")
+    parser.add_argument("--single-wait", action="store_true",
+                        help="Consume at most one wait request, including expiry/cancellation; reject model re-polling.")
     args = parser.parse_args(argv)
     if args.emit_synthetic:
         try:
@@ -158,7 +168,7 @@ def main(argv=None):
             print("EventGuard: synthetic event could not be enqueued. Exit 2.", file=sys.stderr)
             return 2
     try:
-        server = build_server(args.data_dir)
+        server = build_server(args.data_dir, single_wait=args.single_wait)
     except ImportError:
         print("EventGuard: the required installed MCP Python SDK is unavailable. Nothing was installed. Exit 2.", file=sys.stderr)
         return 2
@@ -166,7 +176,15 @@ def main(argv=None):
         print("EventGuard: local synthetic experiment initialization failed. Exit 2.", file=sys.stderr)
         return 2
     try:
-        server.run(transport="stdio")
+        from eventguard.acceptance_control import FileLease
+        owner = FileLease(args.data_dir / "stdio-owner.lock")
+        if not owner.acquire():
+            print("EventGuard: this synthetic runtime already has an active stdio server. Exit 3.", file=sys.stderr)
+            return 3
+        try:
+            server.run(transport="stdio")
+        finally:
+            owner.release()
     except KeyboardInterrupt:
         return 0
     except Exception:

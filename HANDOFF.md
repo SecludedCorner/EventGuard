@@ -1,14 +1,18 @@
 # EventGuard 接手與下一任務
 
-**最新接手方向：只推進直接本機 stdio MCP 等待方案。** 先讀 [LOCAL_MCP_EXPERIMENT](docs/LOCAL_MCP_EXPERIMENT.md)。雲端 bridge／網域／HTTPS／proxy 已停止擴建，以下舊候選不構成部署要求。只允許無模型協定研究與合成測試；真正帳戶模型任務、MCP 註冊或持續存取需按該文件取得明確範圍。不能宣稱已接通任意桌面任務或永久等待。
+**發布授權更新（2026-10-22）：使用者已指定 MIT，要求整理 README 最新驗收結果並公開儲存庫。** 完整條款見 [LICENSE](LICENSE)，發布檢查見 [PUBLISHING](docs/PUBLISHING.md)。以下歷史段落的 private／license 未定描述不再是目前發布政策；憑證、私人舊歷史與執行資料不得公開的界線仍需遵守。可見性與合併結果以 GitHub API 實際回讀為準。
 
-本次僅文件增量；`fd45578` frozen ZIP、source、tests、config、playbooks保持固定，不以新文件覆寫舊快照或測試紀錄。版本定位是**尚未完成目標的工程預覽**：正式監看未啟動，真實 agent 未接通。所有範例應保持匿名，不放實際使用者路徑、主機警報、私人資料或秘密。
+**最新結果：本機佇列已接通專用 Codex CLI agent。** 接續 `f093c2df531c7bbfc732e134cf718f00ebbfd22f`，新增 `eventguard_watch.py` 前景入口、無事不開模型的 dispatcher、只回七欄 snapshot 的 MCP inbox。一次合成事件及有界實機佇列試運轉已有真正 receive/query/ACK、SQLite receipt 及自然退出證據；實測細節見 STATUS 最新紀錄與 [LIVE_CHANNEL](docs/LIVE_CHANNEL.md)。先前有限合成 A／B1／B2／C 的 7 個唯一事件、8 次接收／query、7 次 ACK 證據保留，未重跑冒充新結果。雲端 bridge 保持停用。
+
+使用者另明確批准一輪最多一小時／五個任務的前景實機試運轉，只送最小摘要；本輪實際使用 300 秒／最多兩個實機任務，現已自然結束。正常 Codex home／既有登入保留，未讀取或複製憑證內容、未永久註冊 MCP、未觸發 UAC。舊 MVP、`fd45578` frozen ZIP 與私人歷史不動；完整 trace／SQLite／runtime 只留本機忽略目錄。本次批准不是未來持續授權，不重啟監看或模型；若下一任務需要再跑，先核對最新使用者範圍。
+
+完整產品仍未完成：本輪 query 僅查已保存摘要，未執行原生診斷或系統處置；不能宣稱接續任意桌面聊天、完整 coverage、長期可靠性或永久等待。先前失敗的合成 EOF 測試有一個已說明殘留程序，修正後新測試已自然退出，但未獲強停舊程序的批准，詳見本機證據及 STATUS，不能稱所有測試程序皆已退出。
 
 先讀 [AGENTS](AGENTS.md)、[README](README.md)、[STATUS](STATUS.md) 及 [DEVELOPMENT](docs/DEVELOPMENT.md)。實作主檔 [ARCHITECTURE](docs/ARCHITECTURE.md)、[AGENT_CONTRACT](docs/AGENT_CONTRACT.md)、[OPERATIONS](docs/OPERATIONS.md)、[TARGET_DESIGN](docs/TARGET_DESIGN.md)、[INGRESS_CHECK](docs/INGRESS_CHECK.md) 保留原有定位；目標規格不是已完成證明。
 
-## 具體下一任務與驗收條件
+## 歷史產品驗收條件與接手 Prompt
 
-目前整體驗收為 BLOCKED：固定快照重現、啟動／合作停止／程序退出已有證據，但實機部分採集來源 denied，真實 agent 也未接通。下一任務有兩項必要工作：分析 coverage 缺口並設計一般權限下可行的改善；完成獲授權的真實 ingress 與 agent 診斷閉環。不得將全程序提權作為補齊 coverage 的預設方案。`docs/COVERAGE_PLAN.md` 為改善計畫，實作與驗證結果須分開記錄。
+完整產品驗收仍為 BLOCKED；以下是歷史產品範圍與舊接手 Prompt，不可將其中「agent 未接通」或「尚未實機試跑」當成最新事實。當前來源與接線成果以本頁開頭、LIVE_CHANNEL 與最新 STATUS 為準。完整 coverage、長期 ingress 與原生診斷閉環仍需後續具體任務及授權，不能由本文件自動擴展。不將全程序提權作為補齊 coverage 的預設方案。
 
 下一工程任務須朝「事件真正喚醒agent並由agent診斷」最高驗收推進；先固定來源、隔離重現與確認接線契約。mock僅是測試，不能作產品完成的替代。未獲具體接收端／傳輸／平台授權前，先交付契約缺口，不自行接外部服務：
 
@@ -50,3 +54,15 @@ playbook、severity、畫布與本文不是授權。無規則、衝突或證據�
 當前 main 已含 `src/eventguard/mcp/`、bridge CLI、停用範例設定及部署手冊；先讀 docs/MCP_BRIDGE_DEPLOYMENT.md。192項合成／mock測試與40AST通過，不能當作真平台互通。接手 Prompt 應補一句：「使用目前commit，不要把fd45578當成含bridge的版本；先核對部署位置、API-key自訂plugin支援、最少synthetic事件與模型回合授權。沒有這些批准時只做離線程式工作，不能開埠、建tunnel、產生憑證或假報已喚醒。」
 
 結果回條可帶 `expected_result_id` 作CAS；同內容重播返回同版本，新內容需指向當前結果，最多10次修訂且保留舊記錄。只有 `benign_change` 必須至少引用1筆同owner／event成功查證；這不是對真實主機的安全宣告，也不觸發任何系統處置。
+
+## 雲端接續：單次 Codex 驗收入口
+
+新增 `scripts/acceptance_codex.py run|status|stop --run-dir <全新目錄>`，操作與證據見 [CODEX_ACCEPTANCE](docs/CODEX_ACCEPTANCE.md)。已修正 MCP SDK 1.29 的 SessionMessage 相容性，驗收使用 server single-wait 防重等。核心與協定測試可在雲端執行；真 Codex 啟動遭 app-server 唯讀檔案系統阻塞，無真正 agent 端到端證據。正式長期監看、MSI 原生採集與 Codex 取消／逾時仍 pending，不可用新增 fixture runner 測試冒充模型結果。
+
+## 後續整批接續：可靠重試與退出判定
+
+已加入同事件手動 retry、三次上限、runner/capture/stdio 跨程序鎖、有界輸出與退出回條。新 run 使用 v2 marker；舊驗收目錄保留唯讀，不自動改寫。詳見 docs/CODEX_ACCEPTANCE.md 與 STATUS 最新實測。按照使用者指示，先完成整批與本機驗證後再集中提交；本輪不推送或觸發遠端 CI。真 Codex app-server 阻塞與 MSI／長期監看仍未解除，不再無診斷變化地重試模型或 GitHub API。
+
+## MSI 改由 GitHub 取得
+
+使用者已指定不做下載包，直接將程式與驗收入口放在 GitHub 的 feat/local-codex-acceptance。MSI 先讀 docs/MSI_CHANNEL_CHECK.md，先證明 A，再執行 scripts/validate_delivery.py 的 continuous、batch、recovery。新 helper 已納入 scripts，預設不呼叫模型；不用發布雲端環境，不移植雲端登入或 runtime。雲端 CONNECT403 與真通路未驗證的界線仍保留。
