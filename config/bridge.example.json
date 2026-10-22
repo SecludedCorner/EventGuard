@@ -1,0 +1,23 @@
+{
+  "enabled": false,
+  "network_enabled": false,
+  "synthetic_only": true,
+  "listen_host": "127.0.0.1",
+  "listen_port": 8765,
+  "public_origin": "https://eventguard.example.invalid",
+  "allowed_callback_hosts": [],
+  "principals": [
+    {
+      "principal_id": "example-owner",
+      "host_refs": ["synthetic-host"],
+      "roles": ["subscriber"],
+      "token_env": "EVENTGUARD_MCP_TOKEN"
+    },
+    {
+      "principal_id": "example-owner",
+      "host_refs": ["synthetic-host"],
+      "roles": ["producer"],
+      "token_env": "EVENTGUARD_PRODUCER_TOKEN"
+    }
+  ]
+}

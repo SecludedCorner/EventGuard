@@ -1,8 +1,8 @@
 # EventGuard 真正 agent 事件入口調研與接線計畫
 
-研究日期：2026-10-22 UTC。狀態：**官方路徑已辨識；接線尚未實作；真正 agent 喚醒與端到端驗收未完成**。
+研究／增量更新日期：2026-10-22 UTC。狀態：**官方路徑已辨識；本輪新增 synthetic-only authenticated MCP bridge 工程；尚未部署或連平台，真正 agent 喚醒與端到端驗收未完成**。本輪介面、範例及待選部署見 [MCP_BRIDGE_DEPLOYMENT](MCP_BRIDGE_DEPLOYMENT.md) 與第9節。
 
-本文件僅提出可審查的整合方案；不增加憑證、外部 webhook、常駐程序或模型呼叫，也不構成未來傳輸或處置的授權。本輪只有官方文件與公開 CLI help 調研，沒有讀登入檔、原始 sessions 或秘密，沒有啟動 app-server、列出任務或傳送實際訊息。
+本文件保留先前可審查的整合研究，並記錄本輪工程增量；不增加憑證、外部 webhook、常駐程序或模型呼叫，也不構成未來傳輸或處置的授權。先前研究只有官方文件與公開 CLI help；本輪另有離線、in-process fake HTTP 的實作與測試工作，確切驗證結果見 STATUS。未讀登入檔、原始 sessions 或秘密，未啟動 app-server、列出任務或傳送實際訊息。
 
 ## 1. 結論與適用範圍
 
@@ -24,7 +24,7 @@
 
 官方機制要求 MCP 2.0 `2026-07-28`、plugin 中的 MCP server、持久訂閱，以及向平台 callback 的 HTTPS 投遞。伺服器宣告 `events` 能力，實作 `events/list`、`events/subscribe`、`events/unsubscribe`；ChatGPT 訂閱時提供 callback URL 與簽章秘密。伺服器先驗證 callback，再發送簽章事件；ChatGPT 在訂閱聊天接收並依指示執行。這是事件推送，不是 AI 定時查詢。[官方 MCP Events](https://developers.openai.com/plugins/build/mcp-events)
 
-### EventGuard 建議接線（設計，未實作）
+### EventGuard 目標接線（本輪 bridge 限 synthetic；真實接線未驗證）
 
 ```text
 本機 collectors → rules → durable outbox
@@ -148,7 +148,7 @@ app-server 的官方登入途徑可使用 ChatGPT 帳戶或 API key；兩者的�
 
 ## 6. 精確 blockers、批准與下一步
 
-下列均是 **pending／未建立**，不是權限拒絕，也不是可由本文件自動授權的操作。
+下列正式部署與接線條件均為 **pending／未完成**，不是已收到的權限拒絕，也不是可由本文件自動授權的操作。本輪離線 bridge 程式進度另見第9節，不等於已部署。
 
 | 待完成動作與目標 | 為何阻擋 | 完成條件 |
 | --- | --- | --- |
@@ -182,3 +182,26 @@ connected 不代表桌面可操作；過往 UAC 取消紀錄不證明目前畫�
 - [Codex changelog：舊 MCP server 移除及 app-server 整合方向](https://learn.chatgpt.com/docs/changelog)
 
 後續實作者先重查官方契約與實際帳戶支援，再選一條路徑完成。將驗收證據加到 STATUS；保留「本機事件保存」「平台接收」「agent 回合」「診斷完成」四種差別，不把本文件或 playbook 當永久授權。本輪沒有啟用正式 ingress 或常駐服務，沒有真正喚醒 Codex／dot。
+
+## 9. 本輪 synthetic bridge 工程增量（未部署、未真喚醒）
+
+本節記錄工程介面，不將正在整合的程式能力升格為實機／平台驗收。固定快照、舊 MVP 與既有本機驗收歷史保持原樣；本輪程式與測試結果由新版 STATUS 記錄。
+
+| 項目 | 本輪範圍 | 待完成 |
+| --- | --- | --- |
+| authenticated WSGI | loopback `/mcp`、producer `/events`、最少狀態 `/status`；API-key Bearer、role與host scope | 真實 TLS proxy／平台相容與負載驗證 |
+| MCP Events | `server/discover`、`events/list`／`subscribe`／`unsubscribe`；SQLite耐久訂閱／投遞 | 平台plugin註冊與真實訂閱 |
+| callback | Standard Webhooks HMAC、HTTPS challenge、連線時DNS驗證／固定有效IP、拒絕私網與redirect | 已批准callback host、真實HTTPS與平台驗證 |
+| secret vault | Windows DPAPI current-user；顯式env ref讀Bearer，不讀其他登入token | 部署host與執行身份、秘密來源／保留／撤銷批准；Linux需另接approved securestore |
+| agent tools | `eventguard_get_event`、`eventguard_query_evidence`、`eventguard_record_result`；只讀stored synthetic evidence | 原生producer與跨機診斷均未接通，另需批准及工程 |
+| 驗證 | in-process fake HTTP／合成事件；不bind、不connect、不呼叫模型 | 真正外部程式→平台聊天→agent查證→結果回條／回等待 |
+
+`agent_result_recorded` 只是 authenticated caller 的結果回條，不自證平台run、真喚醒或全機結案。bridge durable ACK、callback 2xx、agent結果是不同狀態；不能因回條存在就把本計畫的 `agent_observed`／`processed`／`closed` 全部標為完成。
+
+安全預設見 [bridge.example.json](../config/bridge.example.json)：`enabled=false`、`network_enabled=false`、`synthetic_only=true`、loopback及空callback allowlist。`check` 不啟服務／不查native；`serve` 需啟用設定與明確 `--enable-server`，本輪未執行。無bridge emit CLI；核心synthetic落盤不會自動送平台。
+
+[mcp.example.json](../integration/mcp.example.json) 使用官方 `api_key`／`bearer` 宣告且不含token；它不是OAuth。submission portal連線表單不支援此宣告，自訂plugin與帳戶可用性待實測；若要求OAuth 2.1 provider，另做工程，不假造端點。[官方固定Bearer說明](https://developers.openai.com/plugins/build/plugins#fixed-bearer-tokens-and-api-keys)
+
+部署只提出兩條**尚未選定／驗證**的條件方案：A已有自有目標Windows主機HTTPS proxy；B已有自有遠端Windows host，先以同host stored synthetic證據驗收。主維護者盤點回報codingEnvironments空、現有事件來源無EventGuard，不能宣稱已有可用host。兩方案均維持loopback listener，既有HTTPS443入站proxy及callback443出站；不自開port／tunnel、不安裝、不建立憑證／服務／排程、不碰UAC。
+
+下一關卡仍是指定host、TLS／proxy、平台與plugin權限、最少傳輸與秘密批准、模型額度／速率／費用上限，再依第5節做真正E2E。成本與帳戶可用性未知，不能承諾免費。詳細操作、撤銷與驗收清單見 [部署文件](MCP_BRIDGE_DEPLOYMENT.md)。

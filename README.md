@@ -8,7 +8,21 @@ EventGuard 目前是**尚未完成目標的工程預覽**。它提供無 GUI 的
 
 **正式監看尚未啟動，真實 agent 接收端尚未接通。** 本版可驗證本機 synthetic event → mock receiver → 耐久 ACK → 合成診斷 → `mock_closed`，但不會喚醒真正 Codex／dot。事件落盤、已傳輸、接收 ACK、agent 開始與案件結案不可混為一談。
 
-本次為文件增量 revision；固定基準 `fd45578` 的 frozen ZIP、原始碼、測試、設定及 playbook 保持不動。文件更新不把歷史測試升格為新的工程／平台驗證，也不修改舊 MVP 或其閱讀入口。
+本機固定基準 `fd45578` 與 frozen ZIP 保留不變；目前 `main` 已另加 MCP Events 接線程式，新增結果以當前 commit 與測試為準。這不修改舊 MVP，也不把歷史測試升格為平台接通證據。
+
+## MCP Events 接線程式：已實作，未部署
+
+目前新增 authenticated WSGI `/mcp`、durable 訂閱／事件投遞、callback 驗證、Standard Webhooks HMAC、獨立 producer HTTPS adapter，以及只讀取已保存合成證據的工具與 CAS 結果回條。**僅接受 synthetic 事件**；不執行原生採集、模型或系統處置。`received` 只代表 callback 收到，`agent_result_recorded` 只代表已驗證呼叫端提交回條，不自證平台回合或主機安全。
+
+安全檢查不開埠、不讀憑證：
+
+```powershell
+python -B scripts/eventguard_bridge.py --config config/bridge.example.json check
+```
+
+範例設定 `enabled=false`、`network_enabled=false`、callback allowlist 為空，不能啟動 listener。完整啟用條件、兩個自有 Windows host 部署選項與撤銷方式見 [MCP_BRIDGE_DEPLOYMENT](docs/MCP_BRIDGE_DEPLOYMENT.md)。本輪沒有部署、建立憑證、外連 callback 或喚醒模型；正式目標仍 BLOCKED。
+
+2026-10-22T03:50:53Z：192 個合成／mock 測試通過、0 failure/error/skip，40 個 Python AST 通過。包含實際 handler／durable store／producer adapter 整合及 fake socket 上的真傳輸標頭政策；不是與平台連線的 E2E。Windows DPAPI 測試只加解密公開合成 fixture。
 
 ## 用途與非目標
 
@@ -100,6 +114,7 @@ python -B scripts/eventguard.py query query_listener --args '{"protocol":"TCP","
 | `src/eventguard/events/` | schema、detector state 與 outbox 原子提交 |
 | `src/eventguard/transport/` | DisabledAdapter 與 synthetic-only 本機 mock receiver |
 | `src/eventguard/diagnostics/` | 有限、型別化唯讀查證 |
+| `src/eventguard/mcp/` | 預設停用、synthetic-only MCP Events／HTTP／簽章／DPAPI／結果帳本 |
 | `config/`、`playbooks/`、`tests/`、`scripts/` | 設定、宣告式規則、測試、CLI／驗證入口 |
 | `data/`、`logs/`、`reports/` | 執行資料，與source分離，禁止驗收任務共用 |
 

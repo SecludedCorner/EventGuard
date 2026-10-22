@@ -42,3 +42,9 @@ playbook、severity、畫布與本文不是授權。無規則、衝突或證據�
 
 使用者已批准private GitHub repository，但文件子任務不操作Git。主維護者保留fd45578及完整本地歷史，另建匿名且無parent root的publication branch，不直接push舊歷史、不改寫既有遠端歷史。license仍待定，不擅加LICENSE。Git／PR流程先做本地diff、匿名與測試證據review，保持文件revision與固定程式快照分離；發布是否成功看實際紀錄。最後交付具體版本、真正E2E或尚未完成的證據、平台差異及blocker，不以mock或歷史數字冒充產品完成。
 ```
+
+## MCP 接線增量交接
+
+當前 main 已含 `src/eventguard/mcp/`、bridge CLI、停用範例設定及部署手冊；先讀 docs/MCP_BRIDGE_DEPLOYMENT.md。192項合成／mock測試與40AST通過，不能當作真平台互通。接手 Prompt 應補一句：「使用目前commit，不要把fd45578當成含bridge的版本；先核對部署位置、API-key自訂plugin支援、最少synthetic事件與模型回合授權。沒有這些批准時只做離線程式工作，不能開埠、建tunnel、產生憑證或假報已喚醒。」
+
+結果回條可帶 `expected_result_id` 作CAS；同內容重播返回同版本，新內容需指向當前結果，最多10次修訂且保留舊記錄。只有 `benign_change` 必須至少引用1筆同owner／event成功查證；這不是對真實主機的安全宣告，也不觸發任何系統處置。

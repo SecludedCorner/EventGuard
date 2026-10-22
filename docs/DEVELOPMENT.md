@@ -2,7 +2,7 @@
 
 版本仍是尚未完成目標的工程預覽。固定快照重現與程序生命週期驗證，不能解除兩項產品阻塞：目標 Windows 主機部分採集來源 denied 的 coverage 分析，以及真正 agent ingress／喚醒／按需診斷閉環。新證據以匿名摘要回報；不公開主機原始警報、實際 pending 數量、單次 RAM 數字或私人路徑，也不以全程序提權解決覆蓋缺口。
 
-本文件是文件增量revision的操作指引。程式基準固定為`fd45578`；frozen ZIP、source、tests、config、playbooks與既有驗證紀錄保持不動。新README／HANDOFF／DEVELOPMENT不能覆寫或重新標記那個快照，也不代表已重跑工程測試。
+本機 `fd45578` 與 frozen ZIP 是保留的歷史基準，不會改寫。目前 main 的 MCP 接線增量應以其完整 commit 作新副本重現；歷史基準不包含新模組。不要把兩個版本的測試混寫。
 
 ## 1. 需求與範圍
 
@@ -92,3 +92,9 @@ license仍未指定，不擅加LICENSE，也不寫成已授予MIT／Apache或其
 真實receiver／agent接線仍blocked，當前是尚未完成目標的工程預覽；最高產品驗收必須真正喚醒agent，再由agent診斷。平台候選見[INGRESS_CHECK](INGRESS_CHECK.md)，契約見[AGENT_CONTRACT](AGENT_CONTRACT.md)；新INGRESS_PLAN是官方候選能力與待批准接線設計，不是已連線。SQLite保存、mock ACK或mock_closed不能替代平台喚醒。下一任務先驗證指定任務入口、身分、資料授權、等待不推理、可信ACK、可核對的真實任務／回合證據及診斷回程；未獲批准不新增外部webhook／憑證／模型CLI，未達真正E2E就不稱產品完成。
 
 保留已知實作界線：query_process需實例、persistence current_only、版本僅Python、無威脅歷史／原生簽章、45秒round預算與30秒忙碌退避、20一般事件／批不是每分鐘limiter、未有長時CPU/RAM/I/O／電池實測。規則不是授權；事件與日誌不可信；不讀秘密、不外洩、不繞過UAC或恢復暫停修補。
+
+## 7. MCP bridge 增量驗證
+
+從目前發布 commit 建立新副本，再執行 `python -B scripts/verify.py` 與 `python -B scripts/eventguard_bridge.py --config config/bridge.example.json check`。2026-10-22T03:50:53Z 的完整結果為192 tests、40 AST通過；重現時保留自己的數量／平台／時間，不沿抄成功。`test_mcp_*` 使用 BytesIO、fake socket／DNS、公開測試向量；Windows DPAPI 是本機合成密文 roundtrip，非真正平台 callback。
+
+新測試必須保持零 bind／外連／模型，不能透過啟動 listener 驗證 HTTP；in-process WSGI 就能測 auth／owner／host／schema、signed callback 請求及回條。正式 E2E 另依 MCP_BRIDGE_DEPLOYMENT 的批准範圍執行。Linux vault不提供假明碼fallback；若vault測試不適用，應明示skip，不能聲稱Windows安全機制已驗證。
