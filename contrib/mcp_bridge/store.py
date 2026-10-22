@@ -19,7 +19,7 @@ import time
 from urllib.parse import urlsplit
 import uuid
 
-from ..events.schema import validate_event, redact_text, EventValidationError
+from eventguard.events.schema import validate_event, redact_text, EventValidationError
 
 EVENT_TYPES = frozenset({"protection.changed", "listener.changed", "persistence.changed", "coverage.degraded"})
 MAX_BYTES = 8 * 1024 * 1024

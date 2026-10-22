@@ -1,7 +1,7 @@
 """Bounded event-driven Codex dispatch; idle waiting is ordinary Python only.
 
 No permanent MCP registration, daemon, credentials, native queries or model
-polling. Cancellation stops subsequent work; started children exit naturally.
+polling. Cancellation stops new work; owned child jobs receive bounded cleanup.
 """
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ import uuid
 from .acceptance_control import FileLease, read_json, write_json
 from .acceptance_evidence import _tool_result
 from .acceptance_process import CAPTURE_LIMIT, capture
-from .local_wait import LocalWaitError, _guard
+from .local_paths import LocalWaitError, _guard
 from .queue_inbox import QueueInboxError
 from .processes import spawn, finish, JobPopen
 
@@ -54,16 +54,19 @@ def _inbox(source, state, event_id=None, allow_live=False, limits=None):
     return QueueInbox(source, state, event_id=event_id, allow_live=allow_live, limits=limits)
 
 
-def command(codex, python, source, state, event_id, evidence, *, allow_live=False):
+def command(codex, python, source, state, event_id, evidence, *, allow_live=False, allow_ack=True):
     server_args = ["-B", str(ROOT / "scripts/eventguard_inbox_mcp.py"),
                    "--source-dir", str(source), "--state-dir", str(state),
                    "--event-id", event_id]
     if allow_live:
         server_args.append("--allow-live")
-    approvals = ",".join(name + '={approval_mode="approve"}' for name in TOOLS)
+    if not allow_ack:
+        server_args.append("--read-only")
+    tools = TOOLS if allow_ack else TOOLS[:2]
+    approvals = ",".join(name + '={approval_mode="approve"}' for name in tools)
     config = ('mcp_servers.eventguard_inbox={command=' + json.dumps(str(python))
               + ',args=' + json.dumps(server_args, separators=(",", ":"))
-              + ',tool_timeout_sec=60,enabled_tools=' + json.dumps(TOOLS, separators=(",", ":"))
+              + ',tool_timeout_sec=60,enabled_tools=' + json.dumps(tools, separators=(",", ":"))
               + ',tools={' + approvals + '}}')
     return [str(codex), "exec", "--ignore-user-config", "--ephemeral", "-C", str(ROOT),
             "-s", "read-only", "--json", "-c", "features.shell_tool=false",
@@ -72,7 +75,7 @@ def command(codex, python, source, state, event_id, evidence, *, allow_live=Fals
             "-c", "log_dir=" + json.dumps(str(evidence / "codex-log")), "-c", config, "-"]
 
 
-def _assess_delivery(trace, evidence, event_id, exit_code, acknowledged):
+def _assess_delivery(trace, evidence, event_id, exit_code, acknowledged, require_ack=True):
     """Require actual tool replies and arguments to match durable inbox evidence."""
     errors, calls, started, thread_ids = [], [], [], []
     record = evidence if isinstance(evidence, dict) else {}
@@ -81,16 +84,17 @@ def _assess_delivery(trace, evidence, event_id, exit_code, acknowledged):
         errors.append("invalid_expected_event")
     if type(exit_code) is not int or exit_code != 0:
         errors.append("cli_not_completed_successfully")
-    if acknowledged is not True:
+    tools = TOOLS if require_ack else TOOLS[:2]
+    if require_ack and acknowledged is not True:
         errors.append("durable_ack_missing")
     if (record.get("event_id") != event_id or not isinstance(record.get("snapshot"), dict)
             or not isinstance(record.get("received_at"), str)
             or not isinstance(record.get("query_id"), str) or not _ID.fullmatch(record["query_id"])
-            or not isinstance(result, dict) or result.get("status") != "review_recorded"
+            or require_ack and (not isinstance(result, dict) or result.get("status") != "review_recorded"
             or result.get("event_id") != event_id or result.get("query_id") != record.get("query_id")
             or result.get("decision") != "reviewed_metadata"
             or result.get("incident_conclusion") != "not_assessed"
-            or result.get("real_agent_wake_verified") is not False):
+            or result.get("real_agent_wake_verified") is not False)):
         errors.append("durable_evidence_incomplete")
     turns = 0
     if not isinstance(trace, list) or len(trace) > 4096:
@@ -115,7 +119,7 @@ def _assess_delivery(trace, evidence, event_id, exit_code, acknowledged):
             if item.get("type") not in {"mcp_tool_call", "agent_message", "reasoning", "todo_list"}:
                 errors.append("unexpected_cli_action")
             if item.get("type") == "mcp_tool_call":
-                if item.get("server") != "eventguard_inbox" or item.get("tool") not in TOOLS:
+                if item.get("server") != "eventguard_inbox" or item.get("tool") not in tools:
                     errors.append("unexpected_mcp_tool")
                 if typ == "item.started":
                     started.append(item.get("id"))
@@ -123,9 +127,9 @@ def _assess_delivery(trace, evidence, event_id, exit_code, acknowledged):
                     calls.append(item)
     if turns != 1:
         errors.append("one_completed_turn_required")
-    if len(calls) != 3 or [call.get("tool") for call in calls] != list(TOOLS):
+    if len(calls) != len(tools) or [call.get("tool") for call in calls] != list(tools):
         errors.append("receive_query_ack_sequence_required")
-    if started and (len(set(value for value in started if isinstance(value, str))) != 3
+    if started and (len(set(value for value in started if isinstance(value, str))) != len(tools)
                     or started != [call.get("id") for call in calls]):
         errors.append("incomplete_or_repeated_tool_call")
     replies = []
@@ -135,9 +139,10 @@ def _assess_delivery(trace, evidence, event_id, exit_code, acknowledged):
                 or not isinstance(raw, dict) or raw.get("isError", raw.get("is_error", False)) is not False):
             errors.append("mcp_call_failed")
         replies.append(_tool_result(call))
-    if len(calls) == 3:
+    if len(calls) == len(tools):
         expected_args = [{}, {"event_id": event_id},
                          {"event_id": event_id, "query_id": record.get("query_id"), "decision": "reviewed_metadata"}]
+        expected_args = expected_args if require_ack else expected_args[:2]
         if [call.get("arguments") for call in calls] != expected_args:
             errors.append("mcp_arguments_mismatch")
         received = {"status": "event_available", "event_id": event_id,
@@ -145,7 +150,8 @@ def _assess_delivery(trace, evidence, event_id, exit_code, acknowledged):
         queried = {"status": "stored_minimal_snapshot", "event_id": event_id,
                    "query_id": record.get("query_id"), "snapshot": record.get("snapshot"),
                    "snapshot_only": True, "system_query_executed": False}
-        if replies != [received, queried, {**result, "outbox_acknowledged": True}]:
+        expected_replies = [received, queried] + ([{**result, "outbox_acknowledged": True}] if require_ack else [])
+        if replies != expected_replies:
             errors.append("tool_returns_do_not_match_durable_evidence")
     return {"passed": not errors, "event_id": event_id, "query_id": record.get("query_id"),
             "result_id": result.get("result_id") if isinstance(result, dict) else None,
@@ -155,10 +161,10 @@ def _assess_delivery(trace, evidence, event_id, exit_code, acknowledged):
             "native_diagnostics_executed": False, "desktop_task_resumed": False}
 
 
-def assess_delivery(trace, evidence, event_id, exit_code, acknowledged):
+def assess_delivery(trace, evidence, event_id, exit_code, acknowledged, *, require_ack=True):
     """Fail closed on malformed untrusted trace and saved evidence."""
     try:
-        return _assess_delivery(trace, evidence, event_id, exit_code, acknowledged)
+        return _assess_delivery(trace, evidence, event_id, exit_code, acknowledged, require_ack)
     except (AttributeError, TypeError, ValueError, OverflowError, RecursionError):
         return {"passed": False, "event_id": None, "query_id": None, "result_id": None,
                 "completed_tools": [], "outbox_acknowledged": False, "thread_ids": [],
@@ -631,7 +637,7 @@ def stop(directory):
         return {"state": "not_running", "process_signal_sent": False}
     write_json(directory / "stop.request", {"run_id": state["run_id"], "requested_at": utc()})
     return {"state": "stop_requested", "process_signal_sent": False,
-            "note": "Started child is allowed to exit naturally; subsequent dispatch is stopped."}
+            "note": "Stops subsequent dispatch; owned child jobs receive a grace period and bounded cleanup."}
 
 
 def main(argv=None):

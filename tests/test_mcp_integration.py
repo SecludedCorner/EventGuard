@@ -11,12 +11,12 @@ import unittest
 
 ROOT=Path(__file__).resolve().parent.parent
 sys.path.insert(0,str(ROOT/'src'))
-from eventguard.mcp.app import BridgeApplication,create_app,validate_config
-from eventguard.mcp.service import BridgeService
-from eventguard.mcp.store import BridgeStore
-from eventguard.mcp.security import Principal,BearerAuth
-from eventguard.mcp.protocol import EVENT_NAME
-from eventguard.mcp.producer import BridgeProducerAdapter,BridgeHTTPSPoster
+from contrib.mcp_bridge.app import BridgeApplication,create_app,validate_config
+from contrib.mcp_bridge.service import BridgeService
+from contrib.mcp_bridge.store import BridgeStore
+from contrib.mcp_bridge.security import Principal,BearerAuth
+from contrib.mcp_bridge.protocol import EVENT_NAME
+from contrib.mcp_bridge.producer import BridgeProducerAdapter,BridgeHTTPSPoster
 from eventguard.synthetic import make_synthetic
 
 
@@ -335,7 +335,7 @@ class MCPIntegrationTests(unittest.TestCase):
         import socket
         from unittest.mock import Mock
         from test_mcp_security import FakeSocket,FakeContext
-        from eventguard.mcp.network import SafeHTTPSPoster
+        from contrib.mcp_bridge.network import SafeHTTPSPoster
         sock=FakeSocket();context=FakeContext()
         resolver=Mock(return_value=[(socket.AF_INET,socket.SOCK_STREAM,socket.IPPROTO_TCP,'',('8.8.8.8',443))])
         poster=BridgeHTTPSPoster(['bridge.example.test'],enabled=True,resolver=resolver,
@@ -347,7 +347,7 @@ class MCPIntegrationTests(unittest.TestCase):
         with self.assertRaises(ValueError):poster.post('https://bridge.example.test/other',b'{}',headers)
 
     def test_signatures_accept_full_core_identifier_limit(self):
-        from eventguard.mcp.security import sign_headers
+        from contrib.mcp_bridge.security import sign_headers
         headers=sign_headers(self.secret,'e'*160,b'{}','s'*160,1)
         self.assertEqual(len(headers['webhook-id']),160)
 

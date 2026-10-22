@@ -11,7 +11,7 @@ import time
 import math
 
 from .acceptance_control import FileLease, write_json
-from .local_wait import _guard
+from .local_paths import _guard
 from .processes import spawn, finish, JobPopen
 
 CAPTURE_LIMIT = 4 * 1024 * 1024

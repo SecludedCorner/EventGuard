@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 
 from eventguard.events.schema import EventValidationError
-from eventguard.mcp.protocol import (
+from contrib.mcp_bridge.protocol import (
     EVENT_NAME, EVENT_TYPES, PROTOCOL_VERSION, ProtocolValidationError,
     event_definition, project_event, query_snapshot, tool_definitions,
     validate_arguments, validate_tool_arguments,
@@ -109,7 +109,7 @@ class ProjectionTests(unittest.TestCase):
 
     def test_bound_is_enforced_even_if_core_validator_is_replaced(self):
         clean = core(host_id="a" * 8200)
-        with patch("eventguard.mcp.protocol.validate_event", return_value=clean):
+        with patch("eventguard.events.projection.validate_event", return_value=clean):
             with self.assertRaisesRegex(ProtocolValidationError, "envelope_size_limit"):
                 project_event(clean)
 

@@ -8,10 +8,11 @@ import threading
 
 ROOT=Path(__file__).resolve().parent.parent
 sys.path.insert(0,str(ROOT/"src"))
+sys.path.insert(0,str(ROOT))
 
 
 def main(argv=None):
-    from eventguard.mcp.app import load_config,create_app
+    from contrib.mcp_bridge.app import load_config,create_app
     parser=argparse.ArgumentParser(description="EventGuard synthetic-only MCP bridge; disabled by default")
     parser.add_argument("--config",default="config/bridge.example.json")
     subs=parser.add_subparsers(dest="command",required=True)

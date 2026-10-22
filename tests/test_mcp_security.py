@@ -13,9 +13,9 @@ import threading
 import unittest
 from unittest.mock import patch, Mock
 
-from eventguard.mcp.security import BearerAuth, Principal, sign_headers, validate_secret
-from eventguard.mcp.network import SafeHTTPSPoster
-from eventguard.mcp.vault import DPAPIVault
+from contrib.mcp_bridge.security import BearerAuth, Principal, sign_headers, validate_secret
+from contrib.mcp_bridge.network import SafeHTTPSPoster
+from contrib.mcp_bridge.vault import DPAPIVault
 
 
 KEY = "whsec_" + base64.b64encode(bytes(range(32))).decode()
@@ -66,7 +66,7 @@ class SecurityTests(unittest.TestCase):
             self.assertIsNone(self.auth().authenticate(header))
 
     def test_auth_uses_constant_time_digest_compare(self):
-        with patch("eventguard.mcp.security.hmac.compare_digest", wraps=hmac.compare_digest) as compare:
+        with patch("contrib.mcp_bridge.security.hmac.compare_digest", wraps=hmac.compare_digest) as compare:
             self.auth().authenticate("Bearer " + TOKEN)
             self.assertTrue(compare.called)
             self.assertEqual(len(compare.call_args.args[0]), 32)
@@ -289,13 +289,13 @@ class NetworkTests(unittest.TestCase):
 
 class VaultTests(unittest.TestCase):
     def test_non_windows_fails_closed(self):
-        with patch("eventguard.mcp.vault.os.name", "posix"):
+        with patch("contrib.mcp_bridge.vault.os.name", "posix"):
             with self.assertRaisesRegex(OSError, "^vault_platform_unsupported$"):
                 DPAPIVault("never-created")
 
     @unittest.skipUnless(os.name == "nt", "Windows local path policy")
     def test_vault_rejects_network_device_root_and_stream_paths(self):
-        with patch("eventguard.mcp.vault.ctypes.WinDLL") as win_dll:
+        with patch("contrib.mcp_bridge.vault.ctypes.WinDLL") as win_dll:
             for directory in ("\\\\server\\share\\vault", "\\\\?\\C:\\vault", "C:\\", "C:\\vault:stream", "..\\vault"):
                 with self.assertRaisesRegex(ValueError, "^invalid_vault_directory$"):
                     DPAPIVault(directory)
@@ -306,7 +306,7 @@ class VaultTests(unittest.TestCase):
         for kind in (0, 1, 2, 4, 5, 6):
             kernel = Mock()
             kernel.GetDriveTypeW.return_value = kind
-            with patch("eventguard.mcp.vault.ctypes.WinDLL", return_value=kernel):
+            with patch("contrib.mcp_bridge.vault.ctypes.WinDLL", return_value=kernel):
                 with self.assertRaisesRegex(ValueError, "^invalid_vault_directory$"):
                     DPAPIVault("Z:\\vault")
             kernel.CreateFileW.assert_not_called()

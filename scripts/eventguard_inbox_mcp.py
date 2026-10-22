@@ -25,8 +25,8 @@ def _sdk_server(name, validate):
         async def run_stdio_async(self):
             # SDK 1.6 keeps its request task group open after raw stdin EOF.
             # Own that lifetime, as in the existing synthetic server. Active
-            # tools finish naturally before this scope can return. Operator
-            # native calls can still hang in the OS; Phase 3 owns that gap.
+            # tools finish before this scope returns; native worker jobs have
+            # their own bounded stop and exit evidence.
             async with stdio_server() as (incoming, outgoing):
                 sender, receiver = anyio.create_memory_object_stream(0)
                 async with anyio.create_task_group() as tasks:
@@ -42,14 +42,14 @@ def _sdk_server(name, validate):
     return InboxMCP(name)
 
 
-def build_server(source_dir, state_dir, event_id, allow_live=False):
+def build_server(source_dir, state_dir, event_id, allow_live=False, allow_ack=True):
     """Legacy three-tool contract stays compatible with acceptance evidence."""
     from eventguard.queue_inbox import QueueInbox
     backend = QueueInbox(source_dir, state_dir, event_id=event_id, allow_live=allow_live)
     def validate(name, arguments):
         allowed = {"receive_event": set(), "query_evidence": {"event_id"},
                    "ack_event": {"event_id", "query_id", "decision"}}
-        if name not in allowed:
+        if name not in allowed or name == "ack_event" and not allow_ack:
             raise ValueError("unknown_inbox_tool")
         if type(arguments) is not dict or set(arguments) != allowed[name]:
             raise ValueError("invalid_inbox_tool_arguments")
@@ -71,11 +71,12 @@ def build_server(source_dir, state_dir, event_id, allow_live=False):
         """Read the same received minimal snapshot; no native diagnostics or additional private evidence."""
         return backend.query_evidence(event_id)
 
-    @server.tool()
     def ack_event(event_id: str, query_id: str, decision: Literal["reviewed_metadata", "needs_more_evidence"]) -> dict:
         """Persist a metadata review then ACK the same event/query. Never asserts host safety or performs remediation."""
         return backend.ack_event(event_id, query_id, decision)
 
+    if allow_ack:
+        server.tool()(ack_event)
     return server
 
 
@@ -119,7 +120,7 @@ def build_operator_server(root, namespace="test", allow_live=False, operator_api
 
     @server.tool()
     def monitor_once() -> dict:
-        """One foreground cycle; fixed synthetic fixture unless launcher allowed live. OS hang limits remain."""
+        """One foreground cycle; fixed synthetic fixture unless launcher allowed live. Owned query Jobs have bounded cleanup."""
         return api.call("monitor", max_cycles=1, max_seconds=30, fixture="tests/fixtures/normal.json" if namespace == "test" else None)
 
     @server.tool()
@@ -152,12 +153,13 @@ def main(argv=None):
     mode.add_argument("--operator-root", type=Path, help="Shared local CLI/API tools; no agent/monitor is launched automatically.")
     parser.add_argument("--state-dir", type=Path)
     parser.add_argument("--event-id")
+    parser.add_argument("--read-only", action="store_true", help="Bound recovery read stage: do not expose an ACK tool.")
     parser.add_argument("--namespace", choices=("test", "live"), default="test")
     parser.add_argument("--allow-live", action="store_true", help="Explicitly allow the configured live event's fixed minimal metadata.")
     args = parser.parse_args(argv)
     try:
         if args.operator_root is not None:
-            if args.state_dir is not None or args.event_id is not None:
+            if args.state_dir is not None or args.event_id is not None or args.read_only:
                 raise ValueError("incompatible_operator_scope")
             server = build_operator_server(args.operator_root, args.namespace, args.allow_live)
             from eventguard.runtime import Runtime
@@ -167,7 +169,7 @@ def main(argv=None):
         else:
             if args.state_dir is None or args.event_id is None:
                 raise ValueError("bound_event_scope_required")
-            server = build_server(args.source_dir, args.state_dir, args.event_id, args.allow_live)
+            server = build_server(args.source_dir, args.state_dir, args.event_id, args.allow_live, not args.read_only)
             owner_path = args.state_dir / "inbox-owner.lock"
     except ImportError:
         print("EventGuard: installed MCP SDK unavailable; nothing was installed.", file=sys.stderr)

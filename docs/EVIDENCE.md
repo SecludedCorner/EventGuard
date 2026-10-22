@@ -2,6 +2,22 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：Phase 5 收斂及 Phase 7 計畫
+
+起點 `fa572ca33a972be5ffc691ba3a48b2ccbf256d06`，同一 feature 分支。新驗收使用正式 QueueInbox，重用 dispatcher command/capture/assessor；舊重複 producer/capture 已移除，保留原 wire schema 的測試與 SQLite 唯讀證據 reader。停用 bridge 移到 contrib，核心 import 隔離；四個 cmd 入口改為檢查既有 Python 3.13，CI 僅備妥設定。差異與相容理由見 [收斂對照](DELIVERY_CONSOLIDATION.md)。
+
+本批唯一完整數字來源 `reports/phase5-consolidation-001/verified-complete/verification-summary.json`。命令 `py -3.13 -B scripts/verify.py --run-dir reports/phase5-consolidation-001/verified-complete --timeout-seconds 600 --scope full`，Windows/Python **3.13.3**，2026-10-22T21:13:40.762835+00:00：**355 discovered、353 passed、0 failure/error、2 symlink 權限 skip、86 AST**；135.892 秒，exit **0**，passed_checks/source_unchanged=true、per_test_residuals=[]。guardian 自然退出、child_exited=true、exit 0、remaining_owned_processes=0、forcibly_terminated=false。scope 是 fixture/SDK/fake CLI 與分列的真 Windows owned Job API；沒有本輪資產掃描或真模型。
+
+命令 `py -3.13 -B scripts/verify.py --run-dir reports/phase5-consolidation-001/mock-final --timeout-seconds 180 --scope mock`：**104/104 通過**、0 skip/failure/error、exit 0、source_unchanged=true、無殘留。這是上面 suite 的明示子集，不相加；不是 Linux 原生支援或遠端 CI。full/mock 的 96 份受測來源 hashes 完全相同，含 contrib、cmd 與 workflow；提交後以同目錄 source-commit.json 綁定實際 Git commit 位元組。
+
+保留原始證據的 probe：`py -3.13 -B reports/phase5-consolidation-001/probe.py` exit 0，`probe/manifest.json` 四案例 passed，**7 個唯一 synthetic events、8 次 receive/query、7 筆真本機 SQLite ACK receipts，missing=[]、duplicates=[]**；recovery 有 pending-proof，同 event/query 補收。CLI 是明示 **fake Python CLI**，不是 Codex；JSONL、工具返回、manifest、DB、inbox 與 owned child 自然退出回條都保留。十二組搬移前後 synthetic projection 全物件相同。最後來源另對原 fake traces 做 verify，沒有再開模型／重造事件。
+
+實際新 single/continuous/batch/recovery 準備入口四項 exit 0，舊 single alias 準備 exit 0；沒有 --execute，不啟動 agent。bridge check exit 0 且 listener_started/credentials_read=false。cmd 既有 Python --version 成功；只在 child 的 PATH 排除 Python 後回 exit 2，系統 PATH 未改。入口 argv/stdout/stderr/Job 回條見 entry-probes.json、compat-entry-probes.json、cmd-missing-python.json。
+
+保留失敗與未完成證據：初次新等價 fixture 使用 SQLite connection 的交易 context 卻未 close，導致臨時 DB WinError 32；改為 closing，不放寬 ACK 檢查。`final/` 的完整輪有一項既有 Job 測試失敗：Job active=0，但立即只查舊 PID 顯示 alive，無殘留；原證據不能確定是退出時序或 PID 重用。測試改為先記 PID+建立時間、有界等待確認原身分退出，並用獨立 owned Job sentinel；增加延遲／PID 重用 fixture，不變更生產終止邏輯。`verified-final/` 工具會話失聯、日誌中斷且沒有摘要／退出回條，記為未完成、退出狀態未知，不列為通過；後續另用新 verified-complete 目錄完整驗證。所有失敗紀錄保留。
+
+文件檢查 `py -3.13 -B reports/phase5-consolidation-001/check_docs.py` 核對本批本機連結、README 上限及七份歷史快照 hashes；結果見 docs-check.json，不宣稱查過外部連結或其他研究文件。未推送、未遠端 CI、未啟動模型／監看／排程／服務、未提權或改安全設定。每日五次耐久總額仍是缺口；現有 max_tasks=5 僅每輪。Phase 7 [可逆實機與故障恢復計畫](WINDOWS_VALIDATION_PLAN.md) 已獨立提交 `cda77a0b031f2368a9b504c2fa84820442c37adc`，和 24 小時 soak 都尚未執行，仍須當次批准。
+
 ## 2026-10-23：文件落地與維護目標更新
 
 本批只改公開專案文件，未修改 src／scripts／config／tests／playbooks。README 短入口、STATUS 一頁現況、HANDOFF 與 [維護目標](MAINTENANCE_GOAL.md) 已收斂，下一個程式實作為 Phase 5；Phase 2 舊 A／B 關卡不再等待。原文件保存在 [history](history/README.md)，來源提交與搬移 hashes 見 snapshot-manifest。操作、架構、接線與 collector 文件已校正 Phase 3 Job／Phase 2 診斷的過期說法。
@@ -24,7 +40,7 @@
 
 下文保留各時間點的工程日誌。只有最近的驗證節代表目前程式基準；其餘舊「尚未實作／等待選案」均屬當時狀態，不構成今天的阻塞或操作授權。
 
-## 目前：Phase 4 容量／保留已實作（2026-10-23 03:11 台北）
+## 歷史：Phase 4 容量／保留已實作（2026-10-23 03:11 台北）
 
 基底 `677fe2a6b78e7f961be45693c8e95d00a5f2a88f`，同一 feature 分支。ACKed payload／review 的 TTL 與壓力清理、有限 receipt 去重窗、inbox 完成回條合併／輪替、dispatcher 已核實 terminal 帳本壓縮及上限已接入；設定見 `config/default.json` 與 [STORAGE_RETENTION](STORAGE_RETENTION.md)。pending／retry／未 ACK failed 都不清除，移除舊七天 failed 自動清除邏輯。上限存在 SQLite／inbox 專用政策，ACK opener 沿用；status 顯示 outbox 實際政策及輪替數。inbox admission 預留收尾空間；帳本開始 child 前預留終態更新大小。
 

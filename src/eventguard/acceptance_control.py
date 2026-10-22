@@ -7,7 +7,7 @@ from pathlib import Path
 import tempfile
 import time
 
-from .local_wait import _guard, LocalWaitError
+from .local_paths import _guard, LocalWaitError
 
 MAX_METADATA = 256 * 1024
 

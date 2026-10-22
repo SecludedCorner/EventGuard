@@ -1,8 +1,8 @@
 """Opt-in producer adapter for a configured HTTPS bridge; never loads credentials itself."""
 import json
 from urllib.parse import urlsplit
-from ..events.schema import validate_event
-from ..events.store import validate_receipt
+from eventguard.events.schema import validate_event
+from eventguard.events.store import validate_receipt
 from .network import SafeHTTPSPoster
 
 

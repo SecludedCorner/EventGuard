@@ -1,6 +1,6 @@
 # 目前架構
 
-程式基準 `1e90a53`；此頁映射已存在模組，不把 [遠期設計](TARGET_DESIGN.md) 當完成能力。核心獨立運作，人類與可選 agent 共用 API，正常監看不呼叫模型。
+目前受測程式及 commit 見 [EVIDENCE](EVIDENCE.md)；此頁映射已存在模組，不把 [遠期設計](TARGET_DESIGN.md) 當完成能力。核心獨立運作，人類與可選 agent 共用 API，正常監看不呼叫模型。
 
 | 區域 | 實作與邊界 |
 | --- | --- |
@@ -11,7 +11,7 @@
 | 規則／資料 | `rules` 確定性 baseline／diff；`events.store` 原子保存 detector state＋outbox，ACK／回條／review 有限保留 |
 | 查證／報告 | `diagnostics` 從事件綁定型別化查詢，輸出 observations／coverage／uncertainties；固定 not_assessed，不 ACK |
 | 可選投遞 | `agent_dispatch` 等待佇列；只有已明確批准執行時才啟動短期 CLI，`queue_inbox` 只提供該事件最小摘要與 ACK |
-| 舊驗收／bridge | `local_wait` 仍是 synthetic 舊路徑；`mcp/` 雲端 bridge 保留停用，尚未搬到 contrib，待 Phase 5 收斂 |
+| 舊驗收／bridge | `local_wait` 僅保留舊格式／測試相容；新驗收使用 QueueInbox；雲端 bridge 已移到 `contrib/mcp_bridge` 且停用 |
 
 核心採集／規則／操作層不依賴 MCP SDK；SDK 只在可選 adapter 使用。共享 operator 的 diagnose 與 bound delivery 的 query_evidence 不同：前者明確查目前唯讀來源，後者只重讀保存摘要，詳見 [介面契約](AGENT_CONTRACT.md)。
 
@@ -19,4 +19,4 @@ outbox 在 data/live 或 data/test；inbox state 與 source 分離；測試／�
 
 pending／retry／未 ACK failed 不做 TTL 刪除；已完成資料依有限政策輪替。事件、名稱與輸出都不提供命令或授權。SQLite／JSON 可被相同使用者篡改，不是不可變鑑識。
 
-目前仍有重疊驗收入口，未宣稱單一路徑收斂已完成。下一步與完成條件見 [維護目標](MAINTENANCE_GOAL.md)，驗證與限制見 [EVIDENCE](EVIDENCE.md)。
+新驗收和正式派送共用 QueueInbox、command/capture/assessor；相容差異見 [收斂對照](DELIVERY_CONSOLIDATION.md)，下一步與完成條件見 [維護目標](MAINTENANCE_GOAL.md)，驗證與限制見 [EVIDENCE](EVIDENCE.md)。

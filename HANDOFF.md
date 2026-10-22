@@ -1,10 +1,10 @@
 # EventGuard 接手
 
-先讀 [AGENTS](AGENTS.md)、[README](README.md)、[STATUS](STATUS.md) 與 [維護目標](docs/MAINTENANCE_GOAL.md)。目前程式基準 `1e90a5398c5d4c555924bffb70bb77cb429dd782`；先核對工作目錄、分支、HEAD 與未提交變更，保留接續，不 reset／clean。
+先讀 [AGENTS](AGENTS.md)、[README](README.md)、[STATUS](STATUS.md) 與 [維護目標](docs/MAINTENANCE_GOAL.md)。目前受測程式版本以 [EVIDENCE](docs/EVIDENCE.md) 與 source-commit 回條核對；先核對工作目錄、分支、HEAD 與未提交變更，保留接續，不 reset／clean。
 
-Phase 0–4 已有各自提交；人類可獨立操作，agent 是共用介面的可選 client。Phase 2 A／B 舊等待關卡已由使用者的共用介面決定解除，不再要求重選。測試與實機證據只查 [EVIDENCE](docs/EVIDENCE.md)，不要從歷史段落抄測試數。
+Phase 0–5 與 Phase 6 文件已有各自批次；人類可獨立操作，agent 是共用介面的可選 client。Phase 2 A／B 舊等待關卡已由使用者的共用介面決定解除，不再要求重選。測試與實機證據只查 [EVIDENCE](docs/EVIDENCE.md)，不要從歷史段落抄測試數。
 
-下一個程式實作為 Phase 5，依 [目標完成條件](docs/MAINTENANCE_GOAL.md) 先列投遞／驗收路徑和測試對照；證明等價後才合併／刪除。停用 bridge 保持停用。Phase 6 文件整理先完成；後續實作要同步更新現況與證據入口，不再向 README／STATUS 堆時間日誌。
+Phase 5 [收斂對照](docs/DELIVERY_CONSOLIDATION.md) 已落地：新驗收只用 QueueInbox；legacy 只保留舊格式／測試及證據讀取，bridge 移到 contrib 保持停用。下一步依 [Phase 7 計畫](docs/WINDOWS_VALIDATION_PLAN.md) 等當次實機注入範圍批准，不自行部署／執行。跨入口每日五次耐久總額尚未具備，屬研究方案待補強，不以 max_tasks=5 冒充。
 
 沿用一般權限、唯讀 Windows、Python 3.13 標準庫；不啟動真 Codex／模型、不提權、不安裝依賴、不開網路、不永久註冊 MCP、不啟用服務／排程、不處理其他程序。私有 Job 只管理本工具新建程序；停止未確認時不得宣稱完成。pending／retry／未 ACK failed 不得因清理、改路徑或測試被丟棄。
 

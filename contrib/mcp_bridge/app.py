@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from ..runtime import read_json, safe_child
+from eventguard.runtime import read_json, safe_child
 
 ALLOWED_CONFIG={"enabled","network_enabled","synthetic_only","listen_host","listen_port","public_origin",
                 "allowed_callback_hosts","principals"}

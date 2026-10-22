@@ -1,5 +1,7 @@
 # MSI：單次真實 Codex 合成驗收
 
+目前新驗收一律使用 [QueueInbox 收斂入口](DELIVERY_CONSOLIDATION.md) 的 single/continuous/batch/recovery，預設不開模型。以下是舊 LocalWait 歷史格式及回條說明；舊 run 入口已轉送新 single，retry 不再執行。
+
 此入口驗證一次本機 stdio 的真 agent 等待 → 事件 → 查證 → 結果／ACK；不是常駐監看、桌面任務續接或 Windows 原生採集驗收。它需要當次明確模型範圍批准，本次維護不執行。完整產品仍為工程預覽，現況與歷史證據見 [EVIDENCE](EVIDENCE.md)。核心正常監看不呼叫模型，沒有永久 MCP 設定或新憑證。
 
 ## 最短操作

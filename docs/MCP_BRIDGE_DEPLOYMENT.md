@@ -1,5 +1,7 @@
 # EventGuard MCP bridge 部署與接線
 
+Phase 5 已將停用 bridge 移至 `contrib/mcp_bridge/`；正常核心不 import。以下保留原部署候選供審查，不是本機前置或新授權；目前使用 [單一 QueueInbox 路徑](DELIVERY_CONSOLIDATION.md)。
+
 文件更新：2026-10-22 UTC。版本定位：**尚未完成目標的工程預覽**。本輪提供 synthetic-only bridge 的程式介面與離線測試接縫；**沒有部署公開端點、建立新憑證、訂閱平台、啟動常駐程序或真正喚醒 agent**。程式／測試的實際結果以本版本 [STATUS](../STATUS.md) 為準，不能沿用舊版測試數。
 
 本文可供下一位維護者審查與選擇部署方式，不是部署授權。原生主機資料外傳、跨機診斷、任何新 TLS／防火牆／服務／排程／自啟設定都不包含在本輪。預設設定維持 disabled。

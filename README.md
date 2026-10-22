@@ -2,7 +2,7 @@
 
 Windows 一般權限的唯讀監看工具。核心能獨立採集、記錄變化、查看事件與匯出報告；人類 CLI 與可選 agent 介面共用操作核心。正常監看不呼叫模型。
 
-目前是 [MIT](LICENSE) 工程預覽。當前程式基準 `1e90a53`，最新狀態見 [STATUS](STATUS.md)，實測範圍與數字見 [EVIDENCE](docs/EVIDENCE.md)。
+目前是 [MIT](LICENSE) 工程預覽。目前受測程式與 commit 見 [EVIDENCE](docs/EVIDENCE.md)，最新狀態見 [STATUS](STATUS.md)，實測範圍與數字見 [EVIDENCE](docs/EVIDENCE.md)。
 
 ## 如何運作
 
@@ -60,4 +60,4 @@ py -3.13 -B scripts/eventguard.py stop
 - 不提供 EDR／鑑識、自動處置、GUI 或 Linux 原生採集。沒有事件、ACK 或診斷都不能證明主機安全。
 - 執行資料與憑證不入 Git。歷史有限 Codex 通路驗收見 [歷史入口](docs/history/README.md)；不是正常使用的前置條件或新的模型授權。
 
-下一階段的範圍、完成條件與停止關卡見 [維護目標](docs/MAINTENANCE_GOAL.md)。離線開發與驗證見 [DEVELOPMENT](docs/DEVELOPMENT.md)。
+目前投遞／驗收已使用 [同一 QueueInbox 路徑](docs/DELIVERY_CONSOLIDATION.md)；Phase 7 [實機驗證計畫](docs/WINDOWS_VALIDATION_PLAN.md) 尚未執行。下一階段的範圍、完成條件與停止關卡見 [維護目標](docs/MAINTENANCE_GOAL.md)。離線開發與驗證見 [DEVELOPMENT](docs/DEVELOPMENT.md)。

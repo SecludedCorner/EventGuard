@@ -58,6 +58,28 @@ class JobTests(FixtureRoot):
         self.children.append(child)
         return child
 
+    def assert_identity_exited(self, before):
+        self.assertIsInstance(before.get("created_at"), str, "record the owned identity before stopping it")
+        until = time.monotonic() + 3
+        observations = 0
+        while True:
+            current = identity(before["pid"])
+            observations += 1
+            reused = (isinstance(current.get("created_at"), str)
+                      and current["created_at"] != before["created_at"])
+            if current["state"] in {"missing", "exited"} or reused:
+                return {"last_identity": current, "pid_reused": reused, "observations": observations}
+            if time.monotonic() >= until:
+                self.fail("original owned PID+creation time did not confirm exit within 3 seconds")
+            time.sleep(.01)
+
+    def test_exit_check_handles_signalling_lag_and_pid_reuse_without_signals(self):
+        before = {"pid": 123, "created_at": "fixture-original", "state": "alive"}
+        with patch(__name__ + ".identity", side_effect=[before, {**before, "state": "exited"}]):
+            self.assertEqual(self.assert_identity_exited(before)["observations"], 2)
+        with patch(__name__ + ".identity", return_value={**before, "created_at": "fixture-reused"}):
+            self.assertTrue(self.assert_identity_exited(before)["pid_reused"])
+
     def test_real_job_normal_stdio_identity_and_natural_exit(self):
         child = self.child('import sys; print("stdout-fixture"); print("stderr-fixture",file=sys.stderr)', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, errors = child.communicate(timeout=5)
@@ -71,18 +93,20 @@ class JobTests(FixtureRoot):
         self.evidence = {"scope": "real_windows_job", "case": "natural_exit", "receipt": receipt}
 
     def test_job_terminates_its_grandchild_and_leaves_other_job_sentinel_alive(self):
-        sentinel = subprocess.Popen([sys.executable, "-B", "-c", "import sys;sys.stdin.read()"], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        sentinel = self.child("import sys;sys.stdin.read()", stdin=subprocess.PIPE)
         try:
             child = self.child('import subprocess,sys,time;p=subprocess.Popen([sys.executable,"-B","-c","import time;time.sleep(60)"]);print(p.pid,flush=True);time.sleep(60)', stdout=subprocess.PIPE)
             grandchild = int(child.stdout.readline())
+            before = identity(grandchild)
             self.assertGreaterEqual(child.job.active(), 2)
             receipt = finish(child, "timeout", grace=.05)
             self.assertTrue(receipt["forcibly_terminated"])
             self.assertTrue(receipt["child_exited"])
             self.assertEqual(receipt["remaining_owned_processes"], 0)
             self.assertIsNone(sentinel.poll(), "terminating our job must not affect the sibling sentinel")
-            self.assertIn(identity(grandchild)["state"], {"missing", "exited"})
-            self.evidence = {"scope": "real_windows_job", "case": "descendant_timeout", "receipt": receipt, "sentinel_outside_target_job_alive": True}
+            observed = self.assert_identity_exited(before)
+            self.evidence = {"scope": "real_windows_job", "case": "descendant_timeout", "receipt": receipt, "sentinel_outside_target_job_alive": True,
+                             "owned_descendant_before": before, "exit_observation": observed}
         finally:
             sentinel.stdin.close()
             sentinel.wait(timeout=5)
@@ -92,16 +116,17 @@ class JobTests(FixtureRoot):
         child = spawn([sys.executable, "-B", "-c", source, str(ROOT / "src")], stdout=subprocess.PIPE)
         self.children.append(child)
         pid = int(child.stdout.readline())
+        before = identity(pid)
         self.assertGreaterEqual(child.job.active(), 2)
         receipt = finish(child, "timeout", grace=.05)
         self.assertEqual(receipt["remaining_owned_processes"], 0)
-        self.assertIn(identity(pid)["state"], {"missing", "exited"})
+        self.assert_identity_exited(before)
 
     def test_owner_exit_closes_private_job_and_cleans_descendant(self):
-        source = 'import sys,os,time;sys.path.insert(0,sys.argv[1]);from eventguard.processes import spawn;p=spawn([sys.executable,"-B","-c","import time;time.sleep(60)"]);print(p.pid,flush=True);sys.stdout.flush();os._exit(17)'
+        source = 'import sys,os,json;sys.path.insert(0,sys.argv[1]);from eventguard.processes import spawn;p=spawn([sys.executable,"-B","-c","import time;time.sleep(60)"]);print(json.dumps({"pid":p.pid,"created_at":p.created_at}),flush=True);sys.stdout.flush();os._exit(17)'
         child = spawn([sys.executable, "-B", "-c", source, str(ROOT / "src")], stdout=subprocess.PIPE)
         self.children.append(child)
-        pid = int(child.stdout.readline())
+        before = json.loads(child.stdout.readline())
         self.assertEqual(child.wait(timeout=5), 17)
         until = time.monotonic()+3
         while child.job.active() and time.monotonic() < until:
@@ -109,7 +134,7 @@ class JobTests(FixtureRoot):
         self.assertEqual(child.job.active(), 0, "Inner owner death must close its noninherited job handle")
         receipt = finish(child, grace=0)
         self.assertFalse(receipt["forcibly_terminated"], "Outer guardian did not need forced cleanup")
-        self.assertIn(identity(pid)["state"], {"missing", "exited"})
+        self.assert_identity_exited(before)
         self.evidence = {"scope": "real_windows_job_synthetic_owner_exit_not_live_monitor_crash", "case": "kill_on_job_close", "outer_receipt": receipt, "owned_descendant_exited": True}
 
     def test_existing_named_job_is_refused_without_modifying_it(self):

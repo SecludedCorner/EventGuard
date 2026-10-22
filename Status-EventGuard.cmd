@@ -1,4 +1,4 @@
 @echo off
 cd /d "%~dp0"
-"C:\Python313\python.exe" -B "%~dp0scripts\eventguard.py" status
-pause
+call "%~dp0scripts\run-python.cmd" "%~dp0scripts\eventguard.py" status %*
+exit /b %ERRORLEVEL%

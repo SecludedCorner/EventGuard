@@ -18,7 +18,7 @@ def parser():
     stopping.add_argument("--namespace",choices=("live","test"),help="選填：只停止該 namespace 的已核對 monitor")
     monitor=sub.add_parser("monitor",help="前景持續監看；Ctrl+C 或另一終端 stop")
     monitor.add_argument("--max-cycles",type=int)
-    monitor.add_argument("--max-seconds",type=int,help="停止後續採集的總秒數（1..3600）；已開始查詢自然退出")
+    monitor.add_argument("--max-seconds",type=int,help="停止後續採集的總秒數（1..3600）；本工具 Job 先寬限再有界清理；未確認退出會明示")
     monitor.add_argument("--fixture",help="僅 tests/fixtures 內的合成資料")
     monitor.add_argument("--fixture-interval",type=float,default=0.1)
     query=sub.add_parser("query")

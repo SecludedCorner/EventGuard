@@ -29,7 +29,8 @@ import time
 import uuid
 
 from .events.store import EventStore, StoreError
-from .mcp.protocol import project_event
+from .events.projection import project_event
+from .local_paths import _guard, LocalWaitError
 
 KIND = "eventguard-single-synthetic-local-wait-experiment"
 MAX_LEDGER_BYTES = 256 * 1024
@@ -41,8 +42,6 @@ _IO_LOCKS = {}
 _WAITERS = set()
 
 
-class LocalWaitError(RuntimeError):
-    """Fixed error codes only, never raw stored values or paths."""
 
 
 def _utc():
@@ -66,15 +65,6 @@ def _timestamp(value):
         raise LocalWaitError("stored_timestamp_invalid") from None
 
 
-def _guard(path):
-    path = Path(path)
-    if ".." in path.parts:
-        raise LocalWaitError("experiment_parent_path_rejected")
-    path = path.absolute()
-    for part in [*reversed(path.parents), path]:
-        if part.is_symlink() or (hasattr(part, "is_junction") and part.is_junction()):
-            raise LocalWaitError("experiment_path_redirect_rejected")
-    return path
 
 
 def _bytes(value):

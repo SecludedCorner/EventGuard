@@ -1,5 +1,6 @@
 """Finite validation entry points; no model, network, CI or native collection."""
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -8,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("finite_delivery_validation", ROOT / "scripts/validate_delivery.py")
+SPEC = importlib.util.spec_from_file_location("finite_delivery_validation", ROOT / "contrib/legacy_delivery_validation.py")
 validation = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(validation)
 
@@ -59,3 +60,32 @@ class DeliveryValidationTests(unittest.TestCase):
         with patch.object(validation.shutil, 'which', return_value='C:/npm/codex.cmd'):
             with self.assertRaisesRegex(ValueError, 'native_codex_required'):
                 validation.argv(Path('runtime'), Path('evidence'), 1)
+
+    def test_legacy_cli_refuses_execution_without_creating_source_or_calling_model(self):
+        with tempfile.TemporaryDirectory() as temp, patch.object(validation, 'capture') as capture:
+            root = Path(temp) / 'absent'
+            args = ['legacy_delivery_validation.py', 'batch', '--root', str(root), '--execute']
+            with patch.object(validation.sys, 'argv', args), self.assertRaisesRegex(ValueError, 'legacy_execution_retired'):
+                validation.main()
+            self.assertFalse(root.exists())
+            capture.assert_not_called()
+
+    def test_legacy_reader_does_not_rewrite_schema_policy_ledger_or_marker(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / 'old'
+            manifest = validation.prepare(root, 'batch')
+            backend = validation.LocalWait(root / 'runtime')
+            event = manifest['events'][0]
+            backend.store.enqueue(event)
+            runtime = root / 'runtime'
+            def snapshot():
+                return {p.relative_to(runtime).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+                        for p in runtime.rglob('*') if p.is_file()}
+            before = snapshot()
+            reader = validation.EvidenceReader(runtime)
+            self.assertEqual(reader.store.get_event(event['event_id'])['delivery_status'], 'pending')
+            self.assertEqual(reader.store.stats()['pending'], 1)
+            validation.prepare(root, 'batch')
+            with self.assertRaisesRegex(validation.LocalWaitError, 'read_only'):
+                reader._save(reader._load())
+            self.assertEqual(snapshot(), before)

@@ -16,20 +16,27 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT))  # Optional contrib tests; core never imports them.
 from eventguard.processes import spawn, finish, cleanup_owned, current_job_members
 from eventguard.runtime import safe_child, atomic_json
 
 
 def sources():
-    return {str(p.relative_to(ROOT)).replace("\\", "/"): hashlib.sha256(p.read_bytes()).hexdigest()
-            for folder in ("src", "scripts", "tests", "config", "playbooks")
-            for p in sorted((ROOT / folder).rglob("*")) if p.is_file() and p.suffix in {".py", ".json"}}
+    result = {str(p.relative_to(ROOT)).replace("\\", "/"): hashlib.sha256(p.read_bytes()).hexdigest()
+            for folder in ("src", "scripts", "tests", "config", "playbooks", "contrib")
+            for p in sorted((ROOT / folder).rglob("*")) if p.is_file() and p.suffix in {".py", ".json", ".cmd"}}
+    for p in [*ROOT.glob("*.cmd"), *(ROOT / ".github").rglob("*.yml")]:
+        result[p.relative_to(ROOT).as_posix()] = hashlib.sha256(p.read_bytes()).hexdigest()
+    return result
 
 
-def worker(output, guardian_name):
+MOCK_MODULES = ("test_events_transport", "test_rules_playbooks", "test_mcp_protocol", "test_mcp_store")
+
+
+def worker(output, guardian_name, scope="full"):
     evidence, residuals, syntax = [], [], []
     baseline = {}
-    files = [p for folder in ("src", "scripts", "tests") for p in (ROOT / folder).rglob("*.py")]
+    files = [p for folder in ("src", "scripts", "tests", "contrib") for p in (ROOT / folder).rglob("*.py")]
     for file in files:
         try:
             ast.parse(file.read_text(encoding="utf-8"), filename=str(file.relative_to(ROOT)))
@@ -62,7 +69,11 @@ def worker(output, guardian_name):
             super().stopTest(test)
     tick = time.monotonic()
     with (output / "unit-tests.txt").open("x", encoding="utf-8") as log, contextlib.redirect_stdout(log), contextlib.redirect_stderr(log):
-        suite = unittest.defaultTestLoader.discover(str(ROOT / "tests"), pattern="test_*.py")
+        if scope == "mock":
+            sys.path.insert(0, str(ROOT / "tests"))
+            suite = unittest.defaultTestLoader.loadTestsFromNames(MOCK_MODULES)
+        else:
+            suite = unittest.defaultTestLoader.discover(str(ROOT / "tests"), pattern="test_*.py")
         # Windows may attach a conhost to the test worker during SDK imports.
         # Account for the exact pre-test PID+creation identities, never a count.
         baseline = current_job_members(guardian_name) if os.name == "nt" else {}
@@ -75,6 +86,9 @@ def worker(output, guardian_name):
              "per_test_residuals": residuals, "scope": "fixture/SDK/fake CLI plus labelled real Windows owned-job APIs; no inventory scan/model",
              "guardian_baseline_identities": baseline,
              "machine_scan_executed": False, "real_agent_woken": False, "model_calls": 0}
+    value.update(verification_scope=scope, linux_native_support=False,
+                 scope="fixture/pure rules/SQLite/mock only; no Linux native support" if scope == "mock" else value["scope"],
+                 selected_modules=list(MOCK_MODULES) if scope == "mock" else ["test_*.py"])
     atomic_json(output / "worker-summary.json", value, 2*1024*1024)
     atomic_json(output / "lifecycle-evidence.json", evidence, 4*1024*1024)
     return 0 if result.wasSuccessful() and not syntax and not residuals else 1
@@ -84,6 +98,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-dir", type=Path)
     parser.add_argument("--timeout-seconds", type=float, default=900)
+    parser.add_argument("--scope", choices=("full", "mock"), default="full")
     parser.add_argument("--_worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--guardian-job-name", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
@@ -95,7 +110,7 @@ def main(argv=None):
         parser.error("verification output must be inside this project's reports")
     output = safe_child(ROOT, absolute.relative_to(ROOT))
     if args._worker:
-        return worker(output, args.guardian_job_name)
+        return worker(output, args.guardian_job_name, args.scope)
     output.mkdir(parents=True, exist_ok=False)
     before = sources()
     atomic_json(output / "source-manifest.json", before, 2*1024*1024)
@@ -103,7 +118,7 @@ def main(argv=None):
     try:
         with (output / "worker.stdout.txt").open("xb") as stdout, (output / "worker.stderr.txt").open("xb") as stderr:
             job_name = "Local\\EventGuard-" + uuid.uuid4().hex
-            child = spawn([sys.executable, "-B", str(Path(__file__).resolve()), "--_worker", "--run-dir", str(output), "--guardian-job-name", job_name],
+            child = spawn([sys.executable, "-B", str(Path(__file__).resolve()), "--_worker", "--scope", args.scope, "--run-dir", str(output), "--guardian-job-name", job_name],
                           **({"job_name": job_name} if os.name == "nt" else {}), stdout=stdout, stderr=stderr)
             deadline = time.monotonic()+args.timeout_seconds
             while child.poll() is None and time.monotonic() < deadline:
@@ -116,7 +131,7 @@ def main(argv=None):
     worker_path = output / "worker-summary.json"
     value = json.loads(worker_path.read_text(encoding="utf-8")) if worker_path.exists() else {"worker_summary_missing": True}
     value.update(source_unchanged=before == sources(), guardian=receipt,
-                 command="python -B scripts/verify.py --run-dir " + str(output.relative_to(ROOT)), output_dir=str(output.relative_to(ROOT)),
+                 command="python -B scripts/verify.py --scope " + args.scope + " --run-dir " + str(output.relative_to(ROOT)), output_dir=str(output.relative_to(ROOT)),
                  passed_checks=bool(receipt and receipt.get("child_exited") and receipt.get("exit_code") == 0
                      and not receipt.get("forcibly_terminated") and receipt.get("remaining_owned_processes", 0) == 0
                      and before == sources() and not value.get("worker_summary_missing")

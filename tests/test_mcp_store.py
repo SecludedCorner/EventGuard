@@ -5,7 +5,7 @@ import sqlite3
 import tempfile
 import unittest
 
-from eventguard.mcp.store import BridgeStore, BridgeError, BridgeCapacityError, subscription_id
+from contrib.mcp_bridge.store import BridgeStore, BridgeError, BridgeCapacityError, subscription_id
 
 
 def event(identity="evt-1", host="host-test", **changes):

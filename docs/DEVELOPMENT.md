@@ -24,6 +24,6 @@ py -3.13 -B scripts/verify.py --run-dir reports/verify-NEW --timeout-seconds 600
 
 不改真 Defender／網路／啟動項來製造測試；不讀事件 Message／XML、完整命令列、登入憑證或 Codex sessions。測試與執行資料只放 data／logs／reports，不能提交。只清理已核實 ACKed 資料，保留所有未解決事件與失敗預算。
 
-當前沒有 CI workflow；Phase 5 才整理 Windows 完整 job 與明示 mock 範圍的另一 job。不得把雲端 mock 通過當 Linux 原生採集支援，沒有本機完整證據也不宣稱遠端 CI 已通過。不得手動觸發或推送以執行 CI。
+`.github/workflows/tests.yml` 已備妥 Windows 完整 job 與明示 mock 範圍的另一 job；本機用 `--scope full|mock` 分開驗證，沒有遠端執行。Windows CI 缺可選 SDK 時回報 skips，不安裝 SDK。不得把 mock 通過當 Linux 原生採集支援，不手動觸發或推送以執行 CI。
 
 需要模型、網路下載／安裝、提權、排程啟用、Phase 7 注入或不可逆操作時回報外部條件；否則在既有範圍自主完成。舊固定快照／雲端接線開發說明保存在 [歷史目錄](history/README.md)，不是目前前置條件。

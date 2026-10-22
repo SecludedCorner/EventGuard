@@ -10,7 +10,7 @@ EventGuard 先是可獨立使用的本機唯讀工具；agent 使用同一能力
 | QueueInbox bound delivery | 一個固定 event 的 receive → 已保存最小 snapshot query → 耐久 result／ACK | query_evidence 沒有新的原生診斷，reviewed_metadata 不是安全結論 |
 | LocalWait 舊 synthetic 驗收 | wait → 保存合成 snapshot query → synthetic ACK | 不是正式監看來源、永久等待或目前對話接線 |
 
-具體工具名稱／參數見 [HUMAN_AGENT_INTERFACE](HUMAN_AGENT_INTERFACE.md) 與既有入口；Phase 5 尚未合併舊路徑，不能提前宣稱三者相同。雲端 MCP Events bridge 是停用歷史候選，不是本機部署前置。
+具體工具名稱／參數見 [HUMAN_AGENT_INTERFACE](HUMAN_AGENT_INTERFACE.md) 與既有入口；Phase 5 將新驗收統一到 QueueInbox，舊格式相容保留，三個 wire schema 仍不同。雲端 MCP Events bridge 已移到 contrib 保持停用；詳見 [收斂對照](DELIVERY_CONSOLIDATION.md)。
 
 ## 不可混淆的證據
 
