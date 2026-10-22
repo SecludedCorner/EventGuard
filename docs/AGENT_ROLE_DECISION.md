@@ -1,5 +1,7 @@
 # Phase 2：agent 角色比較與選案
 
+**決策已更新：** 使用者確認「不論有沒有 agent 都要能獨立運作，人類要能操控並知道發生了甚麼；也提供 agent 介面，使用同一套操作與可見資訊」。本階段因此實作獨立核心＋人類 CLI／可選工具 adapter；不再等待 A／B 二選一。新實作與限制見 [HUMAN_AGENT_INTERFACE](HUMAN_AGENT_INTERFACE.md)。以下保留 `a130dce` 當時的比較與未實作狀態，不當成目前阻塞，也不構成模型授權。
+
 狀態：**比較已完成，等待使用者選 A／B；兩案皆未實作。** 建議 A：確定性 playbook＋本機報告，agent 接收降為可選。原因是目前能核查的增益來自唯讀查詢，尚無 agent 本身增加診斷價值的證據。這不是對未實測模型能力的否定。
 
 程式基準 `088be7561c5ead1bb4e289ad3b4ef6ce03748398`，分支 `feat/local-codex-acceptance`。2026-10-22 21:53（UTC+8），Python 3.13.3。此輪只讀碼及離線 synthetic／fixture 元件比較，沒有真 Codex、模型請求、原生來源查詢、網路或系統變更。Phase 1 七來源結果沿用其證據，未因重新開機而重新採集或宣稱 coverage 改善。

@@ -1,17 +1,12 @@
 """Typed local CLI. There is no shell-execution, remediation or external endpoint option."""
 from __future__ import annotations
 import argparse
-from contextlib import closing
-from datetime import datetime, timezone
-import html
 import json
 from pathlib import Path
-import sqlite3
 import sys
-import uuid
 
-from . import __version__
-from .runtime import Runtime, read_json, utc_now
+from .runtime import Runtime, read_json
+from .operations import OperatorAPI, store as _store, status, export_report
 
 
 def parser():
@@ -19,7 +14,8 @@ def parser():
     sub=p.add_subparsers(dest="command",required=True)
     sub.add_parser("capabilities")
     sub.add_parser("status")
-    sub.add_parser("stop")
+    stopping=sub.add_parser("stop")
+    stopping.add_argument("--namespace",choices=("live","test"),help="選填：只停止該 namespace 的已核對 monitor")
     monitor=sub.add_parser("monitor",help="前景持續監看；Ctrl+C 或另一終端 stop")
     monitor.add_argument("--max-cycles",type=int)
     monitor.add_argument("--max-seconds",type=int,help="停止後續採集的總秒數（1..3600）；已開始查詢自然退出")
@@ -33,6 +29,10 @@ def parser():
     listing=eventsub.add_parser("list")
     listing.add_argument("--namespace",choices=("live","test"),default="live")
     listing.add_argument("--limit",type=int,default=100)
+    for name in ("inspect", "diagnose"):
+        event_operation=eventsub.add_parser(name,help="查看已存事件／明確執行事件綁定唯讀查證；不 ACK")
+        event_operation.add_argument("--namespace",choices=("live","test"),default="live")
+        event_operation.add_argument("--event-id",required=True)
     synth=sub.add_parser("synthetic")
     synthsub=synth.add_subparsers(dest="synthetic_command",required=True)
     emit=synthsub.add_parser("emit")
@@ -58,70 +58,16 @@ def parser():
     return p
 
 
-def _store(runtime,namespace):
-    from .events.store import EventStore
-    config=runtime.config().get("outbox",{})
-    return EventStore(runtime.data_dir(namespace),max_events=config.get("max_events",1000),max_bytes=config.get("max_bytes",8388608))
-
-
-def _readonly_stats(runtime,namespace):
-    path=runtime.data_dir(namespace,create=False)/"eventguard.sqlite3"
-    runtime.path(path.relative_to(runtime.root))
-    if not path.is_file():
-        return {"state":"not_created","events":0}
-    with closing(sqlite3.connect(path.as_uri()+"?mode=ro",uri=True,timeout=1)) as connection:
-        rows=connection.execute("SELECT delivery_status,COUNT(*) FROM events GROUP BY delivery_status").fetchall()
-    return {"state":"available","counts":dict(rows),"events":sum(row[1] for row in rows)}
-
-
-def status(runtime):
-    health=runtime.health()
-    stamp=health.get("heartbeat_at")
-    age=None
-    if isinstance(stamp,str):
-        try:
-            age=max(0,(datetime.now(timezone.utc)-datetime.fromisoformat(stamp.replace("Z","+00:00"))).total_seconds())
-        except (ValueError,TypeError):
-            pass
-    # The last report is not proof of liveness after a crash; do not claim a watchdog.
-    return {"tool_version":__version__,"health":health,"heartbeat_age_seconds":age,
-            "liveness":"last_report_only; no independent watchdog",
-            "namespaces":{name:_readonly_stats(runtime,name) for name in ("live","test")},
-            "agent_ingress":"not_configured","real_agent_woken":False}
-
-
-def export_report(runtime,namespace):
-    events=_store(runtime,namespace).list_events(limit=1000)
-    document={"schema_version":"1.0","tool_version":__version__,"exported_at":utc_now(),"namespace":namespace,
-              "real_agent_connected":False,"note":"本機事件與投遞狀態；ACK 不代表 agent 已處理，也不是安全結論。","events":events}
-    runtime.ensure()
-    prefix="eventguard-"+datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")+"-"+uuid.uuid4().hex[:8]
-    json_path=runtime.path("reports/"+prefix+".json")
-    html_path=runtime.path("reports/"+prefix+".html")
-    with json_path.open("x",encoding="utf-8") as stream:
-        json.dump(document,stream,ensure_ascii=False,indent=2)
-    escaped=html.escape(json.dumps(document,ensure_ascii=False,indent=2),quote=True)
-    page='<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>EventGuard 本機報告</title><style>body{font:15px sans-serif;max-width:1100px;margin:32px auto;padding:16px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style><h1>EventGuard 本機事件報告</h1><p>事件不等於入侵結論。mock 不等於真正 agent 喚醒。</p><pre>'+escaped+'</pre></html>'
-    with html_path.open("x",encoding="utf-8") as stream:
-        stream.write(page)
-    return {"json":str(json_path),"html":str(html_path),"event_count":len(events)}
-
-
 def execute(args,runtime):
+    operator=OperatorAPI(runtime.root)
     if args.command=="capabilities":
-        from .diagnostics.api import DiagnosticAPI
-        return {"tool_version":__version__,"diagnostics":DiagnosticAPI().capabilities(),
-                "monitor":"foreground, cooperative stop, singleton", "transport":["disabled","synthetic-only local mock"],
-                "remediation":[],"gui":False,"model_calls":0,"real_agent_ingress":"not_configured",
-                "optional_agent_ingress":{"entry":"scripts/eventguard_watch.py","mode":"explicit_bounded_foreground",
-                                          "default_enabled":False,"projection":"fixed-minimal-v1"}}
+        return operator.call("capabilities")
     if args.command=="status":
-        return status(runtime)
+        return operator.call("status")
     if args.command=="stop":
-        return runtime.request_stop()
+        return operator.call("stop",args.namespace)
     if args.command=="monitor":
-        from .monitor import Monitor
-        return Monitor(runtime.root).run(max_cycles=args.max_cycles,fixture=args.fixture,fixture_interval=args.fixture_interval,max_seconds=args.max_seconds)
+        return operator.call("monitor",max_cycles=args.max_cycles,fixture=args.fixture,fixture_interval=args.fixture_interval,max_seconds=args.max_seconds)
     if args.command=="query":
         if len(args.args.encode("utf-8"))>8192:
             raise ValueError("query_input_limit")
@@ -131,9 +77,11 @@ def execute(args,runtime):
         from .diagnostics.api import DiagnosticAPI
         return DiagnosticAPI().query(args.operation,values)
     if args.command=="events":
-        if not 1<=args.limit<=1000:
-            raise ValueError("event_limit_out_of_bounds")
-        return {"namespace":args.namespace,"events":_store(runtime,args.namespace).list_events(limit=args.limit)}
+        if args.event_command=="inspect":
+            return operator.call("inspect_event",args.event_id,args.namespace)
+        if args.event_command=="diagnose":
+            return operator.call("diagnose_event",args.event_id,args.namespace)
+        return operator.call("events",args.namespace,args.limit)
     if args.command=="synthetic":
         from .synthetic import make_synthetic
         event=make_synthetic(args.scenario)
@@ -167,7 +115,7 @@ def execute(args,runtime):
             raise ValueError("event_not_found")
         return simulate(event,read_json(path,1024*1024))
     if args.command=="report":
-        return export_report(runtime,args.namespace)
+        return operator.call("report",args.namespace)
     raise ValueError("unknown_command")
 
 

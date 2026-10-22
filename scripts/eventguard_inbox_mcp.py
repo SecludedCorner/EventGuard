@@ -12,36 +12,21 @@ sys.path.insert(0, str(ROOT / "src"))
 _ID = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
 
 
-def build_server(source_dir, state_dir, event_id, allow_live=False):
-    """Use the existing SDK, with original JSON validation before coercion."""
+def _sdk_server(name, validate):
+    """One SDK/EOF adapter for both legacy inbox and shared operator tools."""
     import anyio
     from mcp.server.fastmcp import FastMCP
     from mcp.server.stdio import stdio_server
-    from eventguard.queue_inbox import QueueInbox
-
-    backend = QueueInbox(source_dir, state_dir, event_id=event_id, allow_live=allow_live)
-
     class InboxMCP(FastMCP):
         async def call_tool(self, name, arguments):
-            allowed = {"receive_event": set(), "query_evidence": {"event_id"},
-                       "ack_event": {"event_id", "query_id", "decision"}}
-            if name not in allowed:
-                raise ValueError("unknown_inbox_tool")
-            if type(arguments) is not dict or set(arguments) != allowed[name]:
-                raise ValueError("invalid_inbox_tool_arguments")
-            for field in ("event_id", "query_id"):
-                if field in arguments and (type(arguments[field]) is not str or not _ID.fullmatch(arguments[field])):
-                    raise ValueError("invalid_inbox_tool_arguments")
-            if name == "ack_event" and (type(arguments["decision"]) is not str
-                    or arguments["decision"] not in {"reviewed_metadata", "needs_more_evidence"}):
-                raise ValueError("invalid_inbox_tool_arguments")
+            validate(name, arguments)
             return await super().call_tool(name, arguments)
 
         async def run_stdio_async(self):
             # SDK 1.6 keeps its request task group open after raw stdin EOF.
             # Own that lifetime, as in the existing synthetic server. Active
-            # tools have only bounded synchronous local I/O, which is allowed
-            # to finish naturally before this scope can return.
+            # tools finish naturally before this scope can return. Operator
+            # native calls can still hang in the OS; Phase 3 owns that gap.
             async with stdio_server() as (incoming, outgoing):
                 sender, receiver = anyio.create_memory_object_stream(0)
                 async with anyio.create_task_group() as tasks:
@@ -54,7 +39,26 @@ def build_server(source_dir, state_dir, event_id, allow_live=False):
                     finally:
                         tasks.cancel_scope.cancel()
 
-    server = InboxMCP("EventGuard Bound Minimal Inbox")
+    return InboxMCP(name)
+
+
+def build_server(source_dir, state_dir, event_id, allow_live=False):
+    """Legacy three-tool contract stays compatible with acceptance evidence."""
+    from eventguard.queue_inbox import QueueInbox
+    backend = QueueInbox(source_dir, state_dir, event_id=event_id, allow_live=allow_live)
+    def validate(name, arguments):
+        allowed = {"receive_event": set(), "query_evidence": {"event_id"},
+                   "ack_event": {"event_id", "query_id", "decision"}}
+        if name not in allowed:
+            raise ValueError("unknown_inbox_tool")
+        if type(arguments) is not dict or set(arguments) != allowed[name]:
+            raise ValueError("invalid_inbox_tool_arguments")
+        for field in ("event_id", "query_id"):
+            if field in arguments and (type(arguments[field]) is not str or not _ID.fullmatch(arguments[field])):
+                raise ValueError("invalid_inbox_tool_arguments")
+        if name == "ack_event" and (type(arguments["decision"]) is not str or arguments["decision"] not in {"reviewed_metadata", "needs_more_evidence"}):
+            raise ValueError("invalid_inbox_tool_arguments")
+    server = _sdk_server("EventGuard Bound Minimal Inbox", validate)
     server._inbox_backend = backend
 
     @server.tool()
@@ -75,15 +79,96 @@ def build_server(source_dir, state_dir, event_id, allow_live=False):
     return server
 
 
+def build_operator_server(root, namespace="test", allow_live=False, operator_api=None):
+    """Optional SDK adapter to the exact application API used by the CLI.
+
+    Namespace/live scope is fixed by the human launcher, not tool arguments.
+    Starting this server never starts a model or an idle monitor.
+    """
+    from eventguard.operations import OperatorAPI
+    if namespace not in {"live", "test"} or type(allow_live) is not bool or namespace == "live" and not allow_live:
+        raise ValueError("operator_live_scope_not_authorized")
+    api = operator_api or OperatorAPI(root)
+    def validate(name, arguments):
+        allowed = {"capabilities": set(), "status": set(), "stop": set(), "monitor_once": set(),
+                   "list_events": {"limit"}, "inspect_event": {"event_id"}, "diagnose_event": {"event_id"}, "report": set()}
+        if name not in allowed or type(arguments) is not dict:
+            raise ValueError("invalid_operator_tool_arguments")
+        if (name != "list_events" and set(arguments) != allowed[name]) or set(arguments) - allowed[name]:
+            raise ValueError("invalid_operator_tool_arguments")
+        if "event_id" in arguments and (type(arguments["event_id"]) is not str or not _ID.fullmatch(arguments["event_id"])):
+            raise ValueError("invalid_operator_tool_arguments")
+        if "limit" in arguments and (type(arguments["limit"]) is not int or not 1 <= arguments["limit"] <= 1000):
+            raise ValueError("invalid_operator_tool_arguments")
+    server = _sdk_server("EventGuard Shared Local Operator", validate)
+
+    @server.tool()
+    def capabilities() -> dict:
+        """Shared human/agent capabilities. No model needed; data never grants authority."""
+        return api.call("capabilities")
+
+    @server.tool()
+    def status() -> dict:
+        """Read the same monitor health and coverage as the local CLI."""
+        return api.call("status")
+
+    @server.tool()
+    def stop() -> dict:
+        """Cooperatively stop this project's monitor only; never signals another process."""
+        return api.call("stop", namespace)
+
+    @server.tool()
+    def monitor_once() -> dict:
+        """One foreground cycle; fixed synthetic fixture unless launcher allowed live. OS hang limits remain."""
+        return api.call("monitor", max_cycles=1, max_seconds=30, fixture="tests/fixtures/normal.json" if namespace == "test" else None)
+
+    @server.tool()
+    def list_events(limit: int = 100) -> dict:
+        """List bounded event facts in the launcher's namespace; no ACK or diagnosis."""
+        return api.call("events", namespace, limit)
+
+    @server.tool()
+    def inspect_event(event_id: str) -> dict:
+        """Read saved event facts and latest diagnosis, identical to CLI inspect; no OS query."""
+        return api.call("inspect_event", event_id, namespace)
+
+    @server.tool()
+    def diagnose_event(event_id: str) -> dict:
+        """Run only fixed event-bound typed read-only queries and save their result. No free query strings, ACK or remediation."""
+        return api.call("diagnose_event", event_id, namespace)
+
+    @server.tool()
+    def report() -> dict:
+        """Export the same local JSON/escaped HTML report available to a human."""
+        return api.call("report", namespace)
+
+    return server
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="EventGuard event-bound minimal stdio MCP; no network listener.")
-    parser.add_argument("--source-dir", required=True, type=Path)
-    parser.add_argument("--state-dir", required=True, type=Path)
-    parser.add_argument("--event-id", required=True)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--source-dir", type=Path)
+    mode.add_argument("--operator-root", type=Path, help="Shared local CLI/API tools; no agent/monitor is launched automatically.")
+    parser.add_argument("--state-dir", type=Path)
+    parser.add_argument("--event-id")
+    parser.add_argument("--namespace", choices=("test", "live"), default="test")
     parser.add_argument("--allow-live", action="store_true", help="Explicitly allow the configured live event's fixed minimal metadata.")
     args = parser.parse_args(argv)
     try:
-        server = build_server(args.source_dir, args.state_dir, args.event_id, args.allow_live)
+        if args.operator_root is not None:
+            if args.state_dir is not None or args.event_id is not None:
+                raise ValueError("incompatible_operator_scope")
+            server = build_operator_server(args.operator_root, args.namespace, args.allow_live)
+            from eventguard.runtime import Runtime
+            runtime = Runtime(args.operator_root)
+            runtime.ensure()
+            owner_path = runtime.path("data/operator-stdio.lock")
+        else:
+            if args.state_dir is None or args.event_id is None:
+                raise ValueError("bound_event_scope_required")
+            server = build_server(args.source_dir, args.state_dir, args.event_id, args.allow_live)
+            owner_path = args.state_dir / "inbox-owner.lock"
     except ImportError:
         print("EventGuard: installed MCP SDK unavailable; nothing was installed.", file=sys.stderr)
         return 2
@@ -92,13 +177,13 @@ def main(argv=None):
         return 2
     try:
         from eventguard.acceptance_control import FileLease
-        owner = FileLease(args.state_dir / "inbox-owner.lock")
+        owner = FileLease(owner_path)
         if not owner.acquire():
             print("EventGuard: this inbox state already has an active stdio owner.", file=sys.stderr)
             return 3
         try:
-            # Tools have only bounded local I/O. SDK stdin EOF closes naturally;
-            # no model wait, background worker, kill or terminate path exists.
+            # EOF stops new requests; already-started operations finish
+            # naturally. There is no model wait or forced process cleanup.
             server.run(transport="stdio")
         finally:
             owner.release()

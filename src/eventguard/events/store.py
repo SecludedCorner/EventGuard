@@ -163,7 +163,10 @@ class EventStore:
             rows = db.execute("""SELECT event_id,delivery_status FROM events
                 WHERE delivery_status='ack' OR (delivery_status='failed' AND updated_at < ?)
                 ORDER BY updated_at,event_id LIMIT ?""", (now - FAILED_RETENTION, needed)).fetchall()
+            has_reviews = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_reviews'").fetchone()
             for row in rows:
+                if has_reviews:
+                    db.execute("DELETE FROM event_reviews WHERE event_id=?", (row["event_id"],))
                 db.execute("DELETE FROM events WHERE event_id=?", (row["event_id"],))
                 self._increment(db, "rotated_" + row["delivery_status"], 1)
         db.execute("""DELETE FROM receipts WHERE event_id IN (
@@ -199,7 +202,10 @@ class EventStore:
     def _rotate_completed(self,db,now):
         rows=db.execute("""SELECT event_id,delivery_status FROM events WHERE delivery_status='ack'
             OR (delivery_status='failed' AND updated_at<?) ORDER BY updated_at,event_id LIMIT 100""",(now-FAILED_RETENTION,)).fetchall()
+        has_reviews = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_reviews'").fetchone()
         for row in rows:
+            if has_reviews:
+                db.execute("DELETE FROM event_reviews WHERE event_id=?", (row["event_id"],))
             db.execute("DELETE FROM events WHERE event_id=?",(row["event_id"],))
             self._increment(db,"rotated_"+row["delivery_status"],1)
         return len(rows)
@@ -310,6 +316,33 @@ class EventStore:
                 return self._row(row) if row else None
         except (sqlite3.Error,ValueError) as exc:
             raise StoreError("event_read_failed") from exc
+
+    def save_review(self, event_id, payload_hash, result):
+        """Keep the latest read-only diagnosis with its unchanged source event.
+
+        This is not a delivery receipt, ACK or case closure. Pending events and
+        ACK reserve survive any failed/capacity-limited review transaction.
+        """
+        encoded = json.dumps(result, ensure_ascii=True, sort_keys=True, allow_nan=False)
+        if len(encoded.encode("ascii")) > 65536:
+            raise CapacityError("review_result_capacity")
+        try:
+            with self._lock, self._connect() as db:
+                db.execute("BEGIN IMMEDIATE")
+                row = db.execute("SELECT payload_hash FROM events WHERE event_id=?", (event_id,)).fetchone()
+                if row is None or row[0] != payload_hash or result.get("payload_hash") != payload_hash:
+                    raise StoreError("review_source_identity_conflict")
+                db.execute("""CREATE TABLE IF NOT EXISTS event_reviews(event_id TEXT PRIMARY KEY,payload_hash TEXT NOT NULL,
+                    result TEXT NOT NULL,updated_at REAL NOT NULL)""")
+                previous = db.execute("SELECT length(CAST(result AS BLOB)) FROM event_reviews WHERE event_id=?", (event_id,)).fetchone()
+                growth = max(0, len(encoded) - (previous[0] if previous else 0))
+                page = db.execute("PRAGMA page_size").fetchone()[0]
+                if self._used_bytes(db) + growth + page + self.ack_reserve_bytes > self.max_bytes:
+                    raise CapacityError("review_capacity_pending_and_ack_space_preserved")
+                db.execute("INSERT OR REPLACE INTO event_reviews(event_id,payload_hash,result,updated_at) VALUES(?,?,?,?)",
+                           (event_id, payload_hash, encoded, time.time()))
+        except sqlite3.Error as exc:
+            raise self._sqlite_error(exc) from exc
 
     def _ack(self, db, event_id, receipt, now):
         clean = validate_receipt(event_id, receipt)

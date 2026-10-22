@@ -17,7 +17,7 @@ EVENT_FIELDS = frozenset({
 META_FIELDS = frozenset({
     "id", "version", "rule_id", "protocol", "address", "local_address",
     "local_port", "port", "pid", "process_instance_ref", "instance_ref",
-    "path", "path_status", "name", "source", "source_name", "item", "value",
+    "path", "path_status", "name", "source", "source_name", "item", "property", "value",
     "status", "reason", "summary", "internet_reachability",
     "compromise_conclusion", "gaps", "profile", "redacted", "start", "end",
     "count", "previous", "current", "changed_fields", "detector", "section_id",

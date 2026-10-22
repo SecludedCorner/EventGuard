@@ -1,5 +1,7 @@
 # EventGuard
 
+**目前方向：不依賴 agent 的本機監看與查證，人類與可選 agent 工具共用操作核心。** 無模型的 fixture 快速開始、事件檢視／查證／報告及可選 stdio 接口見 [人類與 agent 共用介面](docs/HUMAN_AGENT_INTERFACE.md)；下列真 Codex 結果是歷史有限通路驗收，不是正常監看的必要步驟。
+
 以 [MIT 授權](LICENSE)釋出的 Windows 本機唯讀事件監看與 Codex agent 接收工具：[SecludedCorner/EventGuard](https://github.com/SecludedCorner/EventGuard)。目前為工程預覽。
 
 **本機事件已接到專用 Codex CLI agent；完整產品仍為工程預覽。** 2026-10-22 MSI 的有限合成 A／B1／B2／C 已通過：7 個唯一事件、8 次接收／查證、7 次耐久 ACK。新增前景入口亦完成一次合成事件及有界實機佇列試運轉，真正 agent 經工具接收、query、ACK 並自然退出。完整 Windows 採集覆蓋、長期可靠性與原生診斷閉環仍待驗證；實測範圍與證據見 [STATUS](STATUS.md)。

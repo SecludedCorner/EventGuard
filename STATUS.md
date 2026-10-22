@@ -263,3 +263,19 @@ python -B reports/phase1-collectors-001/verify.py
 測試數以 `reports/phase2-role-001/summary.json` 為準：相關既有 fixture 18 項通過、0 failure/error/skip，0.9717 秒；另有 18 個探針斷言，不和測試數相加。未重跑全套。原始碼 hashes 前後一致；該探針 model_calls=0、real_codex_tasks=0、native_provider_queries=0、external_attempts=[]。單次元件計時不是完整 A/B 效能評比；模型品質／延遲／token／金額均未測。原始回傳、synthetic event、SQLite 回條與 tests.txt 全留忽略 reports，不提交。
 
 建議 A：確定性 playbook＋本機報告，agent 降為可選；B 的事件綁定、字串 projection 與可量增益要求已寫入比較報告。依原請求等待使用者選 A／B 後才實作；選 B 亦不自動批准真模型。Phase 1 的 tasks／Defender／程序 coverage 限制仍在；Job Object、容量、長期驗證及實機注入尚未進行。本批不啟動背景監看、不建立排程、不提權、不下載安裝、不操作網路、不推送。
+
+## 2026-10-22 22:32 台北：獨立核心與人類／agent 共用操作
+
+使用者已明確改定方向：「不論有沒有 agent 都要能獨立運作，人類要能操控並知道發生了甚麼；也提供 agent 介面，使用同一套操作與可見資訊」。先前 A／B 等待關卡已解除。來源基準 `a130dcef3648330adadfef99875873db0888f22e`、原 feature 分支，原有未提交變更為空；沒有模型／真 Codex、提權、下載安裝、系統政策變更、網路、永久 MCP 註冊、排程、自啟或實機狀態注入。
+
+實作共用 OperatorAPI，CLI 與同一 stdio 入口的 operator mode 共用能力、狀態、事件清單／檢視、事件綁定唯讀查證、報告及合作停止；MCP 另提供固定一輪 monitor_once，長期前景仍用 CLI。核心不依賴 SDK／模型，舊三工具接收／摘要 query／ACK 與驗收契約保留。原有 status／report 邏輯移入共用層，read-only 視圖不初始化或修改 SQLite。新事件表顯示固定說明、具體觀測、coverage 與最近診斷。
+
+查證只從耐久事件綁定 protocol／port、process_instance_ref 或 persistence kind，不接受 agent 的自由查詢參數；缺程序實例留 process_binding_missing。產出 observations、coverage、uncertainties 與固定 incident_conclusion=not_assessed，另保存到同一 SQLite 的最新 event_reviews，不修改 pending／ACK／receipt。資料最小化、字串與快取 schema 驗證、固定錯誤 envelope、容量／ACK reserve 回滾及 ACK 事件輪替清理均有對應測試；介面契約見 [HUMAN_AGENT_INTERFACE](docs/HUMAN_AGENT_INTERFACE.md)。
+
+精確測試數單一來源為本機 `reports/phase2-operator-001/verified/summary.json`：Python 3.13.3，命令 `python -B reports/phase2-operator-001/verify.py --label verified`，304 discovered、302 passed、0 failure/error、2 symlink 建立權限 skip；72 Python AST，來源 hashes 前後不變，92.134 秒，exit 0。含 17 項新操作介面測試與既有 suite，範圍 fixture／已安裝 SDK stdio／fake CLI；沒有真 agent 或本輪 Windows provider 驗收，不與歷史實機／模型數字累加。
+
+`verified/operator-stdio-trace.json` 保留真 Python 子程序的八個 tools/call request／實際 SDK response、child PID、exit 0、reader thread 已退出及該程序 remaining_owned_children=0；不是 Codex agent 接收證據。舊通路測試仍通過。另命令 `python -B reports/phase2-operator-001/demo.py --final` 在隔離 runtime，實際執行人類 CLI main 的 fixture 監看、產生三件 synthetic、list／inspect、阻止 synthetic 原生 query、fixture 注入診斷與 JSON／HTML 報告。`demo-final/manifest.json` 保存命令 argv、真 stdout、同事件關聯、診斷與 source hashes；三件仍 pending、0 receipt，核心未 import MCP，monitor stopped，exit 0。所有原始資料留忽略 reports，不提交。
+
+保留的失敗與修正：第一輪全套發現預先建立診斷表占用小型 outbox 空間，使既有滿載／ACK 輪替測試失敗；改為明確 diagnose 時才在同交易建表，失敗連 DDL 一併回滾。可讀性測試另發現原 schema 會丟棄既有 synthetic Defender 的 property，現在保留此 metadata key、共用 view 僅接受固定防護欄位枚舉。初輪／release 失敗證據及中間 final 成功快照均保留，當前版本只以 verified 為準；沒有放寬原容量或移除既有測試。
+
+尚未驗證：新 agent 介面的真模型操作／效益、重開機後的 Windows coverage、任意 OS hang 的硬性退出、長期控制／自啟、monitor_gap 與 soak。Phase 1 tasks／Defender／程序可讀性缺口未改寫為成功；診斷與 ACK 仍不代表主機安全。Phase 3–7 尚未實作，本輪不宣稱全天候或已將工具載入任意桌面聊天。具體提交由 Git 與本機 source-commit.json 綁定，不推送。
