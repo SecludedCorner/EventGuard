@@ -3,6 +3,7 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+import tomllib
 import unittest
 from unittest.mock import patch
 
@@ -25,6 +26,11 @@ class DeliveryValidationTests(unittest.TestCase):
         config = next(value for value in read_only if value.startswith('mcp_servers.'))
         self.assertIn('query_evidence', config)
         self.assertNotIn('ack_event', config)
+        server = tomllib.loads(config)["mcp_servers"]["eventguard_local"]
+        self.assertEqual(server["enabled_tools"], ["wait_for_event", "query_evidence"])
+        self.assertEqual(server["tools"], {name: {"approval_mode": "approve"}
+                                         for name in server["enabled_tools"]})
+        self.assertNotIn("default_tools_approval_mode", server)
         self.assertIn('features.unbounded_connection_retries=false', multiple)
 
     def test_prepare_is_durable_finite_and_never_launches_model(self):

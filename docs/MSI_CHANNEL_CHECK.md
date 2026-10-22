@@ -18,6 +18,10 @@ $codexExe = (Get-Command codex).Source
 $codexExe
 ```
 
+若 PATH 另有原生入口，可用 `(Get-Command codex.exe -CommandType Application -ErrorAction Stop).Source` 定位，核對其版本與 `login status` 後再指定。若執行環境未選到原本登入的 home，只可在本次 PowerShell 程序指定既有正常目錄：`$env:CODEX_HOME = Join-Path $env:USERPROFILE '.codex'`；不建立新 home、不移植或讀取憑證內容，再以 `& $codexExe login status` 確認。這不是永久設定。
+
+Codex 自身啟動仍可能需要對正常 home 的必要狀態檔作可寫開啟；`sqlite_home`／`log_dir` 覆寫不能保證在外層唯讀 sandbox 下初始化成功。遇 `in-process app-server ... Access denied (os error 5)` 時保留本次退出回條，依當次有效授權處理執行環境限制，不提權、不用 bypass、不搬移登入。CLI 自身也可能執行歷史索引；`--ephemeral` 只表示本次會話不持久化。操作者不讀既有 sessions，不將包含私人路徑的本次 stderr 或 CLI state 上傳。
+
 Python 使用已安裝且能載入 MCP SDK 的 3.13；不自動下載。若 `$codexExe` 是 `.cmd`、`.bat` 或 `.ps1`，請把變數改為同一安裝中既有原生 `codex.exe` 的完整路徑。入口會拒絕 shell 包裝，不會為此改執行政策或安裝程式。缺少 Python／SDK／原生 CLI／既有登入時，先回報該項阻塞，不繼續啟動模型。目錄不能經 symlink／junction 或含 `..`。
 
 若已經 clone，先保留本機修改，再 fetch 並切換這個分支；不使用 reset、clean 或強制覆寫。這次新增的檔案是 `scripts/validate_delivery.py` 與本頁，可靠重試及 capture 相關程式也在同一分支。
@@ -68,4 +72,4 @@ A、兩種 B、C 合計啟動 5 個真 Codex 任務，各自可能含多次模�
 
 先回報 A／B／C 的 passed、missing 與合成 event ID；不要把帳戶憑證、Codex home、原始會話或完整環境 log 上傳 GitHub。若 A 失敗，回報固定錯誤類型與退出碼，先不跑 B／C。
 
-此分支的程式已在雲端做本機測試；MSI 的實際 Codex／SDK／Windows 行為尚未驗收。本階段不承諾永久等待、接續任意桌面對話、無限佇列容量或長期低負載達標。完整單事件排障見 [CODEX_ACCEPTANCE](CODEX_ACCEPTANCE.md)。
+2026-10-22 MSI 已以 Python 3.13.3／MCP SDK 1.6.0／既有 Codex 0.163.0-alpha.11.1 真正通過本頁 A／B1／B2／C：7 個唯一事件、8 次接收／query、7 次 ACK，缺漏與非預期重複為 0。第一輪初始化拒絕與第二輪工具批准失敗均保留，第三輪 A 成功後才執行 B/C；詳見 STATUS。本階段不承諾永久等待、接續任意桌面對話、Windows 原生採集、無限佇列容量或長期低負載達標。完整單事件排障見 [CODEX_ACCEPTANCE](CODEX_ACCEPTANCE.md)。

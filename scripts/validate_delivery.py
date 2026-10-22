@@ -78,11 +78,8 @@ def argv(runtime, evidence, count, read_only=False, native_executable="codex"):
     native = shutil.which(native_executable)
     if not native or Path(native).suffix.lower() in {".cmd", ".bat", ".ps1"}:
         raise ValueError("native_codex_required")
-    args = command(native, sys.executable, runtime, evidence_dir=evidence)
-    if count > 1:
-        args = [value.replace(',"--single-wait"', '') for value in args]
-    if read_only:
-        args = [value.replace(',"ack_event"', '') for value in args]
+    args = command(native, sys.executable, runtime, evidence_dir=evidence,
+                   single_wait=count == 1, allow_ack=not read_only)
     args[-1:-1] = ["-c", "features.unbounded_connection_retries=false"]
     return args
 

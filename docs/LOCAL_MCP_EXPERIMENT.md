@@ -4,7 +4,7 @@
 
 這是目前唯一優先接線方向：本機程式保存事件，Codex 呼叫本機 stdio MCP 工具等待；事件出現後工具返回，agent 再查證並留下同一事件的結果。不需要網域、HTTPS、proxy、雲端服務或新增憑證。既有雲端 bridge 保留為停用的歷史候選，不是部署前置要求。
 
-**狀態：無模型協定實驗，尚未證明真實 Codex 續跑或永久等待。** 本次工具只接受合成事件，查證只讀取保存的合成 snapshot，不查 Windows。不是另一個假 agent，也不把 ACK 當作喚醒證據。
+**本頁保留早期無模型協定研究；2026-10-22 MSI 有限真 Codex 通路 A／B1／B2／C 已通過，詳見 [CODEX_ACCEPTANCE](CODEX_ACCEPTANCE.md) 與 [STATUS](../STATUS.md)。** 永久等待仍未證明。工具只接受合成事件，查證只讀取保存的合成 snapshot，不查 Windows；SDK 協定證據與真正 CLI 工具接收證據分開。
 
 ## 已核實與尚未核實
 
@@ -48,7 +48,7 @@ python -B -m unittest discover -s tests -p test_local_wait.py -v
 
 測試啟動真實本機 Python MCP server，使用 SDK／stdio 協定互通、加入合成事件、讀取證據、ACK，並測試取消、逾時與 EOF。這不是 mock 模型，也不是與 Codex 已接通；結果只證明本機協定與資料流程。
 
-## 一次真實 Codex 實驗的精確批准範圍（尚未執行）
+## 早期一次真實 Codex 實驗的批准範圍與最小命令
 
 需另外明確批准：**一次短的官方 Codex CLI 任務**，使用目前已登入帳戶額度；只把公開合成事件摘要與合成 snapshot 傳給模型。預計等待／查證／ACK 三個工具呼叫，可能包含多次模型請求，不承諾固定 token 或費用。這不授權持續模型存取、正式資料傳輸或任何系統處置。
 

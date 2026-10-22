@@ -1,14 +1,14 @@
 # EventGuard 接手與下一任務
 
-**最新接手方向：只推進直接本機 stdio MCP 等待方案。** 先讀 [LOCAL_MCP_EXPERIMENT](docs/LOCAL_MCP_EXPERIMENT.md)。雲端 bridge／網域／HTTPS／proxy 已停止擴建，以下舊候選不構成部署要求。只允許無模型協定研究與合成測試；真正帳戶模型任務、MCP 註冊或持續存取需按該文件取得明確範圍。不能宣稱已接通任意桌面任務或永久等待。
+**最新結果：MSI 本機有限 stdio MCP 真通路 A／B1／B2／C 全部通過。** 從 `4ffc86c1b931a8706d26723c676e974dba4fbc1d` 接續，修正非互動 CLI 的逐工具單次批准；7 個唯一公開合成事件、8 次接收／query、7 次 ACK，無缺漏或重複結案。先讀 [MSI_CHANNEL_CHECK](docs/MSI_CHANNEL_CHECK.md)、[CODEX_ACCEPTANCE](docs/CODEX_ACCEPTANCE.md) 及 STATUS 最新紀錄。雲端 bridge 保持停用，無須部署雲端環境。
 
-本次僅文件增量；`fd45578` frozen ZIP、source、tests、config、playbooks保持固定，不以新文件覆寫舊快照或測試紀錄。版本定位是**尚未完成目標的工程預覽**：正式監看未啟動，真實 agent 未接通。所有範例應保持匿名，不放實際使用者路徑、主機警報、私人資料或秘密。
+本輪使用者只批准有限公開合成驗收，另明確批准 Git 與驗收程式以一般使用者執行的限定 sandbox 例外；這不是未來永久授權。正常 Codex home／既有登入保留，未讀取或複製憑證內容、未永久註冊 MCP、未觸發 UAC。舊 MVP、`fd45578` frozen ZIP 與私人歷史不動；完整 trace／SQLite／runtime 只在忽略的 reports。正式監看與完整產品仍未完成，不能宣稱接續任意桌面聊天、Windows 原生採集或永久等待。
 
 先讀 [AGENTS](AGENTS.md)、[README](README.md)、[STATUS](STATUS.md) 及 [DEVELOPMENT](docs/DEVELOPMENT.md)。實作主檔 [ARCHITECTURE](docs/ARCHITECTURE.md)、[AGENT_CONTRACT](docs/AGENT_CONTRACT.md)、[OPERATIONS](docs/OPERATIONS.md)、[TARGET_DESIGN](docs/TARGET_DESIGN.md)、[INGRESS_CHECK](docs/INGRESS_CHECK.md) 保留原有定位；目標規格不是已完成證明。
 
 ## 具體下一任務與驗收條件
 
-目前整體驗收為 BLOCKED：固定快照重現、啟動／合作停止／程序退出已有證據，但實機部分採集來源 denied，真實 agent 也未接通。下一任務有兩項必要工作：分析 coverage 缺口並設計一般權限下可行的改善；完成獲授權的真實 ingress 與 agent 診斷閉環。不得將全程序提權作為補齊 coverage 的預設方案。`docs/COVERAGE_PLAN.md` 為改善計畫，實作與驗證結果須分開記錄。
+完整產品驗收仍為 BLOCKED；以下是歷史產品範圍與舊接手 Prompt，本輪有限合成通路的成功以最新 STATUS 為準。正式採集 coverage、長期 ingress 與原生診斷閉環仍需後續具體任務及授權，不能由本文件自動擴展。不將全程序提權作為補齊 coverage 的預設方案。
 
 下一工程任務須朝「事件真正喚醒agent並由agent診斷」最高驗收推進；先固定來源、隔離重現與確認接線契約。mock僅是測試，不能作產品完成的替代。未獲具體接收端／傳輸／平台授權前，先交付契約缺口，不自行接外部服務：
 

@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import tomllib
 import unittest
 from unittest.mock import patch
 
@@ -88,6 +89,13 @@ class AcceptanceTests(unittest.TestCase):
         self.assertIn("features.shell_tool=false", args)
         self.assertTrue(any("tool_timeout_sec=60" in arg and "--single-wait" in arg for arg in args))
         self.assertFalse(any("bypass" in arg for arg in args))
+        config = tomllib.loads(next(value for value in args if value.startswith("mcp_servers.")))
+        server = config["mcp_servers"]["eventguard_local"]
+        self.assertEqual(server["enabled_tools"], ["wait_for_event", "query_evidence", "ack_event"])
+        self.assertEqual(server["tools"], {name: {"approval_mode": "approve"}
+                                         for name in server["enabled_tools"]})
+        self.assertNotIn("default_tools_approval_mode", server)
+        self.assertNotIn("approval_policy", config)
 
     def test_missing_capability_and_directory_not_overwritten(self):
         with patch("eventguard.codex_acceptance.shutil.which", return_value=None):

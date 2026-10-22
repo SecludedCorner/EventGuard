@@ -16,7 +16,9 @@ python -B scripts/acceptance_codex.py run --run-dir reports/msi-codex-001
 
 `python` 必須是能載入 SDK 的既有 Python 3.13；若不是，改用其完整路徑。`codex` 必須是可從 PATH 啟動的原生執行檔；若 PATH 找到的是 npm `.cmd`、`.bat` 或 `.ps1` 包裝，入口會在模型啟動前拒絕。可加 `--codex-executable "既有原生 Codex 執行檔完整路徑"` 指定已安裝的二進位檔，不經 shell、不自動安裝。缺少 SDK／CLI／有效登入時停止，先處理該項前置條件，不自行安裝或建立憑證。命令會使用目前帳戶進行一次真實模型任務（可能多次模型請求，不能保證 token／費用），只處理公開合成資料。
 
-執行器自動啟動一次 `codex exec --ignore-user-config --ephemeral -s read-only --json`，單次覆寫三個本機 MCP 工具、停用 shell 工具。這不是完整工具隔離；受管理工具與政策仍有效。工具不執行原生查詢或系統處置。Codex 的 SQLite 與 log 路徑單次指向此 run 目錄；帳戶登入仍走原有官方機制，不複製 auth 檔。先確認 agent 已寫入 `waiting`，在程式內閒置 3 秒後才產生唯一合成事件，沒有人工搬運事件回覆。
+執行器自動啟動一次 `codex exec --ignore-user-config --ephemeral -s read-only --json`，單次覆寫三個本機 MCP 工具、停用 shell 工具。執行 `run`／`retry` 或有限驗收的 `--execute`，代表已批准該次公開合成 wait／query／ACK；入口只對曝光白名單中的工具設定 `tools.<tool>.approval_mode="approve"`。非互動 exec 的總批准政策維持不變，沒有全域／專案 MCP 設定或繞過旗標。C 的 read-before-ack 階段只曝光及批准 wait／query，完全省略 ACK。這不是完整工具隔離；受管理工具與政策仍有效。工具不執行原生查詢或系統處置。Codex 的 SQLite 與 log 路徑單次指向此 run 目錄；帳戶登入仍走原有官方機制，不複製 auth 檔。先確認 agent 已寫入 `waiting`，在程式內閒置 3 秒後才產生唯一合成事件，沒有人工搬運事件回覆。
+
+僅有 `enabled_tools` 不構成工具批准。若真 trace 顯示 `MCP tool call requires approval, but approval policy is never`，不能把 CLI exit 0 當成功；須有實際工具回傳、durable 結果與 ACK。上述逐工具單次設定依[官方 MCP 文件](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)，不改總批准政策，也不批准其他工具。
 
 另一個終端可查狀態／要求停止：
 

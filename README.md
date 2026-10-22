@@ -2,23 +2,23 @@
 
 私人儲存庫：[SecludedCorner/EventGuard](https://github.com/SecludedCorner/EventGuard)。儲存庫建立不代表雲端開發環境或 agent 接收端已接通。
 
-**整體驗收仍為 BLOCKED。** 固定快照的重現檢查與啟動／合作停止／程序退出已有證據；目標 Windows 主機部分採集來源仍為 denied，須完成 coverage 缺口分析；真實 agent ingress 亦未接通。這兩項阻塞都不能以 mock 通過取代，不可因此提升整個程序權限。[COVERAGE_PLAN](docs/COVERAGE_PLAN.md) 與 [INGRESS_PLAN](docs/INGRESS_PLAN.md) 分別是覆蓋改善計畫與接線候選設計，並非改善或連線已完成的證明。
+**本機有限合成事件通路已通過；完整產品驗收仍為 BLOCKED。** 2026-10-22 MSI 的真正 Codex CLI agent 已通過單件、連續兩件、批次三件及 ACK 前退出補收：7 個唯一事件、8 次接收／查證、7 次耐久 ACK，無缺漏或重複結案。正式 Windows 採集覆蓋、長期事件啟動與診斷閉環仍待驗證，不可因此提升整個程序權限。[COVERAGE_PLAN](docs/COVERAGE_PLAN.md) 與 [INGRESS_PLAN](docs/INGRESS_PLAN.md) 保留其歷史計畫定位；本輪實測見 [STATUS](STATUS.md)。
 
 EventGuard 目前是**尚未完成目標的工程預覽**。它提供無 GUI 的本機唯讀監看核心：一般權限背景程式採集有限 metadata，以確定性規則判斷變化，僅異常轉態建立耐久事件；正常週期不呼叫模型。最高產品驗收是事件真正喚醒指定長期任務 agent，再由 agent 按需使用同工具診斷 CLI，不能用mock替代。
 
-**正式監看尚未啟動，真實 agent 接收端尚未接通。** 本版可驗證本機 synthetic event → mock receiver → 耐久 ACK → 合成診斷 → `mock_closed`，但不會喚醒真正 Codex／dot。事件落盤、已傳輸、接收 ACK、agent 開始與案件結案不可混為一談。
+**正式監看尚未啟動。** 本版有限驗收已證明程式產生的公開 synthetic event 可由真正 Codex agent 透過本機 MCP 收到、查證並 ACK；mock 流程仍只算 mock。事件落盤、已傳輸、接收 ACK、agent 開始與案件結案不可混為一談。這不代表既有桌面聊天會自動接續或已建成長期監看。
 
 本機固定基準 `fd45578` 與 frozen ZIP 保留不變；目前 `main` 已另加 MCP Events 接線程式，新增結果以當前 commit 與測試為準。這不修改舊 MVP，也不把歷史測試升格為平台接通證據。
 
 ## MSI 單次 Codex 驗收入口
 
-先依 [從 GitHub 取得並驗收 A／B／C](docs/MSI_CHANNEL_CHECK.md) 在 MSI 測試真正事件接收、連續／批次與 ACK 前補收。雲端發布不是本機驗收的前置條件；這些項目尚未在 MSI 實測。
+依 [從 GitHub 取得並驗收 A／B／C](docs/MSI_CHANNEL_CHECK.md) 使用有限驗收入口。MSI 本輪 A／B1／B2／C 已真正通過；雲端發布不是本機驗收的前置條件。
 
-新增 `python -B scripts/acceptance_codex.py run --run-dir reports/msi-codex-001`，自動協調 agent 等待後的合成 producer、查證與耐久結果／ACK，提供 status／stop、同事件手動 retry、跨程序鎖、有界輸出與分次保存的證據。詳見 [MSI 最短操作、逾時與故障排查](docs/CODEX_ACCEPTANCE.md)。雲端真 Codex 啟動目前受唯讀 app-server 初始化阻塞，尚無真端到端成功；不是正式常駐或桌面任務續接。
+`python -B scripts/acceptance_codex.py run --run-dir reports/msi-codex-001 --codex-executable <既有原生路徑>` 自動協調 agent 等待後的合成 producer、查證與耐久結果／ACK，提供 status／stop、同事件手動 retry、跨程序鎖、有界輸出與分次保存的證據。三工具批准只作用於本次執行，不永久註冊 MCP。詳見 [MSI 最短操作、逾時與故障排查](docs/CODEX_ACCEPTANCE.md)。雲端先前的網路與初始化阻塞保留為該環境紀錄，不影響本輪 MSI 已核實的有限成功。
 
 ## 目前優先：直接本機 MCP 等待實驗
 
-使用者目前選定本機方案。已新增 `scripts/eventguard_local_mcp.py`：本機 stdio 三個工具 `wait_for_event`、`query_evidence`、`ack_event`。它們只處理專用目錄中的合成事件，沒有網路服務、proxy、憑證或模型呼叫；**尚未做真實 Codex 模型續跑驗證，也不能承諾永久等待**。Codex 官方工具逾時預設 60 秒、可設定；不得用模型重複等待代替事件驅動。
+使用者目前選定本機方案。`scripts/eventguard_local_mcp.py` 提供本機 stdio 三個工具 `wait_for_event`、`query_evidence`、`ack_event`。server 本身只處理專用目錄中的合成事件，沒有網路服務、proxy、憑證或模型呼叫；有限驗收由外層明確啟動真正 Codex。真實等待後續跑及 ACK 前補收已有本輪證據，永久等待仍無保證。入口明設工具 timeout 60 秒、server wait 30 秒；不得用模型重複等待代替事件驅動。
 
 讀 [最小實驗與單次批准範圍](docs/LOCAL_MCP_EXPERIMENT.md)。入口只使用已安裝的可選 Python MCP SDK；缺少時報錯退出，不下載。正式監看、正式資料傳輸及持續模型權限仍未啟用。
 

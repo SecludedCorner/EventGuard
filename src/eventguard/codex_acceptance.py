@@ -33,12 +33,23 @@ def utc():
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
 
 
-def command(codex, python, runtime, evidence_dir=None):
+def command(codex, python, runtime, evidence_dir=None, *, single_wait=True, allow_ack=True):
     # JSON strings are also valid TOML basic strings; never interpolate shell code.
+    tools = ["wait_for_event", "query_evidence"]
+    if allow_ack:
+        tools.append("ack_event")
+    server_args = ["-B", str(ROOT / "scripts/eventguard_local_mcp.py")]
+    if single_wait:
+        server_args.append("--single-wait")
+    server_args.extend(["--data-dir", str(runtime)])
+    # These exact synthetic tools are authorized by invoking this finite run.
+    # Exec cannot interactively approve MCP calls (approval_policy=never).
+    # Scope that approval to this invocation/tool list; leave global policy intact.
+    approvals = ",".join(name + '={approval_mode="approve"}' for name in tools)
     config = ('mcp_servers.eventguard_local={command=' + json.dumps(str(python))
-              + ',args=["-B",' + json.dumps(str(ROOT / "scripts/eventguard_local_mcp.py"))
-              + ',"--single-wait","--data-dir",' + json.dumps(str(runtime))
-              + '],tool_timeout_sec=60,enabled_tools=["wait_for_event","query_evidence","ack_event"]}')
+              + ',args=' + json.dumps(server_args, separators=(",", ":"))
+              + ',tool_timeout_sec=60,enabled_tools=' + json.dumps(tools, separators=(",", ":"))
+              + ',tools={' + approvals + '}}')
     evidence_dir = evidence_dir or runtime.parent
     return [codex, "exec", "--ignore-user-config", "--ephemeral", "-C", str(ROOT),
             "-s", "read-only", "--json", "-c", "features.shell_tool=false",
