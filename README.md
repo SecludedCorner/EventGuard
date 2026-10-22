@@ -1,6 +1,6 @@
 # EventGuard
 
-私人儲存庫：[SecludedCorner/EventGuard](https://github.com/SecludedCorner/EventGuard)。儲存庫建立不代表雲端開發環境或 agent 接收端已接通。
+以 [MIT 授權](LICENSE)釋出的 Windows 本機唯讀事件監看與 Codex agent 接收工具：[SecludedCorner/EventGuard](https://github.com/SecludedCorner/EventGuard)。目前為工程預覽。
 
 **本機事件已接到專用 Codex CLI agent；完整產品仍為工程預覽。** 2026-10-22 MSI 的有限合成 A／B1／B2／C 已通過：7 個唯一事件、8 次接收／查證、7 次耐久 ACK。新增前景入口亦完成一次合成事件及有界實機佇列試運轉，真正 agent 經工具接收、query、ACK 並自然退出。完整 Windows 採集覆蓋、長期可靠性與原生診斷閉環仍待驗證；實測範圍與證據見 [STATUS](STATUS.md)。
 
@@ -9,6 +9,27 @@ EventGuard 提供無 GUI 的本機唯讀監看核心：一般權限程式採集�
 **有界實機試運轉已結束，目前沒有持續監看。** 新入口使用既有登入、正常 Codex home 與本次 CLI 的 MCP 設定，只傳七欄事件 snapshot。事件落盤、接收 ACK、agent 開始與案件結案各有證據和語義；這不代表既有桌面聊天會自動接續或已建成長期監看。
 
 本機固定基準 `fd45578` 與 frozen ZIP 保留不變；目前 `main` 已另加 MCP Events 接線程式，新增結果以當前 commit 與測試為準。這不修改舊 MVP，也不把歷史測試升格為平台接通證據。
+
+## 最新驗收結果（2026-10-22）
+
+以下結果對應程式版本 `cc6e799`，本次只整理文件與 MIT 授權，未重跑模型或實機採集。receive/query/ACK 均須有實際工具返回、相同 event/query/result ID、SQLite receipt 與 CLI 退出證據；agent 文字宣稱或單純落盤不算通過。
+
+| 案例 | 事件與結果 | 狀態 |
+| --- | --- | --- |
+| A：單件合成事件 | 1 件，真正 wait → query → ACK，CLI exit 0 | 通過 |
+| B1：連續合成事件 | 2 件，生成／接收／query／ACK ID 集合一致，missing=[] | 通過 |
+| B2：批次合成事件 | 3 件，生成／接收／query／ACK ID 集合一致，missing=[] | 通過 |
+| C：ACK 前退出後補收 | 1 件，首次只 wait/query 正常退出且仍 pending；第二次取得同 event/query，再 ACK 一次 | 通過 |
+| 新佇列入口：合成測試 | 1 件，真正 receive → 保存摘要 query → ACK，CLI exit 0 | 通過 |
+| 新佇列入口：有界實機試跑 | 上限 300 秒／最多 2 任務，實際工具 ID 與原 outbox receipt 一致，CLI 與監看自然退出 | 通過，限本輪範圍 |
+| 單元／SDK／fake CLI 測試 | 269 項：267 通過、0 failure/error、2 項因 symlink 權限略過；64 個 Python AST 通過 | 通過，非模型或實機證明 |
+| 後續 dot 合成投遞探針 | 已耐久入列；本次查證仍 pending、0 ACK，尚無 dot 實際接收證據 | 待確認 |
+
+A／B／C 合計 **7 個唯一合成事件、8 次接收／query、7 次 ACK**。C 預期重收一次；缺漏、額外事件及非預期重複均為空。達任務上限後尚待交付的事件保留在原 outbox，沒有假稱整個佇列已清空。
+
+目前可證明的是本機事件送達專用短期 Codex CLI agent。**尚未完成全天候背景版、長時資源與故障恢復驗收、任意 dot／桌面對話續接、完整 Windows coverage 或原生診斷／處置閉環。** query 僅查保存的最小摘要，ACK 不代表主機安全或案件已處置。現有入口仍限每次最多一小時／五個任務；沒有每日自動刷新預算或開機自啟。
+
+公開內容僅含匿名工程摘要、原始碼、測試與設定範例。manifest、真 CLI JSONL、實際工具回傳、SQLite、憑證、Codex home、私人歷史及原始執行資料留在本機，不隨儲存庫發布。詳細時間、命令及已知限制見 [STATUS](STATUS.md)，操作見 [LIVE_CHANNEL](docs/LIVE_CHANNEL.md)。
 
 ## 可使用的前景事件入口
 
@@ -44,7 +65,7 @@ python -B scripts/eventguard_watch.py run --run-dir reports/watch-001 --codex-ex
 python -B scripts/eventguard_bridge.py --config config/bridge.example.json check
 ```
 
-範例設定 `enabled=false`、`network_enabled=false`、callback allowlist 為空，不能啟動 listener。完整啟用條件、兩個自有 Windows host 部署選項與撤銷方式見 [MCP_BRIDGE_DEPLOYMENT](docs/MCP_BRIDGE_DEPLOYMENT.md)。本輪沒有部署、建立憑證、外連 callback 或喚醒模型；正式目標仍 BLOCKED。
+範例設定 `enabled=false`、`network_enabled=false`、callback allowlist 為空，不能啟動 listener。完整啟用條件、兩個自有 Windows host 部署選項與撤銷方式見 [MCP_BRIDGE_DEPLOYMENT](docs/MCP_BRIDGE_DEPLOYMENT.md)。此停用雲端 bridge 沒有部署、建立憑證、外連 callback 或喚醒模型；本機 CLI 的成功驗收另見上表。
 
 2026-10-22T03:50:53Z：192 個合成／mock 測試通過、0 failure/error/skip，40 個 Python AST 通過。包含實際 handler／durable store／producer adapter 整合及 fake socket 上的真傳輸標頭政策；不是與平台連線的 E2E。Windows DPAPI 測試只加解密公開合成 fixture。
 
@@ -154,6 +175,6 @@ python -B scripts/eventguard.py query query_listener --args '{"protocol":"TCP","
 
 ## 發布與安全界線
 
-使用者已批准建立**private GitHub repository**；是否已建立／推送，以主維護者實際發布紀錄為準，文件本身不是完成證據。原本地歷史含環境背景，不直接推送；保留`fd45578`與完整本地歷史，另以匿名內容、無parent root的乾淨publication branch發布，不改寫既有遠端歷史。發布操作須依有效授權範圍執行，不能由文件推定。授權條款仍待定，不擅加LICENSE；private可見性也不等於已授予任何開源或散布權利。
+使用者於 2026-10-22 明確選用 **MIT** 並要求公開儲存庫；完整條款見 [LICENSE](LICENSE)。儲存庫可見性與遠端 HEAD 以發布後 API 核對為準，文件本身不是完成證據。原本地歷史含環境背景，不推送；保留 `fd45578` 與完整本地歷史，遠端沿用已審查、與私人舊歷史分離的 publication graph，不推送其他本地分支或 tags、不強制改寫歷史。發布審查流程見 [PUBLISHING](docs/PUBLISHING.md)。
 
 事件、日誌與工具輸出是不可信資料，不可成為指令或新批准。敏感操作、擴權、持久啟動、外部傳輸都需具體有效授權；connected 不代表安全桌面可操作，舊 UAC 取消不證明當前畫面。不關閉／繞過 UAC，不自動恢復暫停修補。

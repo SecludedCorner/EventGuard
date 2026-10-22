@@ -1,5 +1,7 @@
 # EventGuard 接手與下一任務
 
+**發布授權更新（2026-10-22）：使用者已指定 MIT，要求整理 README 最新驗收結果並公開儲存庫。** 完整條款見 [LICENSE](LICENSE)，發布檢查見 [PUBLISHING](docs/PUBLISHING.md)。以下歷史段落的 private／license 未定描述不再是目前發布政策；憑證、私人舊歷史與執行資料不得公開的界線仍需遵守。可見性與合併結果以 GitHub API 實際回讀為準。
+
 **最新結果：本機佇列已接通專用 Codex CLI agent。** 接續 `f093c2df531c7bbfc732e134cf718f00ebbfd22f`，新增 `eventguard_watch.py` 前景入口、無事不開模型的 dispatcher、只回七欄 snapshot 的 MCP inbox。一次合成事件及有界實機佇列試運轉已有真正 receive/query/ACK、SQLite receipt 及自然退出證據；實測細節見 STATUS 最新紀錄與 [LIVE_CHANNEL](docs/LIVE_CHANNEL.md)。先前有限合成 A／B1／B2／C 的 7 個唯一事件、8 次接收／query、7 次 ACK 證據保留，未重跑冒充新結果。雲端 bridge 保持停用。
 
 使用者另明確批准一輪最多一小時／五個任務的前景實機試運轉，只送最小摘要；本輪實際使用 300 秒／最多兩個實機任務，現已自然結束。正常 Codex home／既有登入保留，未讀取或複製憑證內容、未永久註冊 MCP、未觸發 UAC。舊 MVP、`fd45578` frozen ZIP 與私人歷史不動；完整 trace／SQLite／runtime 只留本機忽略目錄。本次批准不是未來持續授權，不重啟監看或模型；若下一任務需要再跑，先核對最新使用者範圍。

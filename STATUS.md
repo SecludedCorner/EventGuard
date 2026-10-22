@@ -217,3 +217,13 @@ python -B scripts/eventguard_watch.py run --run-dir reports/msi-live-001 --codex
 - 較早的一次合成 EOF 測試在關閉 stdin 後，SDK 預設工作群未退出，父測試 exit 1，留一個已核對的 Python 測試程序。修正 stdio 工作群的 EOF 合作取消後，新 EOF 測試自然 exit 0，inbox 18 項測試通過；但舊程序仍存在，且沒有強停批准，未 kill／terminate，不能宣稱所有測試程序皆已退出。身分／啟動時間與檢查證據只留 `reports/live-channel-evidence-001/known-test-orphan.json`。該程序不是本輪實機監看或模型任務，沒有採集系統資料。
 
 本輪前景試跑已結束，目前沒有持續監看；再次執行需當次有效範圍。已接通的是本機事件到專用短期 CLI agent，沒有證明任意桌面對話自動接續、完整 Windows coverage、原生診斷／處置、長期低負載、休眠／崩潰恢復或永久等待。舊 MVP、私人歷史、憑證與 runtime 未推送；集中提交只含審查後 source／tests／操作文件，指定 feature 分支，[skip ci]，不手動觸發 CI。
+
+## 2026-10-22：MIT 與最新驗收摘要發布
+
+使用者明確指定 MIT 並要求公開 `SecludedCorner/EventGuard`。本批以 `cc6e799` 為程式來源，新增 LICENSE、README 驗收結果表，同步 HANDOFF 與 PUBLISHING；沒有修改 Python、模型設定或監看來源，沒有啟動模型／實機採集或重跑原 suite。README 保留 A／B／C 的 7 唯一事件／8 接收與 query／7 ACK、新入口有限真通路及 269 項測試結果，並明列目前一小時／五任務限制及未完成的長期能力。
+
+後續公開合成投遞探針已追加到使用者指定的專用合成佇列，本次只讀核對仍 pending、0 ACK；未證明 dot 收到或回應，不列為成功通路。該探針的 manifest、入列回條與資料庫留在本機忽略 reports；未發布事件 ID、使用者路徑或完整執行資料。
+
+發布前只讀審查涵蓋遠端 main 與 feature 的全部可達內容：9 commits、143 個 unique blobs，均來自與私人舊歷史分離的 publication root；`fd45578` 不在遠端可達祖先中。未發現執行目錄、原始會話、憑證、資料庫或封存檔被追蹤；三處路徑命中均為明示匿名 synthetic 隱私測試 fixture。GitHub 端未有 Actions run／artifact、issue、PR 或 release／附件。本機原始資料與未推送分支保留，不使用 --all／--mirror／force。
+
+本批驗證為既有證據核對、MIT 標準文字比對、Markdown 本地連結與 git diff --check；不把這些文件檢查當成新模型或長時間驗收。Git 作者 metadata 的公開範圍另依 PUBLISHING 檢查，不因原始碼掃描通過而忽略。透過指定 feature 與 PR 更新 main，公開可見性與 MIT 辨識結果以 GitHub API 發布後回讀為準。
