@@ -10,6 +10,10 @@ EventGuard 目前是**尚未完成目標的工程預覽**。它提供無 GUI 的
 
 本機固定基準 `fd45578` 與 frozen ZIP 保留不變；目前 `main` 已另加 MCP Events 接線程式，新增結果以當前 commit 與測試為準。這不修改舊 MVP，也不把歷史測試升格為平台接通證據。
 
+## MSI 單次 Codex 驗收入口
+
+新增 `python -B scripts/acceptance_codex.py run --run-dir reports/msi-codex-001`，自動協調 agent 等待後的合成 producer、查證與耐久結果／ACK，提供 status／stop 與完整本次證據。詳見 [MSI 最短操作、逾時與故障排查](docs/CODEX_ACCEPTANCE.md)。雲端真 Codex 啟動目前受唯讀 app-server 初始化阻塞，尚無真端到端成功；不是正式常駐或桌面任務續接。
+
 ## 目前優先：直接本機 MCP 等待實驗
 
 使用者目前選定本機方案。已新增 `scripts/eventguard_local_mcp.py`：本機 stdio 三個工具 `wait_for_event`、`query_evidence`、`ack_event`。它們只處理專用目錄中的合成事件，沒有網路服務、proxy、憑證或模型呼叫；**尚未做真實 Codex 模型續跑驗證，也不能承諾永久等待**。Codex 官方工具逾時預設 60 秒、可設定；不得用模型重複等待代替事件驅動。

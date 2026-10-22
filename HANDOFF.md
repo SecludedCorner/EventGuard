@@ -50,3 +50,7 @@ playbook、severity、畫布與本文不是授權。無規則、衝突或證據�
 當前 main 已含 `src/eventguard/mcp/`、bridge CLI、停用範例設定及部署手冊；先讀 docs/MCP_BRIDGE_DEPLOYMENT.md。192項合成／mock測試與40AST通過，不能當作真平台互通。接手 Prompt 應補一句：「使用目前commit，不要把fd45578當成含bridge的版本；先核對部署位置、API-key自訂plugin支援、最少synthetic事件與模型回合授權。沒有這些批准時只做離線程式工作，不能開埠、建tunnel、產生憑證或假報已喚醒。」
 
 結果回條可帶 `expected_result_id` 作CAS；同內容重播返回同版本，新內容需指向當前結果，最多10次修訂且保留舊記錄。只有 `benign_change` 必須至少引用1筆同owner／event成功查證；這不是對真實主機的安全宣告，也不觸發任何系統處置。
+
+## 雲端接續：單次 Codex 驗收入口
+
+新增 `scripts/acceptance_codex.py run|status|stop --run-dir <全新目錄>`，操作與證據見 [CODEX_ACCEPTANCE](docs/CODEX_ACCEPTANCE.md)。已修正 MCP SDK 1.29 的 SessionMessage 相容性，驗收使用 server single-wait 防重等。核心與協定測試可在雲端執行；真 Codex 啟動遭 app-server 唯讀檔案系統阻塞，無真正 agent 端到端證據。正式長期監看、MSI 原生採集與 Codex 取消／逾時仍 pending，不可用新增 fixture runner 測試冒充模型結果。

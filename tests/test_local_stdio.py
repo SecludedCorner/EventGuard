@@ -20,6 +20,10 @@ import unittest
 try:
     import anyio
     from mcp import ClientSession, types
+    try:
+        from mcp.shared.message import SessionMessage
+    except ImportError:
+        SessionMessage = None  # SDK 1.6 uses bare JSONRPCMessage streams.
     HAS_SDK = True
 except ImportError:
     HAS_SDK = False
@@ -69,8 +73,9 @@ class OwnedTransport:
 
 
 @asynccontextmanager
-async def owned_stdio(data_dir):
+async def owned_stdio(data_dir, single_wait=False):
     process = await asyncio.create_subprocess_exec(sys.executable, "-B", str(ENTRY), "--data-dir", str(data_dir),
+                                                  *(["--single-wait"] if single_wait else []),
                                                   stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
                                                   stderr=asyncio.subprocess.PIPE, cwd=str(ROOT), env=child_environment())
     transport = OwnedTransport(process)
@@ -81,12 +86,14 @@ async def owned_stdio(data_dir):
     async def reader():
         async with read_sender:
             while line := await process.stdout.readline():
-                await read_sender.send(types.JSONRPCMessage.model_validate_json(line))
+                message = types.JSONRPCMessage.model_validate_json(line)
+                await read_sender.send(SessionMessage(message) if SessionMessage else message)
 
     async def writer():
         try:
             async with write_receiver:
                 async for message in write_receiver:
+                    message = getattr(message, "message", message)
                     raw = message.model_dump(by_alias=True, mode="json", exclude_none=True)
                     if raw.get("method") == "tools/call":
                         transport.requests.append(raw)
@@ -176,6 +183,18 @@ class LocalStdioTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(expired["status"], "wait_expired")
                 self.assertTrue(expired["do_not_model_repoll"])
         self.assertEqual(transport.process.returncode, 0, transport.errors.decode("utf-8", errors="replace"))
+
+    async def test_single_wait_refuses_model_repoll_after_expiry(self):
+        async with owned_stdio(self.directory, single_wait=True) as (transport, incoming, outgoing):
+            async with ClientSession(incoming, outgoing, read_timeout_seconds=timedelta(seconds=6)) as session:
+                await session.initialize()
+                result = result_json(await session.call_tool("wait_for_event", {"timeout_seconds": 1}))
+                self.assertEqual(result["status"], "wait_expired")
+                second = await session.call_tool("wait_for_event", {"timeout_seconds": 1})
+                self.assertTrue(second.isError)
+        ledger = json.loads((self.directory / "local-wait-results.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(ledger["waits"]), 1)
+        self.assertEqual(transport.process.returncode, 0)
 
     async def test_request_cancellation_and_eof_cancel_pending_wait(self):
         from eventguard.local_wait import LocalWait
