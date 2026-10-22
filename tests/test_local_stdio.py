@@ -196,6 +196,23 @@ class LocalStdioTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(ledger["waits"]), 1)
         self.assertEqual(transport.process.returncode, 0)
 
+    async def test_runtime_rejects_second_stdio_process(self):
+        async with owned_stdio(self.directory) as (transport, incoming, outgoing):
+            async with ClientSession(incoming, outgoing, read_timeout_seconds=timedelta(seconds=6)) as session:
+                await session.initialize()
+                second = await asyncio.create_subprocess_exec(
+                    sys.executable, "-B", str(ENTRY), "--data-dir", str(self.directory),
+                    stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE, env=child_environment())
+                OWNED_CHILDREN.append(second)
+                stdout, stderr = await asyncio.wait_for(second.communicate(), timeout=5)
+                self.assertEqual(second.returncode, 3)
+                self.assertEqual(stdout, b"")
+                self.assertIn(b"active stdio server", stderr)
+                # The first server still owns a working protocol session.
+                self.assertEqual(len((await session.list_tools()).tools), 3)
+        self.assertEqual(transport.process.returncode, 0)
+
     async def test_request_cancellation_and_eof_cancel_pending_wait(self):
         from eventguard.local_wait import LocalWait
         LocalWait(self.directory)

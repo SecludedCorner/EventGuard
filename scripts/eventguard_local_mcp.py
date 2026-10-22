@@ -176,7 +176,15 @@ def main(argv=None):
         print("EventGuard: local synthetic experiment initialization failed. Exit 2.", file=sys.stderr)
         return 2
     try:
-        server.run(transport="stdio")
+        from eventguard.acceptance_control import FileLease
+        owner = FileLease(args.data_dir / "stdio-owner.lock")
+        if not owner.acquire():
+            print("EventGuard: this synthetic runtime already has an active stdio server. Exit 3.", file=sys.stderr)
+            return 3
+        try:
+            server.run(transport="stdio")
+        finally:
+            owner.release()
     except KeyboardInterrupt:
         return 0
     except Exception:

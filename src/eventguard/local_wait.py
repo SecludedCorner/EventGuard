@@ -67,7 +67,10 @@ def _timestamp(value):
 
 
 def _guard(path):
-    path = Path(path).absolute()
+    path = Path(path)
+    if ".." in path.parts:
+        raise LocalWaitError("experiment_parent_path_rejected")
+    path = path.absolute()
     for part in [*reversed(path.parents), path]:
         if part.is_symlink() or (hasattr(part, "is_junction") and part.is_junction()):
             raise LocalWaitError("experiment_path_redirect_rejected")

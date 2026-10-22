@@ -14,7 +14,7 @@ codex login status
 python -B scripts/acceptance_codex.py run --run-dir reports/msi-codex-001
 ```
 
-`python` 必須是能載入 SDK 的既有 Python 3.13；若不是，改用其完整路徑。`codex` 必須可從 PATH 啟動。缺少 SDK／CLI／有效登入時停止，先處理該項前置條件，不自行安裝或建立憑證。命令會使用目前帳戶進行一次真實模型任務（可能多次模型請求，不能保證 token／費用），只處理公開合成資料。
+`python` 必須是能載入 SDK 的既有 Python 3.13；若不是，改用其完整路徑。`codex` 必須是可從 PATH 啟動的原生執行檔；若 PATH 找到的是 npm `.cmd`、`.bat` 或 `.ps1` 包裝，入口會在模型啟動前拒絕。可加 `--codex-executable "既有原生 Codex 執行檔完整路徑"` 指定已安裝的二進位檔，不經 shell、不自動安裝。缺少 SDK／CLI／有效登入時停止，先處理該項前置條件，不自行安裝或建立憑證。命令會使用目前帳戶進行一次真實模型任務（可能多次模型請求，不能保證 token／費用），只處理公開合成資料。
 
 執行器自動啟動一次 `codex exec --ignore-user-config --ephemeral -s read-only --json`，單次覆寫三個本機 MCP 工具、停用 shell 工具。這不是完整工具隔離；受管理工具與政策仍有效。工具不執行原生查詢或系統處置。Codex 的 SQLite 與 log 路徑單次指向此 run 目錄；帳戶登入仍走原有官方機制，不複製 auth 檔。先確認 agent 已寫入 `waiting`，在程式內閒置 3 秒後才產生唯一合成事件，沒有人工搬運事件回覆。
 
@@ -25,18 +25,29 @@ python -B scripts/acceptance_codex.py status --run-dir reports/msi-codex-001
 python -B scripts/acceptance_codex.py stop --run-dir reports/msi-codex-001
 ```
 
-`status` 是最後執行紀錄，不是獨立存活探針。`stop` 只合作停止後續 producer；已開始的工具等待／模型請求自然返回，不 kill／terminate、不宣稱已取消遠端請求。等待工具本身最多 30 秒，本機入口允許 180 秒觀測整個 CLI；超時回 `pending_child_exit`、exit 3，保留 PID，可能仍有自己的 CLI 子程序。這時先確認它自然退出，不重複啟動。模型停滯不能保證有界退出。
+`status` 讀取有界狀態與本次擷取程序的退出回條，若回條完整可補完先前逾時的判定；不以 PID 存在猜測模型或 MCP 存活。`stop` 只合作停止後續 producer；已開始的工具等待／模型請求自然返回，不 kill／terminate、不宣稱已取消遠端請求。等待工具本身最多 30 秒，本機入口允許 180 秒觀測整個 CLI；超時回 `pending_child_exit`、exit 3，獨立的本機 capture worker 繼續排空輸出、等待 CLI 自然退出並寫入有 fsync 的回條。它只擷取這次 CLI，不是常駐服務；模型停滯時仍不能保證有界退出。沒有完整退出回條，或 capture／stdio 鎖仍被持有時，`retry` 會拒絕；`status` 不會啟動模型。
 
 ## 證據與判定
 
-每次必須使用全新 run 目錄，禁止覆寫、共用或指定正式 data/live。失敗後資料仍保留，可診斷並以新名稱重試；不自動重試模型。
+第一次 `run` 必須使用全新專用目錄，禁止覆寫、共用或指定正式 data/live。失敗後若要處理**同一事件**，使用下列 `retry`；不要建立新 run 代替原事件重試。每次 `retry` 都是使用者明確要求的一次真模型任務，整個 run 最多三次 attempt（含前置條件失敗），沒有自動模型重試。
 
-- `status.json`：起迄、子程序 PID、退出狀態；`cli_started` 不代表模型已執行。
+```powershell
+python -B scripts/acceptance_codex.py status --run-dir reports/msi-codex-001
+python -B scripts/acceptance_codex.py retry --run-dir reports/msi-codex-001
+```
+
+`retry` 沿用原 runtime、event ID、query ID 與已保存結果；包含「結果落盤後 ACK 失敗」的恢復，不重新產生既有事件；若上一輪在前置檢查就失敗、尚無事件，則會在首次等待時產生第一個合成事件。原事件已 ACK 時會拒絕再次啟動模型。每次只核對自己的新增 wait，歷史 waits 保留。停止請求亦只作用於該 attempt，不會污染重試。沒有退出回條、鎖仍被持有、未知／損壞 metadata、超出三次上限都會拒絕，不能手改狀態或假 ACK 繞過。
+
+這次使用 v2 的 `acceptance.json` 標記；前版未標記的 run 目錄保留原樣供唯讀檢閱，不自動匯入或重試。
+
+- `acceptance.json`：專用 run 標記；`status.json` 為最新 attempt，包含 run/attempt ID、起迄及退出狀態；`cli_started` 不代表模型已執行。
+- 第一輪證據在 run 根目錄；第二、三輪分別在 `attempts/0002`、`attempts/0003`。每輪的 `attempt-status.json` 與 `attempt-summary.json` 保留該輪證據；根目錄 `summary.json` 是最新判定。
 - `codex.jsonl`：只保存這次新 CLI 的原始事件，包含實際 MCP 呼叫；不讀取任何既有 sessions。
-- `codex.stderr.txt`：本次啟動錯誤。
+- `codex.stderr.txt`：本次啟動錯誤。stdout／stderr 各最多保存 4 MiB，超量仍排空以免子程序阻塞，但標記 truncated 並使驗收失敗；不得把被截斷的成功片段當成完整證據。
+- `capture-start.json`、`capture-exit.json`：同 attempt ID 的擷取／自然退出回條。缺少／不完整回條時不猜測子程序已退出。
 - `runtime/local-wait-results.json`：wait 起迄、event ID、query ID、同事件結果。
 - `runtime/outbox/eventguard.sqlite3`：耐久 outbox 與 ACK。
-- `summary.json`：核對恰好一次 wait、query、ACK 順序與同事件／query ID、reviewed_synthetic 結果、SQLite ACK、CLI exit 0。缺項即失敗，agent 的文字「成功」不作證據。
+- `summary.json`：核對當輪恰好一次 wait、query、ACK 的實際回傳內容與順序、同事件／query ID、wait 起迄、reviewed_synthetic 結果、SQLite ACK、完整 CLI turn 及 CLI exit 0。缺項即失敗，agent 的文字「成功」不作證據。
 
 成功需 `summary.passed=true` 且 `status.child_exited=true`。事件儲存層的 `real_agent_wake_verified=false` 不改成 true：它單獨無法證明模型執行。跨 CLI trace 與耐久狀態的驗收結果才是本次合成實驗證據，不能提升為主機安全、既有桌面任務接續或長期喚醒保證。
 
@@ -59,4 +70,8 @@ CLI JSONL 不揭露工具等待期間所有模型後端請求。因此 `idle_mod
 - Codex CLI 0.163.0 可執行且 `login status` 顯示已登入；兩次實際驗收啟動皆 exit 1：`failed to initialize in-process app-server client: Read-only file system (os error 30)`。第二次已使用官方支援的單次 `sqlite_home`／`log_dir` 可寫路徑，結果相同。無 event ID、無 agent 工具呼叫，未證明模型接續，未改權限或搬移／複製憑證。
 - 空閒時實際模型後端請求數、真正 Codex 取消／逾時、MSI Windows 原生採集及長期監看仍未驗證。
 
-缺 SDK：換用既有可載入 SDK 的 Python，不自動下載。缺 CLI／登入：回報前置條件，不建立憑證。CLI 初始化失敗：檢查本次 stderr 與 writable state/log 設定，勿提權或繞過。CLI 結束但缺 query／ACK：summary 失敗，保留 outbox，先查 trace；不要人工 ACK 冒充 agent。既有 monitor 的 fixture 啟停可用 `python -B scripts/acceptance_smoke.py` 驗證，正式 monitor 需另有 Windows 原生範圍。
+缺 SDK：換用既有可載入 SDK 的 Python，不自動下載。缺 CLI／登入：回報前置條件，不建立憑證。CLI 初始化失敗：檢查本次 stderr 與 writable state/log 設定，勿提權或繞過。CLI 結束但缺 query／ACK：summary 失敗，保留 outbox，先查 trace；不要人工 ACK 冒充 agent；需要重試時沿用 `retry --run-dir`，不能刪除原始證據。既有 monitor 的 fixture 啟停可用 `python -B scripts/acceptance_smoke.py` 驗證，正式 monitor 需另有 Windows 原生範圍。
+
+## 開發驗證與提交節奏
+
+先完成一批相關程式與文件，再在本機跑受影響測試及一次完整 suite，集中提交。未明確需要時不反覆推送或觸發遠端 CI。本次新增的 fake CLI／程序測試只證明協調、重試與檔案控制，不是新的真 Codex E2E；前述 app-server 雲端阻塞仍保留。
