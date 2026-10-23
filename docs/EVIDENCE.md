@@ -2,6 +2,14 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：原生MCP實際呼叫仍受阻
+
+使用者表示找不到eventguard_test／MCP設定。新子agent的工具metadata一度列出四個eventguard_test工具，實際呼叫原生 `mcp__eventguard_test__list_events`（limit=10）卻回 `isError=true`、`MCP tool eventguard_test/list_events is not available to the model`，隨後namespace被移除。原始回傳、時間與未receive／未ACK事實保存於 `reports/chat-receive-001/native-receipt-stage1.json`（2026-10-23 13:00:44 UTC+8）。這是原生工具呼叫失敗，不能用metadata出現、SDK或前批命令工具成功替代。保留待測合成事件，不盲目重試。
+
+唯讀執行既有原生Codex的 `--version`：`codex-cli 0.163.0-alpha.11.2`、exit0；`mcp get eventguard_test --json`：`No MCP server named 'eventguard_test' found`、exit1。此CLI管理命令查user-level MCP entries，不能據此斷言專案設定未載入；專案檔仍存在並正確列四工具，沒有修改全域設定或信任政策。官方文件說明project設定僅trusted時載入，且子agent繼承父層MCP，但本輪沒有足夠證據判定具體根因。
+
+先前直接指示Settings→MCP servers→Restart來自[官方MCP文件](https://learn.chatgpt.com/docs/extend/mcp)，未驗證使用者當前UI，現撤回「必定有此入口」的假設。[官方Developer commands](https://learn.chatgpt.com/docs/developer-commands)另提供/mcp檢視當前工具；下一步需用戶端實際狀態或介面證據。沒有提權、改安全設定、讀憑證、啟動模型CLI、重掃主機、強停或ACK。此批只改文件，檢查相對連結與diff，不重跑產品測試。
+
 ## 2026-10-23：本聊天手動接收、ACK修正與限定MCP接線
 
 基底 `d46236fdd20d59ff4c9ff1c7c7091bfd497f484d`，同一feature。本聊天開始時與設定加入後均查可用工具，EventGuard專用工具數為0；正式接收開關唯讀結果為enabled_waiting_receiver／receiver_verified=false。使用者要求實際接收，故以本聊天命令工具呼叫既有OperatorAPI；沒有啟動額外Codex／模型、Windows採集、真事件ACK或新的監看。這是正在回應的agent手動讀取實際工具回傳，**不是原生MCP已載入或閒置聊天被事件喚醒**。

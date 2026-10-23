@@ -14,7 +14,7 @@
 | 採集壞列 | 七來源 native／fallback 均保留合法 sibling，非物件列帶固定原因與計數；有可用列 partial，否則 error | 外層契約錯誤仍拒絕；partial 不清 baseline、不判恢復，壞資料不進錯誤原文 |
 | agent 開關 | 預設關閉；本輪唯讀查得enabled_waiting_receiver；勾選只開放live工具，取消阻擋後續工具讀取／ACK | 開關不是MCP連接或喚醒證據；既有pending與query不丟棄，人類不受影響 |
 | 本聊天接收 | 命令工具實際收到一件程式合成事件、inspect、補收相同event/query並ACK一次；錯query／換decision現已拒絕 | 不等於原生MCP已載入、自動推送或真模型驗收；本輪額外模型呼叫為零 |
-| 限定專案MCP | 使用者明確批准後已加入eventguard_test，僅隔離test佇列及list／inspect／receive／ACK；另有新事件保持pending | 本聊天工具清單仍無EventGuard，須用戶端Restart後再驗；stdio重開遇active owner，未強停或繞過 |
+| 限定專案MCP | 已加入eventguard_test；新子agent曾看見四工具，但實際list_events回not available to the model，之後工具被移除；新合成事件仍pending | 原生接收未通過，不能只歸因未Restart；尚需核對實際用戶端有效設定／工具可用性，不強停或繞過 |
 | 應用生命週期 | GUI持有私有Global Job；host核對應用PID＋建立時間，意外owner退出後合作停止；X縮小持續運作 | 不detach、不breakaway；應用之外的Job仍可能約束其生命週期 |
 | 退出與容量 | 暫停先保存disabled，再核對本工具host／子樹；未知保留視窗。滿載保留pending／baseline且明示背壓 | ACK只表示收到，不是修復或案件結束；有有限保留／去重窗 |
 | 登入後恢復 | 既有排程入口保留，但本輪未建立、Run、服務或自啟 | 使用者沒有批准前次plan；GUI開始無須等待排程。舊plan因程式變更失效 |
