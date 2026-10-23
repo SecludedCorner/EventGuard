@@ -2,6 +2,22 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：既有聊天喚醒前置與當版登入恢復dry-run
+
+基底`af839b36a4f43efbc5e273680ba2f597edb93df1`，同一feature；上一目標回合有實質程式／真工具／合成驗證進展。本回合保留現有explicit_stop，不啟動監看、模型、server/daemon或排程。兩個子agent分讀喚醒入口與登入恢復，root整合；本批只有文件變更與本機忽略的探測／回條。
+
+既有原生CLI版本`0.163.0-alpha.11.2`，使用本機已安裝codex.exe，沒有下載／更新。命令由`py -3.13 -B reports/wake-queue-research-001/help_probe.py`及control-help helper呼叫`--version`、`--help`、`queue --help`、`app-server --help`、`app-server proxy --help`、`app-server daemon --help`、`app-server daemon status --help`。七個child自然退出、私有Job remaining0、未強停；不存在的daemon status help為exit2，其他exit0。stdout、SHA及逐程序回條在help-results.json／control-help-results.json。help確認queue可指定既有session、proxy只連已運行control socket；**沒有實際送queue、連socket、起回合或server**，不能據此聲稱idle喚醒。
+
+root備妥`reports/wake-queue-research-001/proxy_probe.py`，只用既有proxy發initialize及目前thread/read(includeTurns=false)，不resume、不查其他聊天／history、不開server或送turn。但`exec_command`的自動核准審查在執行前拒絕，認定metadata仍屬AGENTS禁止的私人Codex session存取、欠缺此精確授權。**Python／proxy均未啟動**，probe輸出目錄不存在；沒有變通或間接重試。證據proxy-approval-block.json，下一步需明確批准此metadata範圍；不是模型呼叫批准。官方文件／候選比較見[喚醒／恢復關卡](WAKE_RECOVERY_GATES.md)。
+
+登入恢復命令：`py -3.13 -B scripts/eventguard_schedule.py install --dry-run --plan-dir reports/recovery-gate-001/schedule-review`在sandbox身分08:11:37.472131 UTC回blocked／exit1，GetFolder HRESULT80070003、parent_folder_confirmed=false，保留unknown。既有授權的一般使用者sandbox例外執行相同dry-run到新的`.../schedule-review-normal-user`，08:12:01.591273 UTC自然exit0：根folder已確認、GetTask HRESULT80070002，專屬任務absent。不同身分結果分開，沒有以GetFolder失敗推論任務不存在。
+
+新plan/action source綁定與UTF-16 XML實際核對通過；57項來源hash與af839b36相符，SHA=`03b312cd6e08df1517c908956d0c38864c7bc2e715a4f144ab290311d04b35c6`。只有一個同使用者ONLOGON／InteractiveToken／LeastPrivilege／PT0S任務，start_now=false、AllowHardTerminate=false、不帶覆寫。現有enabled=false／explicit_stop保留；註冊即使將來批准也不會解除它。沒有Create、Run、服務或OS重啟，尚未批准安裝。
+
+離線契約驗證命令`py -3.13 -B reports/recovery-gate-001/verify_review.py`，Python3.13.3，08:14:46.023754 UTC回條：**28/28測試通過、exit0**，Popen直接guard在suite後仍installed、child attempts0，failed_checks=[]。最後證據review-verification-003.json／offline-schedule-tests-003.txt；這些mock測試不代替上面真COM查詢，更不是實際註冊／重開機驗證。第一版helper的patch guard被既有test的patch.stopall解除，自審後改直接guard；002因先換Popen再import asyncio造成loader ImportError（1 error），修正為先載入unittest.mock，003確認全程沒有子程序。中間輸出保留，不當產品或最終通過。
+
+新文件／連結及source hashes另核對，不重跑無改動的整套。來源、文件及本批commit綁定留reports/recovery-gate-001/source-commit.json。剩餘批准項目為精確metadata唯讀探測、僅登入註冊；模型與Phase7實機／OS操作未包含。
+
 ## 2026-10-23：建立持續目標、主聊天正式工具與多client修復
 
 基底`bf99496cf3d73601fc2d8a1bf50c1c2fe8709b66`，分支`feat/local-codex-acceptance`；保留既有研究及附件。依使用者「建立目標，繼續完成」建立active目標，未設定token預算。本批一般權限，不啟動監看／本機inventory／真Codex或模型，不建排程／服務、不改安全設定或全域MCP。專案MCP沿用既有批准與設定，SHA256=`b851bc89137e133f1eb1e023ec74d9ffe384e154e2b2bed6eeadaee6362a70d0`，未再修改。

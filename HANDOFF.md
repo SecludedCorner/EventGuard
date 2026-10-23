@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+最新續行基底af839b36。本輪沒有產品碼變動；取得既有Codex CLI0.163.0-alpha.11.2的queue/proxy help，以及當版登入恢復真dry-run。一般使用者任務absent（已確認folder後GetTask80070002）；sandbox GetFolder80070003屬不同身分unknown，兩者分開。新plan只register、不Run，現有explicit_stop不變。方案SHA與批准內容見docs/WAKE_RECOVERY_GATES.md，不重查或重建相同方案。
+
+唯讀control socket探測已備妥在reports/wake-queue-research-001/proxy_probe.py，只initialize＋精確目前thread/read(includeTurns=false)，不送queue/turn、不開server。**自動核准審查拒絕**：metadata亦被認定私人Codex session存取且缺精確授權，helper沒有執行、proxy沒有啟動；不可改用另一方法繞過。先等這項明確批准，再探測一次；即使成功仍不是idle wake，模型傳送另有批准關卡。真排程註冊也仍需本次SHA批准。目標維持active，不能宣稱已完成或自行解除Pause。
+
 最新使用者把產品定位為資安情報中心，要求所有操作經EventGuard且在GUI看得到。共享operator adapter現有15工具（含activity），開始／停止仍走原核心；GUI與operator MCP操作記於data/activity.sqlite3，最多256筆，保持running，故障不阻止Stop。只記固定動作/結果碼與目標hash，不記提示、事件全文、完整命令列；不涵蓋聊天思考、任意外部檔案編輯或舊綁定CLIadapter的每一步。
 
 使用者要求「建立目標，繼續完成」，已建立active持續目標，未設token預算。來源基底bf99496cf3d73601fc2d8a1bf50c1c2fe8709b66，同一feature。正式MCP已批准，不再詢問；目前本主聊天已有15工具，已實際呼叫capabilities／status／activity，activity可讀到操作。當次status顯示background stopped／desired_enabled=false，既有pending保留；current monitor無owner、舊heartbeat過期。本批沒有開始採集、啟用模型或ACK正式資料。

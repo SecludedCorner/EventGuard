@@ -53,4 +53,6 @@ py -3.13 -B scripts/eventguard_schedule.py install --dry-run --start-now --plan-
 
 這是**同一使用者登入後**恢復。登入前監看不在普通互動token範圍，不新增服務、帳戶／憑證或修改自動登入。實際重開機／登出測試由使用者另行安排，程式不主動重開機。
 
+2026-10-23當版已重新產生只註冊、`start_now=false`的dry-run方案；精確SHA與本機證據見[喚醒／恢復關卡](WAKE_RECOVERY_GATES.md)。目前保存explicit_stop，因此即使批准註冊也不解除暫停。這份新方案取代程式變動前的舊審查digest，尚未實際安裝。
+
 目前尚未完成的長時與實機故障項目依 [SOAK_PLAN](SOAK_PLAN.md) 與 [WINDOWS_VALIDATION_PLAN](WINDOWS_VALIDATION_PLAN.md) 分開記錄；有限 fixture／owned Job 測試不能升格為已通過重開機或全天候驗收。

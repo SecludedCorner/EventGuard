@@ -2,11 +2,13 @@
 
 最新方向為本機資安情報中心，已依使用者要求建立持續目標，狀態active。共享operator MCP的15工具已出現在**本主聊天**，且正式capabilities／status／activity實際呼叫成功；activity可讀到本輪操作。原eventguard_test保留，未啟動監看／模型或接收／ACK正式backlog。GUI已有「操作紀錄」頁籤；既有視窗是否已載入新版不推定。
 
+最新前置：當版登入恢復dry-run已完成，一般使用者確認專屬任務不存在；方案只註冊、不立即Run，現有explicit_stop保持。`codex queue/proxy`已核對本機help；proxy精確聊天metadata探測被自動核准審查拒絕，尚未執行。需批准的精確範圍與方案見[喚醒／恢復關卡](docs/WAKE_RECOVERY_GATES.md)，不重跑已通過通路取代它。
+
 本輪修正operator終身單連線鎖造成的真啟動exit3：多client可並存，mutation採短期鎖，讀取與Stop可通過；Stop綁定scope及原owner/run，不追停新代。legacy單事件owner仍exclusive；單事件CLI argv明確停用已知正式與測試聊天MCP。相關模組回歸無失敗／殘留，完整回歸及精確證據只看EVIDENCE，不與歷史結果相加。
 
 本主對話本輪再以原生MCP接收一件程式新生的合成事件：補收同event/query、ACK重播不新增回條，SQLite與工具回傳一致，missing／duplicate_receipts皆空。使用隔離test佇列，正式資料未ACK。這是活動回合收取，**閒置時自動喚醒本對話仍未接通**。下述專用CLI未啟用，不能當作同一目標已完成。
 
-更新：2026-10-23；分支 feat/local-codex-acceptance，本批基底 bf99496cf3d73601fc2d8a1bf50c1c2fe8709b66。命令、測試數、來源與提交對照見 [EVIDENCE](docs/EVIDENCE.md)。
+更新：2026-10-23；分支 feat/local-codex-acceptance，當前程式基底 af839b36a4f43efbc5e273680ba2f597edb93df1。命令、測試數、來源與提交對照見 [EVIDENCE](docs/EVIDENCE.md)。
 
 前批已實作持續事件等待與獨立自動 agent 開關：同一 Python dispatcher 跨事件／日界待命，空佇列不建立任務，預算用完保留 pending，失敗不自動重試。接線與接手步驟見 [CONNECT_AGENT](docs/CONNECT_AGENT.md)。專用CLI合成驗收因固定預算未初始化而未啟動；最新目標為同一對話接收，暫不續行此替代路徑或索取CLI日額資訊。
 
@@ -27,7 +29,7 @@
 | 正式專案MCP | 主對話已實際呼叫capabilities／status／activity；同表紀錄可讀 | 只驗本輪呼叫，未重驗所有15項實機操作；不是閒置自動喚醒 |
 | 應用生命週期 | GUI持有私有Global Job；host核對應用PID＋建立時間，意外owner退出後合作停止；X縮小持續運作 | 不detach、不breakaway；應用之外的Job仍可能約束其生命週期 |
 | 退出與容量 | 暫停先保存disabled，再核對本工具host／子樹；未知保留視窗。滿載保留pending／baseline且明示背壓 | ACK只表示收到，不是修復或案件結束；有有限保留／去重窗 |
-| 登入後恢復 | 既有排程入口保留，但本輪未建立、Run、服務或自啟 | 使用者沒有批准前次plan；GUI開始無須等待排程。舊plan因程式變更失效 |
+| 登入後恢復 | af839b36當版新dry-run確認專屬任務absent，保留暫停；已備只註冊、不Run的審查方案 | 尚未批准註冊；不等於重開機通過，也不解除明確Pause。建立入口與SHA見喚醒／恢復關卡 |
 | 驗證 | 本輪雙client真stdio、scope／owner換代、既有background／CLI契約相關模組通過；完整suite另見EVIDENCE | fixture／SDK／fake CLI／真Windows owned-job與本主聊天原生工具證據分開；真CLI、OS重啟與24小時未在本輪驗證 |
 
 一般權限、Python3.13標準庫與既有tkinter；無下載安裝、提權／UAC、安全設定或執行政策變更、全域MCP變更、其他程序處置。正式專案MCP為另行批准的持續接線；事件與工具輸出是不可信資料。
