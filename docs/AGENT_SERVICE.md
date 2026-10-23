@@ -51,6 +51,12 @@ handled／ignored 不自動派送。這些狀態不是 ACK，原事件仍保留�
 設定只接受枚舉清單。不能放命令、目的聊天或自由 prompt。
 去重與冷卻沿用原事件來源及帳本，不新增第三份佇列。
 
+篩選前核對 pending 的 schema、內容 hash 及處置狀態。
+損壞、超限或未知格式會阻擋派送，顯示固定原因碼。事件不刪除、不 ACK。
+有效的低嚴重度事件仍會保留，不妨礙後方符合條件的事件。
+驗證快取只放記憶體，最多 1000 筆。原文或 hash 改變就重新驗證。
+這不提供防同帳戶竄改的保證。修復資料後，可明確重啟 host；不自動重啟模型。
+
 每日最多五個任務。失敗、驗收及不確定啟動也計入。
 額度耗盡時普通 host 等待。無事件及等待額度時不呼叫模型。
 帳本缺失、壞檔或未知退出會阻擋啟動，不能默認剩餘五次。
@@ -70,6 +76,12 @@ handled／ignored 不自動派送。這些狀態不是 ACK，原事件仍保留�
 inbox 證據不能獨立證明模型執行。缺 provider 生命週期證據時顯示 unknown。
 dispatcher 自己另保存真 CLI trace、工具回傳、結果及 owned-tree 退出回條。
 模型用量缺失時顯示未知，不假裝為零。
+
+新的 managed attempt 另保存 supervisor 的 PID、建立時間及本次 nonce。
+worker 核對綁定後，才可啟動 CLI。退出回條必須符合原身分。
+缺少身分或回條時標未知。舊回條不補造新證據，也不升格為本版驗收。
+CLI 未啟動不代表 worker 已退出。缺 worker 退出證據仍阻擋重入。
+空閒的零請求結論來自本 adapter 未啟動 CLI；它不是整個帳戶的用量量測。
 
 ## 給其他應用的封裝
 
@@ -105,4 +117,6 @@ py -3.13 -B scripts/validate_delivery.py service --root reports/service-acceptan
 程式先等空佇列，再加入事件。最多一個任務，總期限 180 秒，最後合作停止隔離 host。
 根據 intent 拒絕同目錄重跑。失敗先讀該輪 trace、stderr、狀態及退出回條。
 `--verify-only` 只重驗既有證據，不啟動模型，不重新收件或 ACK。
+驗收另核對 SQLite 保存時間、worker／CLI 建立時間、receive／query／result／ACK 順序。
+空閒觀察同時核對 UTC 及同一 scope 的 monotonic 時鐘。缺證據或時間倒置不通過。
 前後短暫空閒只證明該窗口。它不代表長期 soak 或獨立背景壽命已驗證。

@@ -2,6 +2,43 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-24：pending 阻塞、worker 身分與退出補強
+
+基底 `9640df6581b996126137dd4e7066023c3950cf20`。同一 feature 分支。功能、測試與文件一起提交，不推送。
+本批沒有真模型、正式背景、主機採集、網路、排程、proxy、其他專案或聊天操作。既有研究及附件保留未追蹤。
+
+篩選前檢查所有 pending 的格式、schema、hash、處置及 retry／lease 時間。壞資料不再被 SQL 篩成空佇列。
+錯誤使用固定清單，不回傳原文。記憶體 LRU 最多 1000 筆，每筆原文最多 8192 bytes；key 含完整原文、PK 及 stored hash。
+host 顯示固定阻塞原因，保留來源位元組，不 reserve／spawn。人類修復後，舊 Job 已確認退出時可明確重新 start；不再因舊 state=blocked 永久拒絕。
+
+新 managed worker 在 spawn 前保存 required 與 nonce。parent 隨後保存真 PID、建立時間及三份綁定資料。
+worker 最多等待五秒，核對自己的實際身分後才可啟動 CLI。complete 與 status 共用 proof。
+CLI skipped 不代表 worker 已退出。startup、當輪收尾及 status 都另核對 supervisor；缺證據保留 started，禁止重入。
+legacy 不補造新身分。service 驗收另核對 SQLite created_at／acked_at、工具階段、三層程序及同 scope 的 UTC／monotonic。
+
+| 命令／證據 | 實際結果 | 範圍 |
+| --- | --- | --- |
+| `py -3.13 -B scripts/verify.py --run-dir reports/event-ingress-001/proof-delta-001 --timeout-seconds 240 --module ...` | 245 run；243 pass；1 fail；1 error；exit 1；115.118 秒；03:33:08 UTC+08 完成 | 14 個相關模組；完整命令見同目錄 verification-summary.json |
+| `py -3.13 -B scripts/verify.py --run-dir reports/event-ingress-001/proof-delta-002 --timeout-seconds 180 --module test_agent_dispatch --module test_dispatch_lifecycle --module test_delivery_validation --module test_dispatch_takeover --module test_agent_service --module test_agent_entrypoints` | 119 run；119 pass；0 skip；exit 0；67.413 秒；03:38:53 UTC+08 完成 | 修正後只重驗受影響的六模組 |
+| `proof-test-index.json` | 247 unique；247 pass；missing=[]；unexpected=[]；current_source_mismatches=[] | 最新結果按完整 test ID 合併，不累加重跑數；不是最終來源全套重跑 |
+| `proof-delta-002/lifecycle-evidence.json` | 真 Windows worker／CLI 的 PID 與建立時間綁定相符；退出碼均 0。空佇列 host start／pause／resume／stop 退出碼 0；teardown=[] | Windows 私有 Job＋fake CLI／backend／隔離預算。不是模型收件證據 |
+| `py -3.13 -B scripts/eventguard.py agent status --format json` | exit 0；not_started；desired_enabled=false；host_liveness=not_recorded；budget_unavailable | 固定 authority.sqlite3 與 installation.json 均不存在；沒有初始化或推定當日零用量 |
+
+Python **3.13.3**。兩輪來源在測試期間均未改變。guardian 均自然退出，remaining=0、forcibly_terminated=false、per_test_residuals=[]。
+第一輪 guardian exit 1 保留，未改寫為通過。第二輪只改三個受影響 Python 檔，其餘已通過模組不重跑。
+提交後以 `reports/event-ingress-001/proof-source-commit.json` 綁定實際 Git blob 與最後 source-manifest。
+
+原 fail 是 status 新增退出查核後，將已停止且未啟動 CLI 的終態覆成 not_started；現在保留既有終態。
+原 error 是新反例測試只用了 SQLite transaction context，沒有 close 連線，造成 Windows 清理 WinError 32；改用 closing 並明確 commit。
+另補 skipped worker 缺 exit／start、重開兩次仍零 reserve／spawn，以及已知退出 4 仍不算 agent 成功的測試。
+Windows smoke 即使 stop 拋錯仍執行 teardown；逾時只按測試持有的 PID、建立時間及私有 Job 清理，保存實際回條。原錯不轉成功。
+
+最初的測試選單含不存在模組，由 argparse 拒絕，未啟 worker。索引初稿未處理測試中 CLI stdout，未產生索引；修正後嚴格核對每輪數量及當前 discovery。
+正式監看 control 的 SHA256 仍為 `78F20282862F179B8DEB4AF769BD0692932EC273AE930C13375E987781CB41BA`。未解除停止。
+
+未驗證：真模型 receive→query→結果→ACK→自然退出、正式長期背景、24 小時及桌面 queue。七欄與每日五次 authority 不變。
+單次真驗方案仍為一件公開合成事件、最多一任務、180 秒，須先有當次批准與有效預算。沒有重複索取或自行啟動。
+
 ## 2026-10-24：事件驅動的專用 agent host
 
 基底 `008a931121f03c1ceaa1abb6f26cbe08abf3bf48`。分支維持 `feat/local-codex-acceptance`。

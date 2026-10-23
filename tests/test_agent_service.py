@@ -1,8 +1,11 @@
 """Isolated host/control fixtures. No real Codex, model, scheduler or service."""
 from contextlib import nullcontext
+from contextlib import closing
 from pathlib import Path
 import os
 import shutil
+import sqlite3
+import subprocess
 import tempfile
 import time
 import unittest
@@ -12,8 +15,26 @@ from eventguard import agent_service as service
 from eventguard.events.store import EventStore
 from eventguard.runtime import atomic_json
 from eventguard.synthetic import make_synthetic
+from budget_fixtures import isolated_budget
 
 _ADMISSION_BARRIER = service._admission_barrier
+
+
+def _stop_test_hosts(root, children, evidence):
+    """Even a failed control write must reap only the test's proven jobs."""
+    evidence["teardown"] = []
+    try:
+        return service.stop(root, grace_seconds=5)
+    finally:
+        for child, job_name in children:
+            try:
+                child.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                receipt = service.processes.stop_persistent(job_name, pid=child.pid,
+                    created_at=child.created_at, reason="test_teardown", grace=2)
+                evidence["teardown"].append(receipt)
+                child.wait(timeout=5)
+        evidence["child_exit_codes"] = [child.returncode for child, _ in children]
 
 
 class AgentServiceTests(unittest.TestCase):
@@ -241,6 +262,39 @@ class AgentServiceTests(unittest.TestCase):
         self.assertEqual(result["reason"], "previous_agent_host_exit_unconfirmed")
         spawn.assert_not_called()
 
+    def test_explicit_restart_after_blocked_host_exit_preserves_pending_and_ledger(self):
+        from eventguard.queue_inbox import QueueInbox
+        self.control()
+        self.owner()
+        event = make_synthetic("listener")
+        self.store.enqueue(event)
+        inbox = QueueInbox(self.source, self.root / "data/agent-delivery-test")
+        ledger = inbox.state_dir / "dispatcher-attempts.json"
+        ledger.write_bytes(b'{"kind":"retained-synthetic-ledger","events":{}}')
+        before = ledger.read_bytes()
+        service._write(self.root, "run.json", {"run_id": self.run_id, "state": "blocked",
+            "reason": "dispatch_pending_payload_malformed", "model_calls": 0})
+        child = Mock(pid=5678, created_at=service._stamp(), detached=False)
+        child.poll.return_value = None
+        original_write = service._write
+        def write(root, name, value):
+            original_write(root, name, value)
+            if name == "owner.json":
+                original_write(root, "ready.json", {"run_id": value["run_id"], "pid": child.pid,
+                    "created_at": child.created_at, "job_keeper": {"fixture": "no-process-started"}})
+        with patch.object(service.processes, "identity", return_value={"state": "missing"}), \
+             patch.object(service.processes, "current_job_active", return_value=0), \
+             patch.object(service.processes, "process_session", return_value=1), \
+             patch.object(service, "_write", side_effect=write), \
+             patch.object(service.processes, "spawn_persistent", return_value=child) as spawn, \
+             patch.object(service.processes, "detach_owned", return_value={"ownership_transferred": True}):
+            result = self.start(execute=True)
+        self.assertEqual(result["state"], "started")
+        spawn.assert_called_once()
+        self.assertNotEqual(result["run_id"], self.run_id)
+        self.assertEqual(ledger.read_bytes(), before)
+        self.assertEqual(self.store.get_event(event["event_id"])["delivery_status"], "pending")
+
     def test_launch_without_owner_must_prove_empty_job(self):
         self.control()
         service._write(self.root, "launch.json", {"state": "launch_intent", "run_id": self.run_id, "job_name": self.job})
@@ -357,6 +411,43 @@ class AgentServiceTests(unittest.TestCase):
         self.assertEqual(result["reason"], "prior_child_exit_unconfirmed")
         self.assertIsNone(result["model_calls"])
 
+    def test_corrupt_low_pending_reaches_host_status_without_launch_or_charge(self):
+        # Real local dispatcher/selector/SQLite integration. Only the kernel
+        # owner and budget installation are fixtures. No provider is launched.
+        self.control()
+        self.owner()
+        event = make_synthetic("listener")
+        event["severity"] = "info"
+        self.store.enqueue(event)
+        config = self.root / "config/default.json"
+        config.parent.mkdir()
+        shutil.copyfile(service.ROOT / "config/default.json", config)
+        with closing(sqlite3.connect(self.store.path)) as db:
+            db.execute("UPDATE events SET payload=?", ("{ invalid private-instruction",))
+            db.commit()
+        source_before = self.store.path.read_bytes()
+        with isolated_budget(self.root) as authority, \
+             patch.object(service.processes, "adopt_current_job", return_value=self.keeper()), \
+             patch.object(service.agent_dispatch, "spawn", side_effect=AssertionError("No child permitted")) as spawn, \
+             patch.object(authority, "reserve", wraps=authority.reserve) as reserve:
+            result = service.serve(self.root, self.run_id, self.job)
+            self.assertEqual(result["state"], "blocked")
+            self.assertEqual(result["reason"], "dispatch_pending_payload_malformed")
+            self.assertEqual(result["model_calls"], 0)
+            self.assertEqual(result["dispatcher"]["tasks_started"], 0)
+            self.assertEqual(authority.status()["used"], 0)
+            reserve.assert_not_called()
+            spawn.assert_not_called()
+        with patch.object(service.processes, "identity", return_value={"state": "alive", "created_at": self.created}), \
+             patch.object(service.processes, "process_session", return_value=1):
+            visible = service.status(self.root)
+        self.assertEqual(visible["state"], "blocked")
+        self.assertEqual(visible["reason"], "dispatch_pending_payload_malformed")
+        self.assertEqual(visible["pending_events"], 1)
+        self.assertNotIn("private-instruction", str(visible))
+        self.assertEqual(self.store.path.read_bytes(), source_before)
+        self.assertEqual(service._read(self.root, "exit.json")["state"], "blocked")
+
     def test_start_handoff_requires_verified_same_child_receipt(self):
         child = Mock(pid=1234, created_at=self.created, detached=False)
         child.poll.return_value = None
@@ -405,6 +496,20 @@ class AgentServiceTests(unittest.TestCase):
         self.assertFalse(service._control(self.root)["enabled"])
         self.assertEqual(finish.call_args.args[0], child)
 
+    def test_smoke_teardown_reaps_proven_job_even_when_stop_raises(self):
+        child = Mock(pid=1234, created_at=self.created, returncode=1460)
+        child.wait.side_effect = [subprocess.TimeoutExpired("synthetic-worker", 5), 1460]
+        evidence = {}
+        receipt = {"forcibly_terminated": True, "child_exited": True, "remaining_owned_processes": 0}
+        with patch.object(service, "stop", side_effect=OSError("fixture control unavailable")), \
+             patch.object(service.processes, "stop_persistent", return_value=receipt) as cleanup:
+            with self.assertRaises(OSError):
+                _stop_test_hosts(self.root, [(child, self.job)], evidence)
+        cleanup.assert_called_once_with(self.job, pid=child.pid, created_at=self.created,
+                                       reason="test_teardown", grace=2)
+        self.assertEqual(evidence["teardown"], [receipt])
+        self.assertEqual(child.wait.call_count, 2)
+
     @unittest.skipUnless(os.name == "nt" and service.importlib.util.find_spec("mcp") is not None,
                          "Windows private Job and existing optional MCP SDK required")
     def test_real_windows_empty_host_pause_resume_stop_without_executing_provider(self):
@@ -419,7 +524,7 @@ class AgentServiceTests(unittest.TestCase):
         children = []
         def bounded_spawn(argv, **kwargs):
             child = original_spawn(argv, allow_parent_job=True, **kwargs)
-            children.append(child)
+            children.append((child, kwargs["job_name"]))
             return child
         def wait_dispatch_state(expected):
             deadline = time.monotonic() + 8
@@ -446,18 +551,18 @@ class AgentServiceTests(unittest.TestCase):
             self.assertEqual(resumed["model_calls"], 0)
             self.assertEqual(resumed["pending_events"], 0)
         finally:
-            stopped = service.stop(self.root, grace_seconds=5)
-            for child in children:
-                child.wait(timeout=5)
+            self.evidence = {"scope": "real Windows private Job; empty synthetic source; no provider/model"}
+            stopped = _stop_test_hosts(self.root, children, self.evidence)
         self.assertEqual(stopped["state"], "stopped", stopped)
         self.assertFalse(stopped["process"]["forcibly_terminated"])
         self.assertEqual(stopped["process"]["exit_code"], 0)
         self.assertEqual(stopped["process"]["remaining_owned_processes"], 0)
-        self.assertTrue(all(child.returncode == 0 for child in children))
-        self.evidence = {"scope": "real Windows private Job with empty synthetic source; parent budget preflight mocked; no provider/model",
+        self.assertEqual(self.evidence["teardown"], [])
+        self.assertTrue(all(child.returncode == 0 for child, _ in children))
+        self.evidence.update({"scope": "real Windows private Job with empty synthetic source; parent budget preflight mocked; no provider/model",
                          "started": started, "waiting": waiting, "paused": paused, "resumed": resumed,
-                         "stop": stopped, "child_exit_codes": [child.returncode for child in children],
-                         "model_calls": 0}
+                         "stop": stopped, "child_exit_codes": [child.returncode for child, _ in children],
+                         "model_calls": 0})
 
 
 if __name__ == "__main__":

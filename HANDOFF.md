@@ -2,7 +2,7 @@
 
 先讀 AGENTS、README、STATUS。最新目標是事件驅動的專用 agent 通路。一般使用者。核心只用標準庫。
 
-分支 `feat/local-codex-acceptance`。本批基底 `008a931121f03c1ceaa1abb6f26cbe08abf3bf48`。
+分支 `feat/local-codex-acceptance`。本批基底 `9640df6581b996126137dd4e7066023c3950cf20`。
 保留未追蹤的 `docs/research/` 與附件。不 reset、clean、推送或提交執行資料。
 
 ## 本批事件派送
@@ -14,6 +14,16 @@
 - `processes.stop_persistent`：只有已核對且 signalled 的 owned HANDLE 才讀取 OS exit code。失去證據則 null。
 - CLI `agent` 與 Web 派送頁共用 API。Web 只有 pause/stop，不能啟動或恢復模型。
 - 原 `validate_delivery.py service`：一件高嚴重度合成事件；先等候再加入；重驗 trace/工具/SQLite/Job；相同 intent 不重跑。
+
+本次補強：pending schema／hash／處置狀態先驗證，再作篩選。錯誤碼由固定清單投影到 host/status。
+驗證快取有界，key 含完整原文、PK 及 stored hash。同帳戶可改檔的限制仍存在。
+新 managed worker 在 spawn 前存 identity-required 與 nonce，spawn 後保存實際身分。worker 等待綁定後才可啟動 CLI。
+complete 與唯讀 status 共用 supervisor proof。缺開始身分、退出身分不符或缺實際 OS exit 都不能判成功。
+service verifier 另核對 SQLite created_at／acked_at、工具時間及同 scope 的 UTC／monotonic 觀察。
+舊 fixture 回條保留 legacy 語義，不可當成本版 managed 身分驗收。真驗仍未執行。
+capture-skipped 只證明 CLI 未啟動。三個 skip 分支仍須 supervisor proof；缺證據保持 started，不重啟。
+定向回歸及修正證據為 proof-delta-001／002；proof-test-index.json 按 test ID 合併。最後來源只重驗相關模組，沒有冒稱完整全套。
+host 的舊 Job 已確認退出時，可明確 start。未知 Job 仍阻擋，不取消預算或刪帳本。
 
 操作見 [AGENT_SERVICE](docs/AGENT_SERVICE.md)。新證據僅 `reports/event-ingress-001`，完整數字見 EVIDENCE。
 完整測試後又修正 resume/preflight、OS exit code 與 service 驗收；最終是全套加定向回歸，不冒稱最終來源全套重跑。

@@ -5,6 +5,7 @@ The plain-Popen fake used here is explicit test data, never wake evidence.
 from contextlib import ExitStack
 from copy import deepcopy
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -63,7 +64,7 @@ class DispatchLifecycleTests(unittest.TestCase):
 
     def invoke(self, name, **kwargs):
         return dispatch.run(self.root / name, self.source, self.inbox_dir, execute=True,
-                            max_tasks=1, max_seconds=5, poll_seconds=.01,
+                            max_tasks=1, max_seconds=kwargs.pop("max_seconds", 5), poll_seconds=.01,
                             deadline_monotonic=time.monotonic()+15, cancel=self.cancel, **kwargs)
 
     def stop_on_paused(self, target, *, resume=False):
@@ -239,6 +240,29 @@ class DispatchLifecycleTests(unittest.TestCase):
         self.assertTrue(record["child_exited"])
         self.assertEqual(self.children, [])
 
+    @unittest.skipUnless(os.name == "nt", "Windows owned worker identity")
+    def test_actual_owned_worker_writes_bound_start_before_fake_cli(self):
+        # Real Windows Job identities, explicitly fake CLI text and backend.
+        # This cannot establish a model call or real agent delivery.
+        with patch.object(dispatch, "_inbox", return_value=self.inbox), \
+                patch.object(dispatch.shutil, "which", return_value=sys.executable), \
+                patch.object(dispatch.importlib.util, "find_spec", return_value=True), \
+                patch.object(dispatch, "command", return_value=[sys.executable, "-B", str(self.script), str(self.trace), "success"]):
+            self.assertEqual(self.invoke("owned-worker", max_seconds=15), 0)
+        saved = dispatch.status(self.root / "owned-worker", read_only=True)
+        self.assertEqual(saved["supervisor_identity_level"], "bound_v1")
+        attempt = self.root / "owned-worker/attempts" / saved["active_attempt_id"]
+        metadata, started = read_json(attempt / "attempt.json"), read_json(attempt / "supervisor-start.json")
+        self.assertTrue(metadata["supervisor_identity_required"])
+        self.assertEqual(metadata["supervisor_start"], started)
+        self.assertEqual(saved["supervisor_start"], started)
+        self.assertEqual(read_json(attempt / "supervisor-exit.json")["pid"], started["pid"])
+        self.assertNotEqual(started["pid"], read_json(attempt / "capture-start.json")["codex_pid"])
+        self.evidence = {"scope": "real Windows private Job identities; fake CLI and backend; no model",
+            "supervisor_start": started, "supervisor_exit": read_json(attempt / "supervisor-exit.json"),
+            "capture_start": read_json(attempt / "capture-start.json"),
+            "capture_exit": read_json(attempt / "capture-exit.json"), "model_calls": 0}
+
 
 class DispatchProofTests(unittest.TestCase):
     def test_partial_tool_receipts_are_separate_from_ack_and_completion(self):
@@ -362,6 +386,123 @@ class DispatchReadonlyAndWorkerGateTests(unittest.TestCase):
         self.assertFalse(summary["child_exited"])
         self.assertEqual(record["state"], "started")
         self.assertIn("supervisor_tree_exit_unconfirmed", summary["evidence_errors"])
+
+    def bound_worker(self):
+        started = {"attempt_id": self.token, "run_id": self.run_id, "nonce": "e"*32,
+                   "pid": 111, "created_at": "2026-10-24T00:00:00+00:00"}
+        record = {"run_dir": str(self.root), "run_id": self.run_id, "attempt_id": self.token, "event_id": EVENT,
+                  "supervisor_exit_required": True, "supervisor_identity_required": True,
+                  "supervisor_nonce": "e"*32, "supervisor_start": started}
+        exited = {"managed": True, "pid": 111, "created_at": started["created_at"], "child_exited": True,
+                  "remaining_owned_processes": 0, "exit_code": 0, "forcibly_terminated": False, "reason": "natural_exit"}
+        write_json(self.attempt / "attempt.json", record)
+        write_json(self.attempt / "supervisor-start.json", started)
+        write_json(self.attempt / "supervisor-exit.json", exited)
+        self.state.update({key: record[key] for key in ("supervisor_exit_required", "supervisor_identity_required",
+                                                     "supervisor_nonce", "supervisor_start")})
+        write_json(self.root / "status.json", self.state)
+        return record
+
+    def test_supervisor_nonce_pid_and_creation_must_match_original_metadata(self):
+        record = self.bound_worker()
+        self.assertTrue(dispatch._supervisor_proof(record)["tree_exit_verified"])
+        exit_path = self.attempt / "supervisor-exit.json"
+        original = read_json(exit_path)
+        for changes in ({"pid": 222}, {"pid": True}, {"created_at": "2026-10-24T00:00:01+00:00"}, {"created_at": None}):
+            write_json(exit_path, {**original, **changes})
+            self.assertFalse(dispatch._supervisor_proof(record)["tree_exit_verified"])
+        write_json(exit_path, original)
+        start = read_json(self.attempt / "supervisor-start.json")
+        start["nonce"] = "f"*32
+        write_json(self.attempt / "supervisor-start.json", start)
+        self.assertFalse(dispatch._supervisor_proof(record)["identity_verified"])
+
+    def test_status_and_completion_share_missing_supervisor_identity_refusal(self):
+        record = self.bound_worker()
+        (self.attempt / "supervisor-start.json").unlink()
+        write_json(self.attempt / "capture-start.json", {})
+        (self.attempt / "codex.jsonl").write_text("", encoding="utf-8")
+        with patch.object(dispatch, "_receipt", return_value={"codex_exit_code": 0}), \
+                patch.object(dispatch, "validate_receipt", return_value=[]), \
+                patch.object(dispatch, "assess_delivery", return_value={"passed": True, "evidence_errors": []}):
+            view = dispatch.status(self.root, read_only=True)
+            summary = dispatch._complete(record, FakeInbox(self.root / "inbox"), {
+                "codex_exit_code": 0, "stdout_truncated": False, "stderr_truncated": False})
+        self.assertFalse(view["child_exited"])
+        self.assertFalse(summary["child_exited"])
+        self.assertEqual(view["supervisor_identity_level"], "unverified")
+        self.assertEqual(record["state"], "started")
+
+    def test_scalar_or_list_supervisor_evidence_remains_unknown_without_crashing(self):
+        record = self.bound_worker()
+        path = self.attempt / "supervisor-exit.json"
+        write_json(self.attempt / "capture-start.json", {})
+        (self.attempt / "codex.jsonl").write_text("", encoding="utf-8")
+        for value in (None, 1, [], "fixture"):
+            path.write_text(json.dumps(value), encoding="utf-8")
+            with patch.object(dispatch, "validate_receipt", return_value=[]), \
+                    patch.object(dispatch, "assess_delivery", return_value={"passed": True, "evidence_errors": []}):
+                summary = dispatch._complete(record, FakeInbox(self.root / "inbox"), {
+                    "codex_exit_code": 0, "stdout_truncated": False, "stderr_truncated": False})
+            self.assertFalse(summary["passed"])
+            self.assertFalse(summary["child_exited"])
+
+    def test_skipped_cli_does_not_prove_new_managed_worker_exit(self):
+        record = self.bound_worker()
+        write_json(self.attempt / "capture-skipped.json", {"attempt_id": self.token,
+            "launch_not_started": True, "capture_complete": False})
+        (self.attempt / "capture.lock").write_bytes(b"0")
+        exit_path = self.attempt / "supervisor-exit.json"
+        exited = read_json(exit_path)
+        exit_path.unlink()
+        view = dispatch.status(self.root, read_only=True)
+        self.assertTrue(view["launch_not_started"])
+        self.assertFalse(view["child_exited"])
+        self.assertEqual(view["reason"], "supervisor_tree_exit_unconfirmed")
+        # A known exit 4 confirms a declined worker. It is not agent success.
+        write_json(exit_path, {**exited, "exit_code": 4})
+        view = dispatch.status(self.root, read_only=True)
+        self.assertTrue(view["launch_not_started"])
+        self.assertTrue(view["child_exited"])
+        self.assertFalse(view.get("tasks_passed", 0))
+        (self.attempt / "supervisor-start.json").unlink()
+        self.assertFalse(dispatch.status(self.root, read_only=True)["child_exited"])
+
+    def test_restart_keeps_skipped_worker_with_unknown_exit_blocked(self):
+        record = self.bound_worker()
+        record["state"] = "started"
+        write_json(self.attempt / "capture-skipped.json", {"attempt_id": self.token,
+            "launch_not_started": True, "capture_complete": False})
+        (self.attempt / "capture.lock").write_bytes(b"0")
+        (self.attempt / "supervisor-exit.json").unlink()
+        source = self.root / "source"
+        source.mkdir()
+        (source / "eventguard.sqlite3").write_bytes(b"fake source; no scan")
+        state_dir = self.root / "inbox"
+        inbox = FakeInbox(state_dir)
+        ledger = state_dir / "dispatcher-attempts.json"
+        write_json(ledger, {"kind": dispatch.KIND, "events": {EVENT: [record]}})
+        before = ledger.read_bytes()
+        with isolated_budget(self.root) as authority, \
+                patch.object(dispatch, "_inbox", return_value=inbox), \
+                patch.object(dispatch.shutil, "which", return_value=sys.executable), \
+                patch.object(dispatch.importlib.util, "find_spec", return_value=True), \
+                patch.object(dispatch, "spawn", side_effect=AssertionError("No worker permitted")) as spawn, \
+                patch.object(authority, "reserve", wraps=authority.reserve) as reserve:
+            for name in ("restart-one", "restart-two"):
+                target = self.root / name
+                self.assertEqual(dispatch.run(target, source, state_dir, execute=True), 3)
+                self.assertEqual(dispatch.status(target, read_only=True)["reason"], "prior_child_exit_unconfirmed")
+                self.assertEqual(ledger.read_bytes(), before)
+            reserve.assert_not_called()
+            spawn.assert_not_called()
+            self.assertEqual(authority.status()["used"], 0)
+
+    def test_legacy_receipt_never_gets_bound_identity_grade(self):
+        record = {"run_dir": str(self.root), "run_id": self.run_id, "attempt_id": self.token}
+        proof = dispatch._supervisor_proof(record)
+        self.assertEqual(proof["identity_level"], "legacy_unverified")
+        self.assertFalse(proof["identity_verified"])
 
 
 if __name__ == "__main__":

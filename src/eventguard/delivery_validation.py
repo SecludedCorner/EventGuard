@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import hashlib
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -23,7 +24,8 @@ from .acceptance_process import capture, CAPTURE_LIMIT, open_authority, launch_h
 from .capture_receipt import validate_receipt
 from .events.store import event_payload_hash
 from .events.schema import validate_event
-from .agent_dispatch import command, assess_delivery, PROMPT
+from .agent_dispatch import (command, assess_delivery, PROMPT, _process_identity,
+                             _aware_timestamp, _supervisor_proof)
 from .events.store import EventStore
 from .local_paths import _guard
 from .queue_inbox import QueueInbox
@@ -43,7 +45,7 @@ delivery, host safety or remediation. No shell, other tools or native queries.""
 
 
 def utc():
-    return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
 
 def prepare(root, case):
@@ -193,7 +195,12 @@ def _service_path(root, name):
 
 def _service_view(root):
     from .agent_service import status
-    return {"observed_at": utc(), "service": status(root)}
+    clock = read_json(root / "manifest.json").get("service_execution", {}).get("clock_id")
+    if type(clock) is not str or not re.fullmatch(r"[a-f0-9]{32}", clock):
+        raise ValueError("service_acceptance_clock_scope_unknown")
+    view = status(root)
+    return {"observed_at": utc(), "observed_monotonic": time.monotonic(), "clock_id": clock,
+            "service": view}
 
 
 def _wait_service(root, deadline, predicate):
@@ -243,6 +250,7 @@ def execute_service(root, manifest, codex):
         raise ValueError("service_acceptance_existing_config_refused")
     digest = hashlib.sha256(config_source.read_bytes()).hexdigest()
     manifest["service_execution"] = {"kind": _SERVICE_KIND, "state": "intent", "started_at": utc(),
+                                     "started_monotonic": time.monotonic(), "clock_id": uuid.uuid4().hex,
                                      "timeout_seconds": SERVICE_TIMEOUT, "config_sha256": digest}
     # This intent is terminal for re-execution even if start never enqueues.
     write_json(root / "manifest.json", manifest)
@@ -281,19 +289,22 @@ def execute_service(root, manifest, codex):
                 write_json(root / "service-stop.json", stopped)
             finally:
                 manifest["service_execution"]["finished_at"] = utc()
+                manifest["service_execution"]["finished_monotonic"] = time.monotonic()
                 write_json(root / "manifest.json", manifest)
         else:
             manifest["service_execution"]["finished_at"] = utc()
+            manifest["service_execution"]["finished_monotonic"] = time.monotonic()
             write_json(root / "manifest.json", manifest)
     return verify_service(root, manifest)
 
 
 def _same_owner(value, owner):
-    return all(value.get(key) == owner.get(key) for key in ("pid", "created_at"))
+    return (_process_identity(value) and _process_identity(owner)
+            and all(value[key] == owner[key] for key in ("pid", "created_at")))
 
 
 def _natural_job(receipt, *, exit_code=True):
-    return (isinstance(receipt, dict) and receipt.get("managed") is True
+    return (_process_identity(receipt) and receipt.get("managed") is True
             and receipt.get("child_exited") is True
             and type(receipt.get("remaining_owned_processes")) is int and receipt["remaining_owned_processes"] == 0
             and receipt.get("forcibly_terminated") is False and receipt.get("reason") == "natural_exit"
@@ -320,8 +331,46 @@ def _check_idle(proof, owner, directory, tasks, dispatch_id):
     start = datetime.fromisoformat(before.get("observed_at", "").replace("Z", "+00:00"))
     end = datetime.fromisoformat(after.get("observed_at", "").replace("Z", "+00:00"))
     return (start.tzinfo is not None and end.tzinfo is not None and (end-start).total_seconds() >= SERVICE_IDLE_SECONDS
+            and _monotonic(before.get("observed_monotonic")) and _monotonic(after.get("observed_monotonic"))
+            and after["observed_monotonic"]-before["observed_monotonic"] >= SERVICE_IDLE_SECONDS
             and _sample_matches(before, owner, directory, tasks, dispatch_id)
             and _sample_matches(after, owner, directory, tasks, dispatch_id))
+
+
+def _monotonic(value):
+    return type(value) in (int, float) and math.isfinite(value) and value >= 0
+
+
+def _database_time(value):
+    if not _monotonic(value):
+        return None
+    try:
+        return datetime.fromtimestamp(value, timezone.utc)
+    except (ValueError, OverflowError, OSError):
+        return None
+
+
+def _service_clock(observations, execution):
+    clock = execution.get("clock_id")
+    if type(clock) is not str or not re.fullmatch(r"[a-f0-9]{32}", clock):
+        return False
+    samples = [{"clock_id": clock, "observed_at": execution.get("started_at"),
+                "observed_monotonic": execution.get("started_monotonic")},
+               observations["idle_before"]["before"], observations["idle_before"]["after"],
+               observations["completed"], observations["idle_after"]["before"], observations["idle_after"]["after"],
+               {"clock_id": clock, "observed_at": execution.get("finished_at"),
+                "observed_monotonic": execution.get("finished_monotonic")}]
+    prior = None
+    for sample in samples:
+        wall, mono = _aware_timestamp(sample.get("observed_at")), sample.get("observed_monotonic")
+        if sample.get("clock_id") != clock or wall is None or not _monotonic(mono):
+            return False
+        if prior:
+            elapsed_wall, elapsed_mono = (wall-prior[0]).total_seconds(), mono-prior[1]
+            if elapsed_wall < 0 or elapsed_mono < 0 or abs(elapsed_wall-elapsed_mono) > 1:
+                return False  # Clock step or unknown monotonic domain cannot prove causality.
+        prior = wall, mono
+    return True
 
 
 def verify_service(root, manifest):
@@ -332,6 +381,10 @@ def verify_service(root, manifest):
     if (execution.get("kind") != _SERVICE_KIND or execution.get("host_run_id") != host_run
             or type(host_run) is not str or not re.fullmatch(r"[a-f0-9]{32}", host_run)):
         raise ValueError("service_acceptance_host_binding_required")
+    if (not _process_identity(owner) or type(owner.get("session_id")) is not int
+            or not 0 <= owner["session_id"] <= 0xFFFFFFFF or type(owner.get("job_name")) is not str
+            or not re.fullmatch(r"Global\\EventGuard-[a-f0-9]{32}", owner["job_name"])):
+        raise ValueError("service_acceptance_owner_identity_required")
     directory = _service_path(root, "runs") / host_run
     control = read_json(_service_path(root, "control.json"))
     run = read_json(_service_path(root, "run.json"))
@@ -360,6 +413,7 @@ def verify_service(root, manifest):
     record = attempts[0]
     token = record.get("attempt_id")
     if (type(token) is not str or not re.fullmatch(r"[a-f0-9]{32}", token)
+            or type(state.get("run_id")) is not str or not re.fullmatch(r"[a-f0-9]{32}", state["run_id"])
             or record.get("run_id") != state.get("run_id") or _guard(record.get("run_dir", "")) != directory
             or marker.get("run_id") != state.get("run_id") or marker.get("kind") != state.get("kind")
             or marker.get("kind") != "eventguard-bounded-agent-dispatch-v1"):
@@ -367,6 +421,15 @@ def verify_service(root, manifest):
     attempt = _guard(directory / "attempts" / token)
     if {path.name for path in (directory / "attempts").iterdir()} != {token}:
         raise ValueError("service_acceptance_extra_attempt_refused")
+    metadata = read_json(attempt / "attempt.json")
+    if (metadata.get("attempt_id") != token or metadata.get("run_id") != state.get("run_id")
+            or metadata.get("event_id") != identity or _guard(metadata.get("run_dir", "")) != directory
+            or metadata.get("supervisor_identity_required") is not True
+            or record.get("supervisor_identity_required") is not True and identity not in archive.get("events", {})):
+        raise ValueError("service_acceptance_bound_supervisor_identity_required")
+    supervisor_proof = _supervisor_proof(metadata, attempt)
+    if supervisor_proof["identity_verified"] is not True or supervisor_proof["tree_exit_verified"] is not True:
+        raise ValueError("service_acceptance_supervisor_identity_unconfirmed")
     started, receipt = read_json(attempt / "capture-start.json"), read_json(attempt / "capture-exit.json")
     if validate_receipt(receipt, started, token, require_success=True):
         raise ValueError("complete_natural_cli_exit_required")
@@ -380,8 +443,8 @@ def verify_service(root, manifest):
     evidence = inbox.evidence(identity)
     assessment = assess_delivery(trace, evidence, identity, receipt["codex_exit_code"], inbox.acknowledged(identity))
     with inbox._readonly() as db:
-        events = list(db.execute("SELECT event_id,payload_hash,delivery_status FROM events"))
-        receipts = list(db.execute("SELECT event_id,payload_hash FROM receipts"))
+        events = list(db.execute("SELECT event_id,payload_hash,delivery_status,created_at FROM events"))
+        receipts = list(db.execute("SELECT event_id,payload_hash,acked_at FROM receipts"))
     source_ids = {row["event_id"] for row in events} | {row["event_id"] for row in receipts}
     enqueued = [row["event_id"] for row in manifest["enqueued"]]
     idle_before = _check_idle(observations.get("idle_before", {}), owner, directory, 0, state.get("run_id"))
@@ -396,10 +459,24 @@ def verify_service(root, manifest):
     progress = state.get("delivery_progress") or {}
     phase_keys = ("capture_worker_started", "cli_started", "event_received", "evidence_queried", "result_saved",
                   "outbox_acknowledged", "provider_turn_completed", "natural_cli_exit", "owned_tree_exited")
-    timeline = [observations["idle_before"]["after"]["observed_at"], manifest["enqueued"][0]["at"],
-                observations["completed"]["observed_at"], observations["idle_after"]["before"]["observed_at"],
-                observations["idle_after"]["after"]["observed_at"], execution["finished_at"]]
-    moments = [datetime.fromisoformat(value.replace("Z", "+00:00")) for value in timeline]
+    times_available = (len(events) == len(receipts) == 1 and _database_time(events[0]["created_at"]) is not None
+                       and _database_time(receipts[0]["acked_at"]) is not None)
+    chronology = False
+    if times_available and evidence:
+        moments = [
+            _aware_timestamp(owner["created_at"]), _aware_timestamp(observations["idle_before"]["before"]["observed_at"]),
+            _aware_timestamp(observations["idle_before"]["after"]["observed_at"]),
+            _database_time(events[0]["created_at"]),
+            _aware_timestamp(supervisor_proof["start"]["created_at"]), _aware_timestamp(started.get("created_at")),
+            _aware_timestamp(evidence.get("received_at")), _aware_timestamp(evidence.get("queried_at")),
+            _aware_timestamp((evidence.get("result") or {}).get("recorded_at")),
+            _database_time(receipts[0]["acked_at"]),
+            _aware_timestamp(observations["completed"]["observed_at"]),
+            _aware_timestamp(observations["idle_after"]["before"]["observed_at"]),
+            _aware_timestamp(observations["idle_after"]["after"]["observed_at"]),
+            _aware_timestamp(exit_receipt.get("at")), _aware_timestamp(execution.get("finished_at"))]
+        chronology = all(moment is not None for moment in moments) and moments == sorted(moments)
+    clock_verified = _service_clock(observations, execution)
     lifecycle = (control.get("kind") == "eventguard-agent-service-control-v1"
         and owner.get("kind") == "eventguard-agent-service-owner-v1"
         and control.get("run_id") == host_run and control.get("enabled") is False
@@ -408,9 +485,15 @@ def verify_service(root, manifest):
         and state.get("tasks_started") == 1 and state.get("tasks_passed") == 1 and state.get("child_exited") is True
         and state.get("events_total") == 1 and state.get("events") == expected
         and all(progress.get(key) is True for key in phase_keys) and _natural_job(supervisor)
+        and supervisor == supervisor_proof["exit"]
+        and len({owner["pid"], supervisor_proof["start"]["pid"], started["codex_pid"]}) == 3
+        and state.get("supervisor_identity_level") == "bound_v1"
+        and state.get("supervisor_identity_required") is True
+        and state.get("supervisor_nonce") == metadata.get("supervisor_nonce")
+        and state.get("supervisor_start") == supervisor_proof["start"]
         and supervisor == state.get("supervisor_process")
         and _sample_matches(observations.get("completed", {}), owner, directory, 1, state.get("run_id"))
-        and all(moment.tzinfo is not None for moment in moments) and moments == sorted(moments))
+        and chronology and clock_verified)
     matched = (not manifest["stages"] and source_ids == set(expected) and Counter(enqueued) == Counter(expected)
                and evidence and evidence.get("payload_hash") == payload_hash
                and all(row["payload_hash"] == payload_hash for row in receipts)
@@ -425,6 +508,9 @@ def verify_service(root, manifest):
         "duplicates": [] if matched else sorted(source_ids-set(expected)), "per_stage": [assessment],
         "idle_before_verified": idle_before, "idle_after_verified": idle_after,
         "host_natural_exit_verified": host_natural, "lifecycle_verified": lifecycle,
+        "chronology_verified": bool(chronology), "monotonic_clock_verified": clock_verified,
+        "supervisor_identity_level": supervisor_proof["identity_level"],
+        "model_request_count": None, "model_request_count_measured": False, "provider_attempt_count": 1,
         "one_attempt_verified": True, "verified_at": utc(), "real_agent_woken": False,
         "scope": "reassessed service/CLI/tool/SQLite/Job evidence; synthetic fake and real runs must be labelled separately"}
     write_json(root / "validation.json", proof)

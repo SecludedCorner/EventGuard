@@ -9,6 +9,7 @@ import time
 import unittest
 from unittest.mock import patch
 
+import eventguard.dispatch_policy as policy_module
 from eventguard.dispatch_policy import (DEFAULT_POLICY, DispatchPolicyError,
                                        load_policy, select_pending, validate_policy)
 from eventguard.events.store import EventStore
@@ -70,6 +71,15 @@ class PolicyConfigurationTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(DispatchPolicyError):
                 validate_policy(value)
 
+    def test_errors_expose_only_fixed_codes_to_host_status(self):
+        for value in ("private-path-and-instruction", None, [], {"reason": "private"}):
+            with self.subTest(kind=type(value).__name__):
+                error = DispatchPolicyError(value)
+                self.assertEqual(error.code, "dispatch_selection_failed_pending_preserved")
+                self.assertEqual(str(error), error.code)
+        known = DispatchPolicyError("dispatch_pending_identity_conflict")
+        self.assertEqual(known.code, "dispatch_pending_identity_conflict")
+
 
 class DispatchSelectionTests(unittest.TestCase):
     def setUp(self):
@@ -79,6 +89,8 @@ class DispatchSelectionTests(unittest.TestCase):
         self.source, self.state = self.root / "source", self.root / "inbox"
         self.store = EventStore(self.source)
         self.inbox = QueueInbox(self.source, self.state)
+        policy_module._validated_pending_payload.cache_clear()
+        self.addCleanup(policy_module._validated_pending_payload.cache_clear)
 
     def files(self):
         return {p.relative_to(self.root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
@@ -148,21 +160,172 @@ class DispatchSelectionTests(unittest.TestCase):
         live = QueueInbox(self.source, self.root / "live-inbox", allow_live=True)
         self.assertEqual(select_pending(live), "evt-live")
 
+    def test_bad_retry_or_lease_cannot_silently_exclude_pending(self):
+        self.store.enqueue(event(severity="info"))
+        for field in ("next_retry_at", "lease_until"):
+            for value in ("broken private-text", float("inf"), -1, policy_module.MAX_SCHEDULE_TIME):
+                self.sql("UPDATE events SET " + field + "=?", (value,))
+                before = self.files()
+                with self.subTest(field=field, value=value), self.assertRaisesRegex(
+                        DispatchPolicyError, "^dispatch_pending_schedule_invalid$"):
+                    select_pending(self.inbox)
+                self.assertEqual(self.files(), before)
+                self.assertEqual(self.store.stats()["pending"], 1)
+            self.sql("UPDATE events SET " + field + "=NULL")
+        self.assertIsNone(select_pending(self.inbox))  # Valid low severity remains filtered.
+        self.sql("UPDATE events SET next_retry_at=?", (time.time() + 3600,))
+        self.assertIsNone(select_pending(self.inbox))  # A valid future is waiting, not damaged.
+
     def test_matching_invalid_hash_fails_visibly_and_preserves_pending(self):
         self.store.enqueue(event())
         self.sql("UPDATE events SET payload_hash=?", ("a" * 64,))
         before = self.files()
-        with self.assertRaisesRegex(QueueInboxError, "source_identity_conflict"):
+        with self.assertRaisesRegex(DispatchPolicyError, "dispatch_pending_identity_conflict"):
             select_pending(self.inbox)
         self.assertEqual(self.files(), before)
 
-    def test_malformed_or_oversized_nonmatching_json_cannot_crash_sql_or_hide_high(self):
-        self.store.commit_evaluation({}, [event("evt-a-invalid"), event("evt-b-too-large"), event("evt-z-good")])
-        self.sql("UPDATE events SET payload=? WHERE event_id='evt-a-invalid'", ("{ invalid-json",))
-        self.sql("UPDATE events SET payload=? WHERE event_id='evt-b-too-large'", (json.dumps({"severity": "high", "x": "x" * 9000}),))
+    def test_malformed_pending_is_blocked_not_empty_and_preserves_raw_event(self):
+        self.store.enqueue(event(severity="info"))
+        self.sql("UPDATE events SET payload=?", ("{ invalid-json private-instruction",))
         before = self.files()
-        self.assertEqual(select_pending(self.inbox), "evt-z-good")
+        with self.assertRaisesRegex(DispatchPolicyError, "^dispatch_pending_payload_malformed$") as caught:
+            select_pending(self.inbox)
+        self.assertNotIn("private-instruction", str(caught.exception))
         self.assertEqual(self.files(), before)
+        self.assertEqual(self.store.stats()["pending"], 1)
+
+    def test_oversized_pending_is_blocked_before_cache_even_when_other_high_exists(self):
+        self.store.commit_evaluation({}, [event("evt-a-invalid", severity="info"), event("evt-z-good")])
+        oversized = json.dumps({"severity": "info", "x": "x" * 9000})
+        self.sql("UPDATE events SET payload=? WHERE event_id='evt-a-invalid'", (oversized,))
+        before = self.files()
+        with self.assertRaisesRegex(DispatchPolicyError, "^dispatch_pending_payload_capacity$"):
+            select_pending(self.inbox)
+        self.assertEqual(self.files(), before)
+        self.assertEqual(self.store.stats()["pending"], 2)
+        # Query planning may inspect the other valid row first. The oversized
+        # raw text itself cannot add an entry or cache miss in either order.
+        cached = policy_module._validated_pending_payload.cache_info()
+        self.assertLessEqual(cached.currsize, 1)
+        self.assertEqual(policy_module._pending_payload_reason("evt-a-invalid", oversized, "a" * 64),
+                         "dispatch_pending_payload_capacity")
+        self.assertEqual(policy_module._validated_pending_payload.cache_info(), cached)
+
+    def test_missing_core_fields_unknown_schema_and_wrong_type_are_blocked(self):
+        self.store.enqueue(event(severity="info"))
+        from eventguard.events.schema import validate_event
+        original = validate_event(event(severity="info"))
+        cases = []
+        for missing in ("schema_version", "event_id", "host_id", "episode_id", "correlation_id",
+                        "sequence", "event_type", "transition", "severity", "synthetic", "observed_at", "persisted_at"):
+            changed = dict(original)
+            del changed[missing]
+            cases.append(("missing-" + missing, changed))
+        cases.extend((("unknown-schema", dict(original, schema_version="99.0")),
+                      ("invalid-boolean", dict(original, synthetic=1)),
+                      ("invalid-coverage", dict(original, coverage={"status": "safe"})),
+                      ("array-root", [])))
+        for label, changed in cases:
+            self.sql("UPDATE events SET payload=?", (json.dumps(changed),))
+            before = self.files()
+            with self.subTest(label=label), self.assertRaisesRegex(DispatchPolicyError, "^dispatch_pending_schema_invalid$"):
+                select_pending(self.inbox)
+            self.assertEqual(self.files(), before)
+        self.assertEqual(self.store.stats()["pending"], 1)
+
+    def test_invalid_human_status_blocks_instead_of_becoming_filtered(self):
+        self.store.enqueue(event())
+        self.sql("CREATE TABLE event_dispositions(event_id TEXT PRIMARY KEY,status,updated_at REAL)")
+        for invalid in (None, "closed_by_unknown_rule", 77):
+            self.sql("INSERT OR REPLACE INTO event_dispositions VALUES(?,?,?)", ("evt-one", invalid, time.time()))
+            before = self.files()
+            with self.subTest(status=invalid), self.assertRaisesRegex(DispatchPolicyError, "^dispatch_pending_human_status_invalid$"):
+                select_pending(self.inbox)
+            self.assertEqual(self.files(), before)
+            self.assertEqual(self.store.stats()["pending"], 1)
+
+    def test_unknown_conditions_cannot_exclude_their_own_validation(self):
+        self.store.enqueue(event(synthetic=False, severity="info"))
+        # Neither namespace nor future retry can establish trusted exclusion
+        # after the schema has become unreadable.
+        changed = event(synthetic=False, severity="info")
+        changed["schema_version"] = "future"
+        self.sql("UPDATE events SET payload=?,next_retry_at=?", (json.dumps(changed), time.time() + 3600))
+        with self.assertRaisesRegex(DispatchPolicyError, "^dispatch_pending_schema_invalid$"):
+            select_pending(self.inbox)
+
+    def test_duplicate_json_conditions_are_blocked_not_interpreted_differently(self):
+        self.store.enqueue(event())
+        raw = json.dumps(event()).replace('"severity": "high"', '"severity": "info", "severity": "high"')
+        self.sql("UPDATE events SET payload=?", (raw,))
+        before = self.files()
+        with self.assertRaisesRegex(DispatchPolicyError, "^dispatch_pending_payload_malformed$"):
+            select_pending(self.inbox)
+        self.assertEqual(self.files(), before)
+
+    def test_same_valid_low_content_uses_lru_without_full_parse_each_poll(self):
+        self.store.enqueue(event(severity="info"))
+        with patch.object(policy_module, "validate_event", wraps=policy_module.validate_event) as validator:
+            self.assertIsNone(select_pending(self.inbox))
+            self.assertIsNone(select_pending(self.inbox))
+            self.assertIsNone(select_pending(self.inbox))
+            self.assertEqual(validator.call_count, 1)
+        info = policy_module._validated_pending_payload.cache_info()
+        self.assertEqual(info.currsize, 1)
+        self.assertGreaterEqual(info.hits, 2)
+        self.assertEqual(self.store.stats()["pending"], 1)
+
+    def test_same_stored_hash_with_changed_raw_content_does_not_hit_old_validation(self):
+        self.store.enqueue(event(severity="info"))
+        self.assertIsNone(select_pending(self.inbox))
+        from eventguard.events.schema import validate_event
+        changed = validate_event(event(severity="info"))
+        changed["severity"] = "critical"
+        self.sql("UPDATE events SET payload=?", (json.dumps(changed),))
+        before = self.files()
+        with patch.object(policy_module, "validate_event", wraps=policy_module.validate_event) as validator:
+            with self.assertRaisesRegex(DispatchPolicyError, "^dispatch_pending_identity_conflict$"):
+                select_pending(self.inbox)
+            self.assertEqual(validator.call_count, 1)
+        self.assertEqual(self.files(), before)
+
+    def test_cache_is_finite_and_oversized_keys_are_not_admitted(self):
+        from eventguard.events.schema import validate_event
+        from eventguard.events.store import event_payload_hash
+        for index in range(1001):
+            clean = validate_event(event("evt-cache-" + str(index), severity="info"))
+            self.assertIsNone(policy_module._pending_payload_reason(clean["event_id"], json.dumps(clean), event_payload_hash(clean)))
+        info = policy_module._validated_pending_payload.cache_info()
+        self.assertEqual(info.maxsize, 1000)
+        self.assertEqual(info.currsize, 1000)
+        for identity, raw, stored_hash in (("evt-one", "x" * 8193, "a" * 64),
+                                           ("x" * 8193, "{}", "a" * 64),
+                                           ("evt-one", "{}", "a" * 8193)):
+            self.assertIsNotNone(policy_module._pending_payload_reason(identity, raw, stored_hash))
+        after = policy_module._validated_pending_payload.cache_info()
+        self.assertEqual(after.currsize, info.currsize)
+        self.assertEqual(after.misses, info.misses)
+
+    def test_pending_count_above_bound_blocks_before_schema_scan(self):
+        self.store.commit_evaluation({}, [event("evt-one"), event("evt-two")])
+        before = self.files()
+        with patch.object(policy_module, "MAX_CANDIDATES", 1), \
+             patch.object(policy_module, "validate_event", side_effect=AssertionError("must bound before parsing")):
+            with self.assertRaisesRegex(DispatchPolicyError, "^dispatch_pending_capacity_pending_preserved$"):
+                select_pending(self.inbox)
+        self.assertEqual(self.files(), before)
+        self.assertEqual(self.store.stats()["pending"], 2)
+
+    def test_repair_is_observed_without_clearing_pending_or_restarting(self):
+        from eventguard.events.schema import validate_event
+        clean = validate_event(event())
+        self.store.enqueue(clean)
+        self.sql("UPDATE events SET payload=?", ("{ damaged",))
+        with self.assertRaises(DispatchPolicyError):
+            select_pending(self.inbox)
+        self.sql("UPDATE events SET payload=?", (json.dumps(clean),))
+        self.assertEqual(select_pending(self.inbox), "evt-one")
+        self.assertEqual(self.store.stats()["pending"], 1)
 
     def test_actual_selection_validates_source_hash_and_returns_id_only(self):
         self.store.enqueue(event())

@@ -397,17 +397,13 @@ def _complete(record, inbox, receipt):
     if proof_errors:
         summary["passed"] = False
         summary["evidence_errors"].extend(proof_errors)
-    supervisor_path = directory / "supervisor-exit.json"
-    supervisor = read_json(supervisor_path) if supervisor_path.exists() else {}
-    supervisor_invalid = (record.get("supervisor_exit_required") is True and not supervisor_path.exists()) or (supervisor_path.exists() and (supervisor.get("managed") is not True
-            or supervisor.get("child_exited") is not True
-            or type(supervisor.get("remaining_owned_processes")) is not int
-            or supervisor.get("remaining_owned_processes") != 0
-            or type(supervisor.get("exit_code")) is not int))
+    supervisor_proof = _supervisor_proof(record, directory)
+    supervisor = supervisor_proof["exit"]
+    supervisor_invalid = supervisor_proof["tree_exit_verified"] is not True
     if supervisor_invalid:
         summary["passed"] = False
-        summary["evidence_errors"].append("supervisor_tree_exit_unconfirmed")
-    if supervisor_path.exists() and supervisor.get("exit_code") != 0:
+        summary["evidence_errors"].extend(supervisor_proof["errors"])
+    if supervisor and supervisor.get("exit_code") != 0:
         summary["passed"] = False
         summary["evidence_errors"].append("capture_worker_failed")
     if receipt.get("forcibly_terminated") is True or supervisor.get("forcibly_terminated") is True:
@@ -421,7 +417,8 @@ def _complete(record, inbox, receipt):
     summary.update(attempt_id=record["attempt_id"], finished_at=utc(), child_exited=tree_exited,
                    capture_worker_started=True, cli_started=_start_identity_verified(started, record["attempt_id"]),
                    natural_cli_exit=not proof_errors,
-                   owned_tree_exited=tree_exited, notification_submitted=False)
+                   owned_tree_exited=tree_exited, notification_submitted=False,
+                   supervisor_identity_level=supervisor_proof["identity_level"])
     write_json(directory / "summary.json", summary)
     record.update(state="complete" if tree_exited else "started", passed=summary["passed"], child_exited=tree_exited,
                   tree_exit_verified=tree_exited,
@@ -441,15 +438,81 @@ def _progress(value=None):
 
 
 def _start_identity_verified(started, token):
-    if (started.get("attempt_id") != token or type(started.get("codex_pid")) is not int
-            or not 1 <= started["codex_pid"] <= 0xFFFFFFFF
-            or not isinstance(started.get("created_at"), str)):
-        return False
+    return started.get("attempt_id") == token and _process_identity(started, pid_key="codex_pid")
+
+
+def _aware_timestamp(value):
+    if type(value) is not str or not 20 <= len(value) <= 80:
+        return None
     try:
-        stamp = datetime.fromisoformat(started["created_at"].replace("Z", "+00:00"))
-        return stamp.tzinfo is not None and stamp.utcoffset() is not None
+        stamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return stamp if stamp.tzinfo is not None and stamp.utcoffset() is not None else None
     except (ValueError, OverflowError):
-        return False
+        return None
+
+
+def _process_identity(value, *, pid_key="pid"):
+    return (isinstance(value, dict) and type(value.get(pid_key)) is int
+            and 1 <= value[pid_key] <= 0xFFFFFFFF and _aware_timestamp(value.get("created_at")) is not None)
+
+
+def _supervisor_proof(record, directory=None):
+    """Read the same nonce/identity proof for completion and read-only status.
+
+    A legacy receipt remains readable, explicitly without the new identity
+    grade. New managed attempts cannot reconstruct a missing start after exit.
+    """
+    directory = _attempt_path(record) if directory is None else _guard(directory)
+    result = {"identity_level": "legacy_unverified", "identity_verified": False,
+              "tree_exit_verified": False, "errors": [], "start": {}, "exit": {}}
+    try:
+        metadata_path = directory / "attempt.json"
+        metadata = read_json(metadata_path) if metadata_path.exists() else {}
+        if type(metadata) is not dict:
+            raise LocalWaitError("supervisor_identity_metadata_unconfirmed")
+        exit_path = directory / "supervisor-exit.json"
+        exited = read_json(exit_path) if exit_path.exists() else {}
+        if type(exited) is not dict:
+            raise LocalWaitError("supervisor_exit_evidence_invalid")
+        result["exit"] = exited
+        required = record.get("supervisor_identity_required") is True or metadata.get("supervisor_identity_required") is True
+        exit_required = record.get("supervisor_exit_required") is True or metadata.get("supervisor_exit_required") is True
+        if required:
+            result["identity_level"] = "unverified"
+            nonce = record.get("supervisor_nonce")
+            if (record.get("supervisor_identity_required") is not True
+                    or any(type(record.get(key)) is not str or not _TOKEN.fullmatch(record[key])
+                           for key in ("attempt_id", "run_id"))
+                    or metadata.get("supervisor_identity_required") is not True
+                    or type(nonce) is not str or not _TOKEN.fullmatch(nonce)
+                    or metadata.get("supervisor_nonce") != nonce
+                    or metadata.get("run_id") != record.get("run_id")
+                    or metadata.get("attempt_id") != record.get("attempt_id")):
+                raise LocalWaitError("supervisor_identity_metadata_unconfirmed")
+            started = read_json(directory / "supervisor-start.json")
+            if type(started) is not dict:
+                raise LocalWaitError("supervisor_start_identity_unconfirmed")
+            result["start"] = started
+            if (set(started) != {"attempt_id", "run_id", "nonce", "pid", "created_at"}
+                    or started.get("attempt_id") != record.get("attempt_id")
+                    or started.get("run_id") != record.get("run_id") or started.get("nonce") != nonce
+                    or not _process_identity(started) or record.get("supervisor_start") != started
+                    or metadata.get("supervisor_start") != started):
+                raise LocalWaitError("supervisor_start_identity_unconfirmed")
+            result.update(identity_level="bound_v1", identity_verified=True)
+            if (not _process_identity(exited) or exited["pid"] != started["pid"]
+                    or exited["created_at"] != started["created_at"]):
+                raise LocalWaitError("supervisor_exit_identity_unconfirmed")
+        if exit_required or exited:
+            if (exited.get("managed") is not True or exited.get("child_exited") is not True
+                    or type(exited.get("remaining_owned_processes")) is not int
+                    or exited["remaining_owned_processes"] != 0
+                    or type(exited.get("exit_code")) is not int):
+                raise LocalWaitError("supervisor_tree_exit_unconfirmed")
+        result["tree_exit_verified"] = True
+    except (OSError, ValueError, RuntimeError, TypeError, KeyError) as error:
+        result["errors"] = [str(error) if type(error) is LocalWaitError else "supervisor_evidence_unavailable"]
+    return result
 
 
 def _admission_enabled(callback=None, path=None, run_id=None):
@@ -591,6 +654,10 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                 if record["state"] == "started" or (record["state"] == "complete" and record.get("passed") is not True
                                                      and record.get("tree_exit_verified") is not True):
                     if _skipped(record):
+                        if _supervisor_proof(record)["tree_exit_verified"] is not True:
+                            state.update(state="blocked", reason="prior_child_exit_unconfirmed", child_exited=False)
+                            _save(directory, state)
+                            return 3
                         record.update(state="not_started", child_exited=True, cli_started=False,
                                       reason="capture_launch_not_started", finished_at=utc())
                         _ledger_write(ledger_path, ledger, policy)
@@ -661,7 +728,10 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             else:
                 try:
                     event_id = select_event(inbox)
-                except Exception:
+                except Exception as error:
+                    from .dispatch_policy import DispatchPolicyError
+                    if isinstance(error, DispatchPolicyError):
+                        raise LocalWaitError(error.code) from None
                     raise LocalWaitError("dispatch_selection_failed_pending_preserved") from None
             state["queue_checks"] += 1
             state["pending_event_id"] = event_id
@@ -713,7 +783,11 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             prospective = {"kind": KIND, "events": {**ledger["events"], event_id: records + [
                 {"event_id": event_id, "attempt_id": "0"*32, "run_id": state["run_id"], "run_dir": str(directory),
                  "state": "complete", "started_at": utc(), "finished_at": utc(), "child_exited": True,
-                 "codex_exit_code": 4294967295, "passed": False, "ack_verified": False}]}}
+                 "codex_exit_code": 4294967295, "passed": False, "ack_verified": False,
+                 "tree_exit_verified": True, "delivery_progress": _progress(),
+                 "supervisor_exit_required": True, "supervisor_identity_required": True, "supervisor_nonce": "0"*32,
+                 "supervisor_start": {"attempt_id": "0"*32, "run_id": state["run_id"], "nonce": "0"*32,
+                                      "pid": 4294967295, "created_at": "0"*80}}]}}
             if len(json.dumps(prospective, indent=2).encode()) > policy["max_bytes"]//2:
                 raise LocalWaitError("dispatch_ledger_bytes_full_pending_preserved")
             token = uuid.uuid4().hex
@@ -721,12 +795,15 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             attempt_dir.mkdir(parents=True, exist_ok=False)
             active = {"event_id": event_id, "attempt_id": token, "run_id": state["run_id"],
                       "run_dir": str(directory), "state": "started", "started_at": utc(),
-                      "supervisor_exit_required": True}
+                      "supervisor_exit_required": True, "supervisor_identity_required": True,
+                      "supervisor_nonce": uuid.uuid4().hex}
             ledger["events"].setdefault(event_id, []).append(active)
             _ledger_write(ledger_path, ledger, policy)  # Fail-closed crash window BEFORE Popen.
             write_json(attempt_dir / "attempt.json", active)
             state.update(state="running", reason=None, active_attempt_id=token, child_exited=False,
-                         tasks_started=state["tasks_started"] + 1, delivery_progress=_progress())
+                         tasks_started=state["tasks_started"] + 1, delivery_progress=_progress(),
+                         supervisor_exit_required=True, supervisor_identity_required=True,
+                         supervisor_nonce=active["supervisor_nonce"], supervisor_start=None)
             state["events"].append(event_id)
             state["events_total"] += 1
             if continuous:
@@ -737,7 +814,7 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             args = [sys.executable, "-B", str(ROOT / "scripts/eventguard_agent.py"), "_capture",
                     "--attempt-dir", str(attempt_dir), "--attempt-id", token,
                     "--deadline-monotonic", str(deadline), "--stop-run-dir", str(directory),
-                    "--run-id", state["run_id"]]
+                    "--run-id", state["run_id"], "--supervisor-nonce", active["supervisor_nonce"]]
             if admission_path is not None:
                 args.extend(("--admission-path", str(admission_path), "--admission-run-id", admission_run_id))
             args.extend(("--", *cli_args))
@@ -863,8 +940,20 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             # Explicit injected plain-Popen fixtures have no supervisor Job.
             # Production JobPopen owners require both nested tree exit proofs.
             active["supervisor_exit_required"] = isinstance(child, JobPopen)
+            active["supervisor_identity_required"] = isinstance(child, JobPopen)
+            if isinstance(child, JobPopen):
+                started_worker = {"attempt_id": token, "run_id": state["run_id"], "nonce": active["supervisor_nonce"],
+                                  "pid": child.pid, "created_at": child.created_at}
+                if not _process_identity(started_worker):
+                    raise LocalWaitError("supervisor_start_identity_unconfirmed")
+                write_json(attempt_dir / "supervisor-start.json", started_worker)
+                active["supervisor_start"] = started_worker
+            write_json(attempt_dir / "attempt.json", active)
             _ledger_write(ledger_path, ledger, policy)
             state["supervisor_exit_required"] = active["supervisor_exit_required"]
+            state["supervisor_identity_required"] = active["supervisor_identity_required"]
+            state["supervisor_start"] = active.get("supervisor_start")
+            state["supervisor_identity_level"] = "bound_v1" if isinstance(child, JobPopen) else "fixture_unmanaged"
             state["delivery_progress"]["capture_worker_started"] = True
             _save(directory, state)
             while child.poll() is None:
@@ -885,6 +974,11 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             receipt = _receipt(active)
             if receipt is None:
                 if _skipped(active):
+                    if _supervisor_proof(active)["tree_exit_verified"] is not True:
+                        state.update(state="pending_child_exit", reason="supervisor_tree_exit_unconfirmed",
+                                     child_exited=False, launch_not_started=True)
+                        _save(directory, state)
+                        return 3
                     active.update(state="not_started", child_exited=True, cli_started=False,
                                   reason="capture_launch_not_started", finished_at=utc())
                     _ledger_write(ledger_path, ledger, policy)
@@ -911,6 +1005,7 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             _ledger_write(ledger_path, ledger, policy)
             state.update(child_exited=summary["child_exited"], codex_exit_code=receipt["codex_exit_code"])
             state["delivery_progress"] = _progress(summary)
+            state["supervisor_identity_level"] = summary["supervisor_identity_level"]
             if not summary["child_exited"]:
                 state.update(state="pending_child_exit", reason="supervisor_tree_exit_unconfirmed")
                 _save(directory, state)
@@ -972,23 +1067,28 @@ def status(directory, *, read_only=False):
                 progress = _progress(state.get("delivery_progress"))
                 progress.update(capture_worker_started=True, cli_started=True)
                 state = {**state, "delivery_progress": progress}
-    if state.get("child_exited") is False and isinstance(token, str) and _TOKEN.fullmatch(token):
-        record = {"run_dir": str(directory), "run_id": state["run_id"], "attempt_id": token}
+    if isinstance(token, str) and _TOKEN.fullmatch(token) and (state.get("child_exited") is False
+            or (state.get("delivery_progress") or {}).get("capture_worker_started") is True):
+        record = {"run_dir": str(directory), "run_id": state["run_id"], "attempt_id": token,
+                  **{key: state[key] for key in ("supervisor_exit_required", "supervisor_identity_required",
+                                                "supervisor_nonce", "supervisor_start") if key in state}}
+        supervisor_proof = _supervisor_proof(record)
+        state = {**state, "supervisor_identity_level": supervisor_proof["identity_level"],
+                 "supervisor_evidence_errors": supervisor_proof["errors"]}
         receipt = _receipt(record, read_only=read_only)
         if receipt:
-            supervisor_path = _attempt_path(record) / "supervisor-exit.json"
-            supervisor = read_json(supervisor_path) if supervisor_path.exists() else None
-            if (state.get("supervisor_exit_required") is True and supervisor is None) or (supervisor is not None and (supervisor.get("managed") is not True
-                    or supervisor.get("child_exited") is not True
-                    or type(supervisor.get("remaining_owned_processes")) is not int
-                    or supervisor["remaining_owned_processes"] != 0
-                    or type(supervisor.get("exit_code")) is not int)):
+            if supervisor_proof["tree_exit_verified"] is not True:
                 return {**state, "child_exited": False, "reason": "supervisor_tree_exit_unconfirmed"}
             state = {**state, "child_exited": True, "codex_exit_code": receipt["codex_exit_code"],
                      "receipt_available": True, "delivery_assessment_pending": True}
         elif _skipped(record, read_only=read_only):
-            state = {**state, "state": "not_started", "child_exited": True,
+            if supervisor_proof["tree_exit_verified"] is not True:
+                return {**state, "child_exited": False, "launch_not_started": True,
+                        "reason": "supervisor_tree_exit_unconfirmed"}
+            state = {**state, "state": state["state"] if state.get("child_exited") is True else "not_started", "child_exited": True,
                      "launch_not_started": True, "reason": "capture_launch_not_started"}
+        elif state.get("child_exited") is True and supervisor_proof["tree_exit_verified"] is not True:
+            return {**state, "child_exited": False, "reason": "supervisor_tree_exit_unconfirmed"}
     return state
 
 
@@ -1011,6 +1111,7 @@ def main(argv=None):
         parser.add_argument("--deadline-monotonic", type=float, required=True)
         parser.add_argument("--stop-run-dir", type=Path, required=True)
         parser.add_argument("--run-id", required=True)
+        parser.add_argument("--supervisor-nonce")
         parser.add_argument("--admission-path", type=Path)
         parser.add_argument("--admission-run-id")
         parser.add_argument("command", nargs=argparse.REMAINDER)
@@ -1018,6 +1119,7 @@ def main(argv=None):
         args.command = args.command[1:] if args.command[:1] == ["--"] else args.command
         if (not _TOKEN.fullmatch(args.attempt_id) or not _TOKEN.fullmatch(args.run_id)
                 or not math.isfinite(args.deadline_monotonic) or not args.command
+                or (args.supervisor_nonce is not None and not _TOKEN.fullmatch(args.supervisor_nonce))
                 or (args.admission_path is not None and (not isinstance(args.admission_run_id, str)
                     or not _TOKEN.fullmatch(args.admission_run_id)))):
             return 2
@@ -1038,7 +1140,42 @@ def main(argv=None):
                 return False
 
         def start_allowed():
-            return owner_allows() and _admission_enabled(path=args.admission_path, run_id=args.admission_run_id)
+            return (owner_allows() and worker_identity_ready()
+                    and _admission_enabled(path=args.admission_path, run_id=args.admission_run_id))
+
+        def worker_identity_ready():
+            if args.supervisor_nonce is None:
+                return True  # Explicit legacy capture callers have no new identity grade.
+            try:
+                directory = _guard(args.attempt_dir)
+                metadata = read_json(directory / "attempt.json")
+                if metadata.get("supervisor_identity_required") is False and metadata.get("supervisor_exit_required") is False:
+                    return True  # Explicit injected unmanaged fixtures only.
+                started = read_json(directory / "supervisor-start.json")
+                from .processes import identity
+                current = identity()
+                state = _state(_guard(args.stop_run_dir))
+                return (metadata.get("supervisor_identity_required") is True
+                        and metadata.get("supervisor_nonce") == args.supervisor_nonce
+                        and set(started) == {"attempt_id", "run_id", "nonce", "pid", "created_at"}
+                        and started.get("nonce") == args.supervisor_nonce
+                        and started.get("run_id") == args.run_id and started.get("attempt_id") == args.attempt_id
+                        and _process_identity(started) and metadata.get("supervisor_start") == started
+                        and state.get("supervisor_start") == started
+                        and current.get("state") == "alive" and _process_identity(current)
+                        and current["pid"] == started["pid"] and current["created_at"] == started["created_at"])
+            except (OSError, ValueError, RuntimeError, TypeError):
+                return False
+
+        if args.supervisor_nonce is not None:
+            # Parent persists the actual newly-created worker identity. It may
+            # still be flushing when the worker imports this module. Never
+            # fabricate missing metadata or start the CLI during that gap.
+            ready_deadline = min(args.deadline_monotonic, time.monotonic()+5)
+            while not worker_identity_ready():
+                if not owner_allows() or time.monotonic() >= ready_deadline:
+                    return 2
+                time.sleep(.01)
 
         return capture(args.command, args.attempt_dir, args.attempt_id, PROMPT,
                        start_allowed=start_allowed, stop_requested=lambda: not owner_allows(),

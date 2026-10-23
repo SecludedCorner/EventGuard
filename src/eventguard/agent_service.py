@@ -295,7 +295,7 @@ def start(root, codex_executable, *, allow_live=False, source_dir=None, state_di
         current = status(root)
         if current["host_liveness"] in {"alive_verified", "alive_unverified"}:
             return dict(current, reason="agent_service_already_running")
-        if current["host_liveness"] not in {"not_recorded", "exited_verified"} or current["state"] == "blocked":
+        if current["host_liveness"] not in {"not_recorded", "exited_verified"}:
             return dict(current, state="blocked", reason="previous_agent_host_exit_unconfirmed")
         previous = _control(root)
         run_id, job_name = uuid.uuid4().hex, "Global\\EventGuard-" + uuid.uuid4().hex

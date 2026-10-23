@@ -1,6 +1,6 @@
 # EventGuard 現況
 
-更新：2026-10-24，UTC+08。分支：`feat/local-codex-acceptance`。本批基底：`008a931`。
+更新：2026-10-24，UTC+08。分支：`feat/local-codex-acceptance`。本批基底：`9640df6`。
 
 EventGuard 是本機程式。採集、規則、事件保存、CLI／Web 與通知不需要模型。
 主聊天接線、桌面閒置喚醒及開機自啟仍是選配，不阻擋產品。
@@ -15,6 +15,10 @@ EventGuard 是本機程式。採集、規則、事件保存、CLI／Web 與通�
 - 分開記錄工具收件、query、結果、ACK、回合及程序退出。模型用量缺失時顯示未知。
 - 新增唯讀 CloudEvents 七欄匯出、嚴格驗證及同 ID 衝突檢查。它不是新接收服務，也不是喚醒證據。
 - 原驗收腳本新增 `service` 單事件案例。先等空佇列，再由程式加入事件。預設只準備；真驗尚未執行。
+- pending 在篩選前核對。壞資料會顯示固定原因，不能被當成空佇列。原事件保留，不扣新預算。
+- 新 worker 的開始及退出回條綁定同一 PID、建立時間與 attempt nonce。缺身分維持未知，不接受另一程序的回條。
+- service 驗收核對實際 SQLite 保存及 ACK 時間。UTC、monotonic 或程序身分缺證據時，不判成功。
+- CLI 未啟動與 worker 已退出分開。缺 worker 退出證據時保留 started，禁止重新准入。已確認退出的 blocked host 可由人類明確重啟。
 
 操作見 [AGENT_SERVICE](docs/AGENT_SERVICE.md)。測試數、命令、失敗與修復只記於 [EVIDENCE](docs/EVIDENCE.md)。
 
@@ -22,6 +26,7 @@ EventGuard 是本機程式。採集、規則、事件保存、CLI／Web 與通�
 
 fixture、fake CLI、真本機 HTTP 及 Windows 私有 Job 已分範圍驗證。
 隔離空佇列的 host 啟動、暫停、恢復、合作停止與實際 OS exit 0 已通過；無 provider 啟動及殘留。
+本批定向回歸已通過。另核對真 Windows worker／fake CLI 身分與自然退出。原失敗及修正記於 EVIDENCE。
 這不是模型收件或長期背景驗收。最後來源雜湊及退出證據位於 `reports/event-ingress-001`。
 
 正式 agent host 為 `not_started`，未保存啟用。正式監看的停止設定與先前雜湊相同。
