@@ -1,31 +1,30 @@
 # EventGuard 本輪維護目標
 
-更新：2026-10-23。依使用者「全面盤點後實踐、由上而下、兩層子代理、功能完整後統一測試」執行。本批基底 `d4257437757a701874c6f00de6022340bff2bc94`，沿用 `feat/local-codex-acceptance`，保留研究與執行資料，不 reset/clean。前批預算／入口目標已完成，本批以實際使用流程補缺口。
+更新：2026-10-23。基底 `08a4ef8ff7e5762c499b7cb270de1e86a0361822`，同一 `feat/local-codex-acceptance`；保留未提交研究與執行資料，不 reset/clean。
 
-人類能啟動監看、看到來源進度與資料、了解事件、明確查證／接收／ACK、匯出報告、合作停止及再啟動。agent 使用同一核心，是可選介面；沒有 agent 或事件時不呼叫模型。架構、盤點與 ownership 見 [USABILITY_IMPLEMENTATION](USABILITY_IMPLEMENTATION.md)。
+本輪讓既有 Windows 唯讀採集在背景持續運作、異常後恢復、重開機後於同一使用者登入時接續；不需每天手動重啟。人類與可選接收者使用同一事件資料及操作核心。無事件不叫模型；有事件先耐久保存，也不自行啟動模型。
 
-## 本批完成條件
+## 完成條件
 
-| 要求 | 實作與驗證入口 |
+| 要求 | 實作與證據入口 |
 | --- | --- |
-| 慢來源有進度、heartbeat；已返回資料不因後續停止消失 | monitor／collectors progress；test_monitor_progress、test_collector_progress |
-| 七來源保存資料可直接看，列數／截斷／拒讀／過期／unknown 分明 | Runtime.observation、overview／sources；CLI workflow 與獨立七來源唯讀 probe |
-| 人類完成事件檢視、固定查證、receive/query/ACK、retry 與報告 | 共用 OperatorAPI；實際 CLI 子程序與 SQLite ID 集合核對 |
-| persistence／resolved／listener 正確查證綁定，PID 重用不補歷史 | rules／diagnostics／native binding；test_diagnostic_guidance、test_listener_identity |
-| 文字與 JSON 都可用，保留 namespace，控制字元不影響終端 | presentation／CLI／cmd；test_cli_workflow |
-| stdio 使用相同核心並守 launcher scope | SDK adapter；真 Python stdio＋合成資料的十三工具與 EOF exit；不是 agent 驗收 |
-| 未確認子樹不覆蓋、不重開；僅 Query 私有 Job 證明退出後恢復 | Runner／耐久 shutdown gate；test_monitor_progress、test_runtime_atomic |
-| 人類接手不冒充 agent 成功、不清預算、不歸檔未知退出 | dispatcher／QueueInbox；test_dispatch_takeover、test_storage_retention |
-| 完成功能後統一 Windows/full/mock，ID／退出／commit 可對照 | scripts/verify.py；[EVIDENCE](EVIDENCE.md) 為數字／命令唯一入口 |
+| 沒有一小時／每日 agent 額度的採集期限 | background supervisor → 既有無期限 Monitor；不 import dispatcher/model |
+| 啟停意圖耐久，明確 Stop 不被下次登入推翻 | 固定 data/background control；start/status/stop/serve；中斷與錯誤測試 |
+| host 與 worker 都在私有 Job 內；退出未知不報成功 | kernel keeper 交接、Global 跨 session 查核、自然／強停／殘留回條 |
+| 同一事件跨停止／重啟仍 pending、同 query、只 ACK 一次 | Windows 有限 host＋合成事件／SQLite 集合比對 |
+| 容量／保存失敗停止新增採集，不前移 baseline、不丟 pending | 明確背壓、5–300秒等待後重試、monitor_gap 必須先保存 |
+| 同一使用者登入後恢復 | 最小權限 ONLOGON task XML＋source/identity digest；實際建立及一次 Run 另待批准 |
+| 完成功能後統一測試，結果與來源可對照 | scripts/verify.py；[EVIDENCE](EVIDENCE.md) 是測試數與命令唯一入口 |
 
-兩層互斥 ownership 開發已獲使用者授權。子代理只實作與寫案例，不各自跑整套或提交；主線整合、交叉審查、統一測試、處理實際失敗後集中提交，不推送／手動 CI。不自行建立自動喚醒或永久執行。
+架構、操作方式與批准契約見 [BACKGROUND](BACKGROUND.md)。兩層互斥 ownership 開發後由主線整合／測試／集中提交；子代理不各跑完整 suite、不推送或觸發 CI。
 
 ## 保持的界線
 
-- 一般權限、唯讀 Windows、既有 Python 3.13 標準庫；沒有真 Codex／模型、UAC、下載安裝、改安全設定或其他程序處置。
-- 不永久註冊 MCP、不啟用服務／排程／自啟；stdio 協定測試不代表目前聊天已載入工具或 agent 已收到。
-- 每日五次／全域 unknown-exit／每事件限制保留；正式預算不初始化。ACK 只代表收到，不等於修復或結案。
-- pending/retry/未 ACK failed 與未知證據保留；容量／去重／接收證據有有限窗，沒有永久 exactly-once 或防同使用者竄改承諾。
-- [Phase 7](WINDOWS_VALIDATION_PLAN.md) 注入、登出／重開機、[24 小時 soak](SOAK_PLAN.md) 與真模型未執行，需當次批准。不新增來源、GUI、Linux 原生採集、雲端服務或漏洞平台。
+- 一般權限、唯讀、Python 3.13 標準庫；不提權、下載安裝、改設定或執行政策、不動其他程序。
+- 使用者已授權背景實作及一般權限驗證；**實際建立／移除／執行排程仍需當次批准**。不建立服務、不自行登出／重開機；只支援登入後互動使用者 token。
+- 真模型仍需當次批准；正式模型預算不初始化、不重置。每日五次只約束可選 agent 任務，不約束採集。正常背景不呼叫模型。
+- pending/retry/未 ACK failed 保留；ACK 是收到，不是修復或結案。事件及工具輸出均為不可信資料。
+- 受外部 Job 約束時不 breakaway；有限 guardian host 不當作獨立常駐。拒讀／過期／未知不代表安全。
+- 實際登出／重開機、[Phase 7](WINDOWS_VALIDATION_PLAN.md) 注入及 [24小時 soak](SOAK_PLAN.md) 未驗證；有限測試不能升格為全天候承諾。
 
-有限流程完成後回報實際能力、證據 scope 與未驗證，不以舊測試或 synthetic 冒充實機安全／長期可靠性。
+完成後一次回報功能、實際啟用狀態、證據、退出與尚待批准項。憑證、私人歷史、Codex home、data/logs/reports 不提交。

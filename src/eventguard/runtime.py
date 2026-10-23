@@ -184,9 +184,15 @@ class Runtime:
         """Keep the last private query job unresolved across owner/lock exit."""
         from .collectors.windows import process_metadata
         process = process_metadata(document.get("query_shutdown", {}))
+        try:
+            from .processes import process_session
+            session_id = process_session()
+        except (OSError, ValueError, RuntimeError):
+            session_id = None
         value = {"kind": "eventguard-monitor-shutdown-gate-v1", "recorded_at": utc_now(),
                  "instance_id": document.get("instance_id"), "namespace": document.get("namespace"),
                  "owner_pid": document.get("pid"), "owner_created_at": document.get("process_created_at"),
+                 "session_id": session_id,
                  "process": process}
         atomic_json(self.path("data/monitor-shutdown-gate.json"), value)
         return {"state": "blocked", "reason": "previous_query_exit_unconfirmed", "process": process}
@@ -208,9 +214,14 @@ class Runtime:
                     or not isinstance(process, dict) or process.get("managed") is not True):
                 raise ValueError("invalid_monitor_shutdown_gate")
             name = process.get("job_name")
-            if not isinstance(name, str) or not re.fullmatch(r"Local\\EventGuard-[a-f0-9]{32}", name):
+            if not isinstance(name, str) or not re.fullmatch(r"(?:Local|Global)\\EventGuard-[a-f0-9]{32}", name):
                 return {"state": "blocked", "reason": "previous_query_job_identity_unavailable", "process": process}
             from .processes import current_job_active
+            if name.startswith("Local\\"):
+                from .processes import process_session
+                recorded_session = value.get("session_id")
+                if type(recorded_session) is not int or recorded_session != process_session():
+                    return {"state": "blocked", "reason": "previous_local_job_session_unverified", "process": process}
             try:
                 active = current_job_active(name)
             except OSError as error:

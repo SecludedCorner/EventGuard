@@ -56,11 +56,11 @@ py -3.13 -B scripts/eventguard_schedule.py uninstall --dry-run
 
 實測 scope 分開記錄：一般 token 的 Windows Job／孫程序／巢狀 Job／owner exit／不受目標 Job 影響的合成 sentinel；固定 Python executable 版本的 worker smoke；hanging Python fixture 的 timeout／stop；checkpoint、outbox 滿載與恢復的 fixture。沒有真 provider 故障注入、登出／重開機、真模型或長期可靠性證據。
 
-排程腳本的 install／uninstall 都只印出候選 argv，`executed=false`；`--execute` 也拒絕（exit 2）。沒有呼叫 schtasks、建立／刪除任務。未來實際變更仍需批准並驗證既有任務身分，避免覆蓋或刪除不屬於本工具的任務。
+排程與背景生命週期已延伸為 [BACKGROUND](BACKGROUND.md) 契約。install／uninstall 預設 dry-run、只查本安裝同使用者的特定任務並保存審查計畫。`--execute` 需要當次批准的 plan digest，重新核對來源、任務身分與定義；不得自行建立、覆蓋或刪除其他任務。實際安裝狀態以 STATUS／EVIDENCE 為準。
 
 ## 跨來源與重啟的未知退出閘道
 
-Runner 不只查看等待執行緒是否完成；若 managed 回條尚未證明 child_exited=true 且 remaining_owned_processes 為整數 0，下一來源回 busy，不覆蓋該 Job。monitor 在釋放 singleton 前保存 `monitor-shutdown-gate.json`。再次啟動在任何新 collector 前，僅以記錄的 `Local\\EventGuard-<uuid>` 私有 Job 做 QUERY；確認 active=0 或 ERROR_FILE_NOT_FOUND 才保存 recovered 回條並清閘道。仍有程序、拒讀、其他錯誤、舊回條沒有 Job 身分，均保持 blocked_previous_query，不依 PID 強停，也不以刪鎖當恢復。
+Runner 不只查看等待執行緒是否完成；若 managed 回條尚未證明 child_exited=true 且 remaining_owned_processes 為整數 0，下一來源回 busy，不覆蓋該 Job。monitor 在釋放 singleton 前保存 `monitor-shutdown-gate.json`。新 worker 使用 `Global\EventGuard-<uuid>`，再次啟動在任何新 collector 前只 QUERY 記錄的私有 Job；確認 active=0 或 ERROR_FILE_NOT_FOUND 才保存 recovered 回條並清閘道。歷史 Local Job 必須先比對記錄的 session，不能用新登入 session 的不存在證明舊樹已退出。仍有程序、拒讀、其他錯誤或缺 Job 身分均保持 blocked_previous_query，不依 PID 強停，也不以刪鎖當恢復。
 
 每來源 launch／waiting／completed 有固定 progress 回報，慢查詢期間更新 heartbeat；每來源即保存白名單觀測與 coverage／事件交易。文字 UI 不因整輪未完而完全沉默，JSON stdout 仍為單一結果。每輪 45 秒採集預算未取消，超過後剩餘來源明示 busy 並稍後重試，不能把一輪當作七來源都已實際呼叫。
 

@@ -1,6 +1,6 @@
 @echo off
 cd /d "%~dp0"
-echo EventGuard: foreground read-only monitoring; no model required.
-echo Press Ctrl+C or use Stop-EventGuard.cmd from another terminal.
-call "%~dp0scripts\run-python.cmd" "%~dp0scripts\eventguard.py" --format text monitor %*
+echo EventGuard: background read-only monitoring; no model required.
+echo Use Status-EventGuard.cmd to inspect, or Stop-EventGuard.cmd to disable it durably.
+call "%~dp0scripts\run-python.cmd" "%~dp0scripts\eventguard.py" --format text background start %*
 exit /b %ERRORLEVEL%

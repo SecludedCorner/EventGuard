@@ -271,6 +271,8 @@ class Monitor:
                     if fixture:
                         for section in fixture_sections:
                             commit_section(section)
+                            if evaluation_blocked or health.get("persistence_failure"):
+                                break  # Backpressure: do not observe more changes we cannot persist.
                     else:
                         for key in due:
                             if deadline is not None and self.clock()>=deadline:
@@ -314,6 +316,8 @@ class Monitor:
                                 section["elapsed_ms"] = max(0, int((self.clock()-source_start)*1000))
                             # A stop does not erase facts already returned by a source.
                             commit_section(section)
+                            if evaluation_blocked or health.get("persistence_failure"):
+                                break
                     if not evaluation_blocked and not health.get("persistence_failure"):
                         health["healthy"] = all(value["status"] in SUCCESS for value in self.coverage.values())
                         health["last_error"] = None
@@ -324,6 +328,9 @@ class Monitor:
                     self._publish(health, "idle", cycle=cycles)
                     if on_cycle:
                         on_cycle(copy.deepcopy(health))
+                    if evaluation_blocked or health.get("persistence_failure"):
+                        health["stop_reason"]="persistence_backpressure"
+                        break
                     if self.cancel.is_set() or lock.stop_requested():
                         self.cancel.set()
                         health["stop_reason"] = "cooperative_stop"
@@ -341,6 +348,7 @@ class Monitor:
                     next_heartbeat=self.clock()+30
                 self.wait(0.2 if fixture else 0.5)
         except KeyboardInterrupt:
+            health["stop_reason"]="keyboard_interrupt"
             self.cancel.set()
         finally:
             self.cancel.set()

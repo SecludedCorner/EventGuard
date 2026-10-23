@@ -17,6 +17,9 @@ STATES={"ok":"可讀", "partial":"部分可讀", "denied":"拒讀", "unknown":"�
         "blocked_previous_query":"前次查詢退出未確認，已阻擋重啟", "blocked_monitor_gap":"監看缺口尚未耐久保存",
         "stopping_pending_query":"正在等待本工具查詢退出", "stop_requested":"已送出合作停止請求",
         "fresh":"新鮮", "stale":"過期", "blocked":"受阻", "ready":"就緒"}
+STATES.update({"started":"背景程序已啟動", "enabled_not_running":"已設定啟用，目前未運作",
+               "disabled":"已停用", "backoff":"等待後重試", "startup_failed":"背景啟動失敗",
+               "stop_not_persisted":"停止意圖尚未保存"})
 
 
 def text(value, limit=200):
@@ -76,11 +79,29 @@ def _row_lines(rows):
     return result
 
 
+def _background_lines(value):
+    if not isinstance(value,dict):
+        return []
+    lines=["背景控制程序："+state(value.get("state",value.get("status")))+
+           "；希望狀態="+text(value.get("desired_state",value.get("desired_enabled")))+
+           "；空間="+text(value.get("namespace"))]
+    if value.get("reason"):
+        lines.append("背景原因："+text(value["reason"]))
+    if value.get("heartbeat_at"):
+        lines.append("背景心跳："+text(value["heartbeat_at"]))
+    lines.append("背景不使用每日模型額度；手動停止會保存，需明確 start 才重新啟用。")
+    return lines
+
+
 def render(result, command="", operation=""):
     if not isinstance(result,dict):
         return "EventGuard：回傳格式未知。"
     if result.get("status") in {"error","invalid_request","conflict"}:
         return "EventGuard 無法完成操作："+text(result.get("reason",result.get("error_code",result["status"])))
+    if command=="background":
+        return "\n".join(["EventGuard 背景操作："+text(operation),*_background_lines(result),
+            "查看：background status；停止：background stop；事件：events list --namespace live。",
+            "重開機登入後自動恢復需另批准排程；沒有自行建立排程或啟動模型。"])
     if command=="sources" and operation=="list":
         return "\n".join(["EventGuard 保存來源（"+text(result.get("namespace"))+"）",*_source_lines(result.get("source_coverage")),
                           "查看資料：sources show --source-id <來源> --namespace "+text(result.get("namespace")),
@@ -94,6 +115,7 @@ def render(result, command="", operation=""):
                "空間："+text(result.get("namespace"))]
         if isinstance(summary,dict) and summary.get("headline"):
             lines.append(text(summary["headline"],500))
+        lines+=_background_lines(result.get("background"))
         lines+=_source_lines(result.get("source_coverage"))
         listing=result.get("event_list",{})
         lines.append("事件：總數="+text(listing.get("total"))+"，列出="+text(listing.get("exported"))+"，截斷="+text(listing.get("truncated")))
@@ -107,6 +129,7 @@ def render(result, command="", operation=""):
         health=result.get("last_report",result.get("health",{}))
         lines=["EventGuard 狀態", "目前核對："+state(current.get("state")),
                "最後回報："+state(health.get("state"))+"；heartbeat="+text(health.get("heartbeat_at"))]
+        lines+=_background_lines(result.get("background"))
         progress=health.get("progress",{})
         if health.get("last_error"):
             lines.append("未完成原因："+text(health["last_error"]))

@@ -16,6 +16,21 @@ def parser():
     sub=p.add_subparsers(dest="command",required=True)
     sub.add_parser("capabilities")
     sub.add_parser("status")
+    background=sub.add_parser("background",help="長期背景唯讀監看；無模型、耐久手動停止")
+    backgroundsub=background.add_subparsers(dest="background_command",required=True)
+    backgroundsub.add_parser("start",help="明確啟用並啟動；不建立排程或啟動模型")
+    backgroundsub.add_parser("status",help="核對背景 owner、心跳與保存的啟停意圖")
+    background_stop=backgroundsub.add_parser("stop",help="耐久停用背景與合作停止；不碰其他程序")
+    background_stop.add_argument("--grace-seconds",type=float,default=10)
+    background_serve=backgroundsub.add_parser("serve",help="供已批准排程同步執行；只恢復已明確啟用的監看")
+    background_serve.add_argument("--fixture",help=argparse.SUPPRESS)
+    background_serve.add_argument("--max-cycles",type=int,help=argparse.SUPPRESS)
+    background_host=backgroundsub.add_parser("_serve",help=argparse.SUPPRESS)
+    background_host.add_argument("--host-root",type=Path,required=True)
+    background_host.add_argument("--run-id",required=True)
+    background_host.add_argument("--job-name",required=True)
+    background_host.add_argument("--fixture",help=argparse.SUPPRESS)
+    background_host.add_argument("--max-cycles",type=int,help=argparse.SUPPRESS)
     overview=sub.add_parser("overview",help="監看、來源與事件的操作總覽；不重掃")
     overview.add_argument("--namespace",choices=("live","test"),default="live")
     overview.add_argument("--limit",type=int,default=20)
@@ -86,6 +101,18 @@ def parser():
 
 def execute(args,runtime,progress=None):
     operator=OperatorAPI(runtime.root)
+    if args.command=="background":
+        if args.background_command=="start":
+            return operator.call("background_start")
+        if args.background_command=="status":
+            return operator.call("background_status")
+        if args.background_command=="stop":
+            return operator.call("background_stop",args.grace_seconds)
+        from . import background
+        options={"fixture":args.fixture,"max_cycles":args.max_cycles}
+        if args.background_command=="_serve":
+            return background.serve(args.host_root,run_id=args.run_id,job_name=args.job_name,**options)
+        return background.serve(runtime.root,**options)
     if args.command=="budget":
         from .agent_budget import BudgetAuthority, BudgetError, public_status
         try:
@@ -199,9 +226,11 @@ def main(argv=None,root=None):
     root=Path(root) if root else Path(__file__).resolve().parents[2]
     human=args.format=="text" or args.format=="auto" and bool(getattr(sys.stdout,"isatty",lambda:False)())
     def show(value):
+        if sys.stdout is None:  # Existing pythonw.exe scheduled/background host.
+            return  # Structured status/exit receipts are persisted by its owner.
         if human:
             from .presentation import render
-            operation=getattr(args,"event_command",getattr(args,"source_command",""))
+            operation=getattr(args,"background_command",getattr(args,"event_command",getattr(args,"source_command","")))
             print(render(value,args.command,operation))
         else:
             print(json.dumps(value,ensure_ascii=True,allow_nan=False))
@@ -210,6 +239,14 @@ def main(argv=None,root=None):
         result=execute(args,Runtime(root),ProgressPrinter(sys.stderr) if human and args.command=="monitor" else None)
         show(result)
         if isinstance(result,dict):
+            if args.command=="background" or args.command=="stop" and "desired_enabled" in result:
+                state=result.get("state")
+                if state=="busy":
+                    return 3
+                if state in {"blocked","startup_failed","stop_not_persisted"}:
+                    return 2
+                if state in {"unknown","shutdown_unconfirmed"}:
+                    return 5
             if result.get("valid") is False or result.get("status") in {"invalid_request","invalid_playbooks","invalid_event","conflict"} or result.get("error_code") in {"invalid_request","process_instance_required","product_not_allowlisted"}:
                 return 2
             if result.get("status")=="busy":

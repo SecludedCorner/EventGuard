@@ -1,21 +1,20 @@
 # EventGuard 現況
 
-更新：2026-10-23。分支 `feat/local-codex-acceptance`；本批基底 `d4257437757a701874c6f00de6022340bff2bc94`。受測來源、commit、測試數與命令統一見 [EVIDENCE](docs/EVIDENCE.md)。
+更新：2026-10-23。分支 `feat/local-codex-acceptance`，本批基底 `08a4ef8ff7e5762c499b7cb270de1e86a0361822`。測試數、實際命令、時間、限制與 commit 對照統一見 [EVIDENCE](docs/EVIDENCE.md)。
 
-本批由上而下完成操作流程：逐來源進度與保存觀察、可讀 CLI、overview/sources、事件查證與明確 receive/ACK/retry、報告、合作停止與重啟閘道。核心獨立，agent 可選；一般權限七來源各呼叫一次，沒有啟動模型或持續監看。架構／盤點見 [USABILITY_IMPLEMENTATION](docs/USABILITY_IMPLEMENTATION.md)。
+本批完成背景 supervisor、耐久啟停與登入後恢復入口；採集不受每日 agent 預算或一小時期限限制。無事件不呼叫模型，有事件先保存同一 SQLite，交人類或已連接的可選接收者處理。契約及操作見 [BACKGROUND](docs/BACKGROUND.md)。
 
-| 項目 | 已具備 | 限制／尚未證明 |
+| 項目 | 已具備 | 實際狀態／限制 |
 | --- | --- | --- |
-| 獨立操作 | 文字／JSON CLI、cmd 與共用 OperatorAPI；保存來源、查證、receive/query/ACK、單事件 retry、JSON/HTML 報告 | ACK 只表示收到，不是診斷、修補或結案；不自動啟用背景監看 |
-| 七來源 | 固定七來源一般權限實測；原生 listener 當次程序身分、結構化拒讀 | listeners/processes/Defender partial、tasks unknown；細節／筆數見 EVIDENCE，不繞過權限 |
-| 可核查狀態 | 逐來源進度／heartbeat／筆數；安全來源投影與 freshness；namespace 隔離、報告 total/truncated | 保存最多每來源 200 列／1 MiB；無 watchdog，過期／拒讀／未知不代表安全 |
-| 共用工具 | stdio 十三工具與 CLI 共用相同核心、固定 launcher scope；合成資料實際 request/response 與 EOF exit | 尚未在本次真 agent/client 載入；不宣稱已接上目前聊天 |
-| 投遞入口 | QueueInbox 共用 command/capture/assessor；legacy run/retry、generic capture CLI 退役；舊 status 純讀 | 真 agent 與任意桌面聊天續接不是本批驗收範圍 |
-| 耐久預算 | 同安裝 UTC+08 每日五次，涵蓋 dispatch/acceptance/retry；先扣帳、一次性 argv/prompt 綁定、每事件上限、全域 unknown-exit gate | 正式帳本未初始化、沒有真模型；非帳戶級防竄改；時間與容量界線見 [預算契約](docs/AGENT_BUDGET.md) |
-| 程序治理 | 私有 Job、寬限／有界清理；同輪與跨重啟未知退出閘道；Windows 共享替換有界重試；monitor_gap | gate／gap 故障為 fixture；未做真登出／重啟；缺 Job 身分保持阻擋 |
-| 容量與保留 | pending/retry/未 ACK failed 保留；人類合法接手可記 received_without_agent_proof，保留 attempts／預算與失敗語意 | 有限保留／去重窗；接收證據先輪替而無法重證時保持背壓，不猜成功 |
-| 開發／部署 | Python 3.13 stdlib 核心、明示 mock/full scope、排程 dry-run | CI 未遠端執行；沒有服務／自啟／部署或全天候承諾 |
+| 背景生命週期 | start/status/stop/serve、固定耐久 enabled/disabled、單一 host lease、普通程式 backoff | 正式 start 已嘗試：執行端外部 Job 使獨立常駐無法證明，回 blocked；沒有正式 host 殘留 |
+| 登入後恢復 | 當前使用者 ONLOGON／InteractiveToken／LeastPrivilege XML；無期限、同安裝同資料；source/identity digest 批准 | 正常使用者唯讀查詢：專用 task 不存在；已產生審查計畫，尚未獲批准／建立或 Run。不支援登入前監看 |
+| 程序治理 | 原子私有 Global Job、真 kernel keeper 交接、PID＋建立時間、寬限後只清理本工具 Job、真實停止回條 | 受外部 Job 限制不 breakaway；Local 歷史跨 session 保持未知，沒有假裝重開機已驗證 |
+| 保存與恢復 | 滿載／保存失敗停止新採集、不前移 baseline；pending 保留；恢復前先保存 monitor_gap | 無法保存期間的變化不能完全重建；ACKed 保留及去重仍有容量／時間窗 |
+| 人類／可選 agent | 可讀 CLI/cmd、共用 OperatorAPI、七來源保存觀察、diagnose/receive/query/ACK/retry、JSON/HTML 報告 | ACK 是收到，不是修補或結案；沒有真模型／目前聊天載入／自動喚醒證明 |
+| Windows 可見性 | 原生優先、白名單唯讀 fallback、逐來源進度／筆數／拒讀／freshness | 本批沒有再掃七來源；前批受限環境實測 Defender/listeners/processes partial、tasks unknown，不能當正常使用者長期覆蓋證明 |
+| 模型預算 | 可選任務每日耐久五次、unknown-exit gate 保留 | 正式預算未初始化、本批零真模型；不限制背景採集，也不因換目錄重置 |
+| 驗證界線 | 有限真 Windows Job＋synthetic host／SQLite；完整與 mock scope 分列 | 沒有實際登出／重開機、真實狀態注入或24小時 soak，沒有全天候承諾 |
 
-[24 小時 soak](docs/SOAK_PLAN.md) 與 [Phase 7 實機計畫](docs/WINDOWS_VALIDATION_PLAN.md) 尚未執行，仍需當次批准。事件、名稱與工具輸出均為不可信資料。漏洞研究保留於獨立研究目錄，本批不新增感測器。
+實際排程啟用需要一次集中批准；使用者一般權限背景實作／驗證已授權，正常步驟不逐步詢問。部署前的測試修正及原始失敗均留 EVIDENCE。未提權、UAC、下載安裝、改設定／執行政策、永久 MCP、服務或其他程序處置。
 
-未提權、下載安裝、改安全設定、啟用排程或執行模型。執行資料、憑證、Codex home、私人歷史及完整會話不上傳；原有 docs/research/ 保留。本批驗證與失敗紀錄見 EVIDENCE，不將 fake CLI、SDK、fixture 升格為真 agent／實機採集或長期可靠性證據。
+執行資料、憑證、Codex home、私人歷史及完整會話不上傳；原有 docs/research/ 保留。本批集中本機提交，不推送或觸發 CI。長時與實機注入依 [SOAK_PLAN](docs/SOAK_PLAN.md)、[WINDOWS_VALIDATION_PLAN](docs/WINDOWS_VALIDATION_PLAN.md) 另驗證。

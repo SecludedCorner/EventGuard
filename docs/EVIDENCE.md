@@ -2,11 +2,35 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：背景監看、耐久啟停與登入恢復入口
+
+基底 `08a4ef8ff7e5762c499b7cb270de1e86a0361822`，同一 feature 分支。依本次授權完成一般權限背景功能、兩層互斥 ownership 開發、主線整合及功能完成後統一驗證。契約見 [BACKGROUND](BACKGROUND.md)，範圍見 [維護目標](MAINTENANCE_GOAL.md)。沒有真模型／Codex、提權／UAC、下載安裝、變更安全設定、服務或排程 mutation；原有研究與執行資料保留、不推送。
+
+**目前完整數字唯一來源**：`reports/background-001/full-003/verification-summary.json`。命令 `py -3.13 -B scripts/verify.py --run-dir reports/background-001/full-003 --timeout-seconds 600 --scope full`；Windows／Python **3.13.3**，2026-10-23T01:02:20.976464+00:00：**613 discovered、611 passed、0 failure/error、2 symlink 權限 skip、111 AST**，202.398 秒、exit **0**。passed_checks/source_unchanged=true，per_test_residuals=[]；guardian child_exited=true、exit0、remaining_owned_processes=0、forcibly_terminated=false。scope 為 fixture／SDK／Python fake CLI 與分列真 Windows owned Job APIs，不是 provider 掃描／真 agent／重開機／長時證據。
+
+命令 `py -3.13 -B scripts/verify.py --run-dir reports/background-001/mock-final-002 --timeout-seconds 180 --scope mock`：**104/104 通過**、0 failure/error/skip，10.346 秒、exit0，source_unchanged=true、無殘留。mock 是 full 子集、不相加，不代表 Linux 原生支援或遠端 CI。full/mock source-manifest 同一最終來源；source-commit.json 另綁本地提交與文件。
+
+命令 `py -3.13 -B reports/background-001/retained_probe.py 002` exit **0**：真 Windows 私有 Global Job／keeper 交接、兩個有限 fixture host、同一耐久 outbox。程式產生 **1 個合成 listener 事件**，receive後仍 pending／receipt0；合作 Stop、公開 serve確認 disabled、明確 Start後補收**同 event/query及payload**，明確 ACK、再次 ACK只有**1 張 SQLite receipt**。生成／唯一接收／query／ACK集合一致，missing=[]、duplicate_receipts=[]；預期重收1次。重啟另產生1個 monitor_gap，保持 pending，不被自動ACK。原始 generated-manifest、actual-operations（實際工具回傳與ACK前pending證據）、event/query集合、SQLite、control/ready/handoff/owner/stop回條及guardian退出保留在 `retained-002/`。子程序自然退出0、remaining0、未強停；fixture host受test guardian約束、lifetime_limited=true，交接時child_exited=null，不能當獨立常駐／真agent／主機重開機證明。
+
+full的 lifecycle-evidence 另有實際Windows keeper交接、無關PID不能授權停止、只有本工具 hanging fixture Job被清理、真正stdio EOF等案例；預期強停案例保留forcibly_terminated=true，不能改報自然退出。中斷／generation競爭／手動disabled／滿載baseline與pending保留／backoff／Global跨session及Local拒判等為fixture/mock，分開記錄，不升格為OS故障注入。
+
+正式命令 `py -3.13 -B scripts/eventguard.py --format json background start` 在正常一般使用者環境 exit **2**：`blocked / independent_background_unverifiable`、desired_enabled=true、model_calls=0、external_job_escape_attempted=false；命令執行端外部 Job 限制使獨立生命週期無法證明，**沒有正式 host 啟動**。啟用意圖保留供待批准同步排程接續，不使用breakaway。證據 `production-start.stdout.json`／stderr；既有live事件未ACK或清除。
+
+排程只做唯讀查詢／dry-run。受限環境 `status` exit2：stage=get_folder、HRESULT80070003、parent_folder_confirmed=false，保持unknown。有限 sandbox 例外在正常一般使用者環境查同一安裝專用任務，exit0：stage=get_task、parent=true、HRESULT80070002／absent。兩context SID不同、任務名稱不同，沒有把受限identity套成登入使用者；不修改token、UAC、ACL或安全設定。原始query JSON／stderr在 `schedule-staged-query.*`、`schedule-normal-query.*`。
+
+最終命令 `py -3.13 -B scripts/eventguard_schedule.py install --dry-run --start-now --plan-dir reports/background-001/schedule-review-002` 在正常一般使用者環境 exit0、executed=false。`schedule-review-002/plan.json`＋UTF-16 task.xml 綁當前使用者、Python3.13、全部核心／config／playbook hashes及單一ONLOGON／InteractiveToken／LeastPrivilege任務；無期限／不依賴網路或電池／失敗最多三次重試。**建立及一次立即Run尚待使用者批准，尚未執行。**原始含本機SID及路徑的計畫只留reports，不提交。Run接受不等於成功採集；批准後仍要核對host/monitor owner與coverage。
+
+首輪 `full-001/` 原始 **2 failures／3 errors／2 skips** 保留，source_unchanged=true、guardian自然exit1、remaining0。實際CompareObjectHandles未由Kernel32匯出；改依 [Microsoft官方API](https://learn.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-compareobjecthandles) 從System32 Kernelbase.dll載入並補缺DLL/export的拒絕測試。滿載案例誤比較輸入與收斂後資料，改為比較實際保存前後的payload hash；不改產品丟棄／保留政策。審查發現啟動ready或serve backoff/setup Ctrl+C可能漏耐久disable，已修generation比對、合作清理與相應案例。
+
+第二輪 `full-002/` 原始 **1 failure／0 errors／2 skips** 保留，source_unchanged=true、自然exit1、remaining0。hanging Job已空但已核對的owner HANDLE尚未signal；新stop_persistent改在原有3秒退出預算內等待同一HANDLE，逾時仍不確認。新增延遲／逾時fixture，實際強停案例保留原斷言；最終003通過。早期retained-001/mock-final與舊plan只作歷史，不代替最終來源。
+
+本批沒有再做七來源全機採集、登出／重開機、Phase7注入或24小時soak；既有監看可見性不能沿用舊成功宣稱長期完成。正式模型預算未初始化，沒有模型輪詢、任務或新永久帳戶權限。`completion-audit.json` 重讀最終來源、實際操作、SQLite／ID、退出回條與文件連結；原始執行資料全部忽略不提交。
+
 ## 2026-10-23：由使用流程完成實作與統一驗證
 
 基底 `d4257437757a701874c6f00de6022340bff2bc94`、同一 feature 分支。按使用者要求全面盤點、兩層互斥 ownership 平行開發；子代理只實作及寫案例，所有功能完成並交叉審查後才由主線統一測試。架構、功能斷點與整合決策見 [USABILITY_IMPLEMENTATION](USABILITY_IMPLEMENTATION.md)。沒有真 Codex／模型、部署、永久 MCP 註冊、提權、服務／排程、Phase 7 注入或長期監看，原有研究目錄保留。
 
-**目前完整數字唯一來源**：`reports/usability-001/full-002/verification-summary.json`。命令 `py -3.13 -B scripts/verify.py --run-dir reports/usability-001/full-002 --timeout-seconds 600 --scope full`；Windows／Python **3.13.3**，2026-10-22T22:58:41.264908+00:00：**528 discovered、526 passed、0 failure/error、2 symlink 權限 skip、105 AST**；238.956 秒、exit **0**。passed_checks/source_unchanged=true、per_test_residuals=[]；guardian child_exited=true、exit0、remaining_owned_processes=0、forcibly_terminated=false。scope 為 fixture／SDK／Python fake CLI 與分列真 Windows owned Job API，不是 provider 採集或真 agent。新增停止、同輪閘道、資料保存、綁定、namespace、控制字元、容量及原子替換案例均納入。
+**前批完整數字來源**：`reports/usability-001/full-002/verification-summary.json`。命令 `py -3.13 -B scripts/verify.py --run-dir reports/usability-001/full-002 --timeout-seconds 600 --scope full`；Windows／Python **3.13.3**，2026-10-22T22:58:41.264908+00:00：**528 discovered、526 passed、0 failure/error、2 symlink 權限 skip、105 AST**；238.956 秒、exit **0**。passed_checks/source_unchanged=true、per_test_residuals=[]；guardian child_exited=true、exit0、remaining_owned_processes=0、forcibly_terminated=false。scope 為 fixture／SDK／Python fake CLI 與分列真 Windows owned Job API，不是 provider 採集或真 agent。新增停止、同輪閘道、資料保存、綁定、namespace、控制字元、容量及原子替換案例均納入。
 
 命令 `py -3.13 -B scripts/verify.py --run-dir reports/usability-001/mock-final --timeout-seconds 180 --scope mock`：**104/104 通過**、0 failure/error/skip，10.12 秒、exit0、source_unchanged=true、無殘留。mock 是 full 子集，不相加，不代表 Linux 原生支援或遠端 CI。full/mock source-manifest 相同；本地 source-commit.json 將受測來源與本批文件綁定實際 Git tree，執行資料不提交。
 

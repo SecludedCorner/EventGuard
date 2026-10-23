@@ -168,7 +168,7 @@ def _coverage_status(runtime, health, now):
 
 def _step(operation, explanation, **parameters):
     """Fixed local operation identifiers, never shell or untrusted instructions."""
-    mutating = operation in {"monitor", "stop", "diagnose_event", "report", "receive_event", "ack_event", "retry_event"}
+    mutating = operation in {"monitor", "background_start", "background_stop", "stop", "diagnose_event", "report", "receive_event", "ack_event", "retry_event"}
     return {"operation": operation, "parameters": parameters, "explanation": explanation,
             "read_only": not mutating, "system_read_only": True, "local_state_mutation": mutating,
             "requires_model": False}
@@ -185,6 +185,7 @@ def _shutdown_status(health, namespace=None):
     if not saved and not blocked:
         return None
     reasons = {"previous_query_exit_unconfirmed", "previous_query_job_identity_unavailable",
+               "previous_local_job_session_unverified",
                "previous_owned_job_still_active", "previous_query_exit_unverifiable",
                "previous_private_job_empty_or_destroyed", "no_unresolved_query"}
     reason = saved.get("reason")
@@ -215,6 +216,9 @@ def _operator_summary(document, namespace=None):
     actions = []
     scope = namespace or "live"
     gate = _shutdown_status(document["last_report"], namespace)
+    background = document.get("background") or {}
+    background_state = background.get("state")
+    summary["background_state"] = background_state
     if current.get("scope_matches") is False:
         summary.update(state="other_namespace", headline="目前監看屬於其他資料範圍；此處只顯示所選範圍的保存觀察。")
         actions.append(_step("status", "核對目前監看的 namespace；不把 fixture 觀察當成 live 採集。"))
@@ -224,6 +228,12 @@ def _operator_summary(document, namespace=None):
         actions.append(_step("overview", "查看此範圍保存的退出阻擋原因；不刪除閘道、不把鎖釋放當作退出。", namespace=scope, limit=20))
         monitor_args = {"fixture": "tests/fixtures/normal.json", "max_cycles": 1} if scope == "test" else {}
         actions.append(_step("monitor", "再次明確啟動時會先核對既有私有 Job 的退出證據；未確認前不開始新採集，也不停止其他程序。", **monitor_args))
+    elif current["state"] != "running_verified" and background.get("namespace") in (None, scope) and (
+            background.get("desired_enabled") is True or background_state in {"stopping", "shutdown_unconfirmed", "blocked"}):
+        summary.update(state="background_" + (background_state if background_state in {
+            "backoff", "stopping", "blocked", "shutdown_unconfirmed", "enabled_not_running", "running"} else "unknown"),
+            headline="背景控制仍啟用；目前尚未證明採集正在運作，請核對等待、背壓或退出原因。")
+        actions.append(_step("background_status", "核對背景心跳、退避與耐久啟停意圖；不要重建資料或反覆啟動。"))
     elif current["state"] == "not_started":
         summary.update(state="not_started", headline="尚未開始監看，尚無實際採集證據。")
         actions.append(_step("monitor", "明確啟動本機唯讀監看；不需要 agent。"))
@@ -281,6 +291,18 @@ def _budget_status(runtime):
         return {"state": "blocked", "reason": "budget_status_unavailable"}
 
 
+def _background_status(runtime, namespace=None):
+    try:
+        from .background import status as background_status
+        value = background_status(runtime.root)
+        if namespace is not None and value.get("namespace") not in (None, namespace):
+            return {"state": "not_applicable", "reason": "background_outside_launcher_namespace",
+                    "namespace": namespace, "model_calls": 0}
+        return value
+    except (OSError, ValueError, TypeError, RuntimeError):
+        return {"state": "unknown", "reason": "background_status_unavailable", "model_calls": 0}
+
+
 def status(runtime):
     now = _now()
     try:
@@ -298,6 +320,7 @@ def status(runtime):
             "source_coverage": _coverage_status(runtime, health, now),
             "namespaces": {namespace: _namespace_status(runtime, namespace) for namespace in ("live", "test")},
             "agent_budget": _budget_status(runtime),
+            "background": _background_status(runtime),
             "agent_ingress": "not_configured", "real_agent_woken": False}
     result["operator_summary"] = _operator_summary(result)
     return result
@@ -312,7 +335,7 @@ class OperatorAPI:
 
     def call(self, operation, *args, **kwargs):
         """Shared public error envelope: never forward an OS exception/path."""
-        if operation not in {"capabilities", "status", "overview", "observation", "stop", "monitor", "events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report"}:
+        if operation not in {"capabilities", "status", "overview", "observation", "stop", "monitor", "events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report", "background_start", "background_status", "background_stop"}:
             return {"status": "invalid_request", "error_code": "input_or_config_validation_failed", "raw_error_omitted": True}
         try:
             return getattr(self, operation)(*args, **kwargs)
@@ -329,10 +352,15 @@ class OperatorAPI:
     def capabilities(self):
         from .diagnostics.api import DiagnosticAPI
         return {"tool_version": __version__, "diagnostics": DiagnosticAPI().capabilities(),
-                "monitor": "foreground, cooperative stop, singleton", "transport": ["disabled", "synthetic-only local mock"],
+                "monitor": "foreground or background, durable stop, singleton", "transport": ["disabled", "synthetic-only local mock"],
                 "remediation": [], "gui": False, "model_calls": 0, "real_agent_ingress": "not_configured",
-                "operator_operations": ["capabilities", "status", "overview", "observation", "stop", "events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report", "monitor"],
+                "operator_operations": ["capabilities", "status", "overview", "observation", "stop", "events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report", "monitor", "background_start", "background_status", "background_stop"],
                 "agent_required": False, "data_trust": "untrusted_data",
+                "background": {"entry": "scripts/eventguard.py background", "model_required": False,
+                    "daily_monitor_limit": None, "duration_limit": None,
+                    "scheduler_installation_requires_separate_approval": True,
+                    "automatic_resume": "current_user_logon_after_approved_task_install",
+                    "manual_stop_is_durable": True, "before_logon_monitoring": False},
                 "optional_agent_ingress": {"entry": "scripts/eventguard_inbox_mcp.py",
                     "arguments": ["--operator-root", "<project-root>", "--namespace", "test"],
                     "live_scope_arguments": ["--namespace", "live", "--allow-live"],
@@ -397,6 +425,7 @@ class OperatorAPI:
                 "source_coverage_namespace": namespace,
                 "event_storage": document["namespaces"][namespace], "event_list": listing,
                 "agent_budget": document["agent_budget"],
+                "background": _background_status(self.runtime, namespace),
                 "progress": document["last_report"].get("progress") if monitor_namespace == namespace else None,
                 "monitor_gap": document["last_report"].get("monitor_gap") if monitor_namespace == namespace else None,
                 "monitor_shutdown_gate": gate, "reason": blocked_reason, "last_error": last_error,
@@ -438,14 +467,35 @@ class OperatorAPI:
                 "system_query_executed": False, "model_calls": 0, "data_trust": "untrusted_data"}
 
     def stop(self, namespace=None):
+        background_result = None
+        background_path = self.runtime.path("data/background/control.json")
+        if background_path.is_file():
+            current = _background_status(self.runtime)
+            if namespace is None or current.get("namespace") == namespace:
+                background_result = self.background_stop()
         if namespace is not None:
             self.runtime.data_dir(namespace, create=False)  # Validate scope.
             owner_path = self.runtime.path("data/monitor-owner.json")
             if owner_path.is_file():
                 owner, health = read_json(owner_path), self.runtime.health()
                 if health.get("namespace") != namespace or health.get("instance_id") != owner.get("instance_id"):
-                    return {"status": "not_applicable", "reason": "monitor_outside_launcher_namespace", "process_terminated": False}
-        return self.runtime.request_stop()
+                    return background_result or {"status": "not_applicable", "reason": "monitor_outside_launcher_namespace", "process_terminated": False}
+        result = self.runtime.request_stop()
+        if background_result is not None:
+            return {**background_result, "monitor_stop": result,
+                    "note": "Background remains disabled until an explicit start; ACK and pending events are unchanged."}
+        return result
+
+    def background_start(self):
+        from .background import start
+        return start(self.runtime.root)
+
+    def background_status(self):
+        return _background_status(self.runtime)
+
+    def background_stop(self, grace_seconds=10):
+        from .background import stop
+        return stop(self.runtime.root, grace_seconds=grace_seconds)
 
     def monitor(self, **kwargs):
         from .monitor import Monitor

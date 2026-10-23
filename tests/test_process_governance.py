@@ -347,19 +347,29 @@ class GapTests(FixtureRoot):
 
 
 class ScheduleTests(unittest.TestCase):
-    def test_install_uninstall_only_print_candidate_and_execute_is_refused(self):
+    def test_schedule_default_plans_are_isolated_and_unapproved_execution_is_refused(self):
         import importlib.util
         spec = importlib.util.spec_from_file_location("eventguard_schedule", ROOT / "scripts/eventguard_schedule.py")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         main = module.main
-        for args, code, status in ((["install"], 0, "dry_run"), (["uninstall", "--dry-run"], 0, "dry_run"), (["install", "--execute"], 2, "approval_required")):
-            with self.subTest(args=args), redirect_stdout(io.StringIO()) as output, patch("subprocess.Popen") as launch:
-                self.assertEqual(main(args), code)
-                value = json.loads(output.getvalue())
-                self.assertEqual(value["status"], status)
-                self.assertFalse(value["executed"])
-                launch.assert_not_called()
+        from eventguard import schedule
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative in schedule.ACTION_SOURCES:
+                target=root/relative
+                target.parent.mkdir(parents=True,exist_ok=True)
+                target.write_text("synthetic schedule fixture; never executed",encoding="utf-8")
+            for args, code, status in ((["install"], 0, "dry_run"), (["uninstall", "--dry-run"], 0, "dry_run"), (["install", "--execute"], 2, "approval_required")):
+                with self.subTest(args=args), redirect_stdout(io.StringIO()) as output, \
+                     patch("eventguard.schedule.current_user_sid",return_value="S-1-5-21-123-456-789-1001"), \
+                     patch("eventguard.schedule.query_task",return_value={"status":"absent"}), \
+                     patch("eventguard.schedule._owned_run") as mutation:
+                    self.assertEqual(main(args,root=root), code)
+                    value = json.loads(output.getvalue())
+                    self.assertEqual(value["status"], status)
+                    self.assertFalse(value["executed"])
+                    mutation.assert_not_called()
 
 
 if __name__ == "__main__":

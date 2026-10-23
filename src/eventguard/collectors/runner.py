@@ -141,7 +141,7 @@ class Runner:
                     child = spawn(argv, popen_factory=self._popen,
                                         stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), shell=False,
-                                        **({"job_name": "Local\\EventGuard-" + uuid.uuid4().hex}
+                                        **({"job_name": "Global\\EventGuard-" + uuid.uuid4().hex}
                                            if os.name == "nt" and self._popen is ORIGINAL_POPEN else {}))
                 except PermissionError as error:
                     launch_problem = ("denied", "query_launch_access_denied", error)

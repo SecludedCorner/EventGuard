@@ -448,7 +448,7 @@ def process_metadata(value):
     if not isinstance(value, dict):
         return {}
     result = {key: value[key] for key in ("managed", "child_exited", "forcibly_terminated") if type(value.get(key)) is bool}
-    if isinstance(value.get("job_name"), str) and re.fullmatch(r"Local\\EventGuard-[a-f0-9]{32}", value["job_name"]):
+    if isinstance(value.get("job_name"), str) and re.fullmatch(r"(?:Local|Global)\\EventGuard-[a-f0-9]{32}", value["job_name"]):
         result["job_name"] = value["job_name"]
     for key in ("pid", "remaining_owned_processes", "exit_code"):
         if type(value.get(key)) is int and 0 <= value[key] <= 2**32-1:

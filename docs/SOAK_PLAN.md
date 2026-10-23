@@ -1,11 +1,12 @@
 # 24 小時 soak 計畫（尚未執行）
 
-Phase 4 先提交計畫；本輪只執行有限的合成容量測試。這份計畫不授權常駐、排程、模型、提權、真實狀態注入或登出／重開機。執行完整 soak 前另行確認開始時間、目錄及範圍，前景執行、使用既有 Python 3.13 標準庫及本工具 Job。
+Phase 4 先提交計畫；尚未執行完整24小時。使用者後續已授權一般權限背景監看實作與驗證，見 [背景契約](BACKGROUND.md)；這不等於24小時、實際登入排程、模型、提權、狀態注入或登出／重開機已通過。完整 soak 仍須先固定開始時間、隔離目錄與範圍，使用既有 Python 3.13 標準庫及本工具 Job。
 
 ## 範圍與隔離
 
 - 全新 `reports/soak-NEW/source`，只放 synthetic 事件與 fixture 設定，不沿用正式 data、Codex home 或既有證據。
 - consumer 以 QueueInbox 的 receive/query/ACK 操作，明示 synthetic harness，不能宣稱 agent 收到。dispatcher 帳本只使用已標示的合成退出／交付 fixture，不啟動 CLI 或模型。
+- 使用同一背景 start/status/stop/serve 控制及保留策略；至少跨午夜，確認每日 agent 額度／日期不停止 Monitor。測試 guardian 約束的有限 host 不冒充獨立常駐；不得用 breakaway 逃離外部 Job。
 - 以提交碼與 source hashes 固定版本；保存 Python／Windows 版本、政策設定、起訖 UTC／monotonic 時間、manifest、容量錯誤、ACK 與每個 Job 的退出回條。
 - 不讀取系統其他程序或完整命令列；只測試本工具程序／其 Job 的 CPU、RAM、handle。OS provider 長時採集另屬未執行的實機驗證範圍。
 
@@ -38,4 +39,5 @@ Phase 4 先提交計畫；本輪只執行有限的合成容量測試。這份計
 - 主檔與狀態上限不超政策；原子替換／SQLite DELETE journal 暫存另列峰值。每一輪 active 回落且 completed 輪替，不能只看最後筆數。
 - idle 最後 30 分鐘 CPU 平均目標 <1%（以單核心比例）、private bytes 相對首個 idle 窗增幅 <32 MiB、handle 增幅 <20；steady 相同工作量窗不得連續四窗單調增加。這些是待測目標，不是現有效能保證；記錄主機背景負載的不確定性。
 - 卡住、容量無法恢復、任何 accepted ID/hash 不見、紀錄超額或資源持續上升即停止新產生；合作停止後只清理本工具 Job，保留失敗證據，禁止刪除資料讓測試變綠。
+- 每次停止先保存 disabled；以公開 serve 檢查沒有自動重新啟用，再明確 Start。同一 outbox／query ID 不重建。異常恢復另核對 monitor_gap、backoff、來源 freshness 與未知退出閘道，host heartbeat 不能代替成功採集。
 - 最後保存所有子程序 exit code、`forcibly_terminated`、Job 剩餘數、scope 與未驗證項。未跑滿 24 小時只能報有限時長；主機登出／重開機與真 agent 仍不得升格為通過。
