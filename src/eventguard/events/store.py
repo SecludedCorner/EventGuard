@@ -128,11 +128,14 @@ class EventStore:
                       next_retry_at REAL,reason TEXT NOT NULL DEFAULT '',lease_until REAL,lease_token TEXT,
                       receipt TEXT,payload_hash TEXT NOT NULL DEFAULT '');
                     CREATE INDEX IF NOT EXISTS events_due ON events(delivery_status,next_retry_at,lease_until);
-                    CREATE TABLE IF NOT EXISTS receipts(event_id TEXT PRIMARY KEY,receipt TEXT NOT NULL,acked_at REAL NOT NULL,payload_hash TEXT NOT NULL DEFAULT '');
+                    CREATE TABLE IF NOT EXISTS receipts(event_id TEXT PRIMARY KEY,receipt TEXT NOT NULL,acked_at REAL NOT NULL,payload_hash TEXT NOT NULL DEFAULT '',
+                      pending_finalization INTEGER NOT NULL DEFAULT 0 CHECK(pending_finalization IN(0,1)));
                 """)
                 for table in ("events","receipts"):
                     if "payload_hash" not in {row[1] for row in db.execute("PRAGMA table_info("+table+")")}:
                         db.execute("ALTER TABLE "+table+" ADD COLUMN payload_hash TEXT NOT NULL DEFAULT ''")
+                if "pending_finalization" not in {row[1] for row in db.execute("PRAGMA table_info(receipts)")}:
+                    db.execute("ALTER TABLE receipts ADD COLUMN pending_finalization INTEGER NOT NULL DEFAULT 0 CHECK(pending_finalization IN(0,1))")
                 for row in db.execute("SELECT event_id,payload FROM events WHERE payload_hash=''").fetchall():
                     db.execute("UPDATE events SET payload_hash=? WHERE event_id=?",(event_payload_hash(json.loads(row["payload"])),row["event_id"]))
                 db.execute("UPDATE receipts SET payload_hash=COALESCE((SELECT payload_hash FROM events WHERE events.event_id=receipts.event_id),'') WHERE payload_hash=''")
@@ -188,9 +191,11 @@ class EventStore:
         rows = db.execute("SELECT event_id,delivery_status FROM events WHERE delivery_status='ack' AND updated_at<?",
                           (now-self.policy["acked_retention_seconds"],)).fetchall()
         self._delete_completed(db, rows)
-        removed = db.execute("DELETE FROM receipts WHERE acked_at<?", (now-self.policy["receipt_retention_seconds"],)).rowcount
+        removed = db.execute("DELETE FROM receipts WHERE pending_finalization=0 AND acked_at<?", (now-self.policy["receipt_retention_seconds"],)).rowcount
+        pinned = db.execute("SELECT COUNT(*) FROM receipts WHERE pending_finalization=1").fetchone()[0]
         removed += db.execute("""DELETE FROM receipts WHERE event_id IN (
-            SELECT event_id FROM receipts ORDER BY acked_at DESC,event_id DESC LIMIT -1 OFFSET ?)""", (self.policy["receipt_limit"],)).rowcount
+            SELECT event_id FROM receipts WHERE pending_finalization=0
+            ORDER BY acked_at DESC,event_id DESC LIMIT -1 OFFSET ?)""", (max(0,self.policy["receipt_limit"]-pinned),)).rowcount
         if removed:
             self._increment(db, "expired_receipts", removed)
 
@@ -238,11 +243,11 @@ class EventStore:
         return len(rows)
 
     def _trim_receipts(self, db):
-        count = db.execute("SELECT COUNT(*) FROM receipts").fetchone()[0]
+        count = db.execute("SELECT COUNT(*) FROM receipts WHERE pending_finalization=0").fetchone()[0]
         if count <= 1:
             return 0
         removed = db.execute("""DELETE FROM receipts WHERE event_id IN (
-            SELECT event_id FROM receipts ORDER BY acked_at,event_id LIMIT ?)""", (max(1,count//2),)).rowcount
+            SELECT event_id FROM receipts WHERE pending_finalization=0 ORDER BY acked_at,event_id LIMIT ?)""", (max(1,count//2),)).rowcount
         self._increment(db, "pressure_rotated_receipts", removed)
         return removed
 
@@ -349,6 +354,7 @@ class EventStore:
                               storage_bytes=self.path.stat().st_size, max_bytes=self.max_bytes,
                               ack_reserve_bytes=self.ack_reserve_bytes,
                               receipt_count=db.execute("SELECT COUNT(*) FROM receipts").fetchone()[0],
+                              pending_receiver_finalizations=db.execute("SELECT COUNT(*) FROM receipts WHERE pending_finalization=1").fetchone()[0],
                               rotated_ack=rotated.get("rotated_ack",0),rotated_failed=rotated.get("rotated_failed",0),
                               real_agent_connected=False)
                 counts.update(retention=dict(self.policy), used_bytes=self._used_bytes(db),
@@ -393,30 +399,53 @@ class EventStore:
         except sqlite3.Error as exc:
             raise self._sqlite_error(exc) from exc
 
-    def _ack(self, db, event_id, receipt, now):
+    def _pin_receipt(self, db, event_id, encoded, payload_hash, acked_at):
+        """Protect the original ACK until its receiver completion is durable."""
+        previous = db.execute("SELECT receipt,payload_hash,pending_finalization FROM receipts WHERE event_id=?", (event_id,)).fetchone()
+        if previous is not None and (json.loads(previous["receipt"]) != json.loads(encoded) or previous["payload_hash"] != payload_hash):
+            raise StoreError("ack_receipt_identity_conflict")
+        if previous is not None and previous["pending_finalization"]:
+            return
+        if db.execute("SELECT COUNT(*) FROM receipts WHERE pending_finalization=1").fetchone()[0] >= self.policy["receipt_limit"]:
+            raise CapacityError("receiver_finalization_capacity_pending_preserved")
+        if previous is None:
+            db.execute("INSERT INTO receipts(event_id,receipt,acked_at,payload_hash,pending_finalization) VALUES(?,?,?,?,1)",
+                       (event_id,encoded,acked_at,payload_hash))
+        else:
+            db.execute("UPDATE receipts SET pending_finalization=1 WHERE event_id=?", (event_id,))
+
+    def _ack(self, db, event_id, receipt, now, receiver_finalization=False):
         clean = validate_receipt(event_id, receipt)
         encoded = json.dumps(clean, ensure_ascii=False, separators=(",", ":"))
-        row = db.execute("SELECT payload_hash,delivery_status,receipt FROM events WHERE event_id=?",(event_id,)).fetchone()
+        row = db.execute("SELECT payload_hash,delivery_status,receipt,updated_at FROM events WHERE event_id=?",(event_id,)).fetchone()
         if not row:
-            previous = db.execute("SELECT receipt FROM receipts WHERE event_id=?",(event_id,)).fetchone()
+            previous = db.execute("SELECT receipt,payload_hash,acked_at FROM receipts WHERE event_id=?",(event_id,)).fetchone()
             if previous and json.loads(previous[0]) != clean:
                 raise StoreError("ack_receipt_identity_conflict")
+            if previous and receiver_finalization:
+                self._pin_receipt(db,event_id,encoded,previous["payload_hash"],previous["acked_at"])
             return previous is not None
         if row["delivery_status"] == "ack":
             if json.loads(row["receipt"]) != clean:
                 raise StoreError("ack_receipt_identity_conflict")
+            if receiver_finalization:
+                self._pin_receipt(db,event_id,encoded,row["payload_hash"],row["updated_at"])
             return True
         db.execute("UPDATE events SET delivery_status='ack',receipt=?,updated_at=?,reason='receiver_persisted',next_retry_at=NULL,lease_until=NULL,lease_token=NULL WHERE event_id=?",(encoded,now,event_id))
         db.execute("INSERT OR IGNORE INTO receipts(event_id,receipt,acked_at,payload_hash) VALUES(?,?,?,?)",(event_id,encoded,now,row["payload_hash"]))
+        if receiver_finalization:
+            self._pin_receipt(db,event_id,encoded,row["payload_hash"],now)
         self._prune(db,now,slots=0)
         return True
 
-    def acknowledge(self, event_id, receipt):
+    def acknowledge(self, event_id, receipt, *, receiver_finalization=False):
+        if type(receiver_finalization) is not bool:
+            raise StoreError("invalid_receiver_finalization_profile")
         for attempt in range(2):
             try:
                 with self._lock, self._connect() as db:
                     db.execute("BEGIN IMMEDIATE")
-                    return self._ack(db,str(event_id),receipt,time.time())
+                    return self._ack(db,str(event_id),receipt,time.time(),receiver_finalization)
             except sqlite3.Error as exc:
                 if attempt == 0 and getattr(exc, "sqlite_errorcode", None) == sqlite3.SQLITE_FULL:
                     try:
@@ -425,6 +454,29 @@ class EventStore:
                     except sqlite3.Error as maintenance:
                         raise self._sqlite_error(maintenance) from maintenance
                 raise self._sqlite_error(exc) from exc
+
+    def finalize_receiver(self, event_id, receipt):
+        """Release only a matching ACK pin after receiver completion is durable.
+
+        A missing/previously released pin is an idempotent no-op. This never
+        creates a receipt, acknowledges a pending event, or changes ACK time.
+        """
+        clean = validate_receipt(str(event_id),receipt)
+        try:
+            with self._lock,self._connect() as db:
+                db.execute("BEGIN IMMEDIATE")
+                previous = db.execute("SELECT receipt,pending_finalization FROM receipts WHERE event_id=?", (str(event_id),)).fetchone()
+                if previous is None:
+                    return False
+                if json.loads(previous["receipt"]) != clean:
+                    raise StoreError("ack_receipt_identity_conflict")
+                if not previous["pending_finalization"]:
+                    return False
+                db.execute("UPDATE receipts SET pending_finalization=0 WHERE event_id=?", (str(event_id),))
+                self._prune(db,time.time(),slots=0)
+                return True
+        except sqlite3.Error as exc:
+            raise self._sqlite_error(exc) from exc
 
     @staticmethod
     def _recover(db, now):

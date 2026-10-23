@@ -2,6 +2,28 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：長期採集公平性、ACK 收尾恢復與精簡狀態
+
+本輪基底`5bff8082edef38d6d30cfd816f1579cb073fc313`，沿用同一feature及資料；三個子agent分工，root整合後統一測試。正式MCP只唯讀查status，確認背景仍disabled／host已退出；沒有解除explicit_stop、追加實機採集、ACK正式事件、呼叫真Codex／模型、建立排程或變更安全設定。前批主聊天真七來源／接收證據獨立保留，不以本輪fixture升格。
+
+**修正前可重現問題。** (1) Monitor固定來源順序與round開始時間計算interval：在合法60秒query timeout、前幾來源30秒interval下，虛擬20輪1209.5秒只嘗試defender20次，其餘六來源未collect；另一測試看到listener實際間隔80秒、小於設定120秒。新測試對原碼實際2fail，輸出在reports/fair-collection-001/test_before_observed.json。(2) completed寫入故障後SQLite已ACK、triple仍在；配置兩個outbox TTL=0，維護清掉payload／receipt後，新pending因舊triple固定回bound_event_missing。實際原輸出保留reports/inbox-finalization-001/before.json，不是把錯誤文字推測成實機問題。
+
+**實作。** 到期來源按實際嘗試開始時間最舊／未嘗試優先，stable tie不變；round_budget跳過仍busy＋30秒defer，不更新last，不放寬45秒啟動預算、query timeout或合作停止。ACK交易原子保存receipt及pending_finalization，TTL／count／byte清理排除未完成proof；completed耐久後才解除、再清triple，重啟可補完。pin受receipt_limit與byte cap限制，滿載回滾新ACK、pending不丟。status／overview唯讀顯示未收尾數，舊schema回null且不遷移；升級前已遺失proof仍blocked。舊長駐程式須正常重新載入，不宣稱熱更新。
+
+overview只合併完全相同的安全錯誤樣本，sample_occurrences不當成總失敗數；原error_count／errors_truncated／各stage及OS碼／attempt順序／coverage／freshness保留。原status、observation及collector契約不變。對前批已保存的coverage離線投影，UTF8大小41622→8666 bytes，減少79.2%；這是大小量測，不是模型token、CPU或實機監看效能保證。
+
+| 命令／範圍 | 實際結果 | 證據 |
+| --- | --- | --- |
+| `py -3.13 -B reports/fair-collection-001/reproduce.py`，前後相同虛擬clock fixture | 原碼20輪只defender；修改後20輪七來源都有實際fixture collect，回歸在14輪內全部嘗試；非真provider或24小時 | before.json、after.json、reproduce.py |
+| `py -3.13 -B reports/fair-collection-001/verify.py`，monitor progress模組 | Python3.13.3；18/18通過、exit0；3項新測試含公平／實際interval／停止，Popen0、source_unchanged=true | test-result.json、test-output.txt |
+| `py -3.13 -B reports/inbox-finalization-001/verify.py`，本機SQLite／合成事件 | 09:22:16–09:22:29 UTC；9/9通過、exit0；TTL0、completed／finalize故障、completed-only恢復、count與64KiB／80cycle byte壓力、pin滿載回滾與解除恢復、舊schema遷移、不同proof拒絕、遺失legacy proof仍blocked；source_unchanged=true，無child／provider／模型 | after.json、test-output.txt |
+| `py -3.13 -B reports/overview-errors-001/verify.py`，精簡overview fixture | 09:20:55–09:20:58 UTC；14/14通過、exit0、source_unchanged=true；無child／live query／模型；其後root新增readonly未收尾數測試，以下統測涵蓋 | result.json、test-output.txt |
+| `py -3.13 -B scripts/verify.py --run-dir reports/runtime-reliability-001/full-001 --timeout-seconds 900` | 09:32:37.970933 UTC完成；Python3.13.3，815執行、813通過、2skip、0failure/error，463.486秒；134個Python AST無誤，source_unchanged=true、per_test_residuals=[]、passed_checks=true | verification-summary.json、unit-tests.txt、lifecycle-evidence.json、source-manifest.json、guardian-exit.json |
+
+完整suite兩項skip均為一般使用者無法建立symlink，未提高權限；其餘scope為fixture／SDK／fake CLI與明確標記的真Windows owned-job API。guardian自然exit0、child_exited=true、未強停、remaining0；沒有主機盤點、真模型、真agent喚醒、OS重開機或24小時soak。本輪成功不抹去前批600秒逾時或其強停回條，測試數不與前批／子agent相加。
+
+文件核對命令`py -3.13 -B reports/runtime-reliability-001/check_release.py`，核對full source manifest、README行數、本機連結及文件hash；最後傳入本地commit寫source-commit.json，將完整受測source／文件hash與提交綁定。執行資料及既有research／附件不提交，不推送。
+
 ## 2026-10-23：收斂本機資安監測、資料品質與真工具接收
 
 基底`11d2dd76d99742fcc3b4715c2ff8d1b92aae77ca`，同一feature。人類最新要求回到「本機監測→保存→agent可分析／必要時收event」，排程與proxy不再是前置。未建立排程、服務或自啟，未啟動另一個Codex／模型，未改安全設定或執行政策。MCP實際操作的回傳、實機資料與ID只留本機忽略`reports/security-core-001`，不提交真資安紀錄。

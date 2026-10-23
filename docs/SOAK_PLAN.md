@@ -40,4 +40,5 @@ Phase 4 先提交計畫；尚未執行完整24小時。使用者後續已授權�
 - idle 最後 30 分鐘 CPU 平均目標 <1%（以單核心比例）、private bytes 相對首個 idle 窗增幅 <32 MiB、handle 增幅 <20；steady 相同工作量窗不得連續四窗單調增加。這些是待測目標，不是現有效能保證；記錄主機背景負載的不確定性。
 - 卡住、容量無法恢復、任何 accepted ID/hash 不見、紀錄超額或資源持續上升即停止新產生；合作停止後只清理本工具 Job，保留失敗證據，禁止刪除資料讓測試變綠。
 - 每次停止先保存 disabled；以公開 serve 檢查沒有自動重新啟用，再明確 Start。同一 outbox／query ID 不重建。異常恢復另核對 monitor_gap、backoff、來源 freshness 與未知退出閘道，host heartbeat 不能代替成功採集。
+- 增加接收器收尾故障窗：原ACK已提交但completed寫入失敗時，先施加TTL／count／byte清理，驗證原proof仍受pending_finalization保護；解除故障後同query收尾一次，後續新事件能接收。pin到達上限應回滾新ACK、保留pending，解除舊pin後恢復，不能靠刪資料通過。慢來源公平性另以虛擬時鐘故障fixture檢查，不把其虛擬秒數算入24小時。
 - 最後保存所有子程序 exit code、`forcibly_terminated`、Job 剩餘數、scope 與未驗證項。未跑滿 24 小時只能報有限時長；主機登出／重開機與真 agent 仍不得升格為通過。

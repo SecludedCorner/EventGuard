@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+最新續行基底5bff808：三個子agent完成實作，root整合後統一回歸。Monitor到期來源依實際嘗試時間公平排序，避免反覆慢查詢讓其餘來源永久busy；間隔從各自實際開始計算。QueueInbox ACK交易同時保護原receipt直到completed耐久成功，TTL/count/byte不可刪未收尾proof；pin有容量上限、滿載回滾pending，舊DB可遷移，原proof已遺失仍blocked。overview合併相同錯誤樣本，sample_occurrences不當成總錯誤數；原status/observation不變。唯讀status另顯示pending_receiver_finalizations，新欄不存在回null，不因讀狀態遷移。
+
+本批沒有新實機盤點、主聊天新接收或背景啟用；正式背景仍explicit_stop。source與資料保留不動；舊GUI/MCP需正常重新載入新版，不能宣稱已熱更新。重現、統測及提交綁定見EVIDENCE的runtime-reliability批次；前批七來源／一件真事件證據仍獨立保存，不重做或升格。
+
 最新人類指示已收斂：把本機資安監測、資料保存、agent可分析／必要時收event做好，不把proxy、排程或idle-chat wake當開發前提。使用者允許必要程式權限，但沒有批准登入任務，勿再詢問或自行註冊。既有GUI的Start/Pause與共享MCP即可使用，正常採集無模型。
 
 本輪基底11d2dd76：已用主聊天正式工具monitor_once完成真實七來源，inspect/diagnose/receive/ACK一件本輪新生真事件；ACK為needs_more_evidence，仍not_assessed，完整SQLite/工具對照在reports/security-core-001。另真PS Defender七欄可讀，auto已來源特定改採有效provider；native-only仍是配置/WSC範圍。修listener身分gap誤resolved、persistence歷史entries與ref-filter、cache target binding；詳情和統一測試看EVIDENCE。已運行舊GUI/MCP不假稱熱更新；新載入使用當版程式。

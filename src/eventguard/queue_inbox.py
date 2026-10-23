@@ -206,6 +206,19 @@ class QueueInbox:
                     total += STAGE_RESERVE
         return total
 
+    def _pending_finalizations(self):
+        """Read pinned IDs once; old source schemas have no finalization pins."""
+        with self._readonly() as db:
+            if "pending_finalization" not in {row[1] for row in db.execute("PRAGMA table_info(receipts)")}:
+                return set()
+            return {_identifier(row[0]) for row in db.execute("SELECT event_id FROM receipts WHERE pending_finalization=1")}
+
+    def _finalize_receipt(self, identity, receipt):
+        try:
+            self.store.finalize_receiver(identity, receipt)
+        except StoreError:
+            raise QueueInboxError("outbox_finalization_failed_completed_preserved") from None
+
     def _maintain(self, now=None, needed=0, reserve_extra=0, completed_slots=0, protect=None):
         now = time.time() if now is None else now
         candidates = []
@@ -228,8 +241,10 @@ class QueueInbox:
                 result = self._result_record(identity, record, query)
                 if result is None or not self._ack_matches(source, result):
                     raise QueueInboxError("inbox_completed_ack_unconfirmed")
+                self._finalize_receipt(identity, json.loads(source["receipt"]))
                 for stage in ("snapshot", "query", "result"):
                     self._path(stage, identity).unlink(missing_ok=True)
+        pinned = self._pending_finalizations()
         for path in self.state_dir.glob("completed-*.json"):
             raw = self._read_json(path)
             if not isinstance(raw.get("snapshot"), dict):
@@ -238,6 +253,13 @@ class QueueInbox:
             if path != self._path("completed", identity):
                 raise QueueInboxError("inbox_completed_record_invalid")
             entry = self._completed(identity)
+            if identity in pinned:
+                record, source = self._checked_record(identity)
+                query, _ = self._query_record(identity, record)
+                result = self._result_record(identity, record, query)
+                if result is None or not self._ack_matches(source, result):
+                    raise QueueInboxError("inbox_completed_ack_unconfirmed")
+                self._finalize_receipt(identity, json.loads(source["receipt"]))
             candidates.append((_timestamp(entry["acked_at"]), identity, path))
         candidates.sort()
         usage, reserve = self._usage(), self._reserve()
@@ -541,18 +563,23 @@ class QueueInbox:
                           "recorded_at": _utc(), "incident_conclusion": "not_assessed",
                           "real_agent_wake_verified": False}
                 self._immutable(self._path("result", identity), result)
-            if not self._ack_matches(source, result):
+            matches = self._ack_matches(source, result)
+            if matches:
+                receipt = json.loads(source["receipt"])
+            else:
                 receipt = {"ack_type": "receiver_persisted", "event_id": identity,
                            "receiver_receipt_id": result["result_id"], "wake_state": "unknown",
                            "received_at": result["recorded_at"]}
+            if not matches or self._completed(identity) is None:
                 try:
-                    if self.store.acknowledge(identity, receipt) is not True:
+                    if self.store.acknowledge(identity, receipt, receiver_finalization=True) is not True:
                         raise QueueInboxError("outbox_ack_failed_result_preserved")
                 except StoreError:
                     raise QueueInboxError("outbox_ack_failed_result_preserved") from None
             completed = {"kind": "inbox-completed-v1", "snapshot": record, "query": query, "result": result,
                          "acked_at": result["recorded_at"]}
             self._immutable(self._path("completed", identity), completed)
+            self._finalize_receipt(identity, receipt)
             # Keep this freshly ACKed record for idempotent immediate replay;
             # older completed records rotate on the next receive/maintenance.
             for stage in ("snapshot", "query", "result"):

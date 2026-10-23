@@ -1,6 +1,6 @@
 # Phase 4：容量、ACK 保留與恢復
 
-核心仍為 Python 3.13 標準庫。以下只變更本工具的資料檔，不修改 Windows 設定、不啟動模型、服務或排程。實測命令與精確測試數見 STATUS；24 小時 soak 僅有 [計畫](SOAK_PLAN.md)，尚未執行。
+核心仍為 Python 3.13 標準庫。以下只變更本工具的資料檔，不修改 Windows 設定、不啟動模型、服務或排程。實測命令與精確測試數見 [EVIDENCE](EVIDENCE.md)；24 小時 soak 僅有 [計畫](SOAK_PLAN.md)，尚未執行。
 
 ## 政策與操作
 
@@ -30,7 +30,13 @@ pending、retry 與未 ACK failed 不因年齡、筆數或 byte 壓力清除。�
 
 result 先保存，才寫 outbox ACK；ACK 成功後，以 fsync＋原子 no-replace link 保存 `completed-<hash>.json`，內含原 snapshot／query／result，再清除三份重複檔案。其後重播沿用同一 event/query/result，不再寫第二次 ACK；不同 receipt ID 會被核心拒絕，既有 ACK 時間不改寫。
 
-完成回條寫入失敗，原 triple 不清除；下次 maintenance 只在原 outbox ACK 與 result 匹配時修復。已清理的 outbox receipt 可由 inbox 已驗證的完成回條提供本機歷史接收證據；若來源同 ID 再度成為 pending，明示衝突，不用舊完成檔把新 pending 隱藏。已超出所有保留窗的歷史無法還原，不能宣稱無限期去重或 exactly-once。
+ACK 交易同時為接收器尚未完成的原 receipt 設 `pending_finalization`。完成回條寫入失敗時保留 triple 與原 ACK proof；payload 仍可清理，但 TTL、count、byte 輪替都不能刪這張 proof。完成檔耐久成功後才解除保護，再清 triple；重啟 maintenance 可核對原 event／payload hash／query／result 後補完。解除保護失敗仍留可恢復資料，不以已寫 result 推定 ACK。
+
+保護中的 receipt 仍受 `receipt_limit` 與 SQLite byte cap 限制；達上限時明確回滾新的 ACK，原 pending／result 保留。解除既有保護後可重試，不換目錄清用量。舊 DB 自動增加預設未保護欄位，舊 ACK caller 介面仍可用；既有長駐 GUI／MCP 需正常重新載入新版，舊程式不提供此保護。新版不能重建升級前已遺失的原 ACK proof，該情況仍明確 blocked。
+
+共用 status／overview 的事件儲存區顯示 `pending_receiver_finalizations` 數量；舊 schema 尚無此欄時回 null，不因讀狀態遷移或改寫資料庫。該值只表示接收器收尾，與漏洞修復／案件結束無關。
+
+已清理的 outbox receipt 可由 inbox 已驗證的完成回條提供本機歷史接收證據；若來源同 ID 再度成為 pending，明示衝突，不用舊完成檔把新 pending 隱藏。已超出所有保留窗的歷史無法還原，不能宣稱無限期去重或 exactly-once。
 
 mutation 使用專用跨程序 FileLease，和 stdio owner lock 分開；busy 立即回報，不等待模型、不強停 owner。清理只選已完成、通過 schema／ID／ACK 對照的檔案；損壞檔案不自動當垃圾刪除。
 

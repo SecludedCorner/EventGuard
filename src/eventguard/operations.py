@@ -166,6 +166,32 @@ def _coverage_status(runtime, health, now):
     return result
 
 
+def _overview_coverage(coverage):
+    """Group identical sanitized error samples only in the operator overview.
+
+    sample_occurrences counts entries in the bounded saved sample, never all
+    failures. The collector's error_count/errors_truncated and detailed saved
+    observation remain authoritative and unchanged.
+    """
+    def grouped(errors):
+        groups = {}
+        for error in errors:
+            key = json.dumps(error, sort_keys=True, separators=(",", ":"))
+            if key not in groups:
+                groups[key] = dict(error, sample_occurrences=0)
+            groups[key]["sample_occurrences"] += 1
+        return list(groups.values())
+
+    result = {}
+    for source, item in coverage.items():
+        summary = dict(item)
+        summary["errors"] = grouped(item.get("errors", []))
+        summary["attempts"] = [dict(attempt, errors=grouped(attempt.get("errors", [])))
+                               for attempt in item.get("attempts", [])]
+        result[source] = summary
+    return result
+
+
 def _step(operation, explanation, **parameters):
     """Fixed local operation identifiers, never shell or untrusted instructions."""
     mutating = operation in {"monitor", "background_start", "background_stop", "stop", "diagnose_event", "report", "receive_event", "ack_event", "retry_event"}
@@ -271,9 +297,12 @@ def _namespace_status(runtime, namespace):
                 counts = dict(db.execute("SELECT delivery_status,COUNT(*) FROM events GROUP BY delivery_status"))
                 policy = db.execute("SELECT value FROM meta WHERE key='storage_policy'").fetchone()
                 receipts = db.execute("SELECT COUNT(*) FROM receipts").fetchone()[0]
+                has_finalization = "pending_finalization" in {row[1] for row in db.execute("PRAGMA table_info(receipts)")}
+                finalizations = db.execute("SELECT COUNT(*) FROM receipts WHERE pending_finalization=1").fetchone()[0] if has_finalization else None
                 rotation = dict(db.execute("SELECT key,value FROM meta WHERE key IN ('rotated_ack','expired_receipts','pressure_rotated_receipts')"))
             return {"state": "available", "counts": counts, "events": sum(counts.values()),
                     "storage_bytes": path.stat().st_size, "receipt_count": receipts,
+                    "pending_receiver_finalizations": finalizations,
                     "retention": json.loads(policy[0]) if policy else None, "rotation": rotation}
         return {"state": "not_created", "events": 0}
     except (OSError, ValueError, TypeError, sqlite3.Error):
@@ -425,7 +454,7 @@ class OperatorAPI:
         return {"tool_version": __version__, "namespace": namespace,
                 "operator_summary": _operator_summary(scoped, namespace),
                 "current_monitor": current, "monitor_namespace": monitor_namespace,
-                "source_coverage": scoped["source_coverage"],
+                "source_coverage": _overview_coverage(scoped["source_coverage"]),
                 "source_coverage_namespace": namespace,
                 "event_storage": document["namespaces"][namespace], "event_list": listing,
                 "agent_budget": document["agent_budget"],

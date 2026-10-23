@@ -43,6 +43,8 @@ py -3.13 -B scripts/eventguard.py report export --namespace test
 
 `status.last_report`（相容欄位 `health`）是歷史回報；`current_monitor` 才是當次單一 owner PID+建立時間與 heartbeat 的核對，沒有獨立 watchdog。`source_coverage` 分開顯示保存狀態與 freshness；future/stale/缺資料為 unknown。每個 namespace 的 DB 故障各自呈現，不以零筆冒充成功。`agent_budget` 顯示同安裝[耐久預算](AGENT_BUDGET.md)及阻塞原因，不初始化帳本。報告顯示 total/exported/truncated/limit，最多輸出 1,000 筆保存事件，不能把匯出數當總數。
 
+`overview`（正式 MCP 的 status／overview 共用）合併完全相同的安全錯誤樣本，`sample_occurrences` 只計有界樣本中重複幾次；總失敗次數仍看 `error_count`，省略仍看 `errors_truncated`。不同 stage／reason／異常類型／OS碼不合併，各次 attempt 順序與狀態保留。原始 status、保存觀察及採集契約不變，需詳細資料時使用 `sources show`／observation；讀 overview 不重掃或改寫觀察。
+
 一般權限的實際監看仍由人類明確啟動前景程序，另一終端可查狀態或合作停止：
 
 ```powershell

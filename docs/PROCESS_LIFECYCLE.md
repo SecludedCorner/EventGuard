@@ -28,7 +28,7 @@ Job 回條包含 `managed`、PID、建立時間、`child_exited`、exit code、`
 
 Runner 合併 stdout/stderr 最多保存 4 MiB，持續 drain 但明示超限；capture 各 stream 保存上限 4 MiB，截斷回條不等於完整驗收成功。強停回條不能通過真投遞驗收，pending 事件仍留在耐久佇列。真模型驗收本輪未執行。
 
-原生 API 改在 worker 內執行，避免 OS 呼叫卡住 monitor 主執行緒。正常一輪七來源會新增七個短期 Python 子程序；PowerShell fallback 僅在原生 API 不存在等既有契約允許的情況使用。這項隔離增加啟動成本；本輪沒有重做七來源性能、負載或 24 小時量測。
+原生 API 在 worker 內執行，避免 OS 呼叫卡住 monitor 主執行緒。目前 auto 一輪為六個原生 Python worker，加一個 Defender 有效狀態 PowerShell provider；其他來源只在契約允許的原生 API 不可用時 fallback。這項隔離增加啟動成本；有限實測與24小時量測分開，見 EVIDENCE。
 
 顯式注入的 fake Popen 保留舊合作式測試契約；沒有私有 Job 所有權就不強停。SDK 與 fake CLI 的測試程序由整套驗證的外層 Job 接住，不當作真 agent。
 
@@ -63,5 +63,7 @@ py -3.13 -B scripts/eventguard_schedule.py uninstall --dry-run
 Runner 不只查看等待執行緒是否完成；若 managed 回條尚未證明 child_exited=true 且 remaining_owned_processes 為整數 0，下一來源回 busy，不覆蓋該 Job。monitor 在釋放 singleton 前保存 `monitor-shutdown-gate.json`。新 worker 使用 `Global\EventGuard-<uuid>`，再次啟動在任何新 collector 前只 QUERY 記錄的私有 Job；確認 active=0 或 ERROR_FILE_NOT_FOUND 才保存 recovered 回條並清閘道。歷史 Local Job 必須先比對記錄的 session，不能用新登入 session 的不存在證明舊樹已退出。仍有程序、拒讀、其他錯誤或缺 Job 身分均保持 blocked_previous_query，不依 PID 強停，也不以刪鎖當恢復。
 
 每來源 launch／waiting／completed 有固定 progress 回報，慢查詢期間更新 heartbeat；每來源即保存白名單觀測與 coverage／事件交易。文字 UI 不因整輪未完而完全沉默，JSON stdout 仍為單一結果。每輪 45 秒採集預算未取消，超過後剩餘來源明示 busy 並稍後重試，不能把一輪當作七來源都已實際呼叫。
+
+到期來源按最後一次實際嘗試開始時間排序，未嘗試優先、同時刻保留原順序；來源間隔也從各自實際開始計算。因 round_budget 跳過只設30秒 defer，不更新 last 或宣稱採集，避免慢來源持續搶占而讓其他來源永久 busy。45秒是啟動下一來源的預算，已啟動查詢仍遵守自己的逾時與停止契約。虛擬時鐘回歸不代表真 provider 持續故障或24小時實測。
 
 精確測試數、時間、命令、失敗修正與證據目錄統一見 [EVIDENCE](EVIDENCE.md)；本文件不是新授權或全天候承諾。

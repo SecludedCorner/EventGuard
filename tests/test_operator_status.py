@@ -12,6 +12,7 @@ from types import ModuleType
 import unittest
 from unittest.mock import patch
 
+from eventguard.collectors.contract import evidence
 from eventguard.events.schema import validate_event
 from eventguard.events.store import EventStore, event_payload_hash
 from eventguard.operations import OperatorAPI, _budget_status
@@ -151,6 +152,89 @@ class OperatorStatusTests(unittest.TestCase):
         self.assertEqual(value["current_coverage"], "unknown")
         self.assertEqual(value["freshness"]["reason"], "freshness_policy_unavailable")
 
+    def test_overview_groups_saved_error_samples_without_changing_status_or_observation(self):
+        error = evidence("object", "access_denied", exception_type="Win32Error",
+                         win32_error=5, operation="ListenerOpenProcess", status="denied")
+        coverage = {"status": "partial", "observed_at": NOW.isoformat(),
+                    "errors": [dict(error) for _ in range(64)], "error_count": 170,
+                    "errors_truncated": True, "reason": "access_denied",
+                    "attempts": [{"backend": "native", "status": "partial", "elapsed_ms": 12,
+                                  "errors": [dict(error) for _ in range(64)],
+                                  "error_count": 170, "errors_truncated": True}]}
+        self.health(coverage={"listeners": coverage})
+        self.runtime.save_observation({"id": "listeners", "status": "partial", "rows": [],
+            "observed_at": NOW.isoformat(), "coverage": coverage}, "test")
+        health_path = self.runtime.path("data/health.json")
+        observation_path = self.runtime.path("data/test/observations/listeners.json")
+        persisted = health_path.read_bytes(), observation_path.read_bytes()
+        before = self.api.status()["source_coverage"]["listeners"]
+        observation = self.api.observation("listeners", "test")
+        result = self.api.overview("test")["source_coverage"]["listeners"]
+        self.assertEqual(result["errors"], [dict(error, sample_occurrences=64)])
+        self.assertEqual(result["attempts"][0]["errors"], result["errors"])
+        self.assertEqual(result["error_count"], 170)
+        self.assertTrue(result["errors_truncated"])
+        self.assertEqual({k: v for k, v in result.items() if k not in {"errors", "attempts"}},
+                         {k: v for k, v in before.items() if k not in {"errors", "attempts"}})
+        self.assertEqual({k: v for k, v in result["attempts"][0].items() if k != "errors"},
+                         {k: v for k, v in before["attempts"][0].items() if k != "errors"})
+        self.assertEqual(self.api.status()["source_coverage"]["listeners"], before)
+        self.assertEqual(self.api.observation("listeners", "test"), observation)
+        self.assertEqual((health_path.read_bytes(), observation_path.read_bytes()), persisted)
+        size = lambda item: len(json.dumps(item, separators=(",", ":")))
+        self.assertLess(size(result), size(before) // 4)
+
+    def test_overview_preserves_distinct_error_codes_and_attempt_order(self):
+        base = evidence("object", "access_denied", exception_type="Win32Error",
+                        win32_error=5, operation="OpenProcess", status="denied")
+        errors = [base, dict(base, win32_error=1314), dict(base, hresult=-2147024891),
+                  dict(base, stage="field"), dict(base, exception_type="PermissionError"),
+                  dict(base, reason_code="policy_denied"), dict(base, operation="GetProcessTimes")]
+        self.health(coverage={"processes": {"status": "partial", "observed_at": NOW.isoformat(),
+            "errors": errors * 2, "error_count": 14,
+            "attempts": [{"backend": "native", "status": "denied", "errors": [base] * 3},
+                         {"backend": "powershell", "status": "unknown", "errors": []}]}})
+        result = self.api.overview("test")["source_coverage"]["processes"]
+        self.assertEqual(result["errors"], [dict(error, sample_occurrences=2) for error in errors])
+        self.assertEqual([(a["backend"], a["status"]) for a in result["attempts"]],
+                         [("native", "denied"), ("powershell", "unknown")])
+        self.assertEqual(result["attempts"][0]["errors"], [dict(base, sample_occurrences=3)])
+        self.assertEqual(result["attempts"][1]["errors"], [])
+
+    def test_overview_error_grouping_never_changes_unknown_denied_or_stale_coverage(self):
+        error = evidence("provider", "query_failed", status="unknown")
+        coverage = {"defender": {"status": "denied", "observed_at": NOW.isoformat()},
+                    "processes": {"status": "unknown", "observed_at": NOW.isoformat()},
+                    "tasks": {"status": "partial", "observed_at": (NOW - timedelta(days=1)).isoformat()}}
+        for item in coverage.values():
+            item["errors"], item["error_count"] = [dict(error)] * 3, 3
+        self.health(coverage=coverage)
+        before = self.api.status()["source_coverage"]
+        after = self.api.overview("test")["source_coverage"]
+        for source in before:
+            for field in ("status", "current_coverage", "freshness", "observed_at", "last_success"):
+                self.assertEqual(after[source][field], before[source][field])
+        self.assertEqual(after["defender"]["current_coverage"], "denied")
+        self.assertEqual(after["processes"]["current_coverage"], "unknown")
+        self.assertEqual(after["tasks"]["current_coverage"], "unknown")
+        self.assertEqual(after["listeners"]["current_coverage"], "unknown")
+
+    def test_overview_groups_only_the_requested_namespaces_saved_observation_errors(self):
+        error = evidence("provider", "access_denied", win32_error=5, status="denied")
+        self.health(coverage={"tasks": {"status": "ok", "observed_at": NOW.isoformat()}})
+        self.runtime.save_observation({"id": "tasks", "status": "denied", "rows": [],
+            "observed_at": NOW.isoformat(), "coverage": {"errors": [dict(error)] * 4,
+                "error_count": 9, "errors_truncated": True}}, "live")
+        result = self.api.overview("live")
+        tasks = result["source_coverage"]["tasks"]
+        self.assertFalse(result["current_monitor"]["scope_matches"])
+        self.assertEqual(tasks["status"], "denied")
+        self.assertEqual(tasks["current_coverage"], "denied")
+        self.assertEqual(tasks["errors"], [dict(error, sample_occurrences=4)])
+        self.assertEqual(tasks["error_count"], 9)
+        self.assertTrue(tasks["errors_truncated"])
+        self.assertEqual(len(self.api.observation("tasks", "live")["coverage"]["errors"]), 4)
+
     def test_namespace_corruption_is_unknown_without_hiding_other_namespace(self):
         event = make_synthetic()
         store = EventStore(self.root / "data/live")
@@ -166,6 +250,23 @@ class OperatorStatusTests(unittest.TestCase):
         self.assertIsNone(result["namespaces"]["test"]["events"])
         self.assertNotIn("private-error-canary", json.dumps(result))
         self.assertEqual(path.read_bytes(), before)
+
+    def test_status_shows_unfinished_receiver_proofs_without_mutating_or_migrating(self):
+        item = make_synthetic()
+        store = EventStore(self.root / "data/test")
+        store.enqueue(item)
+        receipt = {"ack_type": "receiver_persisted", "event_id": item["event_id"], "receipt_id": "synthetic-status-proof"}
+        store.acknowledge(item["event_id"], receipt, receiver_finalization=True)
+        before = store.path.read_bytes()
+        self.assertEqual(self.api.overview("test")["event_storage"]["pending_receiver_finalizations"], 1)
+        self.assertEqual(store.path.read_bytes(), before)
+        store.finalize_receiver(item["event_id"], receipt)
+        self.assertEqual(self.api.status()["namespaces"]["test"]["pending_receiver_finalizations"], 0)
+        with closing(sqlite3.connect(store.path)) as db, db:
+            db.execute("ALTER TABLE receipts DROP COLUMN pending_finalization")
+        before = store.path.read_bytes()
+        self.assertIsNone(self.api.status()["namespaces"]["test"]["pending_receiver_finalizations"])
+        self.assertEqual(store.path.read_bytes(), before)
 
     def test_bad_health_and_owner_records_preserve_readable_namespace(self):
         EventStore(self.root / "data/test").enqueue(make_synthetic())

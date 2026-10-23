@@ -221,7 +221,12 @@ class Monitor:
                 if deadline is not None and stamp>=deadline:
                     health["stop_reason"]="duration_limit"
                     break
-                due=list(SECTIONS) if fixture else [key for key in SECTIONS if stamp>=self.not_before.get(key,0) and (key not in self.last or stamp-self.last[key]>=config["interval_seconds"][key])]
+                due=list(SECTIONS) if fixture else sorted(
+                    (key for key in SECTIONS if stamp>=self.not_before.get(key,0) and
+                     (key not in self.last or stamp-self.last[key]>=config["interval_seconds"][key])),
+                    # A slow early source must not consume every future round.
+                    # Stable sorting retains SECTIONS order for equal/no attempts.
+                    key=lambda key: self.last.get(key, float("-inf")))
                 if due:
                     health["last_attempt"]=utc_now()
                     round_start=self.clock()
@@ -302,7 +307,7 @@ class Monitor:
                                 section={"id":key,"status":"busy","rows":[],"observed_at":utc_now(),"coverage":{"status":"busy","reason":"round_budget"}}
                                 self.not_before[key]=self.clock()+30
                             else:
-                                self.last[key]=stamp
+                                self.last[key]=source_start
                                 self.not_before.pop(key,None)
                                 try:
                                     section=self._collect(key, query_cancel, source_progress)

@@ -23,6 +23,17 @@ def section(source, status="ok", rows=None):
             "coverage": {"status": status}}
 
 
+class VirtualClock:
+    def __init__(self):
+        self.seconds = 0.0
+
+    def __call__(self):
+        return self.seconds
+
+    def wait(self, seconds):
+        self.seconds += seconds
+
+
 class MonitorProgressTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -30,6 +41,83 @@ class MonitorProgressTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         (self.root / "config").mkdir()
         shutil.copy2(ROOT / "config/default.json", self.root / "config/default.json")
+
+    def test_repeated_slow_timeouts_cannot_starve_other_due_sources(self):
+        runtime = Runtime(self.root)
+        config = runtime.config()
+        config["query_timeout_seconds"] = 60
+        for key in ("defender", "listeners", "processes"):
+            config["interval_seconds"][key] = 30
+        atomic_json(self.root / "config/default.json", config)
+        clock, calls, rounds = VirtualClock(), [], []
+
+        class Collectors:
+            def collect(self, key, cancel=None):
+                calls.append((key, clock()))
+                clock.wait(60)
+                return section(key, "timeout")
+
+        monitor = Monitor(self.root, collectors=Collectors(), clock=clock, wait=clock.wait)
+        def completed(health):
+            rounds.append((copy.deepcopy(health), dict(monitor.last)))
+
+        cycle_bound = 2 * len(SECTIONS)
+        with patch.object(Monitor, "_own_low_priority", return_value="fixture"):
+            result = monitor.run(max_cycles=cycle_bound, on_cycle=completed)
+        self.assertEqual(list(dict.fromkeys(key for key, started in calls)), list(SECTIONS))
+        self.assertEqual(set(key for key, started in calls), set(SECTIONS))
+        self.assertEqual(len(calls), cycle_bound, "A spent round cannot start another source")
+        first, first_attempts = rounds[0]
+        self.assertEqual(first_attempts, {"defender": 0})
+        self.assertEqual(first["coverage"]["defender"]["status"], "timeout")
+        for key in SECTIONS[1:]:
+            self.assertEqual(first["coverage"][key]["status"], "busy")
+            self.assertEqual(first["coverage"][key]["reason"], "round_budget")
+        self.assertFalse(result["healthy"])
+        self.assertEqual(result["model_calls"], 0)
+
+    def test_intervals_measure_actual_attempt_start_after_variable_earlier_work(self):
+        runtime = Runtime(self.root)
+        config = runtime.config()
+        clock, calls = VirtualClock(), []
+
+        class Collectors:
+            def collect(self, key, cancel=None):
+                calls.append((key, clock()))
+                if len(calls) == 1:
+                    clock.wait(40)
+                return section(key)
+
+        monitor = Monitor(self.root, collectors=Collectors(), clock=clock, wait=clock.wait)
+        with patch.object(Monitor, "_own_low_priority", return_value="fixture"):
+            monitor.run(max_cycles=3)
+        for key in SECTIONS:
+            starts = [started for source, started in calls if source == key]
+            for previous, current in zip(starts, starts[1:]):
+                self.assertGreaterEqual(current - previous, config["interval_seconds"][key], key)
+        self.assertEqual([started for key, started in calls if key == "listeners"], [40, 160])
+
+    def test_stop_after_budget_exhaustion_never_starts_a_deferred_source(self):
+        clock, calls, rounds = VirtualClock(), [], []
+
+        class Collectors:
+            def collect(self, key, cancel=None):
+                calls.append(key)
+                clock.wait(60)
+                return section(key, "timeout")
+
+        monitor = Monitor(self.root, collectors=Collectors(), clock=clock, wait=clock.wait)
+        def completed(health):
+            rounds.append(health)
+            monitor.cancel.set()
+
+        with patch.object(Monitor, "_own_low_priority", return_value="fixture"):
+            result = monitor.run(max_cycles=20, on_cycle=completed)
+        self.assertEqual(calls, ["defender"])
+        self.assertEqual(monitor.last, {"defender": 0})
+        self.assertEqual(rounds[0]["coverage"]["listeners"]["status"], "busy")
+        self.assertEqual(result["stop_reason"], "cooperative_stop")
+        self.assertEqual(result["state"], "stopped")
 
     def test_source_progress_is_saved_before_next_source_and_callback_is_copy(self):
         runtime = Runtime(self.root)
