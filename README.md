@@ -84,6 +84,8 @@ Windows 可能抑制通知。程式接受通知要求，不代表使用者已看
 - 24 小時運轉與重開機尚未驗證。不作全天候承諾。
 - 執行資料、憑證及私人歷史不提交 Git。
 
-Codex MCP、閒置喚醒及開機自啟均為選配。本輪不啟用。成本與收益見 [現況](STATUS.md)。
+專用 agent 派送提供 `agent start / status / pause / resume / stop`。start 預設只預檢；加 `--execute` 才允許模型。操作、篩選與七欄封裝見 [AGENT_SERVICE](docs/AGENT_SERVICE.md)。本批未啟用。
+
+Codex 主聊天 MCP、桌面閒置喚醒及開機自啟均為選配。成本與收益見 [現況](STATUS.md)。
 
 舊 Tk GUI 仍可雙擊 `EventGuard.cmd` 開啟。歷史驗收見 [EVIDENCE](docs/EVIDENCE.md)。產品範圍見 [維護目標](docs/MAINTENANCE_GOAL.md)。本專案使用 [MIT](LICENSE)。

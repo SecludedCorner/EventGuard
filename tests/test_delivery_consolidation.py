@@ -92,7 +92,10 @@ class ConsolidationTests(unittest.TestCase):
                 return [sys.executable, "-B", str(fake), str(source), str(state), identity, str(ROOT / "src"), "ack" if allow_ack else "read"]
             cases = []
             with patch.object(validation, "command", side_effect=fake_command), patch.object(validation.shutil, "which", return_value=sys.executable), patch.object(validation.importlib.util, "find_spec", return_value=True):
-                for case in validation.COUNTS:
+                # These four cases use the finite stage/capture adapter. The
+                # service case has separate service-driver mocks and raw proof
+                # replay tests; a stage-only fake must never start its host.
+                for case in ("single", "continuous", "batch", "recovery"):
                     root = base / case; manifest = validation.prepare(root, case)
                     with isolated_budget(base / ("budget-" + case)):
                         proof = validation.execute(root, manifest, sys.executable)

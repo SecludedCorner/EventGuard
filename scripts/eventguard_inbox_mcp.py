@@ -82,14 +82,20 @@ def _sdk_server(name, validate):
     return InboxMCP(name)
 
 
-def build_server(source_dir, state_dir, event_id, allow_live=False, allow_ack=True):
+def build_server(source_dir, state_dir, event_id, allow_live=False, allow_ack=True, *, root=None):
     """Legacy three-tool contract stays compatible with acceptance evidence."""
+    from eventguard.local_paths import _guard
+    project = _guard(ROOT if root is None else root)
+    # Isolated roots are for synthetic tests. They cannot select another live
+    # permission file or grant access by moving the installation directory.
+    if allow_live and project != _guard(ROOT):
+        raise ValueError("live_project_root_not_authorized")
     from eventguard.queue_inbox import QueueInbox
     backend = QueueInbox(source_dir, state_dir, event_id=event_id, allow_live=allow_live)
     def call(method, *args):
         if allow_live:
             from eventguard.agent_access import guard
-            blocked = guard(ROOT, "live")
+            blocked = guard(project, "live")
             if blocked is not None:
                 return blocked
         return getattr(backend, method)(*args)
@@ -271,6 +277,8 @@ def main(argv=None):
     mode.add_argument("--source-dir", type=Path)
     mode.add_argument("--operator-root", type=Path, help="Shared local CLI/API tools; no agent/monitor is launched automatically.")
     parser.add_argument("--state-dir", type=Path)
+    parser.add_argument("--project-root", type=Path, default=ROOT,
+                        help="Synthetic isolation only; live access remains installation-bound.")
     parser.add_argument("--event-id")
     parser.add_argument("--read-only", action="store_true", help="Bound recovery read stage: do not expose an ACK tool.")
     parser.add_argument("--namespace", choices=("test", "live"), default="test")
@@ -291,7 +299,8 @@ def main(argv=None):
         else:
             if args.state_dir is None or args.event_id is None:
                 raise ValueError("bound_event_scope_required")
-            server = build_server(args.source_dir, args.state_dir, args.event_id, args.allow_live, not args.read_only)
+            server = build_server(args.source_dir, args.state_dir, args.event_id, args.allow_live, not args.read_only,
+                                  root=args.project_root)
             owner_path = args.state_dir / "inbox-owner.lock"
     except ImportError:
         print("EventGuard: installed MCP SDK unavailable; nothing was installed.", file=sys.stderr)

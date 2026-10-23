@@ -2,6 +2,34 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-24：事件驅動的專用 agent host
+
+基底 `008a931121f03c1ceaa1abb6f26cbe08abf3bf48`。分支維持 `feat/local-codex-acceptance`。
+功能、設定、測試與文件集中提交。提交對照留在本機 `reports/event-ingress-001/source-commit.json`。
+沒有真模型、正式背景、網路擷取、排程、proxy 或其他聊天操作。既有私人研究與附件未納入提交。
+
+| 命令／證據 | 實際結果 | 範圍及限制 |
+| --- | --- | --- |
+| `py -3.13 -B scripts/verify.py --run-dir reports/event-ingress-001/full-001 --timeout-seconds 600` | 1,177 run；1,174 pass；3 skip；exit 0；`passed_checks=true` | fixture、SDK、fake CLI、真本機 HTTP 及明示 Windows Job API。不是模型或採集掃描 |
+| `verify.py --module ...`，完整 25 模組命令見 `final-delta-001/verification-summary.json` | 391 run；388 pass；1 fail；1 error；1 skip；exit 1 | 修正 resume/preflight 及 OS exit 取證後回歸。兩項失敗完整保留 |
+| `py -3.13 -B scripts/verify.py --run-dir reports/event-ingress-001/final-delta-002 --timeout-seconds 180 --module test_delivery_validation --module test_delivery_consolidation --module test_agent_service` | 55 run；55 pass；exit 0；`passed_checks=true` | 修復下述測試契約問題。重驗受影響模組，沒有盲目重跑模型 |
+| `py -3.13 -B scripts/validate_delivery.py service --root reports/event-ingress-001/service-ready-001` | exit 0；`prepared_only_no_model_invoked`；一件合成事件；來源仍空 | 未加 execute。沒有 host 或模型啟動。只是備妥真驗入口 |
+| `py -3.13 -B scripts/eventguard.py agent status --format json` | exit 0；`not_started`；`desired_enabled=false`；`budget_unavailable` | 固定 budget DB/marker 均不存在；未初始化或假設零用量。原監看停止設定雜湊與上輪相同。見 `readiness.json` |
+| Windows 空佇列 host 的 `lifecycle-evidence.json` | start／pause／resume／stop；OS exit 0；remaining 0；未強停；provider 未啟動 | 真 Windows Job＋隔離合成資料。只有父預檢 budget 是 mock；子程序不初始化正式預算。不證明模型收件或獨立長期壽命 |
+| `node --check -` 經私有 Job，見 `web-syntax-final.json` | exit 0；stderr 空；Job 自然退出 | JavaScript 語法檢查。Web 路由另由真 loopback HTTP 測試。未作瀏覽器視覺或長期運轉驗收 |
+
+全套與修復後定向回歸按當前測試 ID 去重為 **1,194 unique：1,191 pass、3 skip、0 failure/error，missing=[]**。
+這不是最終來源全套重跑。逐項結果見 `combined-index-final.json`；受測來源與 `final-delta-002/source-manifest.json` 完全相同。Python **3.13.3**。
+三個 skip 是兩項 symlink 權限測試及原生通知不可用。所有 guardian 均自然退出，remaining=0、未強停，沒有 per-test 殘留；失敗回歸的 worker exit 1 保留。
+
+兩項回歸失敗的原因：生成事件原用秒精度，EventStore 的 `validate_event` 轉成微秒精度，導致 raw manifest hash 不同。現在生成與驗證共用 canonical 契約，另加雜湊一致性測試。另一項是舊測試遍歷新增 service case，但只替換舊 stage adapter；現在明列原四案例，service 由獨立測試覆蓋。沒有放寬工具 trace、ID、結果、ACK、閒置或退出條件。
+
+測試索引初稿把 unittest 已含方法名的 ID 再附一次方法名，故檢查失敗；保留 `combined-index.json`。修正解析後使用 `combined-index-final.json`，不把索引失敗當產品通過或新增測試。
+
+新驗收 case 使用原 `validate_delivery.py`。程式先啟動普通 host 等空佇列，再加入一件 high 合成事件，核對 receive→query→結果→ACK、前後短暫閒置、唯一 attempt、CLI／supervisor／host 退出。預設 prepare／verify 不呼叫模型；execute 需另有當次範圍。intent 先保存，失敗後同目錄拒絕重跑。fake receipts 與真模型仍明確分開。
+
+未驗證：真模型通路、桌面 queue 喚醒、正式長期背景、24 小時 soak、完整漏洞診斷與 OpenOctopus 外部專案整合。七欄未擴大。ACK 不是風險處置或主機安全證明。
+
 ## 2026-10-23：公告追蹤與靜態適用性
 
 基底 `bb6ecff55efbd86bd178e7b0005f077bca765ac9`。沿用 `feat/local-codex-acceptance`。本批只有新功能證據目錄 `reports/advisory-tracker-001`。正式背景與真模型未啟用。原 dot 追蹤不變。

@@ -11,9 +11,9 @@ from urllib.parse import parse_qs, unquote, urlsplit
 HTML = """<!doctype html>
 <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf" content="__TOKEN__"><title>EventGuard 本機資安監看</title><link rel="stylesheet" href="/app.css"></head>
-<body><header><div><h1>EventGuard</h1><p>本機採集。規則比對。事件保存。無模型。</p></div><span id="run-state">正在讀取狀態</span></header>
+<body><header><div><h1>EventGuard</h1><p>本機採集。規則比對。事件保存。正常採集不呼叫模型。</p></div><span id="run-state">正在讀取狀態</span></header>
 <main><p id="error" role="alert" hidden></p><p id="notice" role="status" hidden></p>
-<nav aria-label="頁面"><button data-tab="events" aria-pressed="true">事件</button><button data-tab="sources">來源狀態</button><button data-tab="rules">規則</button></nav>
+<nav aria-label="頁面"><button data-tab="events" aria-pressed="true">事件</button><button data-tab="sources">來源狀態</button><button data-tab="rules">規則</button><button data-tab="agent">Agent 派送</button></nav>
 <section id="events"><h2>事件</h2><form id="filters">
 <label>嚴重度<select name="severity"><option value="">全部</option><option value="critical">嚴重</option><option value="high">高</option><option value="warning">警告</option><option value="info">資訊</option></select></label>
 <label>來源<select name="source"><option value="">全部</option><option value="defender">Defender</option><option value="listeners">監聽端點</option><option value="processes">程序</option><option value="startup">啟動項</option><option value="services">服務</option><option value="tasks">排程工作</option><option value="versions">版本</option><option value="monitor">監看程式</option><option value="advisories">資安公告</option><option value="unknown">未知</option></select></label>
@@ -22,9 +22,10 @@ HTML = """<!doctype html>
 <p><button id="prev">上一頁</button> <button id="next">下一頁</button></p>
 <article id="detail" hidden><h2>事件詳情</h2><p id="detail-summary"></p><p id="detail-id"></p><p>處置狀態只記錄人的決定。它不會 ACK，也不會修改系統。</p>
 <div id="status-buttons"><button data-status="new">新增</button><button data-status="read">已讀</button><button data-status="handled">已處理</button><button data-status="ignored">忽略</button></div>
-<h3>觀察與建議</h3><div id="guidance"></div><details><summary>結構化資料</summary><pre id="detail-json"></pre></details></article></section>
+<h3>觀察與建議</h3><div id="guidance"></div><h3>投遞證據</h3><p>落盤、收件、結果與 ACK 分開記錄。缺少證據顯示未知。</p><pre id="delivery-json"></pre><details><summary>結構化資料</summary><pre id="detail-json"></pre></details></article></section>
 <section id="sources" hidden><h2>七個來源</h2><p>只顯示已保存的採集結果。未知、拒讀或過期都不代表安全。</p><div id="source-cards"></div></section>
 <section id="rules" hidden><h2>規則</h2><p>編輯專案的 config/rules.json。下一輪採集會讀取。規則不執行命令。</p><div id="rule-cards"></div></section>
+<section id="agent" hidden><h2>Agent 派送</h2><p>這是選配的短期專用任務。無事件由普通程式等待。此頁不會啟動模型。ACK 不是風險結案。</p><p id="agent-summary"></p><button id="agent-pause">暫停新派送</button> <button id="agent-stop">停止派送程序</button><p>恢復需在終端明確執行 agent resume --execute。採集及原事件不受這兩個按鈕影響。</p><pre id="agent-json"></pre></section>
 <footer>僅供本機使用。高嚴重度事件會顯示本頁提示。系統通知狀態：<span id="notification-state">未知</span>。<br>關閉此頁不會停止程式。回到執行終端，按 Ctrl+C 停止。</footer></main><script src="/app.js" defer></script></body></html>"""
 
 CSS = """:root{color-scheme:light;font:16px system-ui,'Microsoft JhengHei',sans-serif;color:#183044;background:#f1f5f7}*{box-sizing:border-box}body{margin:0}header{background:#153d50;color:white;padding:24px max(24px,calc((100vw - 1180px)/2));display:flex;justify-content:space-between;gap:24px;align-items:center}h1{margin:0;font-size:29px}header p{margin-bottom:0;color:#d5e6ed}main{max-width:1180px;margin:auto;padding:24px}nav,form,#status-buttons{display:flex;gap:12px;flex-wrap:wrap;align-items:end}button,select{font:inherit;padding:9px 12px;border:1px solid #9badb9;border-radius:6px;background:white;color:#183044}button{cursor:pointer}button:hover,button[aria-pressed=true]{background:#d9eaf0}button:disabled{opacity:.45;cursor:default}label{display:grid;gap:5px}section,article{background:white;border:1px solid #dce4e9;border-radius:10px;margin-top:20px;padding:22px}article{background:#f7fafb}h2{margin-top:0}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;border-bottom:1px solid #e3e9ed;padding:12px 9px;vertical-align:top}th{white-space:nowrap;color:#506472}td:first-child{font-weight:700}.high,.critical{color:#a12822}.warning{color:#855c04}.source-card,.rule-card{padding:16px 0;border-bottom:1px solid #dce4e9}.source-card h3,.rule-card h3{margin:0 0 10px}.reason{font:13px ui-monospace,monospace;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px ui-monospace,monospace}#notice{padding:15px;border-left:5px solid #a12822;background:#fff0eb}#error{padding:15px;background:#ffe3df;color:#7b1e19}footer{font-size:13px;line-height:1.8;color:#566d7c;margin-top:24px}[hidden]{display:none!important}@media(max-width:650px){header{display:block}main{padding:12px}section{padding:14px}form label{flex:1;min-width:130px}}"""
@@ -43,10 +44,13 @@ async function events(){const q=new URLSearchParams(new FormData($('filters')));
 async function detail(id){const d=await api('/api/events/'+encodeURIComponent(id));selected=id;$('detail').hidden=false;$('detail-summary').textContent=(severity[d.severity]||d.severity)+' / '+(sourceNames[d.source]||d.source)+' / '+(handling[d.status]||d.status)+' / '+when(d.observed_at);$('detail-id').textContent=id;$('detail-json').textContent=JSON.stringify(d,null,2);$('guidance').replaceChildren();if(d.guidance){$('guidance').append(node('p',d.guidance.observation));for(const step of d.guidance.next_steps||[])$('guidance').append(node('p',typeof step==='string'?step:JSON.stringify(step)));}for(const b of $('status-buttons').querySelectorAll('button'))b.disabled=b.dataset.status===d.status;}
 async function sources(){const d=await api('/api/sources');$('source-cards').replaceChildren();for(const s of d.sources){const a=node('article',null,'source-card');a.append(node('h3',s.name||sourceNames[s.source_id]||s.source_id),node('p','最後採集：'+when(s.last_collected_at)+'。結果：'+(states[s.saved_status]||s.saved_status)+'。目前：'+(states[s.status]||s.status)+'。'));for(const reason of s.reasons||[])a.append(node('p',JSON.stringify(reason), 'reason'));a.append(node('p',s.suggestion));$('source-cards').append(a);}}
 async function rules(){const d=await api('/api/rules');$('rule-cards').replaceChildren();for(const r of d.rules){const a=node('article',null,'rule-card');a.append(node('h3',r.name),node('p','嚴重度：'+(severity[r.severity]||r.severity)+'。'+(r.enabled===false?'已停用':'已啟用')+'。'),node('pre',JSON.stringify(r.conditions,null,2)));$('rule-cards').append(a);}}
+async function agent(){const d=await api('/api/agent');const b=d.budget||d.agent_budget||{};$('agent-summary').textContent='程序：'+(d.host_liveness||'未知')+'。狀態：'+(d.state||d.host_state||'未知')+'。待收：'+(d.pending_events??'未知')+'。每日剩餘：'+(b.usage_known===true?b.remaining:'未知')+'。原因：'+(d.reason||d.blocked_reason||b.reason||'無')+'。';$('agent-json').textContent=JSON.stringify(d,null,2);}
+const showDetail=detail;detail=async function(id){await showDetail(id);$('delivery-json').textContent='正在讀取保存證據…';try{const d=await api('/api/events/'+encodeURIComponent(id)+'/delivery');if(selected===id)$('delivery-json').textContent=JSON.stringify(d,null,2);}catch(e){if(selected===id)$('delivery-json').textContent='投遞證據不可用：'+e.message;}};
 async function state(){const d=await api('/api/status');$('run-state').textContent=states[d.monitor_state]||d.monitor_state||'狀態未知';const n=d.notifications||{};const noticeLabels={disabled:'已關閉',waiting:'等待新事件',no_high_severity_events:'等待新事件',already_notified:'沒有待通知事件',notification_requested:'已送出系統通知要求',notification_display_cooldown:'等待下一則通知'};const noticeCode=n.reason||n.status||n.state;$('notification-state').textContent=noticeLabels[noticeCode]||(n.status==='failed'?'系統通知不可用。本頁提示仍有效。原因：'+noticeCode:noticeCode)||'等待新事件';if(d.config_error){$('error').textContent='規則檔錯誤：'+d.config_error+'。請檢查 config/rules.json。';$('error').hidden=false;}const fresh=await api('/api/events?severity=high&status=new&limit=1');const critical=await api('/api/events?severity=critical&status=new&limit=1');const count=fresh.total+critical.total;$('notice').hidden=count===0;$('notice').textContent='有 '+count+' 件新增的高嚴重度事件。請查看事件並記錄處置狀態。';}
-async function refresh(){if(busy)return;busy=true;$('error').hidden=true;try{await state();if(tab==='events')await events();if(tab==='sources')await sources();if(tab==='rules')await rules();}catch(e){fail(e);}finally{busy=false;}}
+async function refresh(){if(busy)return;busy=true;$('error').hidden=true;try{await state();if(tab==='events')await events();if(tab==='sources')await sources();if(tab==='rules')await rules();if(tab==='agent')await agent();}catch(e){fail(e);}finally{busy=false;}}
 $('filters').addEventListener('submit',e=>{e.preventDefault();offset=0;refresh();});$('prev').addEventListener('click',()=>{offset=Math.max(0,offset-50);refresh();});$('next').addEventListener('click',()=>{offset+=50;refresh();});
-for(const b of document.querySelectorAll('nav button'))b.addEventListener('click',()=>{tab=b.dataset.tab;for(const s of ['events','sources','rules'])$(s).hidden=s!==tab;for(const x of document.querySelectorAll('nav button'))x.setAttribute('aria-pressed',String(x===b));refresh();});
+for(const b of document.querySelectorAll('nav button'))b.addEventListener('click',()=>{tab=b.dataset.tab;for(const s of ['events','sources','rules','agent'])$(s).hidden=s!==tab;for(const x of document.querySelectorAll('nav button'))x.setAttribute('aria-pressed',String(x===b));refresh();});
+for(const action of ['pause','stop'])$('agent-'+action).addEventListener('click',async()=>{const b=$('agent-'+action);b.disabled=true;try{await api('/api/agent/'+action,{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:'{}'});await agent();}catch(e){fail(e);}finally{b.disabled=false;}});
 for(const b of $('status-buttons').querySelectorAll('button'))b.addEventListener('click',async()=>{if(!selected)return;b.disabled=true;try{await api('/api/events/'+encodeURIComponent(selected)+'/status',{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:JSON.stringify({status:b.dataset.status})});await detail(selected);await refresh();}catch(e){fail(e);b.disabled=false;}});
 refresh();setInterval(refresh,5000);
 """
@@ -146,6 +150,14 @@ class LocalWeb:
                             if k in args:
                                 args[k] = int(args[k])
                         return self.reply(200, app.catalog.list(**args))
+                    if route.path.startswith("/api/events/") and route.path.endswith("/delivery") and not query:
+                        from .event_ingress import inspect_delivery
+                        from .runtime import Runtime
+                        runtime = Runtime(app.root)
+                        event_id = unquote(route.path[len("/api/events/"):-len("/delivery")], errors="strict")
+                        state = "data/agent-delivery" if app.namespace == "live" else "data/agent-delivery-test"
+                        return self.reply(200, inspect_delivery(runtime.path("data/"+app.namespace),
+                            runtime.path(state), event_id, allow_live=app.namespace == "live"))
                     if route.path.startswith("/api/events/") and not query:
                         event_id = unquote(route.path.removeprefix("/api/events/"), errors="strict")
                         return self.reply(200, app.catalog.detail(event_id))
@@ -157,6 +169,9 @@ class LocalWeb:
                         return self.reply(200, {"rules": load_rules(app.root), "model_calls": 0})
                     if route.path == "/api/status" and not query:
                         return self.reply(200, app.status_provider())
+                    if route.path == "/api/agent" and not query:
+                        from .agent_service import status
+                        return self.reply(200, status(app.root))
                     self.error(404, "route_not_found")
                 except ValueError:
                     self.error(400, "invalid_request_or_rules")
@@ -175,6 +190,13 @@ class LocalWeb:
                     if not 1 <= size <= 256:
                         raise ValueError("invalid_body_size")
                     parts = self.path.split("/")
+                    if parts[:3] == ["", "api", "agent"] and len(parts) == 4 and parts[3] in {"pause", "stop"}:
+                        if json.loads(self.rfile.read(size)) != {}:
+                            raise ValueError("invalid_agent_control")
+                        from . import agent_service
+                        result = (agent_service.pause(app.root) if parts[3] == "pause" else
+                                  agent_service.stop(app.root, grace_seconds=5))
+                        return self.reply(200, result)
                     if len(parts) != 5 or parts[:3] != ["", "api", "events"] or parts[4] != "status":
                         return self.error(404, "route_not_found")
                     data = json.loads(self.rfile.read(size))

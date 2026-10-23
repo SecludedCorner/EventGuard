@@ -1,0 +1,5 @@
+{
+  "severities": ["high", "critical"],
+  "event_types": ["advisory.changed", "coverage.degraded", "listener.changed", "monitor_gap", "persistence.changed", "protection.changed"],
+  "human_statuses": ["new", "read"]
+}

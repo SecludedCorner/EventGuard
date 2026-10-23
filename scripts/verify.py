@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
 import sys
 import time
 import unittest
@@ -33,7 +34,7 @@ def sources():
 MOCK_MODULES = ("test_events_transport", "test_rules_playbooks", "test_mcp_protocol", "test_mcp_store")
 
 
-def worker(output, guardian_name, scope="full"):
+def worker(output, guardian_name, scope="full", modules=()):
     evidence, residuals, syntax = [], [], []
     baseline = {}
     files = [p for folder in ("src", "scripts", "tests", "contrib") for p in (ROOT / folder).rglob("*.py")]
@@ -69,7 +70,10 @@ def worker(output, guardian_name, scope="full"):
             super().stopTest(test)
     tick = time.monotonic()
     with (output / "unit-tests.txt").open("x", encoding="utf-8") as log, contextlib.redirect_stdout(log), contextlib.redirect_stderr(log):
-        if scope == "mock":
+        if modules:
+            sys.path.insert(0, str(ROOT / "tests"))
+            suite = unittest.defaultTestLoader.loadTestsFromNames(modules)
+        elif scope == "mock":
             sys.path.insert(0, str(ROOT / "tests"))
             suite = unittest.defaultTestLoader.loadTestsFromNames(MOCK_MODULES)
         else:
@@ -86,9 +90,9 @@ def worker(output, guardian_name, scope="full"):
              "per_test_residuals": residuals, "scope": "fixture/SDK/fake CLI plus labelled real Windows owned-job APIs; no inventory scan/model",
              "guardian_baseline_identities": baseline,
              "machine_scan_executed": False, "real_agent_woken": False, "model_calls": 0}
-    value.update(verification_scope=scope, linux_native_support=False,
+    value.update(verification_scope="targeted" if modules else scope, linux_native_support=False,
                  scope="fixture/pure rules/SQLite/mock only; no Linux native support" if scope == "mock" else value["scope"],
-                 selected_modules=list(MOCK_MODULES) if scope == "mock" else ["test_*.py"])
+                 selected_modules=list(modules) if modules else list(MOCK_MODULES) if scope == "mock" else ["test_*.py"])
     atomic_json(output / "worker-summary.json", value, 2*1024*1024)
     atomic_json(output / "lifecycle-evidence.json", evidence, 4*1024*1024)
     return 0 if result.wasSuccessful() and not syntax and not residuals else 1
@@ -99,9 +103,14 @@ def main(argv=None):
     parser.add_argument("--run-dir", type=Path)
     parser.add_argument("--timeout-seconds", type=float, default=900)
     parser.add_argument("--scope", choices=("full", "mock"), default="full")
+    parser.add_argument("--module", action="append", default=[], help="只驗證指定 tests/test_*.py。可重複；仍使用原 guardian。")
     parser.add_argument("--_worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--guardian-job-name", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
+    if args.module and (args.scope != "full" or len(args.module) != len(set(args.module)) or
+            any(not re.fullmatch(r"test_[A-Za-z0-9_]+", name) or not (ROOT / "tests" / (name+".py")).is_file()
+                for name in args.module)):
+        parser.error("modules must name unique existing test modules; cannot combine with mock scope")
     if not 1 <= args.timeout_seconds <= 1800:
         parser.error("test budget must be 1..1800 seconds")
     path = args.run_dir or Path("reports") / ("verify-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8])
@@ -110,7 +119,7 @@ def main(argv=None):
         parser.error("verification output must be inside this project's reports")
     output = safe_child(ROOT, absolute.relative_to(ROOT))
     if args._worker:
-        return worker(output, args.guardian_job_name, args.scope)
+        return worker(output, args.guardian_job_name, args.scope, args.module)
     output.mkdir(parents=True, exist_ok=False)
     before = sources()
     atomic_json(output / "source-manifest.json", before, 2*1024*1024)
@@ -118,7 +127,8 @@ def main(argv=None):
     try:
         with (output / "worker.stdout.txt").open("xb") as stdout, (output / "worker.stderr.txt").open("xb") as stderr:
             job_name = "Local\\EventGuard-" + uuid.uuid4().hex
-            child = spawn([sys.executable, "-B", str(Path(__file__).resolve()), "--_worker", "--scope", args.scope, "--run-dir", str(output), "--guardian-job-name", job_name],
+            selections = [item for name in args.module for item in ("--module", name)]
+            child = spawn([sys.executable, "-B", str(Path(__file__).resolve()), "--_worker", "--scope", args.scope, "--run-dir", str(output), "--guardian-job-name", job_name, *selections],
                           **({"job_name": job_name} if os.name == "nt" else {}), stdout=stdout, stderr=stderr)
             deadline = time.monotonic()+args.timeout_seconds
             while child.poll() is None and time.monotonic() < deadline:
@@ -131,7 +141,7 @@ def main(argv=None):
     worker_path = output / "worker-summary.json"
     value = json.loads(worker_path.read_text(encoding="utf-8")) if worker_path.exists() else {"worker_summary_missing": True}
     value.update(source_unchanged=before == sources(), guardian=receipt,
-                 command="python -B scripts/verify.py --scope " + args.scope + " --run-dir " + str(output.relative_to(ROOT)), output_dir=str(output.relative_to(ROOT)),
+                 command="python -B scripts/verify.py --scope " + args.scope + "".join(" --module "+name for name in args.module) + " --run-dir " + str(output.relative_to(ROOT)), output_dir=str(output.relative_to(ROOT)),
                  passed_checks=bool(receipt and receipt.get("child_exited") and receipt.get("exit_code") == 0
                      and not receipt.get("forcibly_terminated") and receipt.get("remaining_owned_processes", 0) == 0
                      and before == sources() and not value.get("worker_summary_missing")

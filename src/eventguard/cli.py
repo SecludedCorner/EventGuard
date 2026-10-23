@@ -14,6 +14,22 @@ def parser():
     p.add_argument("--format",choices=("auto","json","text"),default="auto",
                    help="auto: 終端可讀文字、管線JSON；text: 人類摘要；json: 機器介面")
     sub=p.add_subparsers(dest="command",required=True)
+    agents=sub.add_parser("agent",help="選配的事件派送。無事件不呼叫模型。預設只檢查。")
+    agentsub=agents.add_subparsers(dest="agent_command",required=True)
+    agent_start=agentsub.add_parser("start",help="檢查專用CLI派送。加--execute才啟動背景並允許模型。")
+    agent_start.add_argument("--codex-executable",required=True,help="既有原生codex.exe；不接受包裝腳本")
+    agent_start.add_argument("--namespace",choices=("live","test"),default="live")
+    agent_start.add_argument("--execute",action="store_true")
+    for action in ("status","pause","stop","resume","capabilities"):
+        command=agentsub.add_parser(action)
+        if action=="resume":
+            command.add_argument("--execute",action="store_true",help="明確解除暫停，允許事件使用模型額度")
+    for action in ("inspect","export"):
+        command=agentsub.add_parser(action,help="唯讀投遞階段" if action=="inspect" else "唯讀匯出CloudEvents七欄封裝")
+        command.add_argument("--event-id",required=True)
+        command.add_argument("--namespace",choices=("live","test"),default="live")
+        if action=="export":
+            command.add_argument("--producer-id",required=True,help="不含主機或使用者資訊的固定UUID")
     intelligence=sub.add_parser("advisories",help="本機公告追蹤與靜態適用性比對。不呼叫模型。")
     intel_sub=intelligence.add_subparsers(dest="advisory_command",required=True)
     for action in ("start","check"):
@@ -138,6 +154,24 @@ def parser():
 
 
 def execute(args,runtime,progress=None):
+    if args.command=="agent":
+        from . import agent_service, event_ingress
+        action=args.agent_command
+        if action=="start":
+            return agent_service.start(runtime.root,codex_executable=args.codex_executable,
+                                       allow_live=args.namespace=="live",execute=args.execute)
+        if action=="resume":
+            return agent_service.resume(runtime.root,execute=args.execute)
+        if action in {"status","pause","stop"}:
+            return getattr(agent_service,action)(runtime.root)
+        if action=="capabilities":
+            return event_ingress.capabilities()
+        source=runtime.path("data/"+args.namespace)
+        inbox=runtime.path("data/agent-delivery" if args.namespace=="live" else "data/agent-delivery-test")
+        if action=="export":
+            return event_ingress.export_event(source,inbox,args.event_id,
+                allow_live=args.namespace=="live",producer_id=args.producer_id)
+        return event_ingress.inspect_delivery(source,inbox,args.event_id,allow_live=args.namespace=="live")
     if args.command=="advisories":
         from .intelligence import engine, service
         if args.advisory_command=="start":
@@ -318,7 +352,7 @@ def main(argv=None,root=None):
             return  # Structured status/exit receipts are persisted by its owner.
         if human:
             from .presentation import render
-            operation=getattr(args,"background_command",getattr(args,"event_command",getattr(args,"source_command","")))
+            operation=getattr(args,"agent_command",getattr(args,"background_command",getattr(args,"event_command",getattr(args,"source_command",""))))
             print(render(value,args.command,operation))
         else:
             print(json.dumps(value,ensure_ascii=True,allow_nan=False))
@@ -327,7 +361,7 @@ def main(argv=None,root=None):
         result=execute(args,Runtime(root),ProgressPrinter(sys.stderr) if human and args.command=="monitor" else None)
         show(result)
         if isinstance(result,dict):
-            if args.command in {"background","run","advisories"} or args.command=="stop" and "desired_enabled" in result:
+            if args.command in {"background","run","advisories","agent"} or args.command=="stop" and "desired_enabled" in result:
                 state=result.get("state")
                 if state=="busy":
                     return 3
@@ -350,6 +384,10 @@ def main(argv=None,root=None):
         return 0
     except (ValueError,TypeError,json.JSONDecodeError) as error:
         from .rules.configured import RulesValidationError
+        from .event_ingress import EventIngressError
+        if isinstance(error,EventIngressError):
+            show({"status":"invalid_request","error_code":str(error),"raw_error_omitted":True})
+            return 2
         if isinstance(error,RulesValidationError):
             show({"status":"invalid_request","error_code":str(error),"config_file":"config/rules.json"})
             return 2

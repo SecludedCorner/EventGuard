@@ -82,6 +82,23 @@ class PersistentStopReceiptTests(unittest.TestCase):
     def test_empty_job_does_not_prove_process_exit_when_bounded_wait_times_out(self):
         self.assertFalse(self.stop_with_owner_signal(False)["child_exited"])
 
+    def test_exit_code_only_comes_from_signalled_owned_handle(self):
+        from eventguard.processes import _signalled_exit_code
+        def code(handle, pointer):
+            self.assertEqual(handle, 200)
+            C.cast(pointer, C.POINTER(C.c_uint32)).contents.value = 7
+            return 1
+        api = SimpleNamespace(GetExitCodeProcess=Mock(side_effect=code))
+        with patch("eventguard.processes.kernel", return_value=api):
+            self.assertIsNone(_signalled_exit_code(200, False))
+            api.GetExitCodeProcess.assert_not_called()
+            self.assertEqual(_signalled_exit_code(200, True), 7)
+
+    def test_exit_code_read_failure_remains_unknown(self):
+        from eventguard.processes import _signalled_exit_code
+        with patch("eventguard.processes.kernel", return_value=SimpleNamespace(GetExitCodeProcess=lambda *_: 0)):
+            self.assertIsNone(_signalled_exit_code(200, True))
+
 
 @unittest.skipUnless(os.name == "nt", "Actual Windows private Job ownership")
 class BackgroundJobTests(unittest.TestCase):

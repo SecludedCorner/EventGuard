@@ -1,9 +1,25 @@
 # EventGuard 接手
 
-先讀 AGENTS、README、STATUS。最新任務是公告追蹤與本機適用性。一般使用者。核心只用標準庫。
+先讀 AGENTS、README、STATUS。最新目標是事件驅動的專用 agent 通路。一般使用者。核心只用標準庫。
 
-分支 `feat/local-codex-acceptance`。本批基底 `bb6ecff55efbd86bd178e7b0005f077bca765ac9`。
+分支 `feat/local-codex-acceptance`。本批基底 `008a931121f03c1ceaa1abb6f26cbe08abf3bf48`。
 保留未追蹤的 `docs/research/` 與附件。不 reset、clean、推送或提交執行資料。
+
+## 本批事件派送
+
+- `agent_service.py`：手動背景 start/status/pause/resume/stop。沿用原 dispatcher，不建立服務或排程。start/resume 預設不執行。
+- `dispatch_policy.py`、`config/agent-dispatch.json`：純程式枚舉篩選。未選或已處理事件仍 pending。
+- `agent_dispatch.py`：重查耐久 pause gate，保留已扣額度；缺 supervisor 回條維持未知。status(read_only=True) 不建鎖。
+- `event_ingress.py`：七欄 CloudEvents profile、唯讀匯出及分階段證據。沒有 provider 證據時不聲稱已啟動。
+- `processes.stop_persistent`：只有已核對且 signalled 的 owned HANDLE 才讀取 OS exit code。失去證據則 null。
+- CLI `agent` 與 Web 派送頁共用 API。Web 只有 pause/stop，不能啟動或恢復模型。
+- 原 `validate_delivery.py service`：一件高嚴重度合成事件；先等候再加入；重驗 trace/工具/SQLite/Job；相同 intent 不重跑。
+
+操作見 [AGENT_SERVICE](docs/AGENT_SERVICE.md)。新證據僅 `reports/event-ingress-001`，完整數字見 EVIDENCE。
+完整測試後又修正 resume/preflight、OS exit code 與 service 驗收；最終是全套加定向回歸，不冒稱最終來源全套重跑。
+正式 agent 尚未啟用；固定 budget DB/marker 缺失。沒有初始化、推定零用量或呼叫真模型。
+真驗前集中批准一件合成事件、最多一個專用任務，並遵守既有未知用量 bootstrap。不要重置帳本。
+主聊天 queue 仍未驗證，不是阻塞。OpenOctopus 只交付契約，不操作另一聊天或專案。
 
 ## 入口
 
@@ -21,7 +37,7 @@
 
 ## 驗證與界線
 
-新功能證據只放 `reports/advisory-tracker-001`。完整命令、失敗及修復見 EVIDENCE。
+既有公告功能的證據放 `reports/advisory-tracker-001`。本批派送證據另見上節。完整命令、失敗及修復見 EVIDENCE。
 離線 SQLite、真公開 HTTP、合成資產重播、Windows Job 與真模型分開記錄。
 正式背景、真模型、24 小時及 dot 交接未執行。不要把重播或 backend ACK 寫成真 agent 已收到。
 

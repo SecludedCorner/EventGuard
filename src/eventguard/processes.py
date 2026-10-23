@@ -88,6 +88,7 @@ def _kernel():
         "ResumeThread": (DWORD, [HANDLE]), "OpenProcess": (HANDLE, [DWORD, C.c_int, DWORD]),
         "GetProcessTimes": (C.c_int, [HANDLE, C.POINTER(FILETIME), C.POINTER(FILETIME), C.POINTER(FILETIME), C.POINTER(FILETIME)]),
         "WaitForSingleObject": (DWORD, [HANDLE, DWORD]),
+        "GetExitCodeProcess": (C.c_int, [HANDLE, C.POINTER(DWORD)]),
         "GetCurrentProcess": (HANDLE, []),
         "IsProcessInJob": (C.c_int, [HANDLE, HANDLE, C.POINTER(C.c_int)]),
         "AssignProcessToJobObject": (C.c_int, [HANDLE, HANDLE]),
@@ -520,13 +521,13 @@ def stop_persistent(job_name, *, pid, created_at, session_id=None, reason="cance
                             observed.get("created_at") is not None and observed.get("created_at") != created_at else
                             False if observed.get("state") == "alive" else None)
             return {"managed": True, "job_name": name, "pid": pid, "created_at": created_at,
-                    "child_exited": owner_exited, "remaining_owned_processes": 0, "forcibly_terminated": False,
+                    "child_exited": owner_exited, "exit_code": None, "remaining_owned_processes": 0, "forcibly_terminated": False,
                     "reason": "private_job_empty", "shutdown_requested_reason": reason}
         process = kernel().OpenProcess(0x101000, False, pid)
         if (not process or creation_time(process) != created_at or not _membership(process, job)
                 or session_id is not None and process_session(pid) != session_id):
             return {"managed": True, "job_name": name, "pid": pid, "created_at": created_at,
-                    "child_exited": None, "remaining_owned_processes": remaining, "forcibly_terminated": False,
+                    "child_exited": None, "exit_code": None, "remaining_owned_processes": remaining, "forcibly_terminated": False,
                     "reason": "persistent_owner_identity_unverifiable", "shutdown_requested_reason": reason}
         deadline = time.monotonic() + grace
         while _active_job(job) and time.monotonic() < deadline:
@@ -543,14 +544,27 @@ def stop_persistent(job_name, *, pid, created_at, session_id=None, reason="cance
         # than claiming failure from one zero-timeout observation of that race.
         wait_ms = max(0, min(3000, int((deadline - time.monotonic()) * 1000))) if remaining == 0 else 0
         exited = kernel().WaitForSingleObject(process, wait_ms) == 0
+        # Only this already-verified owned HANDLE can supply an OS exit code.
+        # An empty Job, vanished PID or a host's own JSON is not equivalent.
+        exit_code = _signalled_exit_code(process, exited)
         return {"managed": True, "job_name": name, "pid": pid, "created_at": created_at,
-                "child_exited": exited, "remaining_owned_processes": remaining,
+                "child_exited": exited, "exit_code": exit_code, "remaining_owned_processes": remaining,
                 "forcibly_terminated": forced, "reason": reason if forced else "natural_exit",
                 "shutdown_requested_reason": reason}
     finally:
         if process:
             kernel().CloseHandle(process)
         kernel().CloseHandle(job)
+
+
+def _signalled_exit_code(process, signalled):
+    if signalled is not True:
+        return None
+    value = DWORD()
+    query = getattr(kernel(), "GetExitCodeProcess", None)
+    if query is not None and query(process, C.byref(value)):
+        return int(value.value)
+    return None  # Failure to observe is not a successful exit.
 
 
 def finish(child, reason="owner_exception", grace=2.0, request_stop=True):

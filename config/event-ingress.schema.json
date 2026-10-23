@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:eventguard:snapshot:1",
+  "title": "EventGuard minimal CloudEvents 1.0 profile",
+  "$comment": "Local documentation only. Runtime never downloads this URL. Raw UTF-8 input and canonical ASCII JSON are limited to 4096 bytes. Python validator additionally verifies id == data.event_id and time == data.observed_at as instants; normalizes timestamps to UTC; and rejects duplicate JSON keys, nonfinite numbers and non-UUID4 producer scopes. Provision producer UUID once, preserve it in owner configuration. Envelope export never receives, queries, ACKs or starts a model.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specversion", "id", "source", "type", "time", "datacontenttype", "dataschema", "data"],
+  "properties": {
+    "specversion": {"const": "1.0"},
+    "id": {"$ref": "#/$defs/identifier"},
+    "source": {"type": "string", "pattern": "^urn:uuid:[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"},
+    "type": {"const": "org.eventguard.snapshot.v1"},
+    "time": {"$ref": "#/$defs/timestamp"},
+    "datacontenttype": {"const": "application/json"},
+    "dataschema": {"const": "urn:eventguard:snapshot:1"},
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "event_type", "transition", "severity", "synthetic", "observed_at", "coverage_status"],
+      "properties": {
+        "event_id": {"$ref": "#/$defs/identifier"},
+        "event_type": {"enum": ["coverage.degraded", "listener.changed", "persistence.changed", "protection.changed", "monitor_gap", "advisory.changed", "unknown"]},
+        "transition": {"enum": ["new", "escalated", "resolved"]},
+        "severity": {"enum": ["info", "warning", "high", "critical"]},
+        "synthetic": {"type": "boolean"},
+        "observed_at": {"$ref": "#/$defs/timestamp"},
+        "coverage_status": {"enum": ["ok", "partial", "denied", "unknown", "not_applicable", "error", "timeout", "cancelled", "busy", "not_requested", "stale", "limit_exceeded"]}
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {"type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[A-Za-z0-9_.:-]{1,160}$"},
+    "timestamp": {"type": "string", "maxLength": 64, "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?(Z|[+-][0-9]{2}:[0-9]{2})$"}
+  }
+}

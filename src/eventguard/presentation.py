@@ -98,6 +98,19 @@ def render(result, command="", operation=""):
         return "EventGuard：回傳格式未知。"
     if result.get("status") in {"error","invalid_request","conflict"}:
         return "EventGuard 無法完成操作："+text(result.get("reason",result.get("error_code",result["status"])))
+    if command=="agent":
+        if operation in {"inspect","export","capabilities"}:
+            return json.dumps(result,ensure_ascii=False,indent=2)
+        budget=result.get("budget",result.get("agent_budget",{}))
+        return "\n".join([
+            "專用 agent 派送："+text(result.get("state",result.get("host_state","unknown"))),
+            "目前程序："+text(result.get("host_liveness","unknown")),
+            "暫停："+text(result.get("paused"))+"。待收事件："+text(result.get("pending_events")),
+            "每日剩餘任務："+text(budget.get("remaining") if budget.get("usage_known") is True else None)+"。預算原因："+text(budget.get("reason")),
+            "阻塞原因："+text(result.get("reason",result.get("blocked_reason"))),
+            "最後進度："+text(result.get("last_progress",result.get("heartbeat_at"))),
+            "無事件由普通程式等待。ACK 只代表收到。模型用量未知時不視為零。",
+            "查看：agent status；暫停新派送：agent pause；停止：agent stop。"])
     if command=="run":
         return "EventGuard："+state(result.get("state"))+"。模型呼叫：0。"
     if command=="advisories":

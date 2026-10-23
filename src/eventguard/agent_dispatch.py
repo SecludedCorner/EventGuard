@@ -58,10 +58,13 @@ def _inbox(source, state, event_id=None, allow_live=False, limits=None):
     return QueueInbox(source, state, event_id=event_id, allow_live=allow_live, limits=limits)
 
 
-def command(codex, python, source, state, event_id, evidence, *, allow_live=False, allow_ack=True):
+def command(codex, python, source, state, event_id, evidence, *, allow_live=False, allow_ack=True, root=None):
+    root = ROOT if root is None else _guard(root)
     server_args = ["-B", str(ROOT / "scripts/eventguard_inbox_mcp.py"),
                    "--source-dir", str(source), "--state-dir", str(state),
                    "--event-id", event_id]
+    if root != ROOT:
+        server_args.extend(("--project-root", str(root)))
     if allow_live:
         server_args.append("--allow-live")
     if not allow_ack:
@@ -72,7 +75,7 @@ def command(codex, python, source, state, event_id, evidence, *, allow_live=Fals
               + ',args=' + json.dumps(server_args, separators=(",", ":"))
               + ',tool_timeout_sec=60,enabled_tools=' + json.dumps(tools, separators=(",", ":"))
               + ',tools={' + approvals + '}}')
-    return [str(codex), "exec", "--ignore-user-config", "--ephemeral", "-C", str(ROOT),
+    return [str(codex), "exec", "--ignore-user-config", "--ephemeral", "-C", str(root),
             "-s", "read-only", "--json", "-c", "features.shell_tool=false",
             "-c", "features.unbounded_connection_retries=false",
             "-c", "sqlite_home=" + json.dumps(str(evidence / "codex-state")),
@@ -147,17 +150,30 @@ def _assess_delivery(trace, evidence, event_id, exit_code, acknowledged, require
                 or not isinstance(raw, dict) or raw.get("isError", raw.get("is_error", False)) is not False):
             errors.append("mcp_call_failed")
         replies.append(_tool_result(call))
+    received = {"status": "event_available", "event_id": event_id,
+                "snapshot": record.get("snapshot"), "received_at": record.get("received_at")}
+    queried = {"status": "stored_minimal_snapshot", "event_id": event_id,
+               "query_id": record.get("query_id"), "snapshot": record.get("snapshot"),
+               "snapshot_only": True, "system_query_executed": False}
+
+    def tool_verified(index, name, arguments, reply):
+        if index >= len(calls):
+            return False
+        call = calls[index]
+        return (call.get("tool") == name and call.get("server") == "eventguard_inbox"
+                and call.get("status") == "completed" and call.get("error") is None
+                and call.get("arguments") == arguments and replies[index] == reply
+                and isinstance(call.get("result"), dict)
+                and call["result"].get("isError", call["result"].get("is_error", False)) is False)
+
+    received_verified = tool_verified(0, "receive_event", {}, received)
+    queried_verified = received_verified and tool_verified(1, "query_evidence", {"event_id": event_id}, queried)
     if len(calls) == len(tools):
         expected_args = [{}, {"event_id": event_id},
                          {"event_id": event_id, "query_id": record.get("query_id"), "decision": "reviewed_metadata"}]
         expected_args = expected_args if require_ack else expected_args[:2]
         if [call.get("arguments") for call in calls] != expected_args:
             errors.append("mcp_arguments_mismatch")
-        received = {"status": "event_available", "event_id": event_id,
-                    "snapshot": record.get("snapshot"), "received_at": record.get("received_at")}
-        queried = {"status": "stored_minimal_snapshot", "event_id": event_id,
-                   "query_id": record.get("query_id"), "snapshot": record.get("snapshot"),
-                   "snapshot_only": True, "system_query_executed": False}
         expected_replies = [received, queried] + ([{**result, "outbox_acknowledged": True}] if require_ack else [])
         if replies != expected_replies:
             errors.append("tool_returns_do_not_match_durable_evidence")
@@ -165,6 +181,18 @@ def _assess_delivery(trace, evidence, event_id, exit_code, acknowledged, require
             "result_id": result.get("result_id") if isinstance(result, dict) else None,
             "completed_tools": [call.get("tool") if call.get("tool") in TOOLS else "unexpected_tool" for call in calls],
             "outbox_acknowledged": acknowledged is True, "codex_exit_code": exit_code,
+            "event_received": received_verified, "evidence_queried": queried_verified,
+            "result_saved": (isinstance(result, dict) and result.get("status") == "review_recorded"
+                             and result.get("event_id") == event_id
+                             and result.get("query_id") == record.get("query_id")
+                             and isinstance(result.get("query_id"), str)
+                             and isinstance(result.get("result_id"), str)
+                             and isinstance(result.get("recorded_at"), str)
+                             and result.get("decision") == "reviewed_metadata"
+                             and result.get("incident_conclusion") == "not_assessed"
+                             and result.get("real_agent_wake_verified") is False),
+            "provider_turn_completed": turns == 1 and not any(
+                row.get("type") in {"turn.failed", "error"} for row in trace if isinstance(row, dict)),
             "thread_ids": thread_ids, "evidence_errors": list(dict.fromkeys(errors)),
             "native_diagnostics_executed": False, "desktop_task_resumed": False}
 
@@ -202,13 +230,13 @@ def _attempt_path(record):
     return _guard(directory / "attempts" / record["attempt_id"])
 
 
-def _receipt(record):
+def _receipt(record, *, read_only=False):
     directory = _attempt_path(record)
     path = directory / "capture-exit.json"
     if not path.exists():
         return None
     lease = FileLease(directory / "capture.lock")
-    if not lease.acquire():
+    if not lease.acquire(create=not read_only):
         return None
     try:
         value = read_json(path)
@@ -222,13 +250,13 @@ def _receipt(record):
         lease.release()
 
 
-def _skipped(record):
+def _skipped(record, *, read_only=False):
     directory = _attempt_path(record)
     path = directory / "capture-skipped.json"
     if not path.exists():
         return False
     lease = FileLease(directory / "capture.lock")
-    if not lease.acquire():
+    if not lease.acquire(create=not read_only):
         return False
     try:
         value = read_json(path)
@@ -371,14 +399,17 @@ def _complete(record, inbox, receipt):
         summary["evidence_errors"].extend(proof_errors)
     supervisor_path = directory / "supervisor-exit.json"
     supervisor = read_json(supervisor_path) if supervisor_path.exists() else {}
-    supervisor_invalid = supervisor_path.exists() and (supervisor.get("managed") is not True
+    supervisor_invalid = (record.get("supervisor_exit_required") is True and not supervisor_path.exists()) or (supervisor_path.exists() and (supervisor.get("managed") is not True
             or supervisor.get("child_exited") is not True
             or type(supervisor.get("remaining_owned_processes")) is not int
             or supervisor.get("remaining_owned_processes") != 0
-            or type(supervisor.get("exit_code")) is not int)
+            or type(supervisor.get("exit_code")) is not int))
     if supervisor_invalid:
         summary["passed"] = False
         summary["evidence_errors"].append("supervisor_tree_exit_unconfirmed")
+    if supervisor_path.exists() and supervisor.get("exit_code") != 0:
+        summary["passed"] = False
+        summary["evidence_errors"].append("capture_worker_failed")
     if receipt.get("forcibly_terminated") is True or supervisor.get("forcibly_terminated") is True:
         summary["passed"] = False
         summary["evidence_errors"].append("owned_tree_forcibly_terminated")
@@ -387,12 +418,54 @@ def _complete(record, inbox, receipt):
         summary["passed"] = False
         summary["evidence_errors"].append("capture_truncated")
     tree_exited = not exit_errors and not supervisor_invalid
-    summary.update(attempt_id=record["attempt_id"], finished_at=utc(), child_exited=tree_exited)
+    summary.update(attempt_id=record["attempt_id"], finished_at=utc(), child_exited=tree_exited,
+                   capture_worker_started=True, cli_started=_start_identity_verified(started, record["attempt_id"]),
+                   natural_cli_exit=not proof_errors,
+                   owned_tree_exited=tree_exited, notification_submitted=False)
     write_json(directory / "summary.json", summary)
     record.update(state="complete" if tree_exited else "started", passed=summary["passed"], child_exited=tree_exited,
                   tree_exit_verified=tree_exited,
                   codex_exit_code=receipt["codex_exit_code"], ack_verified=summary["passed"], finished_at=summary["finished_at"])
+    record["delivery_progress"] = _progress(summary)
     return summary
+
+
+_PROGRESS_KEYS = ("notification_submitted", "capture_worker_started", "cli_started", "event_received",
+                  "evidence_queried", "result_saved", "outbox_acknowledged", "provider_turn_completed",
+                  "natural_cli_exit", "owned_tree_exited")
+
+
+def _progress(value=None):
+    value = value or {}
+    return {key: value.get(key, False) is True for key in _PROGRESS_KEYS}
+
+
+def _start_identity_verified(started, token):
+    if (started.get("attempt_id") != token or type(started.get("codex_pid")) is not int
+            or not 1 <= started["codex_pid"] <= 0xFFFFFFFF
+            or not isinstance(started.get("created_at"), str)):
+        return False
+    try:
+        stamp = datetime.fromisoformat(started["created_at"].replace("Z", "+00:00"))
+        return stamp.tzinfo is not None and stamp.utcoffset() is not None
+    except (ValueError, OverflowError):
+        return False
+
+
+def _admission_enabled(callback=None, path=None, run_id=None):
+    """Pause is an admission gate, never a cancellation of an admitted task."""
+    try:
+        if callback is not None and callback() is not True:
+            return False
+        if path is not None:
+            control = read_json(_guard(path))
+            return (control.get("kind") == "eventguard-agent-service-control-v1"
+                    and control.get("enabled") is True and control.get("paused") is False
+                    and isinstance(run_id, str) and _TOKEN.fullmatch(run_id) is not None
+                    and control.get("run_id") == run_id)
+        return True
+    except Exception:
+        return False
 
 
 def _bind_channel(source, state_dir):
@@ -430,37 +503,47 @@ def _check_stop(directory, state, cancel):
 
 def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-delivery", *,
         codex="codex", max_seconds=3600, max_tasks=5, allow_live=False, execute=False, poll_seconds=.5,
-        cancel=None, deadline_monotonic=None, storage_limits=None, continuous=False):
+        cancel=None, deadline_monotonic=None, storage_limits=None, continuous=False, root=None,
+        dispatch_enabled=None, admission_path=None, admission_run_id=None, select_event=None):
     """Dispatch pending items, optionally staying alive between tasks and days.
 
     Continuous mode uses ``max_seconds`` per owned CLI task. Its daily admission
     limit remains the fixed installation budget; idle time never reserves an
     attempt. ``deadline_monotonic`` can still bound the whole owner lifetime.
     A failed item waits for human handling, never an automatic model retry.
+    ``dispatch_enabled`` and the optional durable service control are rechecked
+    before admission and worker creation. Pause does not cancel an active CLI.
     """
     began = time.monotonic()
     if (type(max_seconds) not in (int, float) or not 0 < max_seconds <= 3600
             or type(max_tasks) is not int or not 1 <= max_tasks <= 5
             or type(allow_live) is not bool or type(execute) is not bool or type(continuous) is not bool
             or type(poll_seconds) not in (int, float) or not .01 <= poll_seconds <= 5
-            or (deadline_monotonic is not None and
+             or (dispatch_enabled is not None and not callable(dispatch_enabled))
+             or (select_event is not None and not callable(select_event))
+             or (admission_path is not None and (not isinstance(admission_run_id, str)
+                                                or not _TOKEN.fullmatch(admission_run_id)))
+             or (deadline_monotonic is not None and
                 (type(deadline_monotonic) not in (int, float) or not math.isfinite(deadline_monotonic)))):
         raise LocalWaitError("dispatch_bounds_invalid")
     lifetime_deadline = (float("inf") if deadline_monotonic is None else deadline_monotonic) if continuous else (
         min(began + max_seconds, deadline_monotonic) if deadline_monotonic is not None else began + max_seconds)
     deadline = lifetime_deadline
+    root = ROOT if root is None else _guard(root)
     directory, source, state_dir = _guard(directory), _guard(source_dir), _guard(state_dir)
+    admission_path = _guard(admission_path) if admission_path is not None else None
     directory.mkdir(parents=True, exist_ok=False)
     state = {"kind": KIND, "run_id": uuid.uuid4().hex, "state": "preflight", "started_at": utc(),
              "tasks_started": 0, "tasks_passed": 0, "child_exited": True, "stop_requested": False,
              "max_seconds": max_seconds, "max_tasks": None if continuous else max_tasks, "allow_live": allow_live,
              "continuous": continuous, "queue_checks": 0, "events_total": 0, "pending_event_id": None,
-             "execute": execute, "events": [], "reason": None}
+             "execute": execute, "events": [], "reason": None,
+             "delivery_progress": _progress(), "project_root": str(root)}
     write_json(directory / "dispatch.json", {"kind": KIND, "run_id": state["run_id"]})
     _save(directory, state)
     if allow_live:
         from .agent_access import guard
-        blocked = guard(ROOT, "live")
+        blocked = guard(root, "live")
         if blocked is not None:
             state.update(state="blocked", reason=blocked["reason"])
             _save(directory, state)
@@ -496,7 +579,7 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
     active, child = None, None
     try:
         from .runtime import Runtime
-        config = Runtime(ROOT).config()
+        config = Runtime(root).config()
         policy = _ledger_policy(storage_limits if storage_limits is not None else config.get("dispatcher"))
         _bind_channel(source, state_dir)
         inbox = _inbox(source, state_dir, allow_live=allow_live, limits=config.get("inbox"))
@@ -555,7 +638,10 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             if time.monotonic() >= deadline:
                 state.update(state="time_limit_reached")
                 break
-            if allow_live and guard(ROOT, "live") is not None:
+            if not _admission_enabled(dispatch_enabled, admission_path, admission_run_id):
+                wait_state("waiting_paused", "automatic_dispatch_paused")
+                continue
+            if allow_live and guard(root, "live") is not None:
                 if continuous:
                     wait_state("waiting_disabled", "agent_delivery_disabled")
                     continue
@@ -570,7 +656,13 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                     budget = {"state": "blocked", "reason": str(error)}
                 state["budget"] = budget
                 budget_checked_at = time.monotonic()
-            event_id = inbox.pending_event_id()
+            if select_event is None:
+                event_id = inbox.pending_event_id()
+            else:
+                try:
+                    event_id = select_event(inbox)
+                except Exception:
+                    raise LocalWaitError("dispatch_selection_failed_pending_preserved") from None
             state["queue_checks"] += 1
             state["pending_event_id"] = event_id
             if _check_stop(directory, state, cancel) or time.monotonic() >= deadline:
@@ -614,6 +706,9 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                 continue
             if continuous:
                 deadline = min(lifetime_deadline, time.monotonic() + max_seconds)
+            if not _admission_enabled(dispatch_enabled, admission_path, admission_run_id):
+                wait_state("waiting_paused", "automatic_dispatch_paused")
+                continue
             # Reserve room for the terminal update BEFORE starting a child.
             prospective = {"kind": KIND, "events": {**ledger["events"], event_id: records + [
                 {"event_id": event_id, "attempt_id": "0"*32, "run_id": state["run_id"], "run_dir": str(directory),
@@ -625,23 +720,27 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             attempt_dir = directory / "attempts" / token
             attempt_dir.mkdir(parents=True, exist_ok=False)
             active = {"event_id": event_id, "attempt_id": token, "run_id": state["run_id"],
-                      "run_dir": str(directory), "state": "started", "started_at": utc()}
+                      "run_dir": str(directory), "state": "started", "started_at": utc(),
+                      "supervisor_exit_required": True}
             ledger["events"].setdefault(event_id, []).append(active)
             _ledger_write(ledger_path, ledger, policy)  # Fail-closed crash window BEFORE Popen.
             write_json(attempt_dir / "attempt.json", active)
             state.update(state="running", reason=None, active_attempt_id=token, child_exited=False,
-                         tasks_started=state["tasks_started"] + 1)
+                         tasks_started=state["tasks_started"] + 1, delivery_progress=_progress())
             state["events"].append(event_id)
             state["events_total"] += 1
             if continuous:
                 del state["events"][:-MAX_EVENTS]
             _save(directory, state)
-            cli_args = command(executable, sys.executable, source, state_dir, event_id, attempt_dir, allow_live=allow_live)
+            cli_args = command(executable, sys.executable, source, state_dir, event_id, attempt_dir,
+                               allow_live=allow_live, root=root)
             args = [sys.executable, "-B", str(ROOT / "scripts/eventguard_agent.py"), "_capture",
                     "--attempt-dir", str(attempt_dir), "--attempt-id", token,
                     "--deadline-monotonic", str(deadline), "--stop-run-dir", str(directory),
-                    "--run-id", state["run_id"], "--",
-                    *cli_args]
+                    "--run-id", state["run_id"]]
+            if admission_path is not None:
+                args.extend(("--admission-path", str(admission_path), "--admission-run-id", admission_run_id))
+            args.extend(("--", *cli_args))
             # Pending reads, fsync and command preparation can consume time or
             # overlap a cooperative stop. Recheck immediately before Popen.
             if _check_stop(directory, state, cancel) or time.monotonic() >= deadline:
@@ -656,13 +755,44 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                 state["events_total"] -= 1
                 active = None
                 break
+            if not _admission_enabled(dispatch_enabled, admission_path, admission_run_id):
+                # No reservation or OS create occurred. Do not spend an event
+                # retry slot merely because pause raced command preparation.
+                ledger["events"][event_id].remove(active)
+                if not ledger["events"][event_id]:
+                    del ledger["events"][event_id]
+                _ledger_write(ledger_path, ledger, policy)
+                write_json(attempt_dir / "not-started.json", {**active, "state": "not_started",
+                           "child_exited": True, "reason": "paused_before_reservation"})
+                state.update(child_exited=True, tasks_started=state["tasks_started"] - 1)
+                state["events"].pop()
+                state["events_total"] -= 1
+                active = None
+                wait_state("waiting_paused", "automatic_dispatch_paused")
+                continue
+            reference = inbox.delivery_reference(event_id)
+            if not _admission_enabled(dispatch_enabled, admission_path, admission_run_id):
+                ledger["events"][event_id].remove(active)
+                if not ledger["events"][event_id]:
+                    del ledger["events"][event_id]
+                _ledger_write(ledger_path, ledger, policy)
+                write_json(attempt_dir / "not-started.json", {**active, "state": "not_started",
+                           "child_exited": True, "reason": "paused_before_reservation"})
+                state.update(child_exited=True, tasks_started=state["tasks_started"] - 1)
+                state["events"].pop()
+                state["events_total"] -= 1
+                active = None
+                wait_state("waiting_paused", "automatic_dispatch_paused")
+                continue
             try:
-                reference = inbox.delivery_reference(event_id)
                 authority = open_authority()
+                # Opening authority can perform local I/O. The immediately
+                # preceding gate still must be after that operation.
+                if not _admission_enabled(dispatch_enabled, admission_path, admission_run_id):
+                    raise BudgetError("dispatch_paused_before_reservation")
                 authority.reserve(token, event_id, reference["namespace"], reference["payload_hash"],
                                   "retry" if prior_attempts else "dispatch", existing_attempts=prior_attempts,
                                   launch_hash=launch_hash(cli_args, PROMPT))
-                state["budget"] = authority.status()
             except BudgetError as error:
                 # No worker has been created by this owner. A failed admission
                 # must not invent an unconfirmed source child or consume retry
@@ -677,6 +807,9 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                 state["events"].pop()
                 state["events_total"] -= 1
                 active = None
+                if str(error) == "dispatch_paused_before_reservation":
+                    wait_state("waiting_paused", "automatic_dispatch_paused")
+                    continue
                 if continuous:
                     reason = str(error)
                     waits_for_day = reason in {"budget_exhausted", "budget_bootstrap_usage_unknown"}
@@ -688,8 +821,52 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                     wait_state("waiting_budget" if waits_for_day else "waiting_attention", reason)
                     continue
                 break
-            child = spawn(args, popen_factory=subprocess.Popen, cwd=ROOT, stdin=subprocess.DEVNULL,
+            try:
+                state["budget"] = authority.status()
+            except BudgetError as error:
+                # Reserve already committed. A later status read must not erase
+                # its charge or pretend this was a refused, uncharged admission.
+                proof = {"attempt_id": token, "launch_not_started": True, "capture_complete": False}
+                write_json(attempt_dir / "capture-skipped.json", proof)
+                authority.record_not_started(token, proof)
+                active.update(state="not_started", child_exited=True, cli_started=False,
+                              finished_at=utc(), reason=str(error))
+                _ledger_write(ledger_path, ledger, policy)
+                state.update(state="blocked_pending", child_exited=True, reason=str(error),
+                             tasks_started=state["tasks_started"] - 1)
+                state["events"].pop()
+                state["events_total"] -= 1
+                active = None
+                break
+            stopped = _check_stop(directory, state, cancel)
+            expired = time.monotonic() >= deadline
+            paused = not _admission_enabled(dispatch_enabled, admission_path, admission_run_id)
+            if stopped or expired or paused:
+                proof = {"attempt_id": token, "launch_not_started": True, "capture_complete": False}
+                # A durable reservation is charged even though no worker exists.
+                authority.record_not_started(token, proof)
+                write_json(attempt_dir / "capture-skipped.json", proof)
+                active.update(state="not_started", child_exited=True, cli_started=False,
+                              finished_at=utc(), reason="paused_before_worker_launch" if paused else "stop_or_deadline_before_worker_launch")
+                _ledger_write(ledger_path, ledger, policy)
+                state.update(child_exited=True, tasks_started=state["tasks_started"] - 1)
+                state["events"].pop()
+                state["events_total"] -= 1
+                active = None
+                if stopped or expired:
+                    state.update(state="stopped" if stopped else "time_limit_reached", reason="stop_or_deadline_before_worker_launch")
+                    break
+                wait_state("waiting_paused", "automatic_dispatch_paused")
+                continue
+            child = spawn(args, popen_factory=subprocess.Popen, cwd=root, stdin=subprocess.DEVNULL,
                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            # Explicit injected plain-Popen fixtures have no supervisor Job.
+            # Production JobPopen owners require both nested tree exit proofs.
+            active["supervisor_exit_required"] = isinstance(child, JobPopen)
+            _ledger_write(ledger_path, ledger, policy)
+            state["supervisor_exit_required"] = active["supervisor_exit_required"]
+            state["delivery_progress"]["capture_worker_started"] = True
+            _save(directory, state)
             while child.poll() is None:
                 _check_stop(directory, state, cancel)
                 if time.monotonic() >= deadline or (state["stop_requested"] and isinstance(child, JobPopen)):
@@ -719,14 +896,21 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                     state["events"].pop()
                     state["events_total"] -= 1
                     active = None
+                    if continuous and not state["stop_requested"] and time.monotonic() < deadline and not _admission_enabled(
+                            dispatch_enabled, admission_path, admission_run_id):
+                        budget_checked_at = float("-inf")
+                        wait_state("waiting_paused", "automatic_dispatch_paused")
+                        continue
                     break
                 state.update(state="blocked" if child.poll() is not None else "pending_child_exit",
-                             child_exited=child.poll() is not None, reason="complete_owned_exit_receipt_missing")
+                             child_exited=False, capture_worker_exited=child.poll() is not None,
+                             reason="complete_owned_exit_receipt_missing")
                 _save(directory, state)
                 return 3
             summary = _complete(active, inbox, receipt)
             _ledger_write(ledger_path, ledger, policy)
             state.update(child_exited=summary["child_exited"], codex_exit_code=receipt["codex_exit_code"])
+            state["delivery_progress"] = _progress(summary)
             if not summary["child_exited"]:
                 state.update(state="pending_child_exit", reason="supervisor_tree_exit_unconfirmed")
                 _save(directory, state)
@@ -773,25 +957,36 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             source_lease.release()
 
 
-def status(directory):
+def status(directory, *, read_only=False):
+    if type(read_only) is not bool:
+        raise LocalWaitError("invalid_dispatch_read_only_profile")
     directory = _guard(directory)
     state = _state(directory)
     token = state.get("active_attempt_id")
+    if isinstance(token, str) and _TOKEN.fullmatch(token):
+        attempt = _guard(directory / "attempts" / token)
+        start_path = attempt / "capture-start.json"
+        if start_path.exists():
+            started = read_json(start_path)
+            if _start_identity_verified(started, token):
+                progress = _progress(state.get("delivery_progress"))
+                progress.update(capture_worker_started=True, cli_started=True)
+                state = {**state, "delivery_progress": progress}
     if state.get("child_exited") is False and isinstance(token, str) and _TOKEN.fullmatch(token):
         record = {"run_dir": str(directory), "run_id": state["run_id"], "attempt_id": token}
-        receipt = _receipt(record)
+        receipt = _receipt(record, read_only=read_only)
         if receipt:
             supervisor_path = _attempt_path(record) / "supervisor-exit.json"
             supervisor = read_json(supervisor_path) if supervisor_path.exists() else None
-            if supervisor is not None and (supervisor.get("managed") is not True
+            if (state.get("supervisor_exit_required") is True and supervisor is None) or (supervisor is not None and (supervisor.get("managed") is not True
                     or supervisor.get("child_exited") is not True
                     or type(supervisor.get("remaining_owned_processes")) is not int
                     or supervisor["remaining_owned_processes"] != 0
-                    or type(supervisor.get("exit_code")) is not int):
+                    or type(supervisor.get("exit_code")) is not int)):
                 return {**state, "child_exited": False, "reason": "supervisor_tree_exit_unconfirmed"}
             state = {**state, "child_exited": True, "codex_exit_code": receipt["codex_exit_code"],
                      "receipt_available": True, "delivery_assessment_pending": True}
-        elif _skipped(record):
+        elif _skipped(record, read_only=read_only):
             state = {**state, "state": "not_started", "child_exited": True,
                      "launch_not_started": True, "reason": "capture_launch_not_started"}
     return state
@@ -800,7 +995,7 @@ def status(directory):
 def stop(directory):
     directory = _guard(directory)
     state = _state(directory)
-    if state["state"] not in {"waiting", "running", "pending_child_exit", "waiting_budget", "waiting_attention", "waiting_disabled"}:
+    if state["state"] not in {"waiting", "running", "pending_child_exit", "waiting_budget", "waiting_attention", "waiting_disabled", "waiting_paused"}:
         return {"state": "not_running", "process_signal_sent": False}
     write_json(directory / "stop.request", {"run_id": state["run_id"], "requested_at": utc()})
     return {"state": "stop_requested", "process_signal_sent": False,
@@ -816,14 +1011,18 @@ def main(argv=None):
         parser.add_argument("--deadline-monotonic", type=float, required=True)
         parser.add_argument("--stop-run-dir", type=Path, required=True)
         parser.add_argument("--run-id", required=True)
+        parser.add_argument("--admission-path", type=Path)
+        parser.add_argument("--admission-run-id")
         parser.add_argument("command", nargs=argparse.REMAINDER)
         args = parser.parse_args(values[1:])
         args.command = args.command[1:] if args.command[:1] == ["--"] else args.command
         if (not _TOKEN.fullmatch(args.attempt_id) or not _TOKEN.fullmatch(args.run_id)
-                or not math.isfinite(args.deadline_monotonic) or not args.command):
+                or not math.isfinite(args.deadline_monotonic) or not args.command
+                or (args.admission_path is not None and (not isinstance(args.admission_run_id, str)
+                    or not _TOKEN.fullmatch(args.admission_run_id)))):
             return 2
 
-        def start_allowed():
+        def owner_allows():
             try:
                 directory = _guard(args.stop_run_dir)
                 state = _state(directory)
@@ -838,8 +1037,11 @@ def main(argv=None):
             except (OSError, ValueError, RuntimeError):
                 return False
 
+        def start_allowed():
+            return owner_allows() and _admission_enabled(path=args.admission_path, run_id=args.admission_run_id)
+
         return capture(args.command, args.attempt_dir, args.attempt_id, PROMPT,
-                       start_allowed=start_allowed, stop_requested=lambda: not start_allowed(),
+                       start_allowed=start_allowed, stop_requested=lambda: not owner_allows(),
                        deadline_monotonic=args.deadline_monotonic)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("run", "watch", "status", "stop"))
