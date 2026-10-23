@@ -2,6 +2,14 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：澄清同一對話接收，活動回合再次實測
+
+使用者說「你一個就好了」，因此沒有把回覆解讀成今日CLI用量數，也沒有初始化預算或啟動另一個agent。基底5211e654ceea4d30621f8d80f656b587688bc10b。先直接呼叫本對話原生eventguard_test/list_events，確認原有兩件皆ACK；再用Python標準庫向已批准的隔離operator/test佇列加入一件新coverage合成事件，producer不輸出event ID給對話。主agent隨後原生list_events取得pending ID，receive_event得到query ID，inspect_event證明仍pending，再ACK同event/query。原始四個MCP回傳留reports/chat-receive-002/native-calls.json，程式manifest與validation同目錄。
+
+接收時間2026-10-23 **13:52:37.268 UTC+08**，ACK **13:52:46.312**。本機只讀SQLite與實際回傳核對命令exit0，validation.passed=true：生成／接收／查證／ACK集合各1且相同，missing=[]、duplicate_receipts=[]，該事件只有1張匹配result_id回條。這個接收者就是目前主對話，不是fake、SDK代收或另一個CLI；額外CLI任務0、原生採集0。沒有改MCP／登入／預算／正式資料。
+
+限制仍明確：這是已在處理使用者回合時主動呼叫工具，idle_chat_wakeup_verified=false。現有工具清單提供agent發起的MCP與聊天操作，尚無已接通、可供本機producer在本對話閒置時投遞並喚醒的入口；不能以定時模型polling或專用CLI冒充。前批CLI功能保留未啟用，後續優先核對同一對話的事件觸發能力。
+
 ## 2026-10-23：持續事件待命、GUI自動開關與接線文件
 
 基底 `72673a3657b6e30c9c594dcc6140ddd6f147b096`，同一feature。兩個子agent分工dispatcher與GUI，第三個唯讀審查；主agent整合後統一驗證。`agent_dispatch.run(continuous=True)`／CLI `watch`不受一小時host壽命或五個總任務限制；五次是固定每日預算，max_seconds是每次CLI期限。空佇列純Python等待，無attempt／reserve／模型；日額用完等待，投遞失敗不自動重試。審查抓到reserve-only拒絕可能每次poll建立空目錄，已以同event拒絕latch修正，新增針對性測試。

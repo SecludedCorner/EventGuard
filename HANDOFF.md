@@ -1,5 +1,7 @@
 # EventGuard 接手
 
+最新範圍澄清：使用者表示「你一個就好了」，目標是目前這個對話收到事件；不要再把另開專用CLI當成達成同一目標，也不要重問每日CLI數量。2026-10-23 13:52台北時間，本主對話再次以原生MCP收到程式新生成的合成事件並ACK，證據在reports/chat-receive-002；這仍是活動回合主動收取。閒置同一對話的事件觸發入口尚未接通，不能以MCP註冊、手動接收或另一個CLI代替。保留既有可選CLI實作，但未啟用、不初始化其budget；不要用模型定時輪詢規避此缺口。
+
 先讀 AGENTS、README、STATUS、docs/CONNECT_AGENT.md、docs/EVIDENCE.md、docs/BACKGROUND.md。核對cwd/branch/HEAD/未提交變更，保留接續，不reset/clean。本批基底72673a3657b6e30c9c594dcc6140ddd6f147b096，同一feature集中提交、不推送；原有docs/research/排除。
 
 本批新增：agent_dispatch.run(continuous=True)／CLI watch沿用原來源與固定budget跨事件、跨日待命；max_seconds只限每任務，空佇列零attempt/模型。GUI獨立auto開關與原生exe選擇，設定在忽略的data/agent-automation.json；單純開視窗不啟動，明確Start才恢復保存的選擇，Pause取消並核對owned child退出。非日額的reserve拒絕鎖定同pending，不再每poll建立空目錄。真CLI的單次設定停用project eventguard_test，避免混入聊天合成佇列。

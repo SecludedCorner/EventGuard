@@ -1,8 +1,10 @@
 # EventGuard 現況
 
+最新澄清：目前任務要求**本對話**接收。2026-10-23 13:52本主對話已再次以原生MCP接收新合成事件並ACK，生成／接收／查證／ACK各1、同ID、1張回條；沒有另開CLI。這是活動回合收取，**閒置時自動喚醒本對話仍未接通**。下述專用CLI為可選能力，沒有啟用，不能當作此目標已完成。
+
 更新：2026-10-23；分支 feat/local-codex-acceptance，本批基底 72673a3657b6e30c9c594dcc6140ddd6f147b096。命令、測試數、來源與提交對照見 [EVIDENCE](docs/EVIDENCE.md)。
 
-本批已實作持續事件等待與獨立自動 agent 開關：同一 Python dispatcher 跨事件／日界待命，空佇列不建立任務，預算用完保留 pending，失敗不自動重試。接線與接手步驟見 [CONNECT_AGENT](docs/CONNECT_AGENT.md)。真正自動 CLI 合成驗收仍受阻：固定每日預算未初始化，正等待人類確認今日已用任務數；前置檢查未啟動模型，不能宣稱已自動喚醒。
+前批已實作持續事件等待與獨立自動 agent 開關：同一 Python dispatcher 跨事件／日界待命，空佇列不建立任務，預算用完保留 pending，失敗不自動重試。接線與接手步驟見 [CONNECT_AGENT](docs/CONNECT_AGENT.md)。專用CLI合成驗收因固定預算未初始化而未啟動；最新目標為同一對話接收，暫不續行此替代路徑或索取CLI日額資訊。
 
 已交付可操作的 Tk GUI。雙擊 EventGuard.cmd，按開始持續監看、暫停耐久停止；X 最小化，應用程式→暫停並結束才離開。操作走同一核心，無模型輪詢、每日採集期限或額外事件帳本。見 [GUI](docs/GUI.md)。
 
