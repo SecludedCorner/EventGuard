@@ -99,7 +99,7 @@ tool_timeout_sec = 30
 
 client 載入設定後，核對**當前 agent 工具清單**是否出現四工具，接著實際 list／receive／inspect／ACK，不能只看設定檔存在或 `/mcp` 名稱。若沒出現，記錄 client 版本、專案位置及錯誤，使用 client 提供的重新載入方式；找不到入口時不要假裝已接通。
 
-本主對話於 2026-10-23 確實完成四工具呼叫、同 event/query 補收及冪等 ACK，見 [EVIDENCE](EVIDENCE.md)。先前清單延遲出現的精確原因尚未確定，不能宣稱某個 Restart 動作已解決。這份專案設定只接合成資料，沒有接正式 live 事件。
+本主對話於 2026-10-23 確實完成四工具呼叫、同 event/query 補收及冪等 ACK；最新另外驗連續／批次與active inbox滿載恢復，精確結果見 [EVIDENCE](EVIDENCE.md)。先前清單延遲出現的精確原因尚未確定，不能宣稱某個 Restart 動作已解決。這個eventguard_test設定只接合成資料；正式eventguard是下方另一個已批准入口。
 
 ## 接手 agent 必讀
 
@@ -121,11 +121,11 @@ required = true
 
 由client載入後，先核對**這個聊天**的工具清單，再呼叫正式`status`、`activity`，確認GUI操作紀錄出現相同操作。不要用子agent的工具清單、SDK測試或舊eventguard_test成功代替主聊天接通。正式事件receive／ACK應只在明確處理該事件時操作；ACK不是漏洞修補或案件結束。
 
-2026-10-23本主聊天已實際呼叫正式capabilities／status／activity，後者讀到相同操作；沒有接收／ACK正式backlog。原始工具回傳與當次唯讀狀態留本機`reports/goal-center-001`。這證明本聊天工具可用，仍不是閒置喚醒或GUI畫面已熱更新的證據。
+2026-10-23本主聊天已實際呼叫正式capabilities／status／activity，後者讀到相同操作；其後於`reports/security-core-001`完成一次真七來源採集及一件該輪真事件的inspect／diagnose／receive／ACK，沒有接管其餘正式backlog。最早工具回傳留`reports/goal-center-001`，新結果與限制統一見EVIDENCE。這證明本聊天工具可用，仍不是閒置喚醒或GUI／MCP畫面已熱更新的證據。
 
 operator允許多個client同時連接。狀態變更工具共用短期`operator-mutation.lock`；忙碌回`operator_operation_busy`、`operation_started=false`，不自動重試。讀取與Stop不等這把鎖；Stop重新核對namespace及原owner/run，換代回busy，不停止新owner。若操作可能已完成但回條失敗，回`operation_may_have_completed=true`，先查事件／操作紀錄，不能直接重做。舊事件綁定adapter的`inbox-owner.lock`仍維持單owner。
 
-同一聊天的閒置喚醒另看[喚醒／恢復關卡](WAKE_RECOVERY_GATES.md)：目前僅核對原生queue/proxy help，沒有送訊息；metadata探測尚因自動核准審查而未執行。不要以新CLI、heartbeat或手動MCP接收取代這項未完成要求。
+同一聊天的閒置喚醒另看[喚醒／恢復研究](WAKE_RECOVERY_GATES.md)：歷史metadata探測後獲批准，但helper收尾失敗，未取得可用連線／退出結論；沒有送queue／turn或啟動server。依最新優先序不再追這個旁支，不作日常監看的前置。不要以新CLI、heartbeat或活動回合MCP接收宣稱已達成閒置喚醒。
 
 舊版operator曾以終身`operator-stdio.lock`擋住另一個聊天；本輪實際啟動exit3後已改用上述短期鎖。保留鎖檔及舊失敗證據，不靠刪鎖或停止別人的client修復。先前所有載入延遲不全能歸因於這個原因；當前是否接通仍以工具實際回傳為準。官方[app-server介面](https://learn.chatgpt.com/docs/app-server)提供MCP重新載入方法；此聊天沒有可呼叫的reload工具，不假設使用者UI一定存在Restart按鈕。
 

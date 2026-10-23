@@ -1,6 +1,6 @@
 # EventGuard 現況
 
-更新：2026-10-23；分支 `feat/local-codex-acceptance`，本輪基底 `5bff8082edef38d6d30cfd816f1579cb073fc313`。精確命令、時間、測試數、退出回條與提交對照統一見 [EVIDENCE](docs/EVIDENCE.md)。
+更新：2026-10-23；分支 `feat/local-codex-acceptance`，程式基底 `645d8d9ea8def504fd66b0cb16fcfd3850ea86c9`。本批只有文件及主聊天合成通路實測；精確命令、時間、測試數、退出回條與提交對照統一見 [EVIDENCE](docs/EVIDENCE.md)。
 
 目前重點是本機唯讀採集、耐久保存，以及人類／agent 共用查證介面。正常監看由程式執行，不呼叫模型；proxy、排程及同一聊天閒置喚醒都不是使用前提。本輪沒有建立排程、服務或自啟，沒有啟動另一個 Codex／模型。
 
@@ -11,7 +11,7 @@
 | Defender 修正 | auto 使用既有 Get-MpComputerStatus 有效狀態；修改後一般使用者實測七欄 ok | explicit native 仍僅配置／WSC；拒讀不以設定值替代有效狀態 |
 | 事件品質 | listener 缺程序身分不誤報恢復；持久化事件保留有界目標事實，診斷先以事件 ref 篩選；快取核對目標 | 舊事件沒有的事實不回填推測；部分、拒讀、過期及未知均不代表安全 |
 | 正式 agent 介面 | 本主聊天已載入15工具；前批讀取／查證／接收／ACK 一件實際新生 listener 事件，工具與 SQLite 同 event/query、只有一張回條 | 查證 partial，決定為 needs_more_evidence，incident_conclusion=not_assessed；本批未追加正式接收 |
-| 接收與 ACK | 事件先落盤，pending 保留；先前隔離合成測試另有補收與冪等 ACK 證據 | ACK 只代表收到，不代表修復、恢復或結案；活動回合接收不等於閒置喚醒 |
+| 接收與 ACK | 本主聊天最新實測合成單件／連續／batch、active inbox滿載拒絕與釋放恢復；補收同event/query、ACK重播無重複回條，集合比對通過 | ACK只代表收到；本次不是跨任務退出恢復或閒置喚醒。合成config／policy已恢復，歷史紀錄保留 |
 | 操作紀錄 | GUI／正式 MCP 共用有界 activity 帳本，可看固定操作進度與結果；前批已實際匯出 JSON／HTML 報告 | 不記聊天思考、私人原文或任意外部 shell／檔案操作；非抗同使用者竄改帳本 |
 | 採集與退出 | 每來源保存 coverage／觀察；子程序執行前加入私有 Job，停止先合作寬限，只清理工具自己的 job | 退出不明就保留阻擋與未知，不能宣稱 stopped；本輪正常實機來源全部退出且無殘留 |
 | 容量 | ACKed／完成帳本有保留與輪替；未完成接收器收尾的原ACK proof受保護，completed耐久後才解除；status顯示未收尾數 | pin仍有上限，滿載回滾新ACK保留pending；升級前已遺失的原proof不能還原，詳見儲存政策 |

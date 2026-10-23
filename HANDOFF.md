@@ -1,5 +1,7 @@
 # EventGuard 接手
 
+最新程式645d8d9、本批只有文件與主聊天真合成接收。已沿用四工具MCP驗7件程式事件：單件、連續兩件、batch三件＋另一補收件；先讓active inbox滿3，第四件明確拒絕且pending/hash不變，ACK一件後補收成功。補收同event/query/received_at/snapshot，七張新回條與一次ACK重播；八組ID集合全同，missing/extra/duplicate_receipts空。原config及inbox-limits bytes/hash已恢復、四筆歷史五欄保留；只讀獨立validation及原生32calls在reports/chat-delivery-003。兩個helper失敗保留，沒有重做原生投遞。不是新CLI任務、跨任務退出或閒置喚醒，沒解除正式Pause。source仍吻合前批完整suite manifest，不重跑；最後commit綁定及未完成條件見EVIDENCE與goal-completion-audit.json。
+
 最新續行基底5bff808：三個子agent完成實作，root整合後統一回歸。Monitor到期來源依實際嘗試時間公平排序，避免反覆慢查詢讓其餘來源永久busy；間隔從各自實際開始計算。QueueInbox ACK交易同時保護原receipt直到completed耐久成功，TTL/count/byte不可刪未收尾proof；pin有容量上限、滿載回滾pending，舊DB可遷移，原proof已遺失仍blocked。overview合併相同錯誤樣本，sample_occurrences不當成總錯誤數；原status/observation不變。唯讀status另顯示pending_receiver_finalizations，新欄不存在回null，不因讀狀態遷移。
 
 本批沒有新實機盤點、主聊天新接收或背景啟用；正式背景仍explicit_stop。source與資料保留不動；舊GUI/MCP需正常重新載入新版，不能宣稱已熱更新。重現、統測及提交綁定見EVIDENCE的runtime-reliability批次；前批七來源／一件真事件證據仍獨立保存，不重做或升格。

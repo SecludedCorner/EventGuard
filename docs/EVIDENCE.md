@@ -2,6 +2,22 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：本主聊天連續／批次與容量恢復的真工具接收
+
+程式基底`645d8d9ea8def504fd66b0cb16fcfd3850ea86c9`，同一feature，本批只更新文件，不改產品碼。沿用已批准的eventguard_test及`reports/chat-receive-001/operator`合成test佇列；未改MCP設定、正式live資料或日額帳本，未啟動額外Codex任務／模型、OS盤點、背景或排程。既有server載入世代沒有辨識，不宣稱本批熱更新或重驗新schema故障。
+
+`py -3.13 -B reports/chat-delivery-003/producer.py setup`先確認原佇列四件均ACK且active inbox=0，保存原config／inbox policy bytes與SHA。只把這個合成root的inbox.max_events暫設3，其他來源／data保留。`emit single`、`emit continuous-1`、`emit continuous-2`、`emit batch-recovery`分段產生7件公開合成事件；ID及隨機port先存manifest，不輸出給聊天。主agent從真list回傳才取得各ID；第二件continuous在前件ACK後才產生。所有producer命令觀察exit0；不是Codex CLI或worker退出證據。
+
+主聊天實際呼叫四個原生工具，原始參數／回傳／返回時間在`native-calls-all.json`。receive內含真正query_evidence的七欄snapshot／query_id，沒有獨立query工具，也沒有執行Windows診斷。batch三件先receive／inspect而不ACK，第四件receive明確回`inbox_event_capacity_pending_preserved`；容量前後active=3、pending=4，來源hash／回條／接收檔案不變。ACK一batch釋放一格後，原第四件成功receive；先保存仍pending、snapshot/query存在且result/completed不存在的唯讀證據，再處理其他batch，最後補收同event/query/received_at/snapshot並ACK。ACK重播同result_id，不另建回條。
+
+**獨立比較命令**：`py -3.13 -B reports/chat-delivery-003/verify.py`，Python3.13.3，自然exit0，`validation.json`為passed=true、missing=[]、extra=[]、duplicate_receipts=[]。生成／accepted／原生list發現／成功receive／query／inspect／新ACK／SQLite回條八組ID集合完全相同，各7件。共32次真工具呼叫：list6、receive9（8成功＋1容量拒絕）、inspect9、ACK8（7新增＋1重播）。補收件成功receive兩次；recovered_same_event_and_query=true、pending_evidence.verified=true、capacity_recovery.verified=true。這是工具接收證據，不是mock或SDK代呼；沒有新CLI JSONL或子任務正常退出證據，不能當作原五個真CLI任務驗收、跨任務退出恢復、閒置喚醒或重開機成功。
+
+最後`producer.py checkpoint final`與`restore`均exit0，新事件全ACK、active=0；config及inbox-limits原bytes／hash均恢復。四件歷史的event_id／payload_hash／delivery_status／receipt／updated_at五欄一致，當前payload canonical hash吻合原hash。沒有保存歷史payload原始bytes，不能宣稱原序列化文字逐byte比對。原始manifest、emission、每階段checkpoint、SQLite及完成檔留本機；驗證器只用mode=ro/query_only讀DB，記錄來源hash。
+
+兩次helper失敗原樣保留：以過長shell參數回存JSON遭Windows 206，該保存程序未啟動；改由apply_patch保存既有tool log，沒有重做投遞。補收比較最初把dict的key順序當差異，改比較既有第二次回傳的key/value，實際query／時間／snapshot都相同，沒有再呼叫receive。證據在log-save-failure.json及comparator-helper-failure.json；不是產品或投遞失敗。
+
+當版source仍完全吻合前批full source manifest；本批沒有重跑未變的完整suite，也不與前批測試數相加。文件／提交綁定在`reports/chat-delivery-003/source-commit.json`；goal-completion-audit.json保留仍未證明的長時／登入／閒置條件，目標未宣告完成。執行資料、ID、完整回傳、研究及附件不提交或上傳。
+
 ## 2026-10-23：長期採集公平性、ACK 收尾恢復與精簡狀態
 
 本輪基底`5bff8082edef38d6d30cfd816f1579cb073fc313`，沿用同一feature及資料；三個子agent分工，root整合後統一測試。正式MCP只唯讀查status，確認背景仍disabled／host已退出；沒有解除explicit_stop、追加實機採集、ACK正式事件、呼叫真Codex／模型、建立排程或變更安全設定。前批主聊天真七來源／接收證據獨立保留，不以本輪fixture升格。
