@@ -1,5 +1,7 @@
 # EventGuard 接手
 
+最新要求是讓EventGuard日常功能可由本對話操作。operator adapter已有14工具；新增start_monitor轉接原背景核心，stop原已支援耐久暫停，不新增第二控制器。test scope不能啟動live；live每次呼叫仍檢查人類接收開關。reports/operator-full-001/eventguard-live.review.toml為完整正式接線候選，尚未安裝；已向使用者詢問是否由原「四個合成工具」擴為正式live操作。未回覆前不能改MCP設定或讀正式資料，也不要開額外agent。此操作接線與閒置同一對話自動喚醒是不同能力，後者仍未接通。
+
 最新範圍澄清：使用者表示「你一個就好了」，目標是目前這個對話收到事件；不要再把另開專用CLI當成達成同一目標，也不要重問每日CLI數量。2026-10-23 13:52台北時間，本主對話再次以原生MCP收到程式新生成的合成事件並ACK，證據在reports/chat-receive-002；這仍是活動回合主動收取。閒置同一對話的事件觸發入口尚未接通，不能以MCP註冊、手動接收或另一個CLI代替。保留既有可選CLI實作，但未啟用、不初始化其budget；不要用模型定時輪詢規避此缺口。
 
 先讀 AGENTS、README、STATUS、docs/CONNECT_AGENT.md、docs/EVIDENCE.md、docs/BACKGROUND.md。核對cwd/branch/HEAD/未提交變更，保留接續，不reset/clean。本批基底72673a3657b6e30c9c594dcc6140ddd6f147b096，同一feature集中提交、不推送；原有docs/research/排除。

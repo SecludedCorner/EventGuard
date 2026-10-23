@@ -384,13 +384,42 @@ class OperatorMCPTests(unittest.IsolatedAsyncioTestCase):
         content = result.content if hasattr(result, "content") else result
         return json.loads(next(item.text for item in content if item.type == "text"))
 
+    async def test_persistent_start_uses_existing_core_only_with_live_permission(self):
+        from eventguard.agent_access import set_enabled
+        server = self.module.build_operator_server(self.root, namespace="live", allow_live=True)
+        expected = {"state": "started", "namespace": "live", "model_calls": 0}
+        with patch("eventguard.background.start", return_value=expected) as start:
+            refused = self.unpack(await server.call_tool("start_monitor", {}))
+            self.assertEqual(refused["reason"], "agent_delivery_disabled")
+            start.assert_not_called()
+            self.assertTrue(set_enabled(self.root, True)["setting_saved"])
+            self.assertEqual(self.unpack(await server.call_tool("start_monitor", {})), expected)
+            start.assert_called_once_with(self.root)
+            for args in ({"shell": "run"}, {"namespace": "test"}, {"enable_agent": True}):
+                with self.assertRaisesRegex(ValueError, "invalid_operator_tool_arguments"):
+                    await server.call_tool("start_monitor", args)
+            self.assertTrue(set_enabled(self.root, False)["setting_saved"])
+            refused = self.unpack(await server.call_tool("start_monitor", {}))
+            self.assertEqual(refused["reason"], "agent_delivery_disabled")
+            start.assert_called_once()
+
+    async def test_test_scope_cannot_start_persistent_live_monitor(self):
+        server = self.module.build_operator_server(self.root)
+        with patch("eventguard.background.start", side_effect=AssertionError("No live collection")) as start:
+            result = self.unpack(await server.call_tool("start_monitor", {}))
+            self.assertEqual(result["state"], "blocked")
+            self.assertEqual(result["reason"], "live_monitor_control_not_in_test_scope")
+            self.assertEqual(result["model_calls"], 0)
+            start.assert_not_called()
+        self.assertFalse((self.root / "data/background/control.json").exists())
+
     async def test_sdk_tools_share_cli_views_and_reject_extra_or_coercible_input(self):
         event = make_synthetic()
         EventStore(self.root / "data/test").enqueue(event)
         api = OperatorAPI(self.root, DiagnosticAPI(Fixtures()))
         server = self.module.build_operator_server(self.root, operator_api=api)
         tools = await server.list_tools()
-        self.assertEqual({tool.name for tool in tools}, {"capabilities", "status", "overview", "observation", "stop", "monitor_once", "list_events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report"})
+        self.assertEqual({tool.name for tool in tools}, {"capabilities", "status", "overview", "observation", "stop", "monitor_once", "start_monitor", "list_events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report"})
         for tool, args in (("list_events", {"limit": True}), ("list_events", {"limit": "1"}), ("diagnose_event", {"event_id": event["event_id"], "port": 80}), ("inspect_event", {"event_id": event["event_id"], "namespace": "live"}), ("monitor_once", {"shell": "run"})):
             with self.assertRaisesRegex(ValueError, "invalid_operator_tool_arguments"):
                 await server.call_tool(tool, args)

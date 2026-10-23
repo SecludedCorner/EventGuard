@@ -76,6 +76,7 @@ python -B scripts/eventguard_inbox_mcp.py --operator-root . --namespace test
 | 全域狀態 | status | stdio status → OperatorAPI.overview（固定 launcher namespace，limit=1） |
 | 操作總覽／逐來源 coverage | overview --namespace … | overview → OperatorAPI.overview |
 | 保存來源觀察 | sources show --source-id … --namespace … | observation → OperatorAPI.observation |
+| 持續開始監看 | background start | start_monitor → OperatorAPI.background_start；只限已開放的live launcher，test拒絕 |
 | 一輪監看 | monitor --max-cycles 1 --max-seconds 30（test 另加固定 fixture） | monitor_once → OperatorAPI.monitor；test 固定 normal.json，live 需 launcher opt-in |
 | 合作停止 | stop --namespace test 或 live | stop → OperatorAPI.stop；只能停止 namespace 與 instance 均相符的本工具 owner |
 | 事件清單 | events list --namespace … --limit … | list_events → OperatorAPI.events |
@@ -87,6 +88,12 @@ python -B scripts/eventguard_inbox_mcp.py --operator-root . --namespace test
 | 人類可讀報告 | report export --namespace … | report → OperatorAPI.report |
 
 同一 scope 的事件清單／檢視使用完全相同的結構化資料，沒有為 agent 把「重讀摘要」改名成診斷。CLI 與 MCP 的新公開操作也共用固定錯誤 envelope，不回傳原始 OS 例外或私人錯誤路徑。
+
+完整operator adapter共有14個工具。`start_monitor`只呼叫現有背景核心；`stop`已能對該scope耐久暫停，不另建第二套控制器。開始不啟用自動agent、不初始化模型預算、不建立排程。既有背景Job／owner限制仍有效；若回blocked，不能宣稱已開始或繞過限制。test launcher的start_monitor固定拒絕，不能因連合成佇列而啟動正式採集。
+
+目前聊天只獲准連合成test佇列的list/inspect/receive/ACK四工具；程式有14工具不等於client已載入或已獲准正式資料。擴大接線必須明確核對資料scope及工具清單，不能把server capability當成實際授權。
+
+「整個可供agent使用」指正常產品操作：狀態／coverage、保存觀察、開始／暫停、固定唯讀查證、事件接收／ACK／重試與報告。它不包含任意命令、提權、系統修補、任意檔案、排程安裝或自動模型啟用。資料存取開關仍由人類控制，agent不能自行給自己權限。這也不解決閒置聊天喚醒，後者需要另一個已驗證的client事件觸發入口。
 
 長期前景監看仍用 CLI；MCP `monitor_once` 一次一輪，避免讓模型靠永久工具等待維持監看。Phase 3 已將 native 呼叫移入私有 Job worker；到期／取消先留寬限，再只清理本工具 Job，保存實際退出或未確認狀態。清理本身另有有限等待，30 秒不是硬即時總上限，詳見 [生命週期](PROCESS_LIFECYCLE.md)。未驗證全天候、任意既有聊天接續或將工具載入目前 agent。
 

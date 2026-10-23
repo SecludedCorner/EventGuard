@@ -1,4 +1,4 @@
-"""Event-bound minimal EventGuard stdio tools; no network/system queries."""
+"""Scoped EventGuard stdio adapters; all operations use the existing core."""
 from __future__ import annotations
 
 import argparse
@@ -107,6 +107,7 @@ def build_operator_server(root, namespace="test", allow_live=False, operator_api
     def validate(name, arguments):
         allowed = {"capabilities": set(), "status": set(), "overview": {"limit"},
                    "observation": {"source_id","limit"}, "stop": set(), "monitor_once": set(),
+                   "start_monitor": set(),
                    "list_events": {"limit"}, "inspect_event": {"event_id"}, "diagnose_event": {"event_id"},
                    "receive_event": {"event_id"}, "ack_event": {"event_id","query_id","decision"},
                    "retry_event": {"event_id"}, "report": set()}
@@ -151,6 +152,19 @@ def build_operator_server(root, namespace="test", allow_live=False, operator_api
     def stop() -> dict:
         """Cooperatively stop this project's monitor only; never signals another process."""
         return call("stop", namespace)
+
+    @server.tool()
+    def start_monitor() -> dict:
+        """Start persistent read-only collection through the existing background core.
+
+        Live launcher scope and receive permission are required. Never enables
+        agent automation, changes scheduling or starts a model. Core ownership
+        restrictions still apply; a blocked start is not a running monitor.
+        """
+        if namespace != "live":
+            return {"state": "blocked", "reason": "live_monitor_control_not_in_test_scope",
+                    "model_calls": 0}
+        return call("background_start")
 
     @server.tool()
     def monitor_once() -> dict:

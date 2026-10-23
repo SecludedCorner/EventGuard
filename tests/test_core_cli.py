@@ -42,7 +42,7 @@ class CoreTests(unittest.TestCase):
         code,value=self.command("capabilities")
         self.assertEqual(code,0)
         self.assertEqual(value["model_calls"],0)
-        self.assertFalse(value["gui"])
+        self.assertTrue(value["gui"])
         self.assertFalse((self.root/"data").exists())
         code,value=self.command("status")
         self.assertEqual(code,0)

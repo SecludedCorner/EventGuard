@@ -353,7 +353,7 @@ class OperatorAPI:
         from .diagnostics.api import DiagnosticAPI
         return {"tool_version": __version__, "diagnostics": DiagnosticAPI().capabilities(),
                 "monitor": "foreground or background, durable stop, singleton", "transport": ["disabled", "synthetic-only local mock"],
-                "remediation": [], "gui": False, "model_calls": 0, "real_agent_ingress": "not_configured",
+                "remediation": [], "gui": True, "model_calls": 0, "real_agent_ingress": "not_configured",
                 "operator_operations": ["capabilities", "status", "overview", "observation", "stop", "events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report", "monitor", "background_start", "background_status", "background_stop"],
                 "agent_required": False, "data_trust": "untrusted_data",
                 "background": {"entry": "scripts/eventguard.py background", "model_required": False,

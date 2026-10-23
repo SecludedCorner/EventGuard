@@ -99,6 +99,8 @@ client 載入設定後，核對**當前 agent 工具清單**是否出現四工�
 
 ## 接手 agent 必讀
 
+若要讓agent使用日常完整操作介面，operator adapter現有14工具：capabilities、status、overview、observation、start_monitor、stop、monitor_once、list_events、inspect_event、diagnose_event、receive_event、ack_event、retry_event、report。開始／停止共用既有背景核心，不啟用模型；工具能力表見 [HUMAN_AGENT_INTERFACE](HUMAN_AGENT_INTERFACE.md)。現行eventguard_test仍只批准四工具及合成資料，完整正式接線需另外核對scope，不能把下列工作方式當成已取得正式資料權限。
+
 - 先讀 AGENTS、README、STATUS、HANDOFF，核對分支／HEAD／未提交工作與當前程序；不要重做舊驗收或碰正式 backlog。
 - 核心順序：`Monitor → EventStore → QueueInbox → agent_dispatch → 單次 CLI/MCP → query/result → 原來源 ACK`。事件先落盤；提示不含事件 ID／內容，工具才提供最小七欄。
 - dispatcher 用單次 `-c` 設定綁定一個事件，read-only、shell 關閉，關閉此專案的 `eventguard_test`，不寫全域 MCP、不複製登入。

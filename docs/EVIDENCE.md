@@ -2,6 +2,14 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：補齊日常operator操作介面
+
+基底7865f9b267213f8d2187f101ed9f87ecb05afdac。盤點確認operator MCP程式原有13工具，但當前聊天僅載入批准的合成四工具。新增start_monitor直接轉接OperatorAPI.background_start，原有stop已經支援背景耐久暫停，未另建控制器或佇列。start_monitor沒有自由參數；test launcher固定拒絕，live需原launcher opt-in與每次人類存取開關；不建立排程、不開自動模型。原背景owner／Job限制照常，blocked不當成啟動成功。另修正capabilities的gui=false舊宣告。
+
+命令 `py -3.13 -B reports/operator-full-001/verify_selected.py`；Python3.13.3，2026-10-23T05:58:21.738884+00:00，operator_api／core_cli／agent_access／operator_workflow四模組 **75/75通過、0 error/failure/skip、124 AST**，31.59秒、exit0。source_unchanged=true、per_test_residuals=[]；guardian自然exit0、remaining_owned_processes=0、forcibly_terminated=false。新增測試驗證test不能啟動live、權限撤回即拒絕、參數不可加shell／namespace／自動agent，以及對原核心的映射。start_monitor本次使用mock背景核心，未啟動正式Windows採集；既有SDK／stdio測試也不是目前聊天已載入14工具的證據。
+
+完整14工具的review設定與connection-plan保存在reports/operator-full-001，scope為本專案live，註冊本身不開始監看或模型。現行專案MCP設定未改，已向人類請求由原「合成四工具」擴為正式操作範圍；批准前不接正式資料。正常操作介面可用與「閒置同一對話會被事件喚醒」分開，後者仍未驗證。此次未推送、安裝、提權、修改安全政策或啟動額外agent。
+
 ## 2026-10-23：澄清同一對話接收，活動回合再次實測
 
 使用者說「你一個就好了」，因此沒有把回覆解讀成今日CLI用量數，也沒有初始化預算或啟動另一個agent。基底5211e654ceea4d30621f8d80f656b587688bc10b。先直接呼叫本對話原生eventguard_test/list_events，確認原有兩件皆ACK；再用Python標準庫向已批准的隔離operator/test佇列加入一件新coverage合成事件，producer不輸出event ID給對話。主agent隨後原生list_events取得pending ID，receive_event得到query ID，inspect_event證明仍pending，再ACK同event/query。原始四個MCP回傳留reports/chat-receive-002/native-calls.json，程式manifest與validation同目錄。
