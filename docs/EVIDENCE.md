@@ -2,6 +2,27 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：正式 Start 缺口與 MCP 應用持有生命週期
+
+本批基底`3e3692507bceadbd7cd701b612396f7658cb6327`，同一feature；保留既有研究／附件。先實際呼叫本主聊天正式status→start_monitor→status→stop→status。Start於10:00:28 UTC回`blocked / independent_background_unverifiable`，desired_enabled=true；這是外部Job下舊server走independent契約，**未建立child**，不是監看成功或child自然退出。10:00:34 UTC Stop恢復disabled/explicit_stop；最後host已退出、remaining0、未強停。沒有新來源觀察／事件／ACK變動，也沒有啟動模型。原生回傳及EventGuard activity在`reports/operator-start-001/native-calls.json`、`activity-after.json`，可見agent_mcp的失敗開始與成功停止。
+
+`py -3.13 -B reports/operator-start-001/verify_before.py`於10:05:33.635464 UTC exit0：before-validation.json為observation_valid=true、**start_monitor_passed=false**、cleanup_restored_original_pause=true。它核實這次失敗與恢復，不把helper exit0混作產品Start成功。七來源實機及正式事件接收仍沿用security-core-001，未重做盤點或處理其餘backlog。
+
+修正operator adapter明確選既有application-owned核心；CLI預設independent不變。不經DesktopController、不恢復GUI保存的auto-agent選擇、不用測試allow_parent_job或breakaway。Start只保存自身callback的新child與可信scope；EOF先封鎖新Start並等已接受Start，再於控制鎖內核namespace/run/generation/job，含「新Start已改control但未寫launch」競態；不採納其他client既有host或追停新owner。最後只finish實際owned Job。status的launch_intent與後續run持續顯示application lifetime。固定有界operator-stop-receipt經atomic/fsync保留退出、forced與原因；空觀察者不覆寫，EOF／中斷收尾強停、未確認或保存失敗不能報clean exit0。
+
+root＋lead＋兩個子任務兩層分工，source freeze後統測；新增24項契約／ownership案例。四項SDK案例使用真正Windows私有Job及合成Monitor，涵蓋Start/Status/Stop、正常EOF、Start未回應前EOF、雙client observer不接管／不停止他人host。它們是SDK協定及程序治理證據，**不是主聊天新碼已載入、真主機採集或agent喚醒證據**。
+
+| 根目錄命令 | 實際結果／UTC | 範圍與退出 |
+| --- | --- | --- |
+| `py -3.13 -B reports/operator-start-001/verify_owner.py` | 10:16:04.545898；149/149通過，76.143秒 | ownership、operator_api/clients、background、desktop/integration、QueueInbox、delivery_consolidation；focused-001保留所有回條 |
+| `py -3.13 -B reports/operator-start-001/verify_integration.py` | 10:18:23.680843；107/107通過，31.912秒 | 與上一組模組不重疊：background_integration/jobs、local_stdio、stop_binding、operator_status/workflow、activity、core_cli；integration-001保留所有回條 |
+
+兩組均Python3.13.3，135個Python檔AST無誤，0failure/error/skip、source_unchanged=true、per_test_residuals=[]；guardian自然exit0、forcibly_terminated=false、remaining0。每組source-manifest／unit-tests／lifecycle-evidence／guardian-exit／verification-summary均保存；不把兩組加成完整suite，也不以先前全套覆蓋本批新碼。沒有主機inventory、真Codex／額外模型、排程、自啟或安全設定變更。
+
+修改後主聊天只再呼叫一次真正`capabilities`，仍缺`background.start_lifetime_owner`等新標記，保存在native-capabilities-after.json；**當前server仍舊，不再重試Start**。官方[app-server文件](https://learn.chatgpt.com/docs/app-server)記載config/mcpServer/reload會重新讀設定並排入已載入thread的refresh；本聊天沒有可呼叫reload工具，未核實此client上EventGuard-only reload入口。沒有連proxy、改其他MCP、強停server或藉此建立排程。待client正常重新載入後核對`start_lifetime_owner=application`，才做一次有限真Start/Status/Stop；目前正式背景仍暫停，未宣稱已熱更新。
+
+文件檢查與當版source/commit綁定在同目錄document-check.json、source-commit.json；執行資料與完整回傳不提交。應用持有監看依賴server及祖先Job，意外退出未必保存回條；24小時soak、OS重啟／登入、閒置同一聊天事件觸發仍未驗證，目標不因本批局部修補宣告完成。
+
 ## 2026-10-23：本主聊天連續／批次與容量恢復的真工具接收
 
 程式基底`645d8d9ea8def504fd66b0cb16fcfd3850ea86c9`，同一feature，本批只更新文件，不改產品碼。沿用已批准的eventguard_test及`reports/chat-receive-001/operator`合成test佇列；未改MCP設定、正式live資料或日額帳本，未啟動額外Codex任務／模型、OS盤點、背景或排程。既有server載入世代沒有辨識，不宣稱本批熱更新或重驗新schema故障。

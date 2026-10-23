@@ -14,7 +14,7 @@ import sys
 import tempfile
 import threading
 import unittest
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 from eventguard.cli import main
 from eventguard.diagnostics.api import DiagnosticAPI
@@ -419,7 +419,7 @@ class OperatorMCPTests(unittest.IsolatedAsyncioTestCase):
             start.assert_not_called()
             self.assertTrue(set_enabled(self.root, True)["setting_saved"])
             self.assertEqual(self.unpack(await server.call_tool("start_monitor", {})), expected)
-            start.assert_called_once_with(self.root)
+            start.assert_called_once_with(self.root, lifetime_owner="application", child_owner=ANY)
             for args in ({"shell": "run"}, {"namespace": "test"}, {"enable_agent": True}):
                 with self.assertRaisesRegex(ValueError, "invalid_operator_tool_arguments"):
                     await server.call_tool("start_monitor", args)

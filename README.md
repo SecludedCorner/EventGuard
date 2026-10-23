@@ -76,6 +76,8 @@ py -3.13 -B scripts/eventguard.py stop
 
 GUI 的開始不需要建立排程；監看由應用持有，應用縮小後繼續運作。Status／Stop-EventGuard.cmd 仍可查看／耐久暫停。獨立 CLI background start 的生命週期契約保留，與 GUI 應用持有模式分開。終端預設文字，管線預設 JSON，可用 `--format text|json` 固定。
 
+新版正式 MCP 的 Start 同樣由應用持有，持續採集不呼叫模型；server退出時只收尾自己新啟動的監看，非獨立／重開機存活。先依[接線指南](docs/CONNECT_AGENT.md)核對已載入capability；本聊天舊server的Start失敗與恢復暫停如實保留於EVIDENCE，修改檔案不等於已熱更新。
+
 重開機後於同一使用者登入時恢復，使用 [背景監看契約](docs/BACKGROUND.md) 的低權限 ONLOGON 排程；建立／立即執行仍需批准。若啟動端受外部 Job 約束，回報 `independent_background_unverifiable`，不繞過它；排程可直接執行同步 host。前景除錯仍可用 `monitor`。
 
 `events list/inspect/diagnose/receive/ack/retry` 與報告操作見 [共用介面](docs/HUMAN_AGENT_INTERFACE.md)。inspect／sources 只讀保存觀察；diagnose 才執行事件綁定查詢。手動 stdio 需既有 MCP SDK及 client 明確連接；自動模式僅在另行啟用後使用單次 MCP 設定，不接續桌面聊天。

@@ -32,6 +32,16 @@ Runner 合併 stdout/stderr 最多保存 4 MiB，持續 drain 但明示超限；
 
 顯式注入的 fake Popen 保留舊合作式測試契約；沒有私有 Job 所有權就不強停。SDK 與 fake CLI 的測試程序由整套驗證的外層 Job 接住，不當作真 agent。
 
+## MCP 應用持有監看
+
+正式operator adapter明確選`OperatorAPI(background_lifetime_owner="application")`；CLI預設仍independent。Start沿用`background.start`及私有application Job，不經DesktopController、不恢復其自動agent選擇。capabilities明示owner與限制，status／launch_intent／後續run亦保留application lifetime。監看沒有固定期限，但依賴此MCP server及祖先Job存活，不能當成獨立、登出或重開機持續運作。
+
+只收下本API Start回呼的新child及run/generation/namespace/job/PID/建立時間，job名另與實際owned handle核對；回報already_running的他人host不收養。EOF先封鎖新Start，等已接受Start完成，再於控制鎖內比對原scope，換代不改新intent；寬限後只finish保留的自身Job，不走全域cleanup或PID強停。單純觀察者EOF不發Stop。
+
+有實際owned child收尾時，atomic/fsync更新固定有界`data/background/operator-stop-receipt.json`，保留scope、Stop與process回條、forced來源、退出及截斷。它不是每connection一檔、不覆寫新host的control／stop-receipt；同使用者可改寫，並非完整防竄改歷史。未知退出保留child與未確認結果；EOF／中斷收尾回條若顯示強停、退出未確認或保存失敗，server回exit2，不能宣稱clean退出。explicit Stop的強停顯示於工具回傳，不因此即時關閉server；意外被結束則未必來得及保存回條。成功空觀察者不覆寫此檔。
+
+本輪Windows SDK／合成fixture驗證與主聊天實測分開；舊server不會隨source檔案自動換版，實際Start被拒絕、恢復暫停及capability仍舊的證據見EVIDENCE。沒有為接線重試proxy、提權或安裝排程。
+
 ## monitor_gap
 
 `data/{live,test}/monitor-checkpoint.json` 保存前次 PID＋建立時間、instance、namespace、heartbeat 與停止狀態。啟動時先比對 checkpoint，再進行採集：

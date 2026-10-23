@@ -215,7 +215,8 @@ def status(root):
         control = _control(runtime)
         if control is not None:
             result.update(namespace=control["namespace"], desired_enabled=control["enabled"],
-                          desired_state="enabled" if control["enabled"] else "disabled")
+                          desired_state="enabled" if control["enabled"] else "disabled",
+                          control_generation=control["generation"])
         owner = _read(runtime, "owner.json")
         launch = _read(runtime, "launch.json")
         saved = _read(runtime, "run.json")
@@ -223,17 +224,30 @@ def status(root):
         if owner is None:
             return dict(result, state="enabled_not_running" if result["desired_enabled"] else "disabled",
                         reason=(saved or {}).get("reason", "no_recorded_host"))
+        if owner.get("lifetime_owner") == "application":
+            application_owner = owner.get("application_owner")
+            if (not isinstance(application_owner, dict) or type(application_owner.get("pid")) is not int
+                    or not 0 < application_owner["pid"] <= 2**32 - 1
+                    or _date(application_owner.get("created_at")) is None):
+                raise BackgroundError("application_owner_identity_unverifiable")
+            result.update(lifetime_owner="application", lifetime_limited=True,
+                          application_owner={key: application_owner[key] for key in ("pid", "created_at")})
         if owner.get("state") == "launch_intent":
             if not _token(owner.get("run_id")) or type(owner.get("job_name")) is not str or not JOB.fullmatch(owner["job_name"]):
                 raise BackgroundError("background_launch_unverifiable")
             job = _job_state(owner)
+            owner_view = {key: owner.get(key) for key in ("run_id", "namespace", "job_name", "session_id")}
+            if result.get("lifetime_owner") == "application":
+                owner_view.update(lifetime_owner="application", application_owner=result["application_owner"])
             return dict(result, state=("enabled_not_running" if result["desired_enabled"] else "stopped") if job["state"] == "exited_verified" else "unknown",
                         host_liveness=job["state"], job=job, reason=job["reason"], run_id=owner["run_id"],
-                        owner={key: owner.get(key) for key in ("run_id", "namespace", "job_name", "session_id")})
+                         owner=owner_view)
         if not _owner_valid(owner):
             raise BackgroundError("background_owner_unverifiable")
         result.update(run_id=owner["run_id"], owner={key: owner.get(key) for key in
             ("run_id", "pid", "created_at", "session_id", "namespace", "job_name")})
+        if owner.get("lifetime_owner") == "application":
+            result["owner"].update(lifetime_owner="application", application_owner=result["application_owner"])
         observed = processes.identity(owner["pid"])
         result["owner_observation"] = _identity_view(observed)
         matches = isinstance(observed, dict) and observed.get("state") == "alive" and observed.get("created_at") == owner["created_at"]
@@ -250,6 +264,8 @@ def status(root):
             if isinstance(saved, dict) and saved.get("run_id") == owner["run_id"]:
                 result["last_report"] = {key: saved.get(key) for key in
                     ("state", "reason", "heartbeat_at", "restart_count", "backoff_seconds", "next_retry_at", "monitor_state", "coverage_degraded", "queue_backpressure", "lifetime_owner", "parent_job_present")}
+                if owner.get("lifetime_owner") == "application":
+                    result["last_report"].update(lifetime_owner="application", lifetime_limited=True)
             phase = (saved or {}).get("state")
             state = "running" if result["desired_enabled"] and fresh and same_session else "stopping" if not result["desired_enabled"] else "unknown"
             if phase in {"backoff", "blocked", "stopping", "shutdown_unconfirmed"} and state == "running":
@@ -337,6 +353,13 @@ def start(root, *, resume=False, ready_timeout=20, fixture=None, max_cycles=None
                         "desired_enabled": True, "model_calls": 0, "child_exited": True if known else None,
                         "external_job_escape_attempted": False}
             if child_owner is not None:
+                # This trusted launch identity is captured before invoking the
+                # application owner. Never rediscover ownership from mutable
+                # status files, or adopt a different client's existing host.
+                child._eventguard_background_scope = {"kind": "eventguard-background-owned-launch-v1",
+                    "run_id": run_id, "control_generation": control["generation"],
+                    "job_name": job_name, "namespace": control["namespace"],
+                    "pid": child.pid, "created_at": child.created_at}
                 child_owner(child)
             launch.update(state="started", pid=child.pid, created_at=child.created_at)
             _write(runtime, "launch.json", launch)
@@ -435,12 +458,19 @@ def _verified_stop(runtime, current):
                 reason="owned_job_forcibly_terminated" if receipt.get("forcibly_terminated") else "background_exit_verified")
 
 
-def stop(root, *, grace_seconds=10, expected_namespace=None):
+def stop(root, *, grace_seconds=10, expected_namespace=None, expected_run_id=None,
+         expected_control_generation=None, expected_job_name=None):
     """Persist disabled first, cooperate, then terminate only a proven own Job."""
     if type(grace_seconds) not in (int, float) or not math.isfinite(grace_seconds) or not 0 <= grace_seconds <= 30:
         raise ValueError("invalid_background_stop_bounds")
     if expected_namespace is not None and (type(expected_namespace) is not str or expected_namespace not in {"live", "test"}):
         raise ValueError("invalid_background_stop_namespace")
+    expected = (expected_run_id, expected_control_generation, expected_job_name)
+    guarded_owner = any(value is not None for value in expected)
+    if guarded_owner and (expected_namespace is None or not _token(expected_run_id)
+            or not _token(expected_control_generation) or type(expected_job_name) is not str
+            or JOB.fullmatch(expected_job_name) is None):
+        raise ValueError("invalid_background_stop_owner")
     runtime = Runtime(root)
     disabled_written, scoped_owner, scoped_run = False, None, None
     try:
@@ -458,6 +488,24 @@ def stop(root, *, grace_seconds=10, expected_namespace=None):
                     invalid.replace(_path(runtime, "control-invalid.json"))
                 control = None
             current = status(root)
+            if guarded_owner:
+                recorded_owner, recorded_launch = _read(runtime, "owner.json"), _read(runtime, "launch.json")
+                if any(value is not None and not isinstance(value, dict) for value in (recorded_owner, recorded_launch)):
+                    return dict(current, state="blocked", reason="background_scope_unverifiable",
+                                process_terminated=False, disabled_persisted=False)
+                recorded = _selected_owner(recorded_owner, recorded_launch)
+                # Check the desired generation as well as the launch identity:
+                # Start writes enabled/generation before replacing launch.json.
+                # An old server's EOF must not disable that newer intent.
+                if (control is None or control["generation"] != expected_control_generation
+                        or control["namespace"] != expected_namespace
+                        or not isinstance(recorded, dict)
+                        or recorded.get("run_id") != expected_run_id
+                        or recorded.get("generation") != expected_control_generation
+                        or recorded.get("job_name") != expected_job_name
+                        or recorded.get("namespace") != expected_namespace):
+                    return dict(current, state="not_applicable", reason="background_owner_changed",
+                                process_terminated=False, disabled_persisted=False)
             if expected_namespace is not None:
                 if control is None:
                     return {"state": "blocked", "reason": "background_scope_unverifiable",
@@ -579,7 +627,9 @@ def serve(root, *, run_id=None, job_name=None, fixture=None, max_cycles=None):
                 "restart_count": 0, "backoff_seconds": 0, "next_retry_at": None, "monitor_state": None,
                 "coverage_degraded": None, "queue_backpressure": False, "model_calls": 0,
                 "parent_job_present": held.get("parent_job_present"),
-                "lifetime_owner": held.get("lifetime_owner", "private_job_keeper")}
+                "lifetime_owner": "application" if application_owner is not None else held.get("lifetime_owner", "private_job_keeper")}
+            if application_owner is not None:
+                run["lifetime_limited"] = True
             _write(runtime, "run.json", run)
             _write(runtime, "ready.json", {"kind": READY_KIND, "run_id": run_id, "generation": control["generation"],
                 "pid": held["pid"], "created_at": held["created_at"], "session_id": held["session_id"],

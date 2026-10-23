@@ -10,6 +10,8 @@
 
 本主聊天另以程式產生的合成事件驗單件／連續／batch、active inbox滿載及ACK前補收。真工具回傳、pending、同query、唯一回條及原設定復原皆通過獨立比對；詳見chat-delivery-003。產品source未變，不重跑前批全套、不藉驗收另啟模型。這補齊活動回合通路證據，仍保留下面長時／閒置／OS登入條件，沒有以局部成功宣告整個目標完成。
 
+本批實際驗正式Start，發現舊MCP錯走independent契約而被外部Job拒絕，未建立child；Stop已恢復原Pause。已改接現有application-owned核心，補多client換代／EOF只清自身Job與耐久退出回條，不啟動模型。當前聊天一次capabilities仍是舊server，需client正常重新載入後再驗Start；不把SDK fixture成功或前批全套升格成主聊天已更新。這是本輪可用性修補，不以proxy／排程作前提。
+
 - 沿用七來源、耐久事件、事件綁定查證與報告；不新增另一套控制器或事件佇列。
 - 正式MCP已在本主聊天載入15工具，實際呼叫capabilities／status／activity；前批只驗capabilities／status／activity；本輪另接收與ACK一件本輪新生真事件，未接管其餘backlog。GUI操作紀錄與工具共用同表，實際工具可讀到本輪操作；既有視窗是否已載入新版頁籤仍不推定。
 - 隔離合成入口由本主聊天實際list→receive→inspect→補收→ACK→重播ACK；核對SQLite只新增一張回條，保留ACK前pending證據。

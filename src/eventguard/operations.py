@@ -11,10 +11,11 @@ import html
 import json
 import re
 import sqlite3
+import threading
 import uuid
 
 from . import __version__
-from .runtime import Runtime, utc_now, read_json
+from .runtime import Runtime, utc_now, read_json, atomic_json
 from .events.store import EventStore, StoreError, event_payload_hash
 from .events.schema import validate_event
 from .diagnostics.review import event_view, review, validate_saved_review, row_view, event_guidance
@@ -356,11 +357,22 @@ def status(runtime):
 
 
 class OperatorAPI:
-    def __init__(self, root, diagnostic_api=None):
+    def __init__(self, root, diagnostic_api=None, *, background_lifetime_owner="independent"):
+        if type(background_lifetime_owner) is not str or background_lifetime_owner not in {"independent", "application"}:
+            raise ValueError("invalid_operator_background_lifetime")
         self.runtime = Runtime(root)
         # Explicit test injection only; synthetic input never instantiates a
         # native diagnostic implementation by itself.
         self.diagnostic_api = diagnostic_api
+        # An adapter may own the existing application-lifetime host. The CLI
+        # retains its independent launch contract. No desktop/agent automation
+        # controller is constructed or resumed by this application API.
+        self._background_lifetime_owner = background_lifetime_owner
+        self._background_owner_lock = threading.RLock()
+        self._background_owner_closed = threading.Event()
+        self._background_children = []
+        self._background_receipts = []
+        self._background_shutdown_result = None
 
     def call(self, operation, *args, **kwargs):
         """Shared public error envelope: never forward an OS exception/path."""
@@ -387,6 +399,10 @@ class OperatorAPI:
                 "agent_required": False, "data_trust": "untrusted_data",
                 "background": {"entry": "scripts/eventguard.py background", "model_required": False,
                     "daily_monitor_limit": None, "duration_limit": None,
+                    "start_lifetime_owner": self._background_lifetime_owner,
+                    "lifetime_limited": True if self._background_lifetime_owner == "application" else None,
+                    "lifetime_scope": "owning_application_process" if self._background_lifetime_owner == "application" else "independent_host_if_verified",
+                    "owner_exit_stops_monitor": self._background_lifetime_owner == "application",
                     "scheduler_installation_requires_separate_approval": True,
                     "automatic_resume": "current_user_logon_after_approved_task_install",
                     "manual_stop_is_durable": True, "before_logon_monitoring": False},
@@ -530,14 +546,157 @@ class OperatorAPI:
 
     def background_start(self):
         from .background import start
-        return start(self.runtime.root)
+        if self._background_lifetime_owner == "independent":
+            return start(self.runtime.root)
+        if self._background_owner_closed.is_set():
+            return {"state": "blocked", "reason": "operator_monitor_owner_closed", "model_calls": 0}
+        with self._background_owner_lock:
+            if self._background_owner_closed.is_set():
+                return {"state": "blocked", "reason": "operator_monitor_owner_closed", "model_calls": 0}
+            self._release_exited_monitor_children()
+            return start(self.runtime.root, lifetime_owner="application", child_owner=self._own_monitor_child)
+
+    def _own_monitor_child(self, child):
+        """Capture only a child created by our start, never a saved existing host."""
+        scope = getattr(child, "_eventguard_background_scope", None)
+        if (not isinstance(scope, dict) or scope.get("kind") != "eventguard-background-owned-launch-v1"
+                or type(scope.get("run_id")) is not str or re.fullmatch(r"[a-f0-9]{32}", scope["run_id"]) is None
+                or type(scope.get("control_generation")) is not str
+                or re.fullmatch(r"[a-f0-9]{32}", scope["control_generation"]) is None
+                or type(scope.get("job_name")) is not str
+                or re.fullmatch(r"Global\\EventGuard-[a-f0-9]{32}", scope["job_name"]) is None
+                or scope["job_name"] != getattr(getattr(child, "job", None), "name", None)
+                or scope.get("namespace") not in {"live", "test"}
+                or scope.get("pid") != child.pid or scope.get("created_at") != child.created_at):
+            # Retain the actual fresh child even if its launch evidence cannot
+            # be used to change shared intent. Cleanup still owns its Job.
+            scope = None
+        with self._background_owner_lock:
+            self._background_children.append({"child": child, "scope": dict(scope) if scope is not None else None})
+
+    @staticmethod
+    def _monitor_child_exited(receipt):
+        return (isinstance(receipt, dict) and receipt.get("child_exited") is True
+                and type(receipt.get("remaining_owned_processes")) is int
+                and receipt["remaining_owned_processes"] == 0)
+
+    def _release_exited_monitor_children(self):
+        """Release handles only after both process and private Job are empty."""
+        from . import processes
+        remaining = []
+        for record in self._background_children:
+            child = record["child"]
+            try:
+                if child.poll() is None or child.job.active() != 0:
+                    remaining.append(record)
+                    continue
+                receipt = processes.finish(child, "cancelled", grace=0, request_stop=False)
+                if self._monitor_child_exited(receipt):
+                    self._background_receipts.append(receipt)
+                else:
+                    remaining.append(record)
+            except (OSError, ValueError, TypeError, RuntimeError):
+                remaining.append(record)
+        self._background_children = remaining
+        self._background_receipts = self._background_receipts[-32:]
+
+    def close_owned_monitor(self, grace_seconds=5):
+        """EOF cleanup: fence admission, then stop only this API's captured hosts.
+
+        This is adapter lifecycle, deliberately absent from public operations.
+        A different client's newer intent is never disabled. The retained real
+        child/Job remains our only force-cleanup authority after the grace.
+        """
+        if type(grace_seconds) not in (int, float) or not 0 <= grace_seconds <= 30:
+            raise ValueError("invalid_operator_monitor_close_grace")
+        from . import background, processes
+        # Fence even callers waiting for the ownership lock. An already
+        # accepted Start completes under that lock and is included below.
+        self._background_owner_closed.set()
+        with self._background_owner_lock:
+            if not self._background_children and self._background_shutdown_result is not None:
+                return self._background_shutdown_result
+            results, remaining = [], []
+            for record in self._background_children:
+                child, scope = record["child"], record["scope"]
+                stopped = None
+                if scope is not None:
+                    try:
+                        stopped = background.stop(self.runtime.root, grace_seconds=grace_seconds,
+                            expected_namespace=scope["namespace"], expected_run_id=scope["run_id"],
+                            expected_control_generation=scope["control_generation"], expected_job_name=scope["job_name"])
+                    except (OSError, ValueError, TypeError, RuntimeError):
+                        stopped = {"state": "shutdown_unconfirmed", "reason": "operator_owned_stop_unconfirmed",
+                                   "raw_error_omitted": True}
+                if ((stopped or {}).get("process") or {}).get("forcibly_terminated") is True:
+                    record["forced_process"] = stopped["process"]
+                try:
+                    receipt = processes.finish(child, "cancelled", grace=grace_seconds, request_stop=False)
+                    if receipt.get("forcibly_terminated") is True:
+                        record["forced_process"] = receipt
+                    confirmed = self._monitor_child_exited(receipt)
+                    results.append({"scope": scope, "stop": stopped, "process": receipt,
+                                    "forced_process": record.get("forced_process")})
+                    if confirmed:
+                        self._background_receipts.append(receipt)
+                    else:
+                        remaining.append(record)
+                except (OSError, ValueError, TypeError, RuntimeError):
+                    remaining.append(record)
+                    results.append({"scope": scope, "stop": stopped, "child_exited": None,
+                                    "forced_process": record.get("forced_process"),
+                                    "reason": "operator_owned_monitor_cleanup_unconfirmed", "raw_error_omitted": True})
+            self._background_children = remaining
+            self._background_receipts = self._background_receipts[-32:]
+            forced = any((item.get("process") or {}).get("forcibly_terminated") is True
+                         or ((item.get("stop") or {}).get("process") or {}).get("forcibly_terminated") is True
+                         or item.get("forced_process") is not None
+                         for item in results)
+            evidence_saved = None
+            if results:
+                # One bounded last receipt for this installation, never one
+                # file per MCP connection and never the new host's control or
+                # stop receipt. Empty observers cannot overwrite this proof.
+                entries = []
+                for item in results[-32:]:
+                    stopped = item.get("stop") or {}
+                    entries.append({"scope": item["scope"], "process": item.get("process"),
+                        "forced_process": item.get("forced_process"),
+                        "stop": {key: stopped[key] for key in ("state", "reason", "desired_enabled", "disabled_persisted", "process") if key in stopped},
+                        "reason": item.get("reason"), "child_exited": item.get("child_exited")})
+                try:
+                    atomic_json(self.runtime.path("data/background/operator-stop-receipt.json"),
+                        {"kind": "eventguard-operator-monitor-shutdown-v1", "recorded_at": utc_now(),
+                         "child_exited": not remaining, "forcibly_terminated": forced,
+                         "results": entries, "truncated": len(results) > len(entries)}, 128 * 1024)
+                    evidence_saved = True
+                except (OSError, ValueError, TypeError, RuntimeError):
+                    evidence_saved = False
+            self._background_shutdown_result = {"state": "shutdown_unconfirmed" if remaining else "closed", "child_exited": not remaining,
+                    "owned_monitors_remaining": len(remaining), "owned_monitor_results": results,
+                    "forcibly_terminated": forced, "evidence_saved": evidence_saved,
+                    "evidence_write_failed": evidence_saved is False,
+                    "lifetime_owner": self._background_lifetime_owner,
+                    "lifetime_limited": self._background_lifetime_owner == "application", "model_calls": 0}
+            return self._background_shutdown_result
 
     def background_status(self):
         return _background_status(self.runtime)
 
     def background_stop(self, grace_seconds=10, *, expected_namespace=None):
         from .background import stop
-        return stop(self.runtime.root, grace_seconds=grace_seconds, expected_namespace=expected_namespace)
+        result = stop(self.runtime.root, grace_seconds=grace_seconds, expected_namespace=expected_namespace)
+        if self._background_lifetime_owner == "application":
+            with self._background_owner_lock:
+                process = result.get("process") or {}
+                if process.get("forcibly_terminated") is True:
+                    for record in self._background_children:
+                        child = record["child"]
+                        if (process.get("job_name") == child.job.name and process.get("pid") == child.pid
+                                and process.get("created_at") == child.created_at):
+                            record["forced_process"] = process
+                self._release_exited_monitor_children()
+        return result
 
     def monitor(self, **kwargs):
         from .monitor import Monitor

@@ -94,6 +94,8 @@ python -B scripts/eventguard_inbox_mcp.py --operator-root . --namespace test
 
 operator的多個stdio client不持有終身exclusive鎖。MCP狀態變更操作以短期lease序列化，忙碌明示`operator_operation_busy`且不開始、不自動重試；讀取與Stop不經該鎖。SQLite／QueueInbox／背景核心仍保留自己的交易與ownership，這不是所有GUI/CLI動作共用的一筆全域交易。scoped Stop在控制鎖內核對namespace，綁原instance/run與Job；換代後回busy，不能追停新owner。無效instance ID不得退化為global Stop。人類未指定scope的全域暫停行為保留；legacy單事件stdio仍只有一個owner。
 
+operator MCP的`start_monitor`選用既有application-owned核心，與CLI預設independent生命週期分開；capabilities明示`start_lifetime_owner=application`及`owner_exit_stops_monitor=true`。不限制採集時長、不啟動模型；server／祖先Job退出也會停止自身監看，不能宣稱重開機持續。EOF只收尾本API新啟動並保留handle的Job，以原run/generation/namespace/job守衛避免停錯新owner；已有其他client監看只返回already_running，不收養。收尾回條及失敗exit2見[生命週期](PROCESS_LIFECYCLE.md)，重新載入及本聊天實測限制見[接線](CONNECT_AGENT.md)。
+
 完整operator adapter共有15個工具（含activity）。`start_monitor`只呼叫現有背景核心；`stop`已能對該scope耐久暫停，不另建第二套控制器。開始不啟用自動agent、不初始化模型預算、不建立排程。既有背景Job／owner限制仍有效；若回blocked，不能宣稱已開始或繞過限制。test launcher的start_monitor固定拒絕，不能因連合成佇列而啟動正式採集。
 
 目前使用者已批准EventGuard正式MCP方向，要求所有操作在EventGuard看得到。實際註冊、工具載入與呼叫結果仍須核對STATUS；程式有15工具不等於client已載入。共享operator每次操作寫入[操作紀錄](ACTIVITY.md)，不把工具輸出當成授權。

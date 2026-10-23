@@ -58,17 +58,26 @@ def _sdk_server(name, validate):
             # Own that lifetime, as in the existing synthetic server. Active
             # tools finish before this scope returns; native worker jobs have
             # their own bounded stop and exit evidence.
-            async with stdio_server() as (incoming, outgoing):
-                sender, receiver = anyio.create_memory_object_stream(0)
-                async with anyio.create_task_group() as tasks:
-                    tasks.start_soon(self._mcp_server.run, receiver, outgoing,
-                                     self._mcp_server.create_initialization_options())
-                    try:
-                        async with sender:
-                            async for message in incoming:
-                                await sender.send(message)
-                    finally:
-                        tasks.cancel_scope.cancel()
+            try:
+                async with stdio_server() as (incoming, outgoing):
+                    sender, receiver = anyio.create_memory_object_stream(0)
+                    async with anyio.create_task_group() as tasks:
+                        tasks.start_soon(self._mcp_server.run, receiver, outgoing,
+                                         self._mcp_server.create_initialization_options())
+                        try:
+                            async with sender:
+                                async for message in incoming:
+                                    await sender.send(message)
+                        finally:
+                            tasks.cancel_scope.cancel()
+            finally:
+                # The application owner fences new Start calls and waits for
+                # any accepted Start before its bounded, own-Job-only cleanup.
+                # Never use a global Stop on EOF: another client may now own
+                # this root, while an idle server owns no monitor at all.
+                cleanup = getattr(self, "shutdown_owned_monitor", None)
+                if cleanup is not None:
+                    self._owned_monitor_shutdown = cleanup()
 
     return InboxMCP(name)
 
@@ -127,7 +136,7 @@ def build_operator_server(root, namespace="test", allow_live=False, operator_api
     from eventguard.operations import OperatorAPI
     if namespace not in {"live", "test"} or type(allow_live) is not bool or namespace == "live" and not allow_live:
         raise ValueError("operator_live_scope_not_authorized")
-    api = operator_api or OperatorAPI(root)
+    api = operator_api or OperatorAPI(root, background_lifetime_owner="application")
     def call(operation, *args, **kwargs):
         def execute():
             if operation != "capabilities":
@@ -168,6 +177,7 @@ def build_operator_server(root, namespace="test", allow_live=False, operator_api
         if "limit" in arguments and (type(arguments["limit"]) is not int or not 1 <= arguments["limit"] <= (256 if name=="activity" else 200 if name=="observation" else 1000)):
             raise ValueError("invalid_operator_tool_arguments")
     server = _sdk_server("EventGuard Shared Local Operator", validate)
+    server.shutdown_owned_monitor = api.close_owned_monitor
 
     @server.tool()
     def capabilities() -> dict:
@@ -201,11 +211,14 @@ def build_operator_server(root, namespace="test", allow_live=False, operator_api
 
     @server.tool()
     def start_monitor() -> dict:
-        """Start persistent read-only collection through the existing background core.
+        """Start application-owned read-only collection through the existing core.
 
         Live launcher scope and receive permission are required. Never enables
         agent automation, changes scheduling or starts a model. Core ownership
         restrictions still apply; a blocked start is not a running monitor.
+        No fixed duration limit while this MCP server and its ancestor Jobs
+        remain alive. Disconnect/exit stops only this server's own monitor;
+        this does not provide independent or reboot-persistent execution.
         """
         return call("background_start")
 
@@ -293,13 +306,30 @@ def main(argv=None):
             print("EventGuard: this inbox state already has an active stdio owner.", file=sys.stderr)
             return 3
         try:
-            # EOF stops new requests; already-started operations finish
-            # naturally. There is no model wait or forced process cleanup.
+            # EOF stops new requests. Owned monitors cooperate first, with
+            # bounded private-Job-only cleanup and explicit exit evidence.
             server.run(transport="stdio")
+            shutdown = getattr(server, "_owned_monitor_shutdown", None)
+            if shutdown is not None and (shutdown.get("child_exited") is not True
+                    or shutdown.get("forcibly_terminated") is True or shutdown.get("evidence_write_failed") is True):
+                print("EventGuard: owned monitor shutdown was not cleanly verified.", file=sys.stderr)
+                return 2
         finally:
             if owner is not None:
                 owner.release()
     except KeyboardInterrupt:
+        cleanup = getattr(server, "shutdown_owned_monitor", None)
+        if cleanup is not None:
+            try:
+                shutdown = cleanup()
+                server._owned_monitor_shutdown = shutdown
+                if (shutdown.get("child_exited") is not True or shutdown.get("forcibly_terminated") is True
+                        or shutdown.get("evidence_write_failed") is True):
+                    print("EventGuard: owned monitor shutdown was not cleanly verified.", file=sys.stderr)
+                    return 2
+            except (OSError, ValueError, TypeError, RuntimeError, KeyboardInterrupt):
+                print("EventGuard: owned monitor shutdown remains unconfirmed.", file=sys.stderr)
+                return 2
         return 0
     except Exception:
         print("EventGuard: bound inbox stdio stopped with an error.", file=sys.stderr)

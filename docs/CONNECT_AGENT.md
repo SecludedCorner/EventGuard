@@ -121,6 +121,10 @@ required = true
 
 由client載入後，先核對**這個聊天**的工具清單，再呼叫正式`status`、`activity`，確認GUI操作紀錄出現相同操作。不要用子agent的工具清單、SDK測試或舊eventguard_test成功代替主聊天接通。正式事件receive／ACK應只在明確處理該事件時操作；ACK不是漏洞修補或案件結束。
 
+新版`start_monitor`使用既有application-owned背景核心；`capabilities.background.start_lifetime_owner`應為`application`，`owner_exit_stops_monitor=true`。沒有固定監看期限，不呼叫模型、不恢復GUI保存的自動agent選擇。正常EOF只收尾自己新啟動的monitor；監看受MCP server及祖先Job生命週期限制，意外退出未必來得及保存收尾回條。其他client的既有host不被收養；EOF遇到新run/generation不改其控制。這不是獨立程序或重開機存活，CLI的independent契約保留。退出證據見[生命週期](PROCESS_LIFECYCLE.md)。
+
+如果工具名稱存在但上面capability缺失，表示當前server尚未載入這版；不要重試Start、刪鎖或強停。2026-10-23本聊天真Start曾回`independent_background_unverifiable`且沒有child，已Stop恢復暫停；修改後一次capabilities仍舊。需由client正常重新載入EventGuard MCP後再核對並做一次有限Start/Status/Stop；當前聊天沒有reload工具，不能宣稱已熱更新，也不因此註冊排程／重試proxy。精確實測見EVIDENCE。
+
 2026-10-23本主聊天已實際呼叫正式capabilities／status／activity，後者讀到相同操作；其後於`reports/security-core-001`完成一次真七來源採集及一件該輪真事件的inspect／diagnose／receive／ACK，沒有接管其餘正式backlog。最早工具回傳留`reports/goal-center-001`，新結果與限制統一見EVIDENCE。這證明本聊天工具可用，仍不是閒置喚醒或GUI／MCP畫面已熱更新的證據。
 
 operator允許多個client同時連接。狀態變更工具共用短期`operator-mutation.lock`；忙碌回`operator_operation_busy`、`operation_started=false`，不自動重試。讀取與Stop不等這把鎖；Stop重新核對namespace及原owner/run，換代回busy，不停止新owner。若操作可能已完成但回條失敗，回`operation_may_have_completed=true`，先查事件／操作紀錄，不能直接重做。舊事件綁定adapter的`inbox-owner.lock`仍維持單owner。
