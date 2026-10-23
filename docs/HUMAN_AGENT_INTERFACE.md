@@ -39,6 +39,8 @@ py -3.13 -B scripts/eventguard.py report export --namespace test
 
 `receive` 先以共用 QueueInbox 保存最小 snapshot/query，回傳同 event/query ID，但事件仍 pending；`ack` 才產生一次耐久回條，重複 ACK 不新增回條。`retry` 僅明確重試單一 failed outbox，不清每日預算或來源三次上限，也不啟動模型。ACK 是「收到」，與診斷、處置及案件結束分開。
 
+重播 ACK 必須是相同 event／query／decision，且既有 inbox 與來源回條可互相驗證，才回 ack_replay_verified=true；驗證只讀，不重建或寫入接收資料。錯 query 回 same_event_query_required，換 decision 回 inbox_result_decision_conflict；既有證據缺失／已輪替回 ack_replay_evidence_unavailable，來源回條衝突回 outbox_ack_identity_conflict。事件已 ACK 仍可唯讀 receive 顯示 already_received，這不代表任何輸入 query 都有效。
+
 `status.last_report`（相容欄位 `health`）是歷史回報；`current_monitor` 才是當次單一 owner PID+建立時間與 heartbeat 的核對，沒有獨立 watchdog。`source_coverage` 分開顯示保存狀態與 freshness；future/stale/缺資料為 unknown。每個 namespace 的 DB 故障各自呈現，不以零筆冒充成功。`agent_budget` 顯示同安裝[耐久預算](AGENT_BUDGET.md)及阻塞原因，不初始化帳本。報告顯示 total/exported/truncated/limit，最多輸出 1,000 筆保存事件，不能把匯出數當總數。
 
 一般權限的實際監看仍由人類明確啟動前景程序，另一終端可查狀態或合作停止：

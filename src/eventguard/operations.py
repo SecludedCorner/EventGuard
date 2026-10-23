@@ -575,7 +575,30 @@ class OperatorAPI:
             raise ValueError("invalid_event_receipt_request")
         event = self._event(event_id, namespace)
         if event["delivery_status"] == "ack":
-            return self._already_received(event, namespace)
+            # An existing source ACK proves receipt, not that this caller's
+            # query/decision is its retained receipt. Never reconstruct missing
+            # inbox evidence or write a second receipt while checking a replay.
+            from .queue_inbox import QueueInbox, QueueInboxError
+            source = self.runtime.data_dir(namespace, create=False)
+            state = self.runtime.path("data/agent-delivery" if namespace == "live" else "data/agent-delivery-test")
+            try:
+                inbox = QueueInbox.open_readonly(source, state, event_id, allow_live=namespace == "live")
+            except QueueInboxError as error:
+                if error.args and error.args[0] in {"existing_inbox_state_required", "existing_inbox_policy_required"}:
+                    raise QueueInboxError("ack_replay_evidence_unavailable") from None
+                raise
+            evidence = inbox.evidence(event_id)
+            if evidence is None or "query_id" not in evidence or "result" not in evidence:
+                raise QueueInboxError("ack_replay_evidence_unavailable")
+            if evidence["query_id"] != query_id:
+                raise QueueInboxError("same_event_query_required")
+            if evidence["result"]["decision"] != decision:
+                raise QueueInboxError("inbox_result_decision_conflict")
+            if not inbox.acknowledged(event_id):
+                raise QueueInboxError("ack_replay_evidence_unavailable")
+            return {**self._already_received(event, namespace), "query_id": query_id,
+                    "decision": decision, "result_id": evidence["result"]["result_id"],
+                    "ack_replay_verified": True}
         inbox = self._operator_inbox(event_id, namespace)
         result = inbox.ack_event(event_id, query_id, decision)
         return {**result, "namespace": namespace, "ack_semantics": "received_only_not_case_closed",

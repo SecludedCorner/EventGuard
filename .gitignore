@@ -11,6 +11,7 @@ reports/
 *.tmp
 
 # Local settings, credentials and private key material are never source inputs.
+.codex/
 .env
 .env.*
 !.env.example

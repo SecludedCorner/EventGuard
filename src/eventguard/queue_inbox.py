@@ -104,9 +104,12 @@ def _validate_snapshot(snapshot, identity):
 
 
 class QueueInbox:
-    def __init__(self, source_dir, state_dir, event_id=None, allow_live=False, limits=None):
+    def __init__(self, source_dir, state_dir, event_id=None, allow_live=False, limits=None, *, read_only=False):
         if type(allow_live) is not bool:
             raise QueueInboxError("invalid_live_profile")
+        if type(read_only) is not bool:
+            raise QueueInboxError("invalid_inbox_read_only_profile")
+        self._read_only = read_only
         self.source_dir = _guard(source_dir)
         self.source_path = _guard(self.source_dir / "eventguard.sqlite3")
         if not self.source_path.is_file():
@@ -117,13 +120,29 @@ class QueueInbox:
         self.event_id = _identifier(event_id) if event_id is not None else None
         self.allow_live = allow_live
         self._store = None
-        self.state_dir.mkdir(parents=True, exist_ok=True)
+        if read_only:
+            if not self.state_dir.is_dir():
+                raise QueueInboxError("existing_inbox_state_required")
+        else:
+            self.state_dir.mkdir(parents=True, exist_ok=True)
         self.marker_path = _guard(self.state_dir / "inbox-state.json")
         self.policy_path = _guard(self.state_dir / "inbox-limits.json")
         marker = {"kind": KIND, "source_key": _digest(os.path.normcase(str(self.source_dir))),
                   "allow_live": allow_live, "projection": "fixed-minimal-v1"}
         with _REGISTRY_LOCK:
             self._lock = _LOCKS.setdefault(os.path.normcase(str(self.state_dir)), threading.RLock())
+        if read_only:
+            existing = self._read_json(self.marker_path)
+            if existing is None:
+                raise QueueInboxError("existing_inbox_state_required")
+            if existing != marker:
+                raise QueueInboxError("inbox_source_profile_conflict")
+            previous = self._read_json(self.policy_path)
+            if previous is None:
+                raise QueueInboxError("existing_inbox_policy_required")
+            from .storage_policy import limits as validated
+            self.policy = validated("inbox", previous)
+            return
         with self._mutation():
             existing = self._read_json(self.marker_path)
             if existing is None:
@@ -140,8 +159,15 @@ class QueueInbox:
                 from .runtime import atomic_json
                 atomic_json(self.policy_path, self.policy, MAX_RECORD_BYTES)
 
+    @classmethod
+    def open_readonly(cls, source_dir, state_dir, event_id=None, allow_live=False):
+        """Read retained receipt evidence without creating state or changing policy."""
+        return cls(source_dir, state_dir, event_id, allow_live, read_only=True)
+
     @contextmanager
     def _mutation(self):
+        if self._read_only:
+            raise QueueInboxError("inbox_read_only")
         from .acceptance_control import FileLease
         with self._lock:
             lease = FileLease(self.state_dir / "inbox-mutation.lock")
@@ -241,6 +267,8 @@ class QueueInbox:
     @property
     def store(self):
         """Only called by the ACK path; polling never initializes/writes SQLite."""
+        if self._read_only:
+            raise QueueInboxError("inbox_read_only")
         if self._store is None:
             try:
                 self._store = EventStore(self.source_dir)
@@ -310,6 +338,8 @@ class QueueInbox:
 
     def _immutable(self, path, value):
         """Fsync then atomic no-replace link; existing records are immutable."""
+        if self._read_only:
+            raise QueueInboxError("inbox_read_only")
         temporary = None
         try:
             encoded = _bytes(value)

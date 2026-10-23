@@ -1,6 +1,12 @@
 # EventGuard 接手
 
-先讀 AGENTS、README、STATUS、docs/GUI.md、docs/EVIDENCE.md、docs/BACKGROUND.md。核對cwd/branch/HEAD/未提交變更，保留接續，不reset/clean。本批基底32f9975182e189ad3b9723d8df78e3db022cdd4e，同一feature集中提交、不推送；原有docs/research/排除。
+先讀 AGENTS、README、STATUS、docs/GUI.md、docs/EVIDENCE.md、docs/BACKGROUND.md。核對cwd/branch/HEAD/未提交變更，保留接續，不reset/clean。本批基底d46236fdd20d59ff4c9ff1c7c7091bfd497f484d，同一feature集中提交、不推送；原有docs/research/排除。
+
+最新工作：本聊天透過命令工具實際接收一件程式合成事件、讀inspect、補收同event/query、明確ACK一次。找到ACKed事件對錯query／換decision誤回already_received，已改為唯讀驗既有query/result及實際來源回條；證據缺失不重建或猜成功。相同三元組才ack_replay_verified。相關模組驗證與原始操作在reports/chat-receive-001，數字只看EVIDENCE。
+
+使用者已明確批准「限定的專案MCP接線」：.codex/config.toml僅eventguard_test，指向本輪隔離operator root與test namespace，只開list_events／inspect_event／receive_event／ack_event。不含正式事件、不改其他設定、不啟動模型；.codex已忽略不提交。本聊天尚無這四個原生工具，不能因設定已寫或stdio有owner就宣稱接通；已請使用者在設定→MCP servers按Restart。新合成事件保持pending且尚未透過原生工具接收，不事先把eventID／內容寫進prompt。重載後先核對工具、list→receive→inspect→核對pending→ACK同event/query，保存實際回傳；不可使用舊模擬或SDK測試替代。stdio owner busy時不強停或刪鎖繞過。
+
+上游研究已補讀最新654dd716的完整25引擎catalog/plans/registry/launcher/adapter，及25個上游各README＋代表入口；不是所有repo逐行安全審計。見docs/SCANNER_ENGINES.md與SCANNER_RUNTIME_REVIEW.md；沒有安裝／執行掃描器。候選輸出超量提早停止仍未實作，勿干擾接收主線。
 
 本批已依使用者指定研究 ai-security-scanner，兩個子agent分讀架構／UX，概念獨立實作後統一驗證。gui_presenter 提供人類摘要／原始JSON展開、當前最多100件本地篩選與完整性提示；observed_at修正。collector對非物件壞列留固定原因／計數及合法siblings，partial不清baseline或判恢復。研究固定commit、採納依據與未採納範圍見docs/SCANNER_LESSONS.md。命令與結果只讀EVIDENCE；不執行上游掃描器、不新增依賴。
 

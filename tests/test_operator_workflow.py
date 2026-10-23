@@ -225,9 +225,12 @@ class OperatorWorkflowTests(unittest.TestCase):
             self.assertEqual(acknowledged["decision"], "needs_more_evidence")
             self.assertEqual(store.stats()["receipt_count"], 1)
             before = store.path.read_bytes()
-            repeated = self.api.ack_event(event["event_id"], received["query_id"], "reviewed_metadata", "test")
+            repeated = self.api.ack_event(event["event_id"], received["query_id"], "needs_more_evidence", "test")
             self.assertEqual(repeated["status"], "already_received")
             self.assertFalse(repeated["new_receipt_created"])
+            self.assertTrue(repeated["ack_replay_verified"])
+            changed = self.api.call("ack_event", event["event_id"], received["query_id"], "reviewed_metadata", "test")
+            self.assertEqual((changed["status"], changed["reason"]), ("blocked", "inbox_result_decision_conflict"))
             self.assertEqual(store.path.read_bytes(), before)
             self.assertEqual(self.api.receive_event(event["event_id"], "test")["status"], "already_received")
 

@@ -2,6 +2,26 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：本聊天手動接收、ACK修正與限定MCP接線
+
+基底 `d46236fdd20d59ff4c9ff1c7c7091bfd497f484d`，同一feature。本聊天開始時與設定加入後均查可用工具，EventGuard專用工具數為0；正式接收開關唯讀結果為enabled_waiting_receiver／receiver_verified=false。使用者要求實際接收，故以本聊天命令工具呼叫既有OperatorAPI；沒有啟動額外Codex／模型、Windows採集、真事件ACK或新的監看。這是正在回應的agent手動讀取實際工具回傳，**不是原生MCP已載入或閒置聊天被事件喚醒**。
+
+命令 `py -3.13 -B reports/chat_receive_probe.py setup` exit0：程式在全新隔離root生成1件公開合成事件，不預先回傳其ID／內容。接著 `receive-next` 實際讀到event及query，`inspect EVENT_ID`讀到保存的TCP／port／綁定與process_binding_missing；`state`確認pending／receipt0。第二次receive收到相同event/query；本聊天明確 `ack EVENT_ID QUERY_ID reviewed_metadata` 後來源ack且SQLite receipt恰1。生成／唯一接收／查證／ACK集合相同，預期補收1次，沒有缺漏或重複回條。原始生成manifest、逐次時間／實際回傳與SQLite留 `reports/chat-receive-001/`；ID不抄入公開文件。
+
+實測發現舊API在已ACK時接受query-wrong／不同decision並回already_received，未新增回條但誤稱請求已匹配。修正為QueueInbox.open_readonly：只驗既有marker/policy、query/result與來源實際receipt，不mkdir、建立snapshot或再次ACK。相同event/query/decision回ack_replay_verified=true；錯query回same_event_query_required，改decision回inbox_result_decision_conflict，缺失／已輪替回ack_replay_evidence_unavailable，receipt衝突回outbox_ack_identity_conflict。修正後在同一事件上實際重試均得到上述預期結果，receipt保持1；測試另覆蓋位元組不變、其他receiver、輪替、缺policy及唯讀物件所有寫入拒絕。原workflow固化「改decision仍成功」的預期已同步修正。
+
+**本批驗證數字唯一來源**：`reports/chat-receive-001/selected-001/verification-summary.json`。命令 `py -3.13 -B reports/chat-receive-001/verify_selected.py`，重用既有verify.worker／私有Job guardian，明確選operator_api、operator_workflow、operator_status、queue_inbox、storage_retention、agent_access六個受影響模組；Python **3.13.3**，2026-10-23T04:43:53.761109+00:00：**108/108通過、0 failure/error/skip、122 AST**，33.625秒，exit **0**。source_unchanged/passed_checks=true、per_test_residuals=[]，guardian自然exit0、remaining0、未強停。這是局部合成／SDK／SQLite契約，不稱新完整suite；前批完整結果保留歷史，不累加。
+
+使用者明確批准後，命令 `py -3.13 -B reports/chat-receive-001/install_project_mcp.py` exit0，新建專案 `.codex/config.toml` 的eventguard_test；只連本輪合成operator root、test namespace與四個list／inspect／receive／ACK工具，沒有全域設定或其他MCP變更。設定digest與安裝回條留project-mcp-installed.json；`.codex/`已加入Git忽略，不提交本機設定。`emit-mcp`另生成1件新合成事件並保留pending，未向本聊天透露ID／內容或ACK，供用戶端重載後驗收。
+
+原生聊天MCP仍為**blocked／待用戶端重載**。依 [OpenAI官方MCP設定](https://learn.chatgpt.com/docs/extend/mcp?surface=cli) 已請使用者在設定→MCP servers對eventguard_test按Restart；沒有能力在本聊天自行重載工具清單，也沒有把命令工具當原生MCP。首個stdio readiness輔助程式已收tools/list，但收尾誤用非白名單reason而例外，無有效退出回條，不宣稱通過；stderr保留。修正輔助程式後第二次server回 `this inbox state already has an active stdio owner`、exit3／child_exited=true／remaining0／未強停；沒有辨識該owner來源，也沒有終止、刪鎖或換state繞過。保留mcp-ready-002 stderr、transcript與exit；不能以這些結果聲稱原生工具接收成功。
+
+## 2026-10-23：補讀25引擎與各真上游repo
+
+兩個子agent補讀主repo最新固定 `654dd7165112c38da4e7bf894fdccb9a251d2c1d`，含完整tree（未截斷）、catalog、25個plans、registry、launcher/adapter及執行邊界；並逐一讀25個真上游固定source_revision的README與代表CLI入口／manifest（最多前180行）。[引擎表](SCANNER_ENGINES.md)逐項列用途／輸入／命令／依賴／網路／輸出與pinned程式來源；[runtime研究](SCANNER_RUNTIME_REVIEW.md)列可採納與不可照搬機制。`reports/scanner-engines-001/catalog-review.json`核對25個unique引擎／repo／README／代表檔、13網路／12離線、執行數0；不擴查其餘69筆來源依賴、不宣稱25個repo完整安全審計。前輪僅UI及部分adapter的閱讀範圍不回溯升格。
+
+本輪沒有安裝／執行25引擎、下載binary／容器、測模型或外掃目標。新增文件的相對連結／固定來源檢查與本地來源綁定回條留reports；後續超量輸出提早停止只是候選，未實作或列作驗收成功。私人資料、runtime、完整會話及原有docs/research均保留不提交；不推送或觸發CI。
+
 ## 2026-10-23：研究 ai-security-scanner 並直接採納
 
 基底 `32f9975182e189ad3b9723d8df78e3db022cdd4e`，同一feature。兩個子agent分別讀採集與結果介面，固定公開commit `46b7d1900fc25ef8ae4e4b568b638c915f28d130`；主線另核對README、LICENSE、adapter及混合壞列測試、篩選與技術展開程式。來源及取捨見 [SCANNER_LESSONS](SCANNER_LESSONS.md)。未執行上游程式或測試，未下載依賴；只參考設計概念並獨立實作，無程式／資產複製或授權更動。

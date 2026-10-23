@@ -21,6 +21,7 @@ from eventguard.diagnostics.api import DiagnosticAPI
 from eventguard.diagnostics.review import review, query_plan, event_view
 from eventguard.events.store import EventStore, CapacityError
 from eventguard.operations import OperatorAPI
+from eventguard.queue_inbox import QueueInbox, QueueInboxError
 from eventguard.runtime import Runtime, InstanceLock
 from eventguard.synthetic import make_synthetic
 
@@ -224,6 +225,129 @@ class OperatorTests(unittest.TestCase):
             db.execute("UPDATE event_reviews SET result=? WHERE event_id=?", (json.dumps(result), event["event_id"]))
         with self.assertRaisesRegex(ValueError, "saved_review_invalid"):
             self.api.inspect_event(event["event_id"], "test")
+
+    def retained_files(self):
+        return {str(path.relative_to(self.root)): path.read_bytes()
+                for path in self.root.rglob("*") if path.is_file()}
+
+    def acknowledged_event(self, decision="reviewed_metadata"):
+        event = self.event()
+        received = self.api.receive_event(event["event_id"], "test")
+        result = self.api.ack_event(event["event_id"], received["query_id"], decision, "test")
+        self.assertTrue(result["outbox_acknowledged"])
+        return event, received, result
+
+    def test_matching_ack_replay_verifies_retained_receipt_without_writing(self):
+        event, received, result = self.acknowledged_event("needs_more_evidence")
+        before = self.retained_files()
+        with patch.object(EventStore, "__init__", side_effect=AssertionError("replay opened writable store")), \
+                patch.object(QueueInbox, "_mutation", side_effect=AssertionError("replay entered mutation")):
+            repeated = OperatorAPI(self.root).ack_event(event["event_id"], received["query_id"], "needs_more_evidence", "test")
+        self.assertEqual(repeated["status"], "already_received")
+        self.assertTrue(repeated["ack_replay_verified"])
+        self.assertFalse(repeated["new_receipt_created"])
+        self.assertEqual(repeated["query_id"], received["query_id"])
+        self.assertEqual(repeated["decision"], "needs_more_evidence")
+        self.assertEqual(repeated["result_id"], result["result_id"])
+        self.assertEqual(self.retained_files(), before)
+        self.assertEqual(EventStore(self.root / "data/test").stats()["receipt_count"], 1)
+
+    def test_ack_replay_rejects_wrong_query_and_changed_decision(self):
+        event, received, _ = self.acknowledged_event("needs_more_evidence")
+        before = self.retained_files()
+        for query_id, decision, reason in (
+            ("query-wrong", "needs_more_evidence", "same_event_query_required"),
+            (received["query_id"], "reviewed_metadata", "inbox_result_decision_conflict"),
+        ):
+            with self.subTest(reason=reason):
+                rejected = self.api.call("ack_event", event["event_id"], query_id, decision, "test")
+                self.assertEqual((rejected["status"], rejected["reason"]), ("blocked", reason))
+                self.assertNotIn("outbox_acknowledged", rejected)
+                self.assertEqual(self.retained_files(), before)
+        self.assertEqual(EventStore(self.root / "data/test").stats()["receipt_count"], 1)
+
+    def test_other_receiver_ack_cannot_create_inbox_or_claim_verified_replay(self):
+        event = self.event()
+        store = EventStore(self.root / "data/test")
+        store.acknowledge(event["event_id"], {"ack_type": "receiver_persisted", "event_id": event["event_id"],
+                                              "receiver_receipt_id": "other-receiver"})
+        before = self.retained_files()
+        rejected = self.api.call("ack_event", event["event_id"], "query-other", "reviewed_metadata", "test")
+        self.assertEqual((rejected["status"], rejected["reason"]), ("blocked", "ack_replay_evidence_unavailable"))
+        self.assertFalse((self.root / "data/agent-delivery-test").exists())
+        self.assertEqual(self.retained_files(), before)
+        self.assertEqual(store.stats()["receipt_count"], 1)
+        self.assertEqual(self.api.receive_event(event["event_id"], "test")["status"], "already_received")
+        self.assertEqual(self.retained_files(), before)
+
+    def test_source_ack_without_saved_inbox_result_cannot_claim_replay(self):
+        event = self.event()
+        received = self.api.receive_event(event["event_id"], "test")
+        store = EventStore(self.root / "data/test")
+        store.acknowledge(event["event_id"], {"ack_type": "receiver_persisted", "event_id": event["event_id"],
+                                              "receiver_receipt_id": "other-receiver"})
+        before = self.retained_files()
+        rejected = self.api.call("ack_event", event["event_id"], received["query_id"], "reviewed_metadata", "test")
+        self.assertEqual(rejected["reason"], "ack_replay_evidence_unavailable")
+        self.assertEqual(self.retained_files(), before)
+        self.assertFalse(list((self.root / "data/agent-delivery-test").glob("result-*.json")))
+        self.assertEqual(store.stats()["receipt_count"], 1)
+
+    def test_rotated_inbox_evidence_stays_unverified_and_is_not_reconstructed(self):
+        event, received, _ = self.acknowledged_event()
+        inbox = self.api._operator_inbox(event["event_id"], "test")
+        self.assertEqual(inbox.maintain(now=4102444800)["completed_removed"], 1)
+        before = self.retained_files()
+        rejected = self.api.call("ack_event", event["event_id"], received["query_id"], "reviewed_metadata", "test")
+        self.assertEqual((rejected["status"], rejected["reason"]), ("blocked", "ack_replay_evidence_unavailable"))
+        self.assertEqual(self.retained_files(), before)
+        self.assertEqual(self.api.receive_event(event["event_id"], "test")["status"], "already_received")
+        self.assertEqual(self.retained_files(), before)
+
+    def test_missing_inbox_policy_is_not_recreated_by_ack_replay(self):
+        event, received, _ = self.acknowledged_event()
+        (self.root / "data/agent-delivery-test/inbox-limits.json").unlink()
+        before = self.retained_files()
+        rejected = self.api.call("ack_event", event["event_id"], received["query_id"], "reviewed_metadata", "test")
+        self.assertEqual(rejected["reason"], "ack_replay_evidence_unavailable")
+        self.assertEqual(self.retained_files(), before)
+
+    def test_replay_checks_actual_source_receiver_receipt(self):
+        event, received, _ = self.acknowledged_event()
+        path = self.root / "data/test/eventguard.sqlite3"
+        receipt = json.dumps({"ack_type": "receiver_persisted", "event_id": event["event_id"],
+                              "receiver_receipt_id": "other-receiver"})
+        with closing(sqlite3.connect(path)) as db, db:
+            db.execute("UPDATE events SET receipt=? WHERE event_id=?", (receipt, event["event_id"]))
+            db.execute("UPDATE receipts SET receipt=? WHERE event_id=?", (receipt, event["event_id"]))
+        before = self.retained_files()
+        rejected = self.api.call("ack_event", event["event_id"], received["query_id"], "reviewed_metadata", "test")
+        self.assertEqual((rejected["status"], rejected["reason"]), ("blocked", "outbox_ack_identity_conflict"))
+        self.assertEqual(self.retained_files(), before)
+
+    def test_readonly_inbox_rejects_all_mutations_and_missing_or_foreign_state(self):
+        event, received, _ = self.acknowledged_event()
+        source, state = self.root / "data/test", self.root / "data/agent-delivery-test"
+        inbox = QueueInbox.open_readonly(source, state, event["event_id"])
+        before = self.retained_files()
+        for operation in (
+            lambda: inbox.maintain(), lambda: inbox.receive_event(),
+            lambda: inbox.query_evidence(event["event_id"]),
+            lambda: inbox.ack_event(event["event_id"], received["query_id"], "reviewed_metadata"),
+            lambda: inbox.store,
+        ):
+            with self.assertRaisesRegex(QueueInboxError, "^inbox_read_only$"):
+                operation()
+        with self.assertRaisesRegex(QueueInboxError, "existing_inbox_state_required"):
+            QueueInbox.open_readonly(source, self.root / "missing")
+        self.assertFalse((self.root / "missing").exists())
+        other = self.root / "other-source"
+        EventStore(other).enqueue(make_synthetic())
+        after_other_source = self.retained_files()
+        with self.assertRaisesRegex(QueueInboxError, "inbox_source_profile_conflict"):
+            QueueInbox.open_readonly(other, state, event["event_id"])
+        self.assertEqual(self.retained_files(), after_other_source)
+        self.assertEqual({k: v for k, v in after_other_source.items() if not k.startswith("other-source")}, before)
 
     def test_scoped_stop_cannot_stop_another_namespace_or_stale_owner(self):
         runtime = Runtime(self.root)

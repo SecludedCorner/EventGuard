@@ -8,6 +8,8 @@ Windows 一般權限的唯讀監看工具。人類 GUI／CLI 與可選 agent 介
 
 事件先顯示觀察、未知與唯讀查證建議，技術資料按需展開；可依嚴重度／接收狀態篩選目前載入的100件，總數及截斷會明示。設計參考與已採納項目見 [研究記錄](docs/SCANNER_LESSONS.md)。
 
+已補讀上游25引擎的整合碼，以及各來源repo的README／代表入口；用途、依賴與實際整合範圍見 [25引擎盤點](docs/SCANNER_ENGINES.md)、[執行邊界](docs/SCANNER_RUNTIME_REVIEW.md)。這是讀碼研究，沒有引入或執行這些引擎。
+
 目前是 [MIT](LICENSE) 工程預覽。目前受測程式與 commit 見 [EVIDENCE](docs/EVIDENCE.md)，最新狀態見 [STATUS](STATUS.md)，實測範圍與數字見 [EVIDENCE](docs/EVIDENCE.md)。
 
 ## 如何運作
