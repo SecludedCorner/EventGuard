@@ -171,7 +171,7 @@ def execute(args,runtime,progress=None):
         if action=="export":
             return event_ingress.export_event(source,inbox,args.event_id,
                 allow_live=args.namespace=="live",producer_id=args.producer_id)
-        return event_ingress.inspect_delivery(source,inbox,args.event_id,allow_live=args.namespace=="live")
+        return event_ingress.inspect_delivery(source,inbox,args.event_id,allow_live=args.namespace=="live",root=runtime.root)
     if args.command=="advisories":
         from .intelligence import engine, service
         if args.advisory_command=="start":

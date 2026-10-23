@@ -7,12 +7,14 @@ from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 import tempfile
+import time
 import tomllib
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from eventguard import delivery_validation as queue_validation
 from eventguard import agent_service
+from eventguard import processes
 from eventguard.acceptance_control import read_json, write_json
 from eventguard.agent_dispatch import KIND as DISPATCH_KIND, TOOLS
 from eventguard.queue_inbox import QueueInbox
@@ -149,20 +151,32 @@ class ServiceDeliveryValidationTests(unittest.TestCase):
         self.attempt = attempt
         self.directory = directory
         job_name = "Global\\EventGuard-" + "d"*32
+        parent = {"pid": 300, "created_at": stamp(-2)}
+        scope = {"lifetime_owner": "application", "application_owner": parent,
+                 "deadline_monotonic": 999 + queue_validation.SERVICE_TIMEOUT - 20}
         owner = {"kind": "eventguard-agent-service-owner-v1", "run_id": self.host_id, "pid": 301,
-                 "created_at": self.created, "job_name": job_name, "session_id": 1}
+                 "created_at": self.created, "job_name": job_name, "session_id": 1, **scope}
         self.put(service / "owner.json", owner)
         self.put(service / "control.json", {"kind": "eventguard-agent-service-control-v1", "run_id": self.host_id,
             "job_name": job_name, "enabled": False, "paused": False, "allow_live": False,
             "updated_at": self.created, "source_dir": str(self.root / "source"), "state_dir": str(self.root / "inbox"),
-            "codex_executable": "fixture-never-executed.exe"})
+            "codex_executable": "fixture-never-executed.exe", **scope})
         stop_process = {"managed": True, "job_name": job_name, "pid": owner["pid"], "created_at": self.created,
             "child_exited": True, "remaining_owned_processes": 0, "forcibly_terminated": False,
             "reason": "natural_exit", "shutdown_requested_reason": "cancelled", "exit_code": 0}
         self.put(service / "stop-receipt.json", stop_process)
         self.put(self.root / "service-stop.json", {"state": "stopped", "process": stop_process})
+        self.put(self.root / "service-start.json", {"state": "started", "run_id": self.host_id, **scope,
+            "handoff": {"managed": True, "ownership_transferred": False, "detached": False,
+                        "lifetime_owner": "application", "lifetime_limited": True, "job_name": job_name,
+                        "pid": owner["pid"], "created_at": owner["created_at"], "session_id": owner["session_id"]}})
+        self.put(self.root / "service-owner-stop.json", {"kind": "eventguard-service-application-owner-exit-v1",
+            "lifetime_owner": "application", "recorded_at": stamp(12), "children": [{"retained_handle_observed": True,
+                "launch": {"kind": "eventguard-agent-service-owned-launch-v1", "run_id": self.host_id,
+                           "pid": owner["pid"], "created_at": owner["created_at"], "job_name": job_name, **scope},
+                "process": deepcopy(stop_process)}]})
         self.put(service / "exit.json", {**owner, "state": "stopped", "forcibly_terminated": False, "at": stamp(11.5)})
-        self.put(service / "run.json", {"run_id": self.host_id, "state": "stopped", "exit_code": 0})
+        self.put(service / "run.json", {"run_id": self.host_id, "state": "stopped", "exit_code": 0, **scope})
         supervisor = {"managed": True, "pid": 302, "created_at": stamp(4.1), "child_exited": True,
             "remaining_owned_processes": 0, "forcibly_terminated": False, "reason": "natural_exit", "exit_code": 0}
         self.put(attempt / "supervisor-exit.json", supervisor)
@@ -211,7 +225,7 @@ class ServiceDeliveryValidationTests(unittest.TestCase):
         self.manifest["service_execution"] = {"kind": "eventguard-service-acceptance-v1", "state": "observed",
             "host_run_id": self.host_id, "config_sha256": hashlib.sha256(config.read_bytes()).hexdigest(),
             "clock_id": "e"*32, "started_at": stamp(-1), "started_monotonic": 999,
-            "finished_monotonic": 1012,
+            "finished_monotonic": 1012, "timeout_seconds": queue_validation.SERVICE_TIMEOUT, **scope,
             "finished_at": (self.base+timedelta(seconds=12)).isoformat(), "evidence_scope": "fabricated_fixture_no_model"}
         self.put(self.root / "manifest.json", self.manifest)
         return event
@@ -259,11 +273,58 @@ class ServiceDeliveryValidationTests(unittest.TestCase):
         self.fixture()
         path = self.root / "data/agent-service/stop-receipt.json"
         original = read_json(path)
-        for changes in ({"forcibly_terminated": True}, {"exit_code": 9}, {"exit_code": None}, {"remaining_owned_processes": 1}):
+        for changes in ({"forcibly_terminated": True}, {"exit_code": 9}, {"remaining_owned_processes": 1}):
             receipt = {**original, **changes}
             self.put(path, receipt)
             self.put(self.root / "service-stop.json", {"state": "stopped", "process": receipt})
             self.assertFalse(queue_validation.verify_service(self.root, self.manifest)["passed"], changes)
+
+    def test_empty_job_unknown_os_exit_needs_matching_original_handle_zero_exit(self):
+        self.fixture()
+        path = self.root / "data/agent-service/stop-receipt.json"
+        receipt = {**read_json(path), "exit_code": None, "reason": "private_job_empty"}
+        self.put(path, receipt)
+        self.put(self.root / "service-stop.json", {"state": "stopped", "process": receipt})
+        proof = queue_validation.verify_service(self.root, self.manifest)
+        self.assertTrue(proof["passed"], "Fabricated fixture only, never a real wake")
+        self.assertTrue(proof["application_owner_exit_verified"])
+        self.assertIsNone(read_json(path)["exit_code"], "Original unknown receipt must remain unchanged")
+        cleanup_path = self.root / "service-owner-stop.json"
+        original = read_json(cleanup_path)
+        for changes in ({"exit_code": None}, {"exit_code": 9}, {"forcibly_terminated": True},
+                        {"pid": 999}, {"created_at": "2026-10-24T00:00:01+00:00"}):
+            changed = deepcopy(original)
+            changed["children"][0]["process"].update(changes)
+            self.put(cleanup_path, changed)
+            self.assertFalse(queue_validation.verify_service(self.root, self.manifest)["passed"], changes)
+
+    def test_missing_or_mismatched_retained_owner_cleanup_cannot_pass(self):
+        self.fixture()
+        path = self.root / "service-owner-stop.json"
+        original = read_json(path)
+        for child_changes in ({"retained_handle_observed": False}, {"launch": {}}, {"process": {}}):
+            value = deepcopy(original)
+            value["children"][0].update(child_changes)
+            self.put(path, value)
+            self.assertFalse(queue_validation.verify_service(self.root, self.manifest)["passed"], child_changes)
+        self.put(path, {**original, "children": []})
+        self.assertFalse(queue_validation.verify_service(self.root, self.manifest)["passed"])
+        path.unlink()
+        with self.assertRaises((OSError, ValueError)):
+            queue_validation.verify_service(self.root, self.manifest)
+
+    def test_application_lifetime_does_not_claim_independent_or_unbounded_service(self):
+        self.fixture()
+        self.assertEqual(queue_validation.verify_service(self.root, self.manifest)["lifetime_owner"], "application")
+        path = self.root / "service-start.json"
+        original = read_json(path)
+        changed = deepcopy(original)
+        changed["handoff"]["ownership_transferred"] = True
+        self.put(path, changed)
+        self.assertFalse(queue_validation.verify_service(self.root, self.manifest)["passed"])
+        self.put(path, original)
+        self.manifest["service_execution"]["deadline_monotonic"] += 1
+        self.assertFalse(queue_validation.verify_service(self.root, self.manifest)["passed"])
 
     def test_missing_or_forced_supervisor_receipt_cannot_pass(self):
         self.fixture()
@@ -391,6 +452,9 @@ class ServiceDeliveryValidationTests(unittest.TestCase):
             self.assertFalse(self.manifest["enqueued"])
             self.assertTrue(kwargs["execute"])
             self.assertFalse(kwargs["allow_live"])
+            self.assertEqual(kwargs["lifetime_owner"], "application")
+            self.assertTrue(callable(kwargs["child_owner"]))
+            self.assertLess(kwargs["deadline_monotonic"], time.monotonic()+queue_validation.SERVICE_TIMEOUT)
             self.assertEqual(kwargs["source_dir"], self.root / "source")
             self.assertEqual(kwargs["state_dir"], self.root / "inbox")
             self.put(self.root / "data/agent-service/control.json", {"fixture": True})
@@ -414,3 +478,42 @@ class ServiceDeliveryValidationTests(unittest.TestCase):
                 queue_validation.execute_service(self.root, self.manifest, "fixture-never-executed.exe")
         self.assertEqual(calls, ["start", "idle_before", "enqueued", "stop"])
         self.assertEqual(read_json(self.root / "manifest.json")["service_execution"]["state"], "failed_pending_preserved")
+
+    def test_driver_keeps_original_failure_and_cleans_retained_child_when_stop_fails(self):
+        calls = []
+        child = Mock(spec=processes.JobPopen)
+        child.pid, child.created_at, child.detached = 301, self.created, False
+        child.job = Mock()
+        child.job.name = "Global\\EventGuard-" + "d"*32
+        def start(*args, **kwargs):
+            child._eventguard_agent_service_scope = {"kind": "eventguard-agent-service-owned-launch-v1",
+                "run_id": self.host_id, "pid": child.pid, "created_at": child.created_at,
+                "job_name": child.job.name, "lifetime_owner": "application",
+                "application_owner": {"pid": 300, "created_at": self.created},
+                "deadline_monotonic": kwargs["deadline_monotonic"]}
+            kwargs["child_owner"](child)
+            self.put(self.root / "data/agent-service/control.json", {"fixture": True})
+            return {"state": "started", "run_id": self.host_id}
+        def stop(*args, **kwargs):
+            calls.append("cooperative_stop")
+            raise OSError("private fixture failure")
+        def finish(owned, *args, **kwargs):
+            self.assertIs(owned, child)
+            self.assertEqual(calls, ["cooperative_stop"])
+            calls.append("retained_handle_finish")
+            return {"managed": True, "pid": child.pid, "created_at": child.created_at,
+                    "child_exited": True, "exit_code": 0, "remaining_owned_processes": 0,
+                    "forcibly_terminated": False, "reason": "natural_exit"}
+        with patch.object(agent_service, "start", side_effect=start), \
+             patch.object(queue_validation, "_idle_service", side_effect=ValueError("fixture_original_failure")), \
+             patch.object(agent_service, "stop", side_effect=stop), \
+             patch.object(processes, "finish", side_effect=finish) as cleanup:
+            with self.assertRaisesRegex(ValueError, "fixture_original_failure"):
+                queue_validation.execute_service(self.root, self.manifest, "fixture-never-executed.exe")
+        cleanup.assert_called_once()
+        self.assertEqual(calls, ["cooperative_stop", "retained_handle_finish"])
+        proof = read_json(self.root / "service-owner-stop.json")
+        self.assertTrue(proof["children"][0]["retained_handle_observed"])
+        self.assertEqual(proof["children"][0]["process"]["exit_code"], 0)
+        self.assertEqual(read_json(self.root / "service-stop.json")["state"], "shutdown_unconfirmed")
+        self.assertEqual(self.manifest["service_execution"]["state"], "failed_pending_preserved")

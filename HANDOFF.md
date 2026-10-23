@@ -2,7 +2,7 @@
 
 先讀 AGENTS、README、STATUS。最新目標是事件驅動的專用 agent 通路。一般使用者。核心只用標準庫。
 
-分支 `feat/local-codex-acceptance`。本批基底 `9640df6581b996126137dd4e7066023c3950cf20`。
+分支 `feat/local-codex-acceptance`。本批基底 `c8b84d40bd4eca6c120e5455c28434ed181fcdd2`。
 保留未追蹤的 `docs/research/` 與附件。不 reset、clean、推送或提交執行資料。
 
 ## 本批事件派送
@@ -24,6 +24,14 @@ service verifier 另核對 SQLite created_at／acked_at、工具時間及同 sco
 capture-skipped 只證明 CLI 未啟動。三個 skip 分支仍須 supervisor proof；缺證據保持 started，不重啟。
 定向回歸及修正證據為 proof-delta-001／002；proof-test-index.json 按 test ID 合併。最後來源只重驗相關模組，沒有冒稱完整全套。
 host 的舊 Job 已確認退出時，可明確 start。未知 Job 仍阻擋，不取消預算或刪帳本。
+
+按事件查 provider：新 attempt 保存來源／inbox scope 與 event/hash 綁定。原 ledger／archive 保留有界 attempt 參照。
+`inspect_delivery(..., root=...)` 只讀本專案受管理的 run／attempt，重驗原始 CLI、capture 及 supervisor 回條。
+CLI 與 Web 傳明確 Runtime.root。沒有 root、舊資料無綁定或證據不符時，provider 階段維持未知；獨立 inbox 證據不受影響。
+回傳 scope 明示 CLI 協定證據，real_agent_wake_verified 仍 false。只供本機人類查看，沒有擴大模型 snapshot 或 query。
+有限 service 真驗入口改用正式 application-owned Job，而非測試 allow_parent_job。driver 保留真 child HANDLE、先合作 stop、再核對整樹退出。
+application_owner PID／建立時間與 deadline 在 host 及最終 CLI gate 都會重查。產品獨立 start 預設不變，不逃離外層 Job。
+本批統測為 `reports/event-ingress-001/operator-delta-001`，來源不變、無模型、無殘留。實際範圍與唯一通知 skip 見 EVIDENCE。
 
 操作見 [AGENT_SERVICE](docs/AGENT_SERVICE.md)。新證據僅 `reports/event-ingress-001`，完整數字見 EVIDENCE。
 完整測試後又修正 resume/preflight、OS exit code 與 service 驗收；最終是全套加定向回歸，不冒稱最終來源全套重跑。

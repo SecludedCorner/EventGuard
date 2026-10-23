@@ -94,6 +94,24 @@ class AgentEntryTests(AgentFixture):
         self.assertEqual(code, 2)
         self.assertEqual(result["error_code"], "ingress_invalid_producer_scope")
 
+    def test_event_inspection_uses_explicit_project_scope_without_writes(self):
+        event = make_synthetic("listener")
+        source = self.root / "data/test"
+        EventStore(source).enqueue(event)
+        before = {p.relative_to(self.root): p.read_bytes() for p in self.root.rglob("*") if p.is_file()}
+        provider = {"stages": {key: {"status": "unknown", "reason": "fixture_only"} for key in (
+            "notification_submitted", "agent_started", "agent_turn_completed", "agent_process_exited")},
+            "attempts": [], "scope": "cli_protocol_evidence_not_independent_model_provenance",
+            "reason": "fixture_only", "read_only": True, "real_agent_wake_verified": False, "model_calls": 0}
+        with patch("eventguard.agent_dispatch.inspect_event_attempts", return_value=provider) as inspect:
+            code, result = self.cli(["inspect", "--namespace", "test", "--event-id", event["event_id"]])
+        self.assertEqual(code, 0, result)
+        self.assertEqual(inspect.call_args.kwargs, {"root": self.root})
+        self.assertEqual(inspect.call_args.args[:3], (source, self.root / "data/agent-delivery-test", event["event_id"]))
+        self.assertEqual(result["provider_evidence"]["reason"], "fixture_only")
+        self.assertFalse(result["real_agent_wake_verified"])
+        self.assertEqual(before, {p.relative_to(self.root): p.read_bytes() for p in self.root.rglob("*") if p.is_file()})
+
 
 class AgentWebTests(AgentFixture):
     def setUp(self):
@@ -151,6 +169,60 @@ class AgentWebTests(AgentFixture):
         self.assertEqual(json.loads(body)["event_id"], event["event_id"])
         self.assertEqual(before, {p.name: p.read_bytes() for p in state.iterdir() if p.is_file()})
         self.assertFalse(inbox.acknowledged(event["event_id"]))
+
+    def test_event_delivery_http_passes_its_root_and_keeps_provider_scope(self):
+        event = make_synthetic("coverage")
+        source = self.root / "data/test"
+        EventStore(source).enqueue(event)
+        provider = {"stages": {key: {"status": "unknown", "reason": "fixture_only"} for key in (
+            "notification_submitted", "agent_started", "agent_turn_completed", "agent_process_exited")},
+            "attempts": [], "scope": "cli_protocol_evidence_not_independent_model_provenance",
+            "reason": "fixture_only", "read_only": True, "real_agent_wake_verified": False, "model_calls": 0}
+        with patch("eventguard.agent_dispatch.inspect_event_attempts", return_value=provider) as inspect:
+            code, body = self.request("GET", "/api/events/"+event["event_id"]+"/delivery")
+        self.assertEqual(code, 200, body)
+        self.assertEqual(inspect.call_args.kwargs, {"root": self.root})
+        self.assertEqual(inspect.call_args.args[:3], (source, self.root / "data/agent-delivery-test", event["event_id"]))
+        result = json.loads(body)
+        self.assertEqual(result["provider_evidence"]["reason"], "fixture_only")
+        self.assertFalse(result["real_agent_wake_verified"])
+        self.assertFalse((self.root / "data/agent-service").exists())
+
+    def test_cli_and_http_keep_older_event_progress_after_ledger_rotation(self):
+        # Actual SQLite, CLI and HTTP; all provider/Job JSON is explicitly fake.
+        # No provider is launched and no independent model claim is permitted.
+        from test_dispatch_inspection import build_inspection_fixture
+        from eventguard.agent_dispatch import maintain_ledger
+        from eventguard.acceptance_control import read_json, write_json
+        from datetime import datetime, timezone
+        fixture = build_inspection_fixture(self.root)
+        identity = fixture["event"]["event_id"]
+        args = ["inspect", "--namespace", "test", "--event-id", identity]
+        code, active = self.cli(args)
+        self.assertEqual(code, 0, active)
+        self.assertEqual(active["stages"]["agent_turn_completed"]["status"], "confirmed")
+        inbox = QueueInbox.open_readonly(fixture["source"], fixture["state"], event_id=identity)
+        ledger = fixture["state"] / "dispatcher-attempts.json"
+        maintain_ledger(ledger, inbox, now=datetime(2026, 10, 24, 0, 1, tzinfo=timezone.utc).timestamp())
+        self.assertNotIn(identity, read_json(ledger)["events"])
+        write_json(self.root / "data/agent-service/run.json", {"run_id": "e" * 32,
+            "dispatcher": {"events": ["another-synthetic-event"]}})
+        before = {p.relative_to(self.root): p.read_bytes() for p in self.root.rglob("*") if p.is_file()}
+        code, archived = self.cli(args)
+        self.assertEqual(code, 0, archived)
+        code, body = self.request("GET", "/api/events/"+identity+"/delivery")
+        self.assertEqual(code, 200, body)
+        web = json.loads(body)
+        for result in (archived, web):
+            self.assertEqual(result["event_id"], identity)
+            self.assertEqual(result["stages"]["agent_started"]["status"], "confirmed")
+            self.assertEqual(result["stages"]["agent_turn_completed"]["status"], "confirmed")
+            self.assertEqual(result["stages"]["agent_process_exited"]["status"], "confirmed")
+            self.assertEqual(result["provider_evidence"]["attempts"][0]["attempt_id"], fixture["record"]["attempt_id"])
+            self.assertFalse(result["real_agent_wake_verified"])
+            self.assertEqual(result["provider_evidence"]["scope"],
+                             "cli_protocol_evidence_not_independent_model_provenance")
+        self.assertEqual(before, {p.relative_to(self.root): p.read_bytes() for p in self.root.rglob("*") if p.is_file()})
 
 
 @unittest.skipUnless(importlib.util.find_spec("mcp"), "optional installed MCP SDK unavailable")

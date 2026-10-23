@@ -1,6 +1,6 @@
 # EventGuard 現況
 
-更新：2026-10-24，UTC+08。分支：`feat/local-codex-acceptance`。本批基底：`9640df6`。
+更新：2026-10-24，UTC+08。分支：`feat/local-codex-acceptance`。本批基底：`c8b84d4`。
 
 EventGuard 是本機程式。採集、規則、事件保存、CLI／Web 與通知不需要模型。
 主聊天接線、桌面閒置喚醒及開機自啟仍是選配，不阻擋產品。
@@ -19,6 +19,9 @@ EventGuard 是本機程式。採集、規則、事件保存、CLI／Web 與通�
 - 新 worker 的開始及退出回條綁定同一 PID、建立時間與 attempt nonce。缺身分維持未知，不接受另一程序的回條。
 - service 驗收核對實際 SQLite 保存及 ACK 時間。UTC、monotonic 或程序身分缺證據時，不判成功。
 - CLI 未啟動與 worker 已退出分開。缺 worker 退出證據時保留 started，禁止重新准入。已確認退出的 blocked host 可由人類明確重啟。
+- CLI／Web 可按事件核對保留的 attempt、CLI 啟動、回合及退出。缺綁定或原始證據時仍未知，不採用 summary.passed 作證據。
+- `agent_started=observed` 是 CLI 程序啟動。它不是獨立的真模型來源證明。七欄匯出及 agent 工具不擴欄。
+- 有限 service 驗收由應用持有 host 的實際 HANDLE，可在既有外層 Job 內執行。父應用／期限與退出回條獨立核對，不宣稱獨立背景。
 
 操作見 [AGENT_SERVICE](docs/AGENT_SERVICE.md)。測試數、命令、失敗與修復只記於 [EVIDENCE](docs/EVIDENCE.md)。
 
@@ -27,6 +30,7 @@ EventGuard 是本機程式。採集、規則、事件保存、CLI／Web 與通�
 fixture、fake CLI、真本機 HTTP 及 Windows 私有 Job 已分範圍驗證。
 隔離空佇列的 host 啟動、暫停、恢復、合作停止與實際 OS exit 0 已通過；無 provider 啟動及殘留。
 本批定向回歸已通過。另核對真 Windows worker／fake CLI 身分與自然退出。原失敗及修正記於 EVIDENCE。
+按事件查詢已驗證實際 CLI／HTTP 與合成 SQLite。正式 application-owned API 的空佇列 Windows host 已自然退出；無 provider 啟動。
 這不是模型收件或長期背景驗收。最後來源雜湊及退出證據位於 `reports/event-ingress-001`。
 
 正式 agent host 為 `not_started`，未保存啟用。正式監看的停止設定與先前雜湊相同。

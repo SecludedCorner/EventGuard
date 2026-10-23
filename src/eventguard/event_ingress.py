@@ -22,12 +22,17 @@ from .queue_inbox import (QueueInbox, QueueInboxError, _guard, _identifier,
                           _projection, _timestamp, _validate_snapshot)
 
 MAX_ENVELOPE_BYTES = 4096
+MAX_PROVIDER_EVIDENCE_BYTES = 64 * 1024
 ENVELOPE_TYPE = "org.eventguard.snapshot.v1"
 SCHEMA_URI = "urn:eventguard:snapshot:1"
 _FIELDS = frozenset({"specversion", "id", "source", "type", "time",
                      "datacontenttype", "dataschema", "data"})
 _HASH = re.compile(r"[a-f0-9]{64}\Z")
 _TIME = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,6})?(?:Z|[+-][0-9]{2}:[0-9]{2})\Z")
+_PROVIDER_STAGES = ("notification_submitted", "agent_started", "agent_turn_completed", "agent_process_exited")
+_PROVIDER_SCOPE = "cli_protocol_evidence_not_independent_model_provenance"
+_REASON = re.compile(r"[a-z0-9_]{1,160}\Z")
+_TOKEN = re.compile(r"[a-f0-9]{32}\Z")
 
 
 class EventIngressError(ValueError):
@@ -266,12 +271,65 @@ def _unknown(reason):
     return {"status": "unknown", "reason": reason}
 
 
-def inspect_delivery(source_dir, state_dir, event_id, allow_live=False, producer_id=None):
+def _provider_progress(source_dir, state_dir, identity, payload_hash, root):
+    """Join only the helper's bounded, validated local protocol proof.
+
+    No root means no provider lookup, preserving standalone/read-only adapters.
+    Provider corruption never erases independently validated inbox receipts.
+    Process start or a provider-reported turn is not independent model proof.
+    """
+    reason = "provider_lifecycle_not_inspected" if root is None else "provider_evidence_unavailable"
+    fallback = {"attempts": [], "read_only": True, "model_calls": 0,
+                "real_agent_wake_verified": False, "scope": _PROVIDER_SCOPE, "reason": reason}
+    unknown = {stage: _unknown(reason) for stage in _PROVIDER_STAGES}
+    if root is None:
+        return unknown, fallback
+    try:
+        from .agent_dispatch import inspect_event_attempts
+        value = inspect_event_attempts(source_dir, state_dir, identity, payload_hash, root=root)
+        if (type(value) is not dict
+                or set(value) - {"stages", "attempts", "read_only", "real_agent_wake_verified", "model_calls", "scope", "reason"}
+                or value.get("scope") != _PROVIDER_SCOPE or value.get("read_only") is not True
+                or value.get("real_agent_wake_verified") is not False
+                or type(value.get("model_calls")) is not int or value["model_calls"] != 0
+                or type(value.get("attempts")) is not list or len(value["attempts"]) > 3
+                or any(type(attempt) is not dict for attempt in value["attempts"])
+                or type(value.get("stages")) is not dict or set(value["stages"]) != set(_PROVIDER_STAGES)
+                or len(_encoded(value)) > MAX_PROVIDER_EVIDENCE_BYTES):
+            raise EventIngressError("provider_evidence_invalid")
+        if "reason" in value and (type(value["reason"]) is not str or not _REASON.fullmatch(value["reason"])):
+            raise EventIngressError("provider_evidence_invalid")
+        stages = {}
+        for name, stage in value["stages"].items():
+            allowed_statuses = {"confirmed", "unknown"} | ({"not_applicable"} if name == "notification_submitted" else set())
+            if name == "agent_started":
+                allowed_statuses.add("observed")  # Bound CLI start alone is not a model turn.
+            if (type(stage) is not dict or set(stage) - {"status", "reason", "evidence", "at", "attempt_id"}
+                    or stage.get("status") not in allowed_statuses or not set(stage) & {"reason", "evidence"}):
+                raise EventIngressError("provider_evidence_invalid")
+            for field in ("reason", "evidence"):
+                if field in stage and (type(stage[field]) is not str or not _REASON.fullmatch(stage[field])):
+                    raise EventIngressError("provider_evidence_invalid")
+            if "attempt_id" in stage and (type(stage["attempt_id"]) is not str or not _TOKEN.fullmatch(stage["attempt_id"])):
+                raise EventIngressError("provider_evidence_invalid")
+            stages[name] = dict(stage)
+            if "at" in stage:
+                stages[name]["at"] = _timestamp(stage["at"])
+        # Make a JSON-only detached observation. The helper owns its strict
+        # attempt field projection; never pass trace text, commands or run paths.
+        evidence = json.loads(_encoded({key: item for key, item in value.items() if key != "stages"}))
+        return stages, evidence
+    except (OSError, ValueError, RuntimeError, TypeError, KeyError, ImportError, AttributeError):
+        return unknown, fallback
+
+
+def inspect_delivery(source_dir, state_dir, event_id, allow_live=False, producer_id=None, *, root=None):
     """Inspect retained proof, not inferred lifecycle or incident conclusions.
 
     ``producer_id`` is optional here; it is only validated when supplied. Source
-    and inbox storage can change between reads. This is an observation, not an
-    atomic global snapshot or authorization for another delivery attempt.
+    and inbox storage can change between reads. Optional ``root`` enables a
+    strictly bound lookup of this event's retained provider evidence. This is
+    not an atomic global snapshot or authorization for another delivery attempt.
     """
     identity = _profile(event_id, allow_live)
     if producer_id is not None:
@@ -302,8 +360,8 @@ def inspect_delivery(source_dir, state_dir, event_id, allow_live=False, producer
         stages["finalization"] = {"status": "pending", "reason": "receiver_finalization_pinned"}
     elif acked and completed and source["pending_finalization"] == 0:
         stages["finalization"] = _confirmed("inbox_completed_and_unpinned_source_receipt")
-    for stage in ("notification_submitted", "agent_started", "agent_turn_completed", "agent_process_exited"):
-        stages[stage] = _unknown("provider_lifecycle_not_inspected")
+    provider_stages, provider_evidence = _provider_progress(source_dir, state_dir, identity, source["payload_hash"], root)
+    stages.update(provider_stages)
     if disposition is not None:
         if disposition["status"] not in {"new", "read", "handled", "ignored"}:
             raise EventIngressError("ingress_human_status_invalid")
@@ -317,6 +375,7 @@ def inspect_delivery(source_dir, state_dir, event_id, allow_live=False, producer
     else:
         handling = _unknown("event_disposition_not_retained")
     return {"event_id": identity, "stages": stages, "human_handling": handling,
+            "provider_evidence": provider_evidence,
             "source_delivery_status": source["delivery_status"], "read_only": True,
             "model_calls": 0, "real_agent_wake_verified": False,
             "incident_conclusion": "not_assessed"}

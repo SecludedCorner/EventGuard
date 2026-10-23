@@ -2,6 +2,39 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-24：按事件查看進度與有界應用生命期
+
+基底 `c8b84d40bd4eca6c120e5455c28434ed181fcdd2`。分支維持 `feat/local-codex-acceptance`。
+本批補產品查詢及必要的驗收入口，不建立新佇列、provider、服務或排程。無真模型、正式背景、來源掃描或外部網路。
+
+指定事件的 CLI／Web 現在重讀原 ledger／archive、綁定與原始回條。完成帳本輪替後，仍保留最多三個 attempt 參照。
+新的 binding 綁 event ID、完整 payload hash、namespace、inbox profile 及來源／inbox scope。exclusive write＋fsync，不覆寫。
+查詢只進入明確 root 的受管理 run／attempt，重驗 capture、supervisor、原始 CLI trace 及同事件 inbox。不用 summary.passed 判成功。
+CLI 程序啟動是 observed；typed 協定、工具收件、回合與退出分開。scope 明示不提供獨立模型來源證明。舊資料缺綁定維持未知。
+helper 壞資料不抹除獨立 inbox 證據。查詢不建檔、不扣額度、不接收或 ACK。模型七欄及 query 未擴張。
+
+本輪唯讀查詢目前 Python 的 IsProcessInJob，實際回 parent_job_present=true、spawned_children=0、model_calls=0。
+這證明原 service 驗收走獨立背景入口會被既有 guard 拒絕。現在有限驗收沿正式 spawn_application_host／retain_application_host。
+driver 保留原 child HANDLE，parent PID／建立時間與期限在 host 及最後 CLI gate 都重查。沒有 breakaway，也沒有測試 allow_parent_job 注入。
+先合作 stop，再保存 retained HANDLE 的獨立退出回條。原 stop 的 unknown 不改寫；只有相符原 HANDLE 實際回 OS 0 才能補強自然退出證據。
+缺回條、身分不符、強停或非零仍不通過。產品獨立 start 預設不變。有限模式明示 lifetime_limited，不證明長期獨立背景。
+
+| 命令／證據 | 實際結果 | 範圍 |
+| --- | --- | --- |
+| `py -3.13 -B scripts/verify.py --run-dir reports/event-ingress-001/operator-delta-001 --timeout-seconds 240 --module ...` | 290 run；289 pass；1 skip；0 failure/error；exit 0；140.233 秒；04:10:11 UTC+08 完成 | 16 個相關模組。完整命令見同目錄 verification-summary.json。不是最終來源全套重跑 |
+| 同組 `unit-tests.txt` | 實際 SQLite＋CLI＋loopback HTTP 在輪替後仍查同一舊事件；global 最新任務改變不影響。原始 binding 保存失敗仍保 pending 位元組，reserve／spawn 都零 | provider／Job JSON 為明示 fake。不是模型工具收件證據 |
+| 同組 `lifecycle-evidence.json` | 正式 application-owned Windows 空佇列 host 的 start／pause／resume／stop；retained HANDLE OS exit 0、remaining 0、未強停；provider_attempt_count=0 | 真 Windows Job／handle。父預檢 budget 是 mock。沒有初始化正式預算 |
+| `py -3.13 -B scripts/eventguard.py agent status --format json` | exit 0；not_started；desired_enabled=false；host_liveness=not_recorded；budget_unavailable | 固定 authority.sqlite3、installation.json 均不存在；未初始化或假設零用量 |
+
+Python **3.13.3**。169 個 Python AST 無錯。source_unchanged=true；guardian 自然 exit 0、remaining=0、forcibly_terminated=false、per_test_residuals=[]。
+唯一 skip 為原生通知 notification_icon_unavailable，不升格為 pass。沒有為此重掃主機、提權或更改設定。
+提交後 `reports/event-ingress-001/operator-source-commit.json` 以 raw Git blob 核對最後 source-manifest。
+正式監看 control SHA256 仍為 `78F20282862F179B8DEB4AF769BD0692932EC273AE930C13375E987781CB41BA`。未解除停止。
+
+真模型的單件、最多一任務、180 秒方案仍待當次批准與有效預算。未再次索取，未自行執行。
+尚未驗證真模型通路、正式長期背景、24 小時及桌面 queue。不能宣稱事件已自動交給真正 agent。
+功能、測試及文件集中提交；不推送；執行資料、既有私人研究及附件不提交。
+
 ## 2026-10-24：pending 阻塞、worker 身分與退出補強
 
 基底 `9640df6581b996126137dd4e7066023c3950cf20`。同一 feature 分支。功能、測試與文件一起提交，不推送。

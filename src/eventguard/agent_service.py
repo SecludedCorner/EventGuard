@@ -56,6 +56,31 @@ def _date(value):
         return None
 
 
+def _identity_valid(value):
+    return (isinstance(value, dict) and type(value.get("pid")) is int
+            and 0 < value["pid"] <= 2**32-1 and _date(value.get("created_at")) is not None)
+
+
+def _lifetime_valid(value):
+    lifetime = value.get("lifetime_owner", "independent")
+    deadline = value.get("deadline_monotonic")
+    if type(lifetime) is not str or lifetime not in {"independent", "application"}:
+        return False
+    if deadline is not None and (type(deadline) not in (int, float) or not math.isfinite(deadline) or deadline < 0):
+        return False
+    return (_identity_valid(value.get("application_owner")) if lifetime == "application"
+            else value.get("application_owner") is None and deadline is None)
+
+
+def _lifetime_fields(value):
+    lifetime = value.get("lifetime_owner", "independent")
+    result = {"lifetime_owner": lifetime, "lifetime_limited": lifetime == "application"}
+    if lifetime == "application":
+        result.update(application_owner=dict(value["application_owner"]),
+                      deadline_monotonic=value.get("deadline_monotonic"))
+    return result
+
+
 def _path(root, name):
     return Runtime(root).path(Path("data/agent-service") / name)
 
@@ -101,6 +126,8 @@ def _control(root):
         _guard(value[key])
     if value["allow_live"] and Path(root).resolve() != ROOT.resolve():
         raise AgentServiceError("agent_service_live_root_refused")
+    if not _lifetime_valid(value):
+        raise AgentServiceError("agent_service_lifetime_invalid")
     return value
 
 
@@ -110,7 +137,8 @@ def _owner_valid(value):
             and type(value.get("job_name")) is str and _JOB.fullmatch(value["job_name"])
             and type(value.get("pid")) is int and 0 < value["pid"] <= 2**32-1
             and _date(value.get("created_at")) is not None
-            and type(value.get("session_id")) is int and 0 <= value["session_id"] <= 2**32-1)
+            and type(value.get("session_id")) is int and 0 <= value["session_id"] <= 2**32-1
+            and _lifetime_valid(value))
 
 
 def _job_state(job):
@@ -165,6 +193,7 @@ def status(root):
     try:
         desired = _control(root)
         if desired:
+            result.update(_lifetime_fields(desired))
             result.update(desired_enabled=desired["enabled"], paused=desired["paused"],
                           source_dir=desired["source_dir"], state_dir=desired["state_dir"],
                           namespace="live" if desired["allow_live"] else "test",
@@ -254,10 +283,17 @@ def _preflight(root, codex_executable, allow_live, source_dir, state_dir):
 
 
 def start(root, codex_executable, *, allow_live=False, source_dir=None, state_dir=None,
-          execute=False, ready_timeout=15):
+          execute=False, ready_timeout=15, lifetime_owner="independent", child_owner=None,
+          deadline_monotonic=None):
     """Preflight unless explicitly executed. Never initializes a model budget."""
     if type(execute) is not bool or type(ready_timeout) not in (int, float) or not math.isfinite(ready_timeout) or not 1 <= ready_timeout <= 30:
         raise ValueError("agent_service_start_bounds_invalid")
+    if (type(lifetime_owner) is not str or lifetime_owner not in {"independent", "application"}
+            or lifetime_owner == "application" and not callable(child_owner)
+            or lifetime_owner == "independent" and (child_owner is not None or deadline_monotonic is not None)
+            or deadline_monotonic is not None and (type(deadline_monotonic) not in (int, float)
+                or not math.isfinite(deadline_monotonic) or deadline_monotonic < 0)):
+        raise ValueError("agent_service_lifetime_invalid")
     try:
         root, source, state_dir, executable = _preflight(root, codex_executable, allow_live, source_dir, state_dir)
     except (OSError, ValueError, RuntimeError) as error:
@@ -286,10 +322,20 @@ def start(root, codex_executable, *, allow_live=False, source_dir=None, state_di
                  "model_calls": 0, "source_dir": str(source), "state_dir": str(state_dir),
                  "namespace": "live" if allow_live else "test", "budget": budget,
                  "selection_policy": selection_policy,
+                 "lifetime_owner": lifetime_owner, "lifetime_limited": lifetime_owner == "application",
                  "capability_reasons": capability_reasons, "blocked_reasons": capability_reasons + waiting_reasons,
                  "reason": capability_reasons[0] if capability_reasons else waiting_reasons[0] if waiting_reasons else None}
     if not execute or capability_reasons:
         return preflight
+    scope = {"lifetime_owner": lifetime_owner}
+    if lifetime_owner == "application":
+        observed = processes.identity()
+        if observed.get("state") != "alive" or not _identity_valid(observed):
+            return dict(preflight, state="blocked", reason="application_owner_identity_unverifiable")
+        if deadline_monotonic is not None and time.monotonic() >= deadline_monotonic:
+            return dict(preflight, state="blocked", reason="agent_service_deadline_elapsed")
+        scope.update(application_owner={key: observed[key] for key in ("pid", "created_at")},
+                     deadline_monotonic=deadline_monotonic)
     child = None
     with _mutation(root):
         current = status(root)
@@ -302,9 +348,9 @@ def start(root, codex_executable, *, allow_live=False, source_dir=None, state_di
         control = {"kind": KIND, "run_id": run_id, "job_name": job_name, "enabled": True,
                    "paused": bool(previous and previous["paused"]), "updated_at": _stamp(),
                    "source_dir": str(source), "state_dir": str(state_dir),
-                   "codex_executable": str(executable), "allow_live": allow_live}
+                   "codex_executable": str(executable), "allow_live": allow_live, **scope}
         _write(root, "control.json", control)
-        _write(root, "launch.json", {"state": "launch_intent", "run_id": run_id, "job_name": job_name})
+        _write(root, "launch.json", {"state": "launch_intent", "run_id": run_id, "job_name": job_name, **scope})
         try:
             python = Path(sys.executable)
             hidden = python.with_name("pythonw.exe")
@@ -312,19 +358,28 @@ def start(root, codex_executable, *, allow_live=False, source_dir=None, state_di
                 python = hidden
             argv = [str(python), "-B", "-m", "eventguard.agent_service", "_serve", "--root", str(root),
                     "--run-id", run_id, "--job-name", job_name]
-            child = processes.spawn_persistent(argv, job_name=job_name, stdin=subprocess.DEVNULL,
+            launch = processes.spawn_application_host if lifetime_owner == "application" else processes.spawn_persistent
+            child = launch(argv, job_name=job_name, stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=str(ROOT),
                 env=dict(os.environ, PYTHONPATH=str(ROOT / "src"), PYTHONDONTWRITEBYTECODE="1"))
+            if child_owner is not None:
+                # Give the owning application its actual freshly created child
+                # before any fallible metadata/handoff operation can fail.
+                child._eventguard_agent_service_scope = {"kind": "eventguard-agent-service-owned-launch-v1",
+                    "run_id": run_id, "job_name": job_name,
+                    "pid": child.pid, "created_at": child.created_at, **scope}
+                child_owner(child)
             owner = {"kind": OWNER_KIND, "run_id": run_id, "pid": child.pid, "created_at": child.created_at,
-                     "job_name": job_name, "session_id": processes.process_session(child.pid)}
+                     "job_name": job_name, "session_id": processes.process_session(child.pid), **scope}
             _write(root, "owner.json", owner)
             deadline = time.monotonic() + ready_timeout
             while time.monotonic() < deadline:
                 ready = _read(root, "ready.json")
                 if ready and all(ready.get(key) == owner[key] for key in ("run_id", "pid", "created_at")):
-                    receipt = processes.detach_owned(child, ready["job_keeper"])
+                    receipt = (processes.retain_application_host(child, ready["job_keeper"])
+                               if lifetime_owner == "application" else processes.detach_owned(child, ready["job_keeper"]))
                     return {"state": "started", "run_id": run_id, "handoff": receipt,
-                            "model_calls": None, "real_agent_wake_verified": False}
+                            "model_calls": None, "real_agent_wake_verified": False, **_lifetime_fields(control)}
                 if child.poll() is not None:
                     break
                 time.sleep(.05)
@@ -428,6 +483,14 @@ def serve(root, run_id, job_name):
     desired = _control(root)
     if not desired or not desired["enabled"] or desired["run_id"] != run_id or desired["job_name"] != job_name:
         return {"state": "disabled", "model_calls": 0}
+    scope = _lifetime_fields(desired)
+    parent = desired.get("application_owner")
+    if parent is not None:
+        launch = _read(root, "launch.json")
+        if (not launch or launch.get("run_id") != run_id or launch.get("job_name") != job_name
+                or launch.get("application_owner") != parent or not _lifetime_valid(launch)
+                or launch.get("deadline_monotonic") != desired.get("deadline_monotonic")):
+            raise AgentServiceError("agent_service_application_launch_mismatch")
     keeper = processes.adopt_current_job(job_name)
     _KEEPERS.append(keeper)
     held = keeper.receipt()
@@ -437,17 +500,34 @@ def serve(root, run_id, job_name):
     cancel, finished = threading.Event(), threading.Event()
     directory = _path(root, "runs") / run_id
     state = {"run_id": run_id, "state": "starting", "heartbeat_at": _stamp(), "last_progress": "host_ready",
-             "reason": None, "dispatch_run_dir": str(directory), "model_calls": 0}
+             "reason": None, "dispatch_run_dir": str(directory), "model_calls": 0, **scope}
     monitor = None
+    cancellation_reason = [None]
+    def lifetime_allowed():
+        if parent is not None:
+            observed = processes.identity(parent["pid"])
+            if (observed.get("state") != "alive" or observed.get("pid") != parent["pid"]
+                    or observed.get("created_at") != parent["created_at"]):
+                cancellation_reason[0] = "application_owner_exit_or_unverifiable"
+                cancel.set()
+                return False
+        deadline = desired.get("deadline_monotonic")
+        if deadline is not None and time.monotonic() >= deadline:
+            cancellation_reason[0] = "application_lifetime_deadline_elapsed"
+            cancel.set()
+            return False
+        return True
     def dispatch_enabled():
         current = _control(root)
-        return bool(current and current["enabled"] and not current["paused"] and current["run_id"] == run_id)
+        return bool(lifetime_allowed() and current and current["enabled"] and not current["paused"]
+                    and current["run_id"] == run_id and _lifetime_fields(current) == scope)
     def select_event(inbox):
         from .dispatch_policy import select_pending
         return select_pending(inbox, _selection_policy(root))
     def heartbeat():
         while not finished.wait(HEARTBEAT_SECONDS):
             try:
+                lifetime_allowed()
                 current = _control(root)
                 if current is None or not current["enabled"] or current["run_id"] != run_id:
                     cancel.set()
@@ -459,6 +539,8 @@ def serve(root, run_id, job_name):
                 if view:
                     state.update(last_progress=view.get("state"), reason=view.get("reason"),
                                  model_calls=None if view.get("tasks_started", 0) else 0)
+                if cancellation_reason[0] is not None:
+                    state["reason"] = cancellation_reason[0]
                 _write(root, "run.json", state)
             except (OSError, ValueError, TypeError, RuntimeError):
                 cancel.set()  # Broken control or durable health fails closed.
@@ -472,7 +554,8 @@ def serve(root, run_id, job_name):
             codex=desired["codex_executable"], allow_live=desired["allow_live"], execute=True,
             continuous=True, cancel=cancel, root=root, dispatch_enabled=dispatch_enabled,
             admission_path=_path(root, "control.json"), admission_run_id=run_id,
-            select_event=select_event)
+            select_event=select_event, deadline_monotonic=desired.get("deadline_monotonic"))
+        lifetime_allowed()
         state.update(state="stopped" if cancel.is_set() and code == 0 else "blocked", exit_code=code)
         try:
             view = agent_dispatch.status(directory, read_only=True)
@@ -480,6 +563,8 @@ def serve(root, run_id, job_name):
                          model_calls=None if view.get("tasks_started", 0) else 0)
         except (OSError, ValueError, RuntimeError):
             state.update(reason="dispatcher_exit_evidence_unavailable", model_calls=None)
+        if cancellation_reason[0] is not None:
+            state["reason"] = cancellation_reason[0]
     except (KeyboardInterrupt, OSError, ValueError, RuntimeError):
         cancel.set()
         state.update(state="failed", reason="agent_service_host_failure", model_calls=None)
@@ -491,7 +576,7 @@ def serve(root, run_id, job_name):
         try:
             _write(root, "run.json", state)
             _write(root, "exit.json", {"run_id": run_id, "pid": held["pid"], "created_at": held["created_at"],
-                "state": state["state"], "reason": state.get("reason"), "forcibly_terminated": False, "at": _stamp()})
+                "state": state["state"], "reason": state.get("reason"), "forcibly_terminated": False, "at": _stamp(), **scope})
         finally:
             lease.release()
     return state

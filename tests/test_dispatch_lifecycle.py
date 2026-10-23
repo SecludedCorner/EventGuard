@@ -372,6 +372,25 @@ class DispatchReadonlyAndWorkerGateTests(unittest.TestCase):
             return 0
         self.assertEqual(self.worker(capture), 0)
 
+    def test_worker_rechecks_application_owner_before_native_launch(self):
+        parent = {"pid": 1234, "created_at": "2026-10-24T00:00:00+00:00"}
+        self.write_control(lifetime_owner="application", application_owner=parent,
+                           deadline_monotonic=time.monotonic()+20)
+        def capture(*args, **kwargs):
+            with patch("eventguard.processes.identity", return_value={"state": "alive", **parent}):
+                self.assertTrue(kwargs["start_allowed"]())
+            for observed in ({"state": "missing"}, {"state": "unknown"},
+                             {"state": "alive", "pid": 5678, "created_at": parent["created_at"]},
+                             {"state": "alive", "pid": parent["pid"], "created_at": "2026-10-24T00:00:01+00:00"}):
+                with patch("eventguard.processes.identity", return_value=observed):
+                    self.assertFalse(kwargs["start_allowed"]())
+            self.write_control(lifetime_owner="application", application_owner=parent,
+                               deadline_monotonic=time.monotonic()-1)
+            with patch("eventguard.processes.identity", return_value={"state": "alive", **parent}):
+                self.assertFalse(kwargs["start_allowed"]())
+            return 0
+        self.assertEqual(self.worker(capture), 0)
+
     def test_owned_supervisor_exit_is_required_for_new_managed_attempt(self):
         write_json(self.attempt / "capture-start.json", {})
         (self.attempt / "codex.jsonl").write_text("", encoding="utf-8")

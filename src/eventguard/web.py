@@ -22,7 +22,7 @@ HTML = """<!doctype html>
 <p><button id="prev">上一頁</button> <button id="next">下一頁</button></p>
 <article id="detail" hidden><h2>事件詳情</h2><p id="detail-summary"></p><p id="detail-id"></p><p>處置狀態只記錄人的決定。它不會 ACK，也不會修改系統。</p>
 <div id="status-buttons"><button data-status="new">新增</button><button data-status="read">已讀</button><button data-status="handled">已處理</button><button data-status="ignored">忽略</button></div>
-<h3>觀察與建議</h3><div id="guidance"></div><h3>投遞證據</h3><p>落盤、收件、結果與 ACK 分開記錄。缺少證據顯示未知。</p><pre id="delivery-json"></pre><details><summary>結構化資料</summary><pre id="detail-json"></pre></details></article></section>
+<h3>觀察與建議</h3><div id="guidance"></div><h3>投遞證據</h3><p>落盤、收件、結果與 ACK 分開記錄。缺少證據顯示未知。CLI 啟動只代表程序啟動；實際收件、回合與退出另行核對。</p><pre id="delivery-json"></pre><details><summary>結構化資料</summary><pre id="detail-json"></pre></details></article></section>
 <section id="sources" hidden><h2>七個來源</h2><p>只顯示已保存的採集結果。未知、拒讀或過期都不代表安全。</p><div id="source-cards"></div></section>
 <section id="rules" hidden><h2>規則</h2><p>編輯專案的 config/rules.json。下一輪採集會讀取。規則不執行命令。</p><div id="rule-cards"></div></section>
 <section id="agent" hidden><h2>Agent 派送</h2><p>這是選配的短期專用任務。無事件由普通程式等待。此頁不會啟動模型。ACK 不是風險結案。</p><p id="agent-summary"></p><button id="agent-pause">暫停新派送</button> <button id="agent-stop">停止派送程序</button><p>恢復需在終端明確執行 agent resume --execute。採集及原事件不受這兩個按鈕影響。</p><pre id="agent-json"></pre></section>
@@ -157,7 +157,7 @@ class LocalWeb:
                         event_id = unquote(route.path[len("/api/events/"):-len("/delivery")], errors="strict")
                         state = "data/agent-delivery" if app.namespace == "live" else "data/agent-delivery-test"
                         return self.reply(200, inspect_delivery(runtime.path("data/"+app.namespace),
-                            runtime.path(state), event_id, allow_live=app.namespace == "live"))
+                            runtime.path(state), event_id, allow_live=app.namespace == "live", root=runtime.root))
                     if route.path.startswith("/api/events/") and not query:
                         event_id = unquote(route.path.removeprefix("/api/events/"), errors="strict")
                         return self.reply(200, app.catalog.detail(event_id))

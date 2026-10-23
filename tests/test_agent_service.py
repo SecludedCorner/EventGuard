@@ -34,6 +34,9 @@ def _stop_test_hosts(root, children, evidence):
                     created_at=child.created_at, reason="test_teardown", grace=2)
                 evidence["teardown"].append(receipt)
                 child.wait(timeout=5)
+            if isinstance(child, service.processes.JobPopen) and not child.detached:
+                evidence.setdefault("retained_handle_exits", []).append(
+                    service.processes.finish(child, "cancelled", grace=0, request_stop=False))
         evidence["child_exit_codes"] = [child.returncode for child, _ in children]
 
 
@@ -496,6 +499,104 @@ class AgentServiceTests(unittest.TestCase):
         self.assertFalse(service._control(self.root)["enabled"])
         self.assertEqual(finish.call_args.args[0], child)
 
+    def test_application_lifetime_requires_owner_callback_and_finite_bound(self):
+        with patch.object(service.processes, "spawn_application_host") as spawn:
+            for arguments in ({"lifetime_owner": "application"},
+                              {"child_owner": lambda child: None},
+                              {"deadline_monotonic": time.monotonic()+10},
+                              {"lifetime_owner": "application", "child_owner": lambda child: None,
+                               "deadline_monotonic": float("inf")}):
+                with self.subTest(arguments=list(arguments)), self.assertRaisesRegex(ValueError, "lifetime_invalid"):
+                    self.start(execute=True, **arguments)
+        spawn.assert_not_called()
+
+    def test_application_start_refuses_unknown_parent_or_expired_deadline(self):
+        for observed, deadline, reason in (({"state": "unknown"}, time.monotonic()+30, "application_owner_identity_unverifiable"),
+                ({"state": "alive", "pid": 9876, "created_at": self.created}, time.monotonic()-1, "agent_service_deadline_elapsed")):
+            with self.subTest(reason=reason), patch.object(service.processes, "identity", return_value=observed), \
+                 patch.object(service.processes, "spawn_application_host") as spawn:
+                result = self.start(execute=True, lifetime_owner="application", child_owner=lambda child: None,
+                                    deadline_monotonic=deadline)
+            self.assertEqual(result["state"], "blocked")
+            self.assertEqual(result["reason"], reason)
+            spawn.assert_not_called()
+        self.assertFalse(service._path(self.root, "control.json").exists())
+
+    def test_application_handoff_retains_real_child_before_metadata(self):
+        child = Mock(pid=1234, created_at=self.created, detached=False)
+        child.poll.return_value = None
+        held = []
+        original_write = service._write
+        parent = {"state": "alive", "pid": 9876, "created_at": self.created}
+        def write(root, name, value):
+            if name == "owner.json":
+                self.assertEqual(held, [child])
+                self.assertEqual(child._eventguard_agent_service_scope["run_id"], value["run_id"])
+                self.assertEqual(value["application_owner"]["pid"], parent["pid"])
+                original_write(root, "ready.json", {"run_id": value["run_id"], "pid": child.pid,
+                    "created_at": child.created_at, "job_keeper": {"fixture": "no-real-process"}})
+            original_write(root, name, value)
+        with patch.object(service.processes, "identity", return_value=parent), \
+             patch.object(service.processes, "spawn_application_host", return_value=child) as spawn, \
+             patch.object(service.processes, "spawn_persistent") as independent, \
+             patch.object(service.processes, "process_session", return_value=1), \
+             patch.object(service, "_write", side_effect=write), \
+             patch.object(service.processes, "retain_application_host", return_value={"ownership_transferred": False}) as retain, \
+             patch.object(service.processes, "detach_owned") as detach:
+            result = self.start(execute=True, lifetime_owner="application", child_owner=held.append,
+                                deadline_monotonic=time.monotonic()+30)
+        self.assertEqual(result["state"], "started")
+        self.assertEqual(result["lifetime_owner"], "application")
+        self.assertTrue(result["lifetime_limited"])
+        self.assertFalse(result["handoff"]["ownership_transferred"])
+        spawn.assert_called_once()
+        self.assertNotIn("allow_parent_job", spawn.call_args.kwargs)
+        self.assertNotIn("creationflags", spawn.call_args.kwargs)
+        retain.assert_called_once()
+        independent.assert_not_called()
+        detach.assert_not_called()
+
+    def test_application_serve_checks_parent_identity_and_passes_deadline(self):
+        parent = {"pid": 9876, "created_at": self.created}
+        for observed in ({"state": "missing", "pid": parent["pid"]},
+                         {"state": "unknown", **parent},
+                         {"state": "alive", **parent, "pid": 5432},
+                         {"state": "alive", **parent, "created_at": "2026-10-24T00:00:01+00:00"}):
+            deadline = time.monotonic()+30
+            control = self.control(lifetime_owner="application", application_owner=parent, deadline_monotonic=deadline)
+            service._write(self.root, "launch.json", {"state": "launch_intent", **control})
+            def dispatch(*args, **kwargs):
+                self.assertEqual(kwargs["deadline_monotonic"], deadline)
+                self.assertFalse(kwargs["dispatch_enabled"]())
+                self.assertTrue(kwargs["cancel"].is_set())
+                return 0
+            with self.subTest(observed=observed), patch.object(service.processes, "identity", return_value=observed), \
+                 patch.object(service.processes, "adopt_current_job", return_value=self.keeper()), \
+                 patch.object(service.agent_dispatch, "run", side_effect=dispatch) as run, \
+                 patch.object(service.agent_dispatch, "status", return_value={"state": "stopped", "tasks_started": 0}):
+                result = service.serve(self.root, self.run_id, self.job)
+            self.assertEqual(result["state"], "stopped")
+            self.assertEqual(result["reason"], "application_owner_exit_or_unverifiable")
+            self.assertEqual(result["model_calls"], 0)
+            run.assert_called_once()
+
+    def test_application_serve_cancels_when_its_deadline_expires(self):
+        parent = {"pid": 9876, "created_at": self.created}
+        control = self.control(lifetime_owner="application", application_owner=parent,
+                               deadline_monotonic=time.monotonic()-1)
+        service._write(self.root, "launch.json", {"state": "launch_intent", **control})
+        def dispatch(*args, **kwargs):
+            self.assertFalse(kwargs["dispatch_enabled"]())
+            self.assertTrue(kwargs["cancel"].is_set())
+            return 0
+        with patch.object(service.processes, "identity", return_value={"state": "alive", **parent}), \
+             patch.object(service.processes, "adopt_current_job", return_value=self.keeper()), \
+             patch.object(service.agent_dispatch, "run", side_effect=dispatch), \
+             patch.object(service.agent_dispatch, "status", return_value={"state": "stopped", "tasks_started": 0}):
+            result = service.serve(self.root, self.run_id, self.job)
+        self.assertEqual(result["state"], "stopped")
+        self.assertEqual(result["reason"], "application_lifetime_deadline_elapsed")
+
     def test_smoke_teardown_reaps_proven_job_even_when_stop_raises(self):
         child = Mock(pid=1234, created_at=self.created, returncode=1460)
         child.wait.side_effect = [subprocess.TimeoutExpired("synthetic-worker", 5), 1460]
@@ -520,12 +621,9 @@ class AgentServiceTests(unittest.TestCase):
         config = self.root / "config/default.json"
         config.parent.mkdir(parents=True)
         shutil.copyfile(service.ROOT / "config/default.json", config)
-        original_spawn = service.processes.spawn_persistent
         children = []
-        def bounded_spawn(argv, **kwargs):
-            child = original_spawn(argv, allow_parent_job=True, **kwargs)
-            children.append((child, kwargs["job_name"]))
-            return child
+        def own_child(child):
+            children.append((child, child.job.name))
         def wait_dispatch_state(expected):
             deadline = time.monotonic() + 8
             value = None
@@ -536,10 +634,12 @@ class AgentServiceTests(unittest.TestCase):
                 time.sleep(.05)
             self.fail("bounded fixture host did not publish expected state: " + repr(value))
         try:
-            with patch.object(service.processes, "spawn_persistent", side_effect=bounded_spawn):
-                started = self.start(execute=True)
+            started = self.start(execute=True, lifetime_owner="application", child_owner=own_child,
+                                 deadline_monotonic=time.monotonic()+45)
             self.assertEqual(started["state"], "started", started)
             self.assertTrue(started["handoff"]["lifetime_limited"])
+            self.assertFalse(started["handoff"]["ownership_transferred"])
+            self.assertEqual(started["lifetime_owner"], "application")
             waiting = wait_dispatch_state({"waiting"})
             self.assertEqual(waiting["model_calls"], 0)
             self.assertEqual(waiting["dispatcher"]["tasks_started"], 0)
@@ -555,11 +655,17 @@ class AgentServiceTests(unittest.TestCase):
             stopped = _stop_test_hosts(self.root, children, self.evidence)
         self.assertEqual(stopped["state"], "stopped", stopped)
         self.assertFalse(stopped["process"]["forcibly_terminated"])
-        self.assertEqual(stopped["process"]["exit_code"], 0)
+        if stopped["process"]["exit_code"] is not None:
+            self.assertEqual(stopped["process"]["exit_code"], 0)
         self.assertEqual(stopped["process"]["remaining_owned_processes"], 0)
         self.assertEqual(self.evidence["teardown"], [])
+        self.assertTrue(all(receipt["exit_code"] == 0 and receipt["remaining_owned_processes"] == 0
+                            and receipt["forcibly_terminated"] is False
+                            for receipt in self.evidence["retained_handle_exits"]))
         self.assertTrue(all(child.returncode == 0 for child, _ in children))
-        self.evidence.update({"scope": "real Windows private Job with empty synthetic source; parent budget preflight mocked; no provider/model",
+        self.evidence.update({"scope": "real Windows application-owned private Job with empty synthetic source; parent budget preflight mocked; no provider/model",
+                         "launch_api": "spawn_application_host", "handoff_api": "retain_application_host",
+                         "lifetime_limited": True, "provider_attempt_count": 0,
                          "started": started, "waiting": waiting, "paused": paused, "resumed": resumed,
                          "stop": stopped, "child_exit_codes": [child.returncode for child, _ in children],
                          "model_calls": 0})

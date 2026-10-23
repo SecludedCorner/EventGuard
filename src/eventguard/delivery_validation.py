@@ -240,7 +240,7 @@ def _idle_service(root, deadline, tasks):
 
 def execute_service(root, manifest, codex):
     """One event, one ordinary service owner, one possible CLI task. No retry."""
-    from . import agent_service
+    from . import agent_service, processes
     if (manifest.get("service_execution") is not None or _service_path(root, ".").exists()
             or manifest["stages"] or manifest["enqueued"]):
         raise ValueError("existing_service_execution_refused_inspect_evidence")
@@ -249,23 +249,35 @@ def execute_service(root, manifest, codex):
     if config.exists():
         raise ValueError("service_acceptance_existing_config_refused")
     digest = hashlib.sha256(config_source.read_bytes()).hexdigest()
+    began = time.monotonic()
+    deadline = began + SERVICE_TIMEOUT
+    work_deadline = deadline - 20  # Reserve the final cooperative stop window.
     manifest["service_execution"] = {"kind": _SERVICE_KIND, "state": "intent", "started_at": utc(),
-                                     "started_monotonic": time.monotonic(), "clock_id": uuid.uuid4().hex,
-                                     "timeout_seconds": SERVICE_TIMEOUT, "config_sha256": digest}
+                                     "started_monotonic": began, "clock_id": uuid.uuid4().hex,
+                                     "timeout_seconds": SERVICE_TIMEOUT, "config_sha256": digest,
+                                     "lifetime_owner": "application", "deadline_monotonic": work_deadline}
     # This intent is terminal for re-execution even if start never enqueues.
     write_json(root / "manifest.json", manifest)
     observations = {"kind": _SERVICE_KIND}
-    deadline = time.monotonic() + SERVICE_TIMEOUT
-    work_deadline = deadline - 20  # Reserve the final cooperative stop window.
+    children = []
+    def own_child(child):
+        # This callback receives only a child created by our own Start. Keep
+        # its real HANDLE/Job and immutable launch identity before further I/O.
+        record = {"child": child, "launch": None}
+        children.append(record)
+        record["launch"] = dict(child._eventguard_agent_service_scope)
     try:
         config.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(config_source, config)
         start = agent_service.start(root, codex, source_dir=root / "source", state_dir=root / "inbox",
-                                    allow_live=False, execute=True, ready_timeout=15)
+                                    allow_live=False, execute=True, ready_timeout=15,
+                                    lifetime_owner="application", child_owner=own_child,
+                                    deadline_monotonic=work_deadline)
         write_json(root / "service-start.json", start)
         if start.get("state") != "started":
             raise ValueError("service_acceptance_start_blocked")
-        manifest["service_execution"].update(state="running", host_run_id=start["run_id"])
+        manifest["service_execution"].update(state="running", host_run_id=start["run_id"],
+                                              application_owner=start.get("application_owner"))
         write_json(root / "manifest.json", manifest)
         observations["idle_before"] = _idle_service(root, work_deadline, 0)
         write_json(root / "service-observations.json", observations)
@@ -281,20 +293,52 @@ def execute_service(root, manifest, codex):
         manifest["service_execution"]["state"] = "failed_pending_preserved"
         raise
     finally:
-        # A blocked preflight creates no service control. Do not invent a stop.
-        if _service_path(root, "control.json").is_file():
-            remaining = max(1, min(15, deadline-time.monotonic()-3))
-            try:
-                stopped = agent_service.stop(root, grace_seconds=remaining)
+        original_failure = sys.exc_info()[0] is not None
+        shutdown_failed = False
+        try:
+            # A blocked preflight creates no service control. Do not invent a
+            # cooperative stop or reinterpret a failed source as no event.
+            if _service_path(root, "control.json").is_file():
+                remaining = max(1, min(12, deadline-time.monotonic()-6))
+                try:
+                    stopped = agent_service.stop(root, grace_seconds=remaining)
+                except (OSError, ValueError, RuntimeError, KeyError, TypeError):
+                    stopped = {"state": "shutdown_unconfirmed", "reason": "service_cooperative_stop_failed",
+                               "raw_error_omitted": True}
+                    shutdown_failed = True
                 write_json(root / "service-stop.json", stopped)
+        finally:
+            # Retained HANDLE evidence is separate from stop_persistent's
+            # receipt. An already empty Job may lack an OS exit code there;
+            # the original child HANDLE can still observe the actual OS code.
+            cleanup = {"kind": "eventguard-service-application-owner-exit-v1",
+                       "lifetime_owner": "application", "children": [], "recorded_at": utc()}
+            for owned in children:
+                child, launch = owned["child"], owned["launch"]
+                retained = (isinstance(child, processes.JobPopen) and child.detached is False
+                    and isinstance(launch, dict) and launch.get("pid") == child.pid
+                    and launch.get("created_at") == child.created_at and launch.get("job_name") == child.job.name)
+                try:
+                    receipt = processes.finish(child, "cancelled",
+                        grace=max(0, min(3, deadline-time.monotonic()-3)), request_stop=False)
+                except (OSError, ValueError, RuntimeError, TypeError):
+                    receipt = {"child_exited": None, "remaining_owned_processes": None,
+                               "reason": "retained_owned_handle_exit_unconfirmed", "raw_error_omitted": True}
+                cleanup["children"].append({"launch": launch, "process": receipt, "retained_handle_observed": retained})
+                if (not retained or receipt.get("child_exited") is not True or receipt.get("remaining_owned_processes") != 0
+                        or receipt.get("forcibly_terminated") is not False or receipt.get("exit_code") != 0):
+                    shutdown_failed = True
+            cleanup["recorded_at"] = utc()
+            try:
+                write_json(root / "service-owner-stop.json", cleanup)
             finally:
+                if shutdown_failed:
+                    manifest["service_execution"]["state"] = "failed_pending_preserved"
                 manifest["service_execution"]["finished_at"] = utc()
                 manifest["service_execution"]["finished_monotonic"] = time.monotonic()
                 write_json(root / "manifest.json", manifest)
-        else:
-            manifest["service_execution"]["finished_at"] = utc()
-            manifest["service_execution"]["finished_monotonic"] = time.monotonic()
-            write_json(root / "manifest.json", manifest)
+            if shutdown_failed and not original_failure:
+                raise ValueError("service_acceptance_owned_shutdown_failed")
     return verify_service(root, manifest)
 
 
@@ -309,6 +353,44 @@ def _natural_job(receipt, *, exit_code=True):
             and type(receipt.get("remaining_owned_processes")) is int and receipt["remaining_owned_processes"] == 0
             and receipt.get("forcibly_terminated") is False and receipt.get("reason") == "natural_exit"
             and (not exit_code or type(receipt.get("exit_code")) is int and receipt["exit_code"] == 0))
+
+
+def _application_lifetime(start, owner, control, run, exit_receipt, execution, cleanup):
+    """Bind saved proof to the one original application-owned host HANDLE."""
+    children = cleanup.get("children")
+    if (cleanup.get("kind") != "eventguard-service-application-owner-exit-v1"
+            or cleanup.get("lifetime_owner") != "application" or type(children) is not list or len(children) != 1):
+        return False
+    child = children[0]
+    if not isinstance(child, dict):
+        return False
+    launch, process, handoff = child.get("launch"), child.get("process"), start.get("handoff")
+    if not all(isinstance(value, dict) for value in (launch, process, handoff)):
+        return False
+    parent = owner.get("application_owner")
+    deadline = execution.get("deadline_monotonic")
+    if (not _process_identity(parent) or not _monotonic(deadline)
+            or not _monotonic(execution.get("started_monotonic"))
+            or not _monotonic(execution.get("finished_monotonic"))
+            or deadline != execution["started_monotonic"] + SERVICE_TIMEOUT - 20
+            or execution.get("timeout_seconds") != SERVICE_TIMEOUT
+            or not 0 <= execution["finished_monotonic"] - execution["started_monotonic"] <= SERVICE_TIMEOUT):
+        return False
+    records = (start, owner, control, run, exit_receipt, execution, launch)
+    if any(value.get("lifetime_owner") != "application" or value.get("application_owner") != parent
+           or value.get("deadline_monotonic") != deadline for value in records):
+        return False
+    return (child.get("retained_handle_observed") is True and _natural_job(process)
+            and _same_owner(process, owner) and _same_owner(launch, owner)
+            and launch.get("kind") == "eventguard-agent-service-owned-launch-v1"
+            and launch.get("run_id") == owner.get("run_id") and launch.get("job_name") == owner.get("job_name")
+            and start.get("state") == "started" and start.get("run_id") == owner.get("run_id")
+            and handoff.get("managed") is True and handoff.get("ownership_transferred") is False
+            and handoff.get("detached") is False and handoff.get("lifetime_owner") == "application"
+            and handoff.get("lifetime_limited") is True and handoff.get("job_name") == owner.get("job_name")
+            and handoff.get("session_id") == owner.get("session_id") and _same_owner(handoff, owner)
+            and parent["pid"] != owner["pid"]
+            and _aware_timestamp(parent["created_at"]) <= _aware_timestamp(owner["created_at"]))
 
 
 def _sample_matches(sample, owner, directory, tasks, dispatch_id):
@@ -391,6 +473,8 @@ def verify_service(root, manifest):
     exit_receipt = read_json(_service_path(root, "exit.json"))
     stopped = read_json(root / "service-stop.json")
     stop_receipt = read_json(_service_path(root, "stop-receipt.json"))
+    start_receipt = read_json(root / "service-start.json")
+    owner_cleanup = read_json(root / "service-owner-stop.json")
     observations = read_json(root / "service-observations.json")
     state = read_json(directory / "status.json")
     marker = read_json(directory / "dispatch.json")
@@ -449,8 +533,17 @@ def verify_service(root, manifest):
     enqueued = [row["event_id"] for row in manifest["enqueued"]]
     idle_before = _check_idle(observations.get("idle_before", {}), owner, directory, 0, state.get("run_id"))
     idle_after = _check_idle(observations.get("idle_after", {}), owner, directory, 1, state.get("run_id"))
-    host_natural = (stopped.get("state") == "stopped" and stopped.get("process") == stop_receipt
-        and _natural_job(stop_receipt) and _same_owner(stop_receipt, owner)
+    application_lifetime = _application_lifetime(start_receipt, owner, control, run, exit_receipt, execution, owner_cleanup)
+    # Keep the original cooperative Job receipt, including an unknown OS code.
+    # Only matching original-child HANDLE proof may supply that missing code.
+    cooperative_exit = (_process_identity(stop_receipt) and stop_receipt.get("managed") is True
+        and stop_receipt.get("child_exited") is True and type(stop_receipt.get("remaining_owned_processes")) is int
+        and stop_receipt["remaining_owned_processes"] == 0 and stop_receipt.get("forcibly_terminated") is False
+        and stop_receipt.get("reason") in {"natural_exit", "private_job_empty"}
+        and (stop_receipt.get("exit_code") is None or type(stop_receipt.get("exit_code")) is int
+             and stop_receipt["exit_code"] == 0))
+    host_natural = (application_lifetime and stopped.get("state") == "stopped" and stopped.get("process") == stop_receipt
+        and cooperative_exit and _same_owner(stop_receipt, owner)
         and stop_receipt.get("job_name") == owner.get("job_name")
         and exit_receipt.get("run_id") == host_run and _same_owner(exit_receipt, owner)
         and exit_receipt.get("state") == "stopped" and exit_receipt.get("forcibly_terminated") is False
@@ -477,7 +570,8 @@ def verify_service(root, manifest):
             _aware_timestamp(exit_receipt.get("at")), _aware_timestamp(execution.get("finished_at"))]
         chronology = all(moment is not None for moment in moments) and moments == sorted(moments)
     clock_verified = _service_clock(observations, execution)
-    lifecycle = (control.get("kind") == "eventguard-agent-service-control-v1"
+    lifecycle = (application_lifetime and execution.get("state") == "observed"
+        and control.get("kind") == "eventguard-agent-service-control-v1"
         and owner.get("kind") == "eventguard-agent-service-owner-v1"
         and control.get("run_id") == host_run and control.get("enabled") is False
         and control.get("allow_live") is False and _guard(control.get("source_dir", "")) == root / "source"
@@ -508,6 +602,8 @@ def verify_service(root, manifest):
         "duplicates": [] if matched else sorted(source_ids-set(expected)), "per_stage": [assessment],
         "idle_before_verified": idle_before, "idle_after_verified": idle_after,
         "host_natural_exit_verified": host_natural, "lifecycle_verified": lifecycle,
+        "lifetime_owner": "application", "lifetime_limited": True,
+        "application_owner_exit_verified": application_lifetime,
         "chronology_verified": bool(chronology), "monotonic_clock_verified": clock_verified,
         "supervisor_identity_level": supervisor_proof["identity_level"],
         "model_request_count": None, "model_request_count_measured": False, "provider_attempt_count": 1,

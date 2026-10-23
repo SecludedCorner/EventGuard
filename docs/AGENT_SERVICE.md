@@ -77,6 +77,13 @@ inbox 證據不能獨立證明模型執行。缺 provider 生命週期證據時�
 dispatcher 自己另保存真 CLI trace、工具回傳、結果及 owned-tree 退出回條。
 模型用量缺失時顯示未知，不假裝為零。
 
+人類 CLI 與 Web 可按事件查 `provider_evidence`。後續任務開始後，仍可查保留的舊 attempt。
+查詢沿用原帳本及回條。已輪替的完成帳本保留有界參照，不建立另一份佇列。
+只讀本專案受管理的 run／attempt 及已綁定的來源。舊資料缺少綁定、證據已清理或內容不符時，仍顯示未知。
+`agent_started=observed` 只表示已核對 CLI 程序啟動。回合完成、工具收件及程序退出各有自己的證據。
+這些是 CLI 協定證據，不能單獨證明模型來源。fake CLI 不會因此成為真模型驗收。
+此查詢不接收、不 ACK、不啟動模型，也不改變人類處置狀態。模型七欄不增加這些本機資料。
+
 新的 managed attempt 另保存 supervisor 的 PID、建立時間及本次 nonce。
 worker 核對綁定後，才可啟動 CLI。退出回條必須符合原身分。
 缺少身分或回條時標未知。舊回條不補造新證據，也不升格為本版驗收。
@@ -115,6 +122,10 @@ py -3.13 -B scripts/validate_delivery.py service --root reports/service-acceptan
 
 取得本輪有限批准及有效預算後，才在同一目錄加 `--codex-executable $codexExe --execute`。
 程式先等空佇列，再加入事件。最多一個任務，總期限 180 秒，最後合作停止隔離 host。
+有限驗收使用既有 application-owned Job。驗收程式持有實際 child handle，不 detach、不離開外層 Job。
+父應用身分不明、退出或期限到達時，host 合作停止。CLI 啟動前也重查父應用與期限。
+停止後另保存手持 HANDLE 的退出回條，不把未知 OS exit 當成 0。此模式明示 lifetime_limited，不證明獨立背景壽命。
+產品 `agent start` 的獨立模式不變。外層 Job 不允許確認獨立生命期時仍拒絕，不使用 breakaway 或測試繞過旗標。
 根據 intent 拒絕同目錄重跑。失敗先讀該輪 trace、stderr、狀態及退出回條。
 `--verify-only` 只重驗既有證據，不啟動模型，不重新收件或 ACK。
 驗收另核對 SQLite 保存時間、worker／CLI 建立時間、receive／query／result／ACK 順序。
