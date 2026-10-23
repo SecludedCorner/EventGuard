@@ -2,6 +2,8 @@
 
 查核時間：2026-10-23（UTC+8）。固定上游 commit：`654dd7165112c38da4e7bf894fdccb9a251d2c1d`，PR #86；本地基底 `d46236fdd20d59ff4c9ff1c7c7091bfd497f484d`。本頁是唯讀原始碼研究，沒有執行上游、下載引擎、安裝容器、呼叫模型或重新採集正式主機。本輪只新增文件。
 
+後續實作更新：使用者要求把適用的盤點結果落實後，已加入輸出超量的提早停止，以及JSON深度／重複key拒絕，實際驗證見[EVIDENCE](EVIDENCE.md)。下表的原候選狀態已更新；首次讀碼本身仍不是實機驗收。
+
 ## 25 個如何執行
 
 **已驗證（讀碼）**：registry 固定25個ID；25個均有 adapter 註冊，並共用容器 run-plan。這不代表25個 Windows 本機感測器，也不代表已在本機成功執行。catalog／包裝方案逐項盤點另見 [引擎清單研究](SCANNER_ENGINES.md)。
@@ -22,9 +24,9 @@
 | 機制與原始碼證據 | 對 EventGuard 的取捨 |
 | --- | --- |
 | run-plan 在執行前檢查 image digest、固定命令、路徑與網路契約；建立 read-only rootfs、cap-drop、no-new-privileges、CPU／RAM／PID／檔案上限與明確掛載。[container_runtime.rs:1259–1464](https://github.com/TED-H-com/ai-security-scanner/blob/654dd7165112c38da4e7bf894fdccb9a251d2c1d/src-tauri/src/container_runtime.rs#L1259-L1464) | 保留「型別化輸入及單一執行邊界」觀念，不引入容器或25個引擎。EventGuard 已有固定查詢、私有 Job、deadline、4 MiB 合計輸出上限（`collectors/runner.py:16,56–71,123–191`）。 |
-| stdout／stderr 共用原子位元組預算；執行期間偵測超量便中止本次樹，而非只於退出後才拒收；讀管線也有 drain deadline。[container_runtime.rs:2156–2235](https://github.com/TED-H-com/ai-security-scanner/blob/654dd7165112c38da4e7bf894fdccb9a251d2c1d/src-tauri/src/container_runtime.rs#L2156-L2235) | **待採納候選**：本地 `_drain` 已限制保存量，但 `Runner.run` 到循環結束才檢查 oversize；可提早合作停止本工具 Job 並留退出回條，縮短已確定失敗的等待。尚未實作／測試。 |
+| stdout／stderr 共用原子位元組預算；執行期間偵測超量便中止本次樹，而非只於退出後才拒收；讀管線也有 drain deadline。[container_runtime.rs:2156–2235](https://github.com/TED-H-com/ai-security-scanner/blob/654dd7165112c38da4e7bf894fdccb9a251d2c1d/src-tauri/src/container_runtime.rs#L2156-L2235) | **已採納**：合計超4MiB時立即進入原有合作寬限與Job清理，回query_output_limit_exceeded；保留output_limit原因與退出證據。非Job不強停、保留pending。測試範圍與結果見EVIDENCE。 |
 | 先保存原始 artifact，normalize 失敗時保留待重解析狀態；同一 opened handle 驗證大小與 SHA256，避免驗一份再重開另一份。[artifact_store.rs:282–327](https://github.com/TED-H-com/ai-security-scanner/blob/654dd7165112c38da4e7bf894fdccb9a251d2c1d/src-tauri/src/artifact_store.rs#L282-L327)、[orchestrator.rs:893–988](https://github.com/TED-H-com/ai-security-scanner/blob/654dd7165112c38da4e7bf894fdccb9a251d2c1d/src-tauri/src/orchestrator.rs#L893-L988) | 可用於將來可選匯入資料的完整性；目前 EventGuard 用受控 SQLite 事件，沒有理由增加另一套 artifact 管線。hash 只能驗完整性，不代表來源可信。 |
-| 解析限制 artifact／總位元組／列／字串／JSON 深度；省略資料明示 omitted，仍驗證跳過的 JSON 語法；重複 key 被省略時移除較早 verdict。[adapters/bounded_json.rs:34–130](https://github.com/TED-H-com/ai-security-scanner/blob/654dd7165112c38da4e7bf894fdccb9a251d2c1d/src-tauri/src/adapters/bounded_json.rs#L34-L130)、[adapters/mod.rs:66–83](https://github.com/TED-H-com/ai-security-scanner/blob/654dd7165112c38da4e7bf894fdccb9a251d2c1d/src-tauri/src/adapters/mod.rs#L66-L83) | 已採納的合法 sibling 保留／partial 原則應維持；不為4 MiB固定查詢立即引入串流解析架構。可另補深層 JSON、重複狀態 key 的 fail-closed 契約測試。未實作新解析器。 |
+| 解析限制 artifact／總位元組／列／字串／JSON 深度；省略資料明示 omitted，仍驗證跳過的 JSON 語法；重複 key 被省略時移除較早 verdict。[adapters/bounded_json.rs:34–130](https://github.com/TED-H-com/ai-security-scanner/blob/654dd7165112c38da4e7bf894fdccb9a251d2c1d/src-tauri/src/adapters/bounded_json.rs#L34-L130)、[adapters/mod.rs:66–83](https://github.com/TED-H-com/ai-security-scanner/blob/654dd7165112c38da4e7bf894fdccb9a251d2c1d/src-tauri/src/adapters/mod.rs#L66-L83) | 保留合法sibling／partial；另已加入標準JSON解碼前32層上限、解碼後重複key拒絕，含Unicode逃脫同名key與字串括號測試。沒有搬入上游串流解析架構。 |
 | findings、inventory observations、未評估目標、人工查核控制與 complete 分開；不因有輸出而聲稱完整。[adapter.rs:112–146](https://github.com/TED-H-com/ai-security-scanner/blob/654dd7165112c38da4e7bf894fdccb9a251d2c1d/src-tauri/src/adapter.rs#L112-L146) | EventGuard 既有觀察、coverage、`incident_conclusion=not_assessed` 與 ACK 語義已相容；不把 inventory 升為漏洞或ACK升為已修。 |
 | cancellation 先stop exact immutable container ID，ID須由本次cidfile＋完整ownership labels證明；cleanup未完成另存checkpoint，不假稱乾淨退出。[container_runtime.rs:2906–3038](https://github.com/TED-H-com/ai-security-scanner/blob/654dd7165112c38da4e7bf894fdccb9a251d2c1d/src-tauri/src/container_runtime.rs#L2906-L3038)、[orchestrator.rs:640–742](https://github.com/TED-H-com/ai-security-scanner/blob/654dd7165112c38da4e7bf894fdccb9a251d2c1d/src-tauri/src/orchestrator.rs#L640-L742) | 保留精確 ownership＋未確認就 blocked 的觀念。本地只以私有 Job 處理自身程序，不增加容器管理或 PID／名稱強停。 |
 
@@ -36,4 +38,4 @@
 - **已驗證（讀碼）**：發行驗證程式核對 checksums、平台 digest、SBOM、來源 revision 與 GitHub attestation，含呼叫 `gh attestation verify`。[verify-publication-artifact.mjs:240–253](https://github.com/TED-H-com/ai-security-scanner/blob/654dd7165112c38da4e7bf894fdccb9a251d2c1d/scripts/release/verify-publication-artifact.mjs#L240-L253)、[423–479](https://github.com/TED-H-com/ai-security-scanner/blob/654dd7165112c38da4e7bf894fdccb9a251d2c1d/scripts/release/verify-publication-artifact.mjs#L423-L479)。本輪沒有執行它，沒有重新驗簽或拉取映像。
 - **上游保存的聲稱／本輪未獨立重現**：[2026-10-23-publication.json:56–122](https://github.com/TED-H-com/ai-security-scanner/blob/654dd7165112c38da4e7bf894fdccb9a251d2c1d/docs/engines/updates/2026-10-23-publication.json#L56-L122) 記錄 Trivy、Nuclei 的 Linux amd64 自有 fixture 執行與限制。這不等於25引擎跨平台全驗，也不是 EventGuard 或 Windows 實測。
 
-結論：先完成當前專案 MCP 的真工具接收；本研究沒有擴充監看來源。後續最小候選是超量輸出的提早停止與小型 fail-closed 解析測試，須沿用既有 runner／Job／coverage 契約。既有前輪採納與測試仍見 [SCANNER_LESSONS](SCANNER_LESSONS.md)，不能把本輪讀碼充當新的功能驗收。
+本研究沒有擴充監看來源；後續兩項實作沿用既有runner／Job／coverage契約。完整採納清單見 [SCANNER_LESSONS](SCANNER_LESSONS.md)，執行驗證只以EVIDENCE記錄為準，不把讀碼本身當驗收。

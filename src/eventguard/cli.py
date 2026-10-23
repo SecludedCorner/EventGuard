@@ -16,6 +16,9 @@ def parser():
     sub=p.add_subparsers(dest="command",required=True)
     sub.add_parser("capabilities")
     sub.add_parser("status")
+    activity=sub.add_parser("activity",help="查看EventGuard操作進度與歷史；不啟動採集或模型")
+    activity.add_argument("--namespace",choices=("live","test"),default="live")
+    activity.add_argument("--limit",type=int,default=100)
     background=sub.add_parser("background",help="長期背景唯讀監看；無模型、耐久手動停止")
     backgroundsub=background.add_subparsers(dest="background_command",required=True)
     backgroundsub.add_parser("start",help="明確啟用並啟動；不建立排程或啟動模型")
@@ -135,6 +138,8 @@ def execute(args,runtime,progress=None):
         return operator.call("capabilities")
     if args.command=="status":
         return operator.call("status")
+    if args.command=="activity":
+        return operator.call("activity",args.namespace,args.limit)
     if args.command=="overview":
         return operator.call("overview",args.namespace,args.limit)
     if args.command=="sources":

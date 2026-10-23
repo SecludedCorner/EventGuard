@@ -98,14 +98,24 @@ def build_operator_server(root, namespace="test", allow_live=False, operator_api
         raise ValueError("operator_live_scope_not_authorized")
     api = operator_api or OperatorAPI(root)
     def call(operation, *args, **kwargs):
-        if operation != "capabilities":
-            from eventguard.agent_access import guard
-            blocked = guard(root, namespace)
-            if blocked is not None:
-                return blocked
-        return api.call(operation, *args, **kwargs)
+        def execute():
+            if operation != "capabilities":
+                from eventguard.agent_access import guard
+                blocked = guard(root, namespace)
+                if blocked is not None:
+                    return blocked
+            if operation == "background_start" and namespace != "live":
+                return {"state": "blocked", "reason": "live_monitor_control_not_in_test_scope",
+                        "model_calls": 0}
+            return api.call(operation, *args, **kwargs)
+        if operation == "activity":
+            return execute()  # Reading history does not generate more history.
+        from eventguard.activity import call as recorded_call
+        target = args[0] if args and operation in {"inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "observation"} else None
+        return recorded_call(root, "agent_mcp", operation, namespace, execute, target)
     def validate(name, arguments):
         allowed = {"capabilities": set(), "status": set(), "overview": {"limit"},
+                   "activity": {"limit"},
                    "observation": {"source_id","limit"}, "stop": set(), "monitor_once": set(),
                    "start_monitor": set(),
                    "list_events": {"limit"}, "inspect_event": {"event_id"}, "diagnose_event": {"event_id"},
@@ -113,7 +123,7 @@ def build_operator_server(root, namespace="test", allow_live=False, operator_api
                    "retry_event": {"event_id"}, "report": set()}
         if name not in allowed or type(arguments) is not dict:
             raise ValueError("invalid_operator_tool_arguments")
-        optional = {"list_events":{"limit"}, "overview":{"limit"}, "observation":{"limit"}, "ack_event":{"decision"}}
+        optional = {"list_events":{"limit"}, "overview":{"limit"}, "activity":{"limit"}, "observation":{"limit"}, "ack_event":{"decision"}}
         if set(arguments) - allowed[name] or not (allowed[name]-optional.get(name,set())) <= set(arguments):
             raise ValueError("invalid_operator_tool_arguments")
         if "event_id" in arguments and (type(arguments["event_id"]) is not str or not _ID.fullmatch(arguments["event_id"])):
@@ -124,7 +134,7 @@ def build_operator_server(root, namespace="test", allow_live=False, operator_api
             raise ValueError("invalid_operator_tool_arguments")
         if "source_id" in arguments and (type(arguments["source_id"]) is not str or arguments["source_id"] not in {"defender","listeners","processes","startup","services","tasks","versions"}):
             raise ValueError("invalid_operator_tool_arguments")
-        if "limit" in arguments and (type(arguments["limit"]) is not int or not 1 <= arguments["limit"] <= (200 if name=="observation" else 1000)):
+        if "limit" in arguments and (type(arguments["limit"]) is not int or not 1 <= arguments["limit"] <= (256 if name=="activity" else 200 if name=="observation" else 1000)):
             raise ValueError("invalid_operator_tool_arguments")
     server = _sdk_server("EventGuard Shared Local Operator", validate)
 
@@ -144,6 +154,11 @@ def build_operator_server(root, namespace="test", allow_live=False, operator_api
         return call("overview",namespace,limit)
 
     @server.tool()
+    def activity(limit: int = 100) -> dict:
+        """Read EventGuard operation progress and history visible in its GUI. No prompts or arbitrary commands."""
+        return call("activity", namespace, limit)
+
+    @server.tool()
     def observation(source_id: Literal["defender","listeners","processes","startup","services","tasks","versions"], limit: int = 20) -> dict:
         """Read bounded saved source facts from the same API a human uses; never executes collection."""
         return call("observation",source_id,namespace,limit)
@@ -161,9 +176,6 @@ def build_operator_server(root, namespace="test", allow_live=False, operator_api
         agent automation, changes scheduling or starts a model. Core ownership
         restrictions still apply; a blocked start is not a running monitor.
         """
-        if namespace != "live":
-            return {"state": "blocked", "reason": "live_monitor_control_not_in_test_scope",
-                    "model_calls": 0}
         return call("background_start")
 
     @server.tool()

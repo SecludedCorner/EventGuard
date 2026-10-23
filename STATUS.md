@@ -1,10 +1,12 @@
 # EventGuard 現況
 
-最新操作介面：依使用者要求，完整operator MCP已備妥14工具，補上持續監看的start_monitor（沿用既有背景核心）；原有stop負責耐久暫停。capabilities已修正為有GUI。相關模組測試通過，數字見EVIDENCE。目前聊天仍只載入四個合成工具；正式live接線設定已備妥，待使用者批准擴大原先範圍，尚未安裝、啟動監看或模型。
+最新方向為本機資安情報中心：共享operator MCP有15工具（含操作紀錄），GUI新增「操作紀錄」頁籤。操作先保存再執行，可看入口、開始時間、待結果及完成狀態。正式MCP已獲使用者批准，專案eventguard設定已加入，原eventguard_test保留；註冊未啟動監看或模型。當前聊天能否使用15工具仍須看client實際載入，不能以寫入設定代替證明。
+
+GitHub盤點的後續兩項已實作：stdout/stderr超過4MiB提早停止本工具Job；JSON超32層或重複key拒絕，Runner與PowerShell字串入口共用。最後完整回歸有一項MCP冷啟動測試逾時，修正後operator補驗通過；dispatcher另一個啟動時序測試修正後全模組通過。最終變動模組均有通過案例，但未再重跑整套，精確數字與原失敗見EVIDENCE。
 
 最新澄清：目前任務要求**本對話**接收。2026-10-23 13:52本主對話已再次以原生MCP接收新合成事件並ACK，生成／接收／查證／ACK各1、同ID、1張回條；沒有另開CLI。這是活動回合收取，**閒置時自動喚醒本對話仍未接通**。下述專用CLI為可選能力，沒有啟用，不能當作此目標已完成。
 
-更新：2026-10-23；分支 feat/local-codex-acceptance，本批基底 72673a3657b6e30c9c594dcc6140ddd6f147b096。命令、測試數、來源與提交對照見 [EVIDENCE](docs/EVIDENCE.md)。
+更新：2026-10-23；分支 feat/local-codex-acceptance，本批基底 befeed79d4ec8c5d5541ff473e11c5cf3b8af872。命令、測試數、來源與提交對照見 [EVIDENCE](docs/EVIDENCE.md)。
 
 前批已實作持續事件等待與獨立自動 agent 開關：同一 Python dispatcher 跨事件／日界待命，空佇列不建立任務，預算用完保留 pending，失敗不自動重試。接線與接手步驟見 [CONNECT_AGENT](docs/CONNECT_AGENT.md)。專用CLI合成驗收因固定預算未初始化而未啟動；最新目標為同一對話接收，暫不續行此替代路徑或索取CLI日額資訊。
 
@@ -22,11 +24,12 @@
 | 自動agent | 已有continuous dispatcher與GUI接線、單次CLI期限、空閒／日額／拒絕等待與合作停止 | 實作及離線測試不等於真CLI驗收；沒有開啟正式auto或接手正式backlog |
 | 本聊天接收 | 主agent已用原生MCP list→receive→inspect→再次receive→ACK→重播ACK→inspect；同一合成event/query，SQLite只新增一張回條 | 先前命令工具驗證與這次原生MCP證據分開；不等於閒置聊天會被自動喚醒 |
 | 限定專案MCP | eventguard_test四工具已出現在主對話且實際可呼叫；只連已批准的隔離test佇列 | 本次新合成事件已ACK；原生接收通過。沒有接正式事件、改全域／信任設定或啟動模型CLI；先前未載入的精確根因仍未定案 |
+| 正式專案MCP | 已依使用者批准加入eventguard，提供15個共用操作工具 | 設定已保存；本主對話目前工具清單仍只有eventguard_test四工具，不能以子agent清單代替正式呼叫成功 |
 | 應用生命週期 | GUI持有私有Global Job；host核對應用PID＋建立時間，意外owner退出後合作停止；X縮小持續運作 | 不detach、不breakaway；應用之外的Job仍可能約束其生命週期 |
 | 退出與容量 | 暫停先保存disabled，再核對本工具host／子樹；未知保留視窗。滿載保留pending／baseline且明示背壓 | ACK只表示收到，不是修復或案件結束；有有限保留／去重窗 |
 | 登入後恢復 | 既有排程入口保留，但本輪未建立、Run、服務或自啟 | 使用者沒有批准前次plan；GUI開始無須等待排程。舊plan因程式變更失效 |
-| 驗證 | 本批完整suite已跑；新增測試的重複參數錯誤已修正並另驗該模組，精確數字與原失敗保留EVIDENCE | 不把修正後局部結果改寫成重新全套；自動真CLI、OS重啟與24小時尚未驗證 |
+| 驗證 | 最後完整suite自然退出但有一項握手逾時；修正後operator、GUI、activity、hardening及dispatcher已有通過案例，輸出保留EVIDENCE | 不把局部結果改寫成修正後重新全套；自動真CLI、OS重啟與24小時尚未驗證 |
 
-一般權限、Python3.13標準庫與既有tkinter；無下載安裝、提權／UAC、安全設定或執行政策變更、永久MCP註冊、其他程序處置。事件與工具輸出是不可信資料。
+一般權限、Python3.13標準庫與既有tkinter；無下載安裝、提權／UAC、安全設定或執行政策變更、全域MCP變更、其他程序處置。正式專案MCP為另行批准的持續接線；事件與工具輸出是不可信資料。
 
 reports/data/logs、憑證、Codex home、私人歷史與原有docs/research/不提交；同一feature集中本地提交、不推送或觸發CI。接手先讀 [HANDOFF](HANDOFF.md)。

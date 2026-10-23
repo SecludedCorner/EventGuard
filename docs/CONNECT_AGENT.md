@@ -99,7 +99,25 @@ client 載入設定後，核對**當前 agent 工具清單**是否出現四工�
 
 ## 接手 agent 必讀
 
-若要讓agent使用日常完整操作介面，operator adapter現有14工具：capabilities、status、overview、observation、start_monitor、stop、monitor_once、list_events、inspect_event、diagnose_event、receive_event、ack_event、retry_event、report。開始／停止共用既有背景核心，不啟用模型；工具能力表見 [HUMAN_AGENT_INTERFACE](HUMAN_AGENT_INTERFACE.md)。現行eventguard_test仍只批准四工具及合成資料，完整正式接線需另外核對scope，不能把下列工作方式當成已取得正式資料權限。
+### 正式 EventGuard 操作入口
+
+本專案已取得使用者對正式MCP接線的批准。其他主機／專案不繼承這個批准；需先確認其使用者允許連接正式資料。既有Python3.13與已安裝MCP SDK可用時，在該專案自己的`.codex/config.toml`保留既有設定，加入以下區塊；不改全域設定、信任、安全政策或登入：
+
+```toml
+[mcp_servers.eventguard]
+command = "<既有 Python 3.13 的 python.exe>"
+args = ["-B", "<專案>/scripts/eventguard_inbox_mcp.py", "--operator-root", "<專案>", "--namespace", "live", "--allow-live"]
+enabled_tools = ["capabilities", "status", "overview", "activity", "observation", "start_monitor", "stop", "monitor_once", "list_events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report"]
+startup_timeout_sec = 20
+tool_timeout_sec = 90
+required = true
+```
+
+這裡`<專案>`是含config、playbooks及data的EventGuard根目錄。`--allow-live`只界定server可接受的來源；每次操作仍核對人類接收開關。註冊本身不啟動監看、排程或模型。缺SDK時停止，不下載替代。
+
+由client載入後，先核對**這個聊天**的工具清單，再呼叫正式`status`、`activity`，確認GUI操作紀錄出現相同操作。不要用子agent的工具清單、SDK測試或舊eventguard_test成功代替主聊天接通。正式事件receive／ACK應只在明確處理該事件時操作；ACK不是漏洞修補或案件結束。
+
+若要讓agent使用日常完整操作介面，operator adapter現有15工具：capabilities、status、overview、activity、observation、start_monitor、stop、monitor_once、list_events、inspect_event、diagnose_event、receive_event、ack_event、retry_event、report。開始／停止共用既有背景核心，不啟用模型；工具能力表見 [HUMAN_AGENT_INTERFACE](HUMAN_AGENT_INTERFACE.md)。eventguard_test仍是四工具合成入口；正式eventguard的批准及實際載入結果另查STATUS，不能只因設定存在就聲稱接通。
 
 - 先讀 AGENTS、README、STATUS、HANDOFF，核對分支／HEAD／未提交工作與當前程序；不要重做舊驗收或碰正式 backlog。
 - 核心順序：`Monitor → EventStore → QueueInbox → agent_dispatch → 單次 CLI/MCP → query/result → 原來源 ACK`。事件先落盤；提示不含事件 ID／內容，工具才提供最小七欄。

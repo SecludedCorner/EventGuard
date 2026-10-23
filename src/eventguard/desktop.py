@@ -13,11 +13,29 @@ import re
 import shutil
 import threading
 import uuid
+from functools import wraps
 
 from . import background, processes
 from .operations import OperatorAPI, SOURCES
 
 CODE = re.compile(r"[a-z][a-z0-9_]{0,95}\Z")
+
+
+def recorded(operation):
+    def decorate(method):
+        @wraps(method)
+        def invoke(self, *args, **kwargs):
+            from .activity import call
+            enabled = args[0] if args else kwargs.get("enabled")
+            result = call(self.root, "human_gui", operation, "live",
+                          lambda: method(self, *args, **kwargs), args[0] if operation == "gui_inspect" and args else None,
+                          allow_unrecorded_stop=operation in {"gui_receive_permission", "gui_automatic_agent"}
+                          and enabled is False)
+            if isinstance(result, dict) and result.get("activity_warning"):
+                self._last_error = result["activity_warning"]
+            return result
+        return invoke
+    return decorate
 
 
 def _code(value, fallback=None):
@@ -68,6 +86,7 @@ class DesktopController:
         return self._remember(action, {"state": "blocked", "reason": code,
             "model_calls": 0, "raw_error_omitted": True})
 
+    @recorded("gui_start")
     def start(self):
         with self._lock:
             if self._closed:
@@ -110,6 +129,7 @@ class DesktopController:
         self._children = remaining
         return not remaining
 
+    @recorded("gui_pause")
     def pause(self):
         with self._lock:
             # Stop admitting agent work before stopping collection. The
@@ -149,6 +169,7 @@ class DesktopController:
                 result = dict(result, state="closed")
             return self._remember("close", result)
 
+    @recorded("gui_receive_permission")
     def set_agent_delivery(self, enabled):
         with self._lock:
             if self._closed:
@@ -210,6 +231,7 @@ class DesktopController:
         result["desktop_task_resumed"] = False
         return result
 
+    @recorded("gui_automatic_agent")
     def set_automatic_agent(self, enabled, executable=None):
         """Explicit model opt-in; existing receive permission is insufficient.
 
@@ -309,6 +331,7 @@ class DesktopController:
                 self._agent_result = result
             return result
 
+    @recorded("gui_inspect")
     def inspect(self, event_id):
         with self._lock:
             return self.api.call("inspect_event", event_id, namespace="live")
@@ -316,6 +339,7 @@ class DesktopController:
     def snapshot(self):
         """Read one saved overview; no collector, model or scheduling operation."""
         with self._lock:
+            from .activity import snapshot as activity_snapshot
             document = self.api.call("overview", namespace="live", limit=100)
             try:
                 from .agent_access import status
@@ -362,6 +386,7 @@ class DesktopController:
                 "events_total": listing.get("total") if type(listing.get("total")) is int and listing["total"] >= 0 else None,
                 "events_limit": 100,
                 "agent_delivery": agent, "last_action": self._last_action,
+                "activity": activity_snapshot(self.root, "live", 100),
                 "automatic_agent": self._automatic_snapshot(),
                 "last_error": self._last_error or _code(document.get("last_error")) or _code(document.get("error_code")) or (
                     "monitor_outside_live_namespace" if not scope_matches else None),

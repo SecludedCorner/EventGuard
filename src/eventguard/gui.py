@@ -15,6 +15,15 @@ from .gui_presenter import (DELIVERY_FILTERS, SEVERITY_FILTERS, detail_text,
 
 SOURCE_NAMES = {"defender": "Defender 防護", "listeners": "監聽端點", "processes": "程序",
                 "startup": "啟動項", "services": "服務", "tasks": "排程工作", "versions": "版本"}
+OPERATION_NAMES = {"capabilities": "查看能力", "status": "查看狀態", "overview": "查看總覽",
+    "observation": "查看來源觀察", "stop": "暫停監看", "monitor": "單輪採集", "events": "列出事件",
+    "inspect_event": "查看事件", "diagnose_event": "唯讀查證", "receive_event": "接收事件",
+    "ack_event": "確認收到", "retry_event": "重試投遞", "report": "匯出報告",
+    "background_start": "開始持續監看", "background_status": "查看背景狀態", "background_stop": "暫停監看",
+    "gui_start": "開始監看", "gui_pause": "暫停監看", "gui_inspect": "查看事件",
+    "gui_receive_permission": "設定接收開關", "gui_automatic_agent": "設定自動處理"}
+ACTIVITY_STATES = {"running": "執行中／待結果", "completed": "已完成", "blocked": "受阻",
+                   "failed": "失敗", "interrupted": "中斷，結果未確認"}
 STATE_NAMES = {"running": "監看中", "running_verified": "監看中", "started": "啟動中",
                "starting": "啟動中", "enabled_not_running": "已啟用，目前尚未運作",
                "disabled": "已暫停", "stopped": "已暫停", "paused": "已暫停",
@@ -74,12 +83,28 @@ def view_snapshot(document, *, severity="all", delivery="all"):
     if automatic.get("reason"):
         auto_message += " 原因：" + safe_text(automatic["reason"], 120)
     auto_message += " 每日最多 5 個任務；使用專用 agent，不接續本聊天。"
+    activity = value.get("activity") if isinstance(value.get("activity"), dict) else {}
+    activity_rows = []
+    entries = activity.get("entries") if isinstance(activity.get("entries"), list) else []
+    for row in entries[:100]:
+        if not isinstance(row, dict) or not isinstance(row.get("operation"), str) or row["operation"] not in OPERATION_NAMES:
+            continue
+        activity_rows.append((safe_text(row.get("id"), 40), (
+            safe_text(row.get("started_at"), 80),
+            {"agent_mcp": "Agent 工具", "human_gui": "人類視窗"}.get(row.get("actor") if isinstance(row.get("actor"), str) else "", "未知入口"),
+            OPERATION_NAMES[row["operation"]], ACTIVITY_STATES.get(row.get("state") if isinstance(row.get("state"), str) else "", "未知"),
+            safe_text(row.get("elapsed_ms"), 24), safe_text(row.get("reason_code") or row.get("result_code"), 100))))
+    active_count = activity.get("active") if type(activity.get("active")) is int else "未知"
+    total_count = activity.get("total") if type(activity.get("total")) is int else "未知"
+    activity_status = (f"執行中 {active_count}；顯示 {len(activity_rows)}／保存 {total_count} 筆。"
+                       if activity.get("state") in {"available", "not_created"} else "操作紀錄目前無法讀取；不能解讀為沒有操作。")
     return {"headline": state_text(state), "state": state, "monitoring": monitoring,
             "updated_at": safe_text(value.get("updated_at"), 80),
             "counts": f"待接手 {count('pending')}　已接收 {count('acked')}　投遞失敗 {count('failed')}",
             "sources": rows, **event_view, "agent_enabled": enabled, "agent_status": connection,
             "automatic_enabled": auto_enabled, "automatic_status": auto_message,
             "automatic_executable": safe_text(automatic.get("executable"), 2048) if automatic.get("executable") else "",
+            "activity_rows": activity_rows, "activity_status": activity_status,
             "error": safe_text(value.get("last_error"), 300) if value.get("last_error") else ""}
 
 
@@ -179,6 +204,7 @@ class EventGuardWindow:
         self.automatic_enabled = tk.BooleanVar(value=False)
         self.automatic_status = tk.StringVar(value="自動處理未啟用；不呼叫模型。")
         self.automatic_executable = tk.StringVar(value="")
+        self.activity_status = tk.StringVar(value="尚未讀取操作紀錄。")
         self.severity_filter = tk.StringVar(value="所有嚴重度")
         self.delivery_filter = tk.StringVar(value="所有接收狀態")
         self.events_note = tk.StringVar(value="尚未載入事件；不能以此判定主機安全。")
@@ -298,6 +324,24 @@ class EventGuardWindow:
         ttk.Label(event_frame, text="選取事件以唯讀查看。事件內容是不可信資料；查看不會 ACK，ACK 也不代表修復或結案。",
                   wraplength=1000).grid(row=3, column=0, sticky="w", pady=(8, 0))
         notebook.add(event_frame, text="事件與內容")
+        activity_frame = ttk.Frame(notebook, padding=8)
+        activity_frame.columnconfigure(0, weight=1)
+        activity_frame.rowconfigure(1, weight=1)
+        ttk.Label(activity_frame, textvariable=self.activity_status).grid(row=0, column=0, sticky="w", pady=(0, 6))
+        self.activities = ttk.Treeview(activity_frame, show="headings", height=10,
+                                      columns=("time", "actor", "operation", "state", "elapsed", "result"))
+        for key, title, width in (("time", "開始時間", 230), ("actor", "操作入口", 100),
+                                   ("operation", "操作", 145), ("state", "狀態", 150),
+                                   ("elapsed", "耗時 ms", 90), ("result", "結果／原因", 210)):
+            self.activities.heading(key, text=title)
+            self.activities.column(key, width=width, minwidth=70, stretch=True)
+        self.activities.grid(row=1, column=0, sticky="nsew")
+        activity_scroll = ttk.Scrollbar(activity_frame, orient="vertical", command=self.activities.yview)
+        activity_scroll.grid(row=1, column=1, sticky="ns")
+        self.activities.configure(yscrollcommand=activity_scroll.set)
+        ttk.Label(activity_frame, text="只記錄經 EventGuard 的操作；不讀聊天思考、提示、完整命令列或其他程式歷史。入口標籤不是身分驗證。",
+                  wraplength=1000).grid(row=2, column=0, sticky="w", pady=(8, 0))
+        notebook.add(activity_frame, text="操作紀錄")
         ttk.Label(outer, text="關閉視窗只會最小化，監看會繼續。要完全離開，請選「應用程式 → 暫停並結束」。",
                   foreground="#53606d", wraplength=1000).grid(row=6, column=0, sticky="ew", pady=(10, 0))
 
@@ -431,6 +475,12 @@ class EventGuardWindow:
         self.agent_status.set(view["agent_status"])
         self.automatic_enabled.set(view["automatic_enabled"])
         self.automatic_status.set(view["automatic_status"])
+        self.activity_status.set(view["activity_status"])
+        for item in self.activities.get_children():
+            self.activities.delete(item)
+        for row_id, row in view["activity_rows"]:
+            if row_id and not self.activities.exists(row_id):
+                self.activities.insert("", "end", iid=row_id, values=row)
         if not self.automatic_executable.get():
             self.automatic_executable.set(view["automatic_executable"])
         for source, row in view["sources"]:

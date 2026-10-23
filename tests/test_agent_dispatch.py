@@ -41,10 +41,13 @@ def trace_fixture():
             for number, (tool, arg, reply) in enumerate(zip(TOOLS, args, replies))] + [{"type": "turn.completed"}]
 
 
-FAKE = """import json,sys,time
+FAKE = """import json,os,sys,time
 rows=json.load(open(sys.argv[1],encoding='utf-8'))
 mode=sys.argv[2]
-if mode=='slow': time.sleep(4)
+if mode=='slow':
+ open(sys.argv[1]+'.ready','w').close()
+ end=time.monotonic()+60
+ while not os.path.exists(sys.argv[1]+'.release') and time.monotonic()<end: time.sleep(.02)
 if mode=='fail': rows=rows[:2]+[{'type':'turn.failed'}]
 for row in rows: print(json.dumps(row),flush=True)
 raise SystemExit(7 if mode=='fail' else 0)
@@ -131,7 +134,7 @@ class DispatchTests(unittest.TestCase):
 
     def invoke(self, name, **kwargs):
         return run(self.directory / name, self.source, self.state_dir, max_tasks=1,
-                   max_seconds=kwargs.pop("max_seconds", 5), execute=kwargs.pop("execute", True), **kwargs)
+                   max_seconds=kwargs.pop("max_seconds", 15), execute=kwargs.pop("execute", True), **kwargs)
 
     def test_scoped_command_and_prompt_no_preloaded_event(self):
         args = command("codex.exe", Path("C:/Python313/python.exe"), self.source, self.state_dir,
@@ -158,13 +161,20 @@ class DispatchTests(unittest.TestCase):
     def test_watch_idle_outlasts_task_timeout_without_attempt_or_model(self):
         self.backend.pending = None
         began = time.monotonic()
-        with self.fixtures(), patch("eventguard.agent_dispatch.command", side_effect=AssertionError("No idle CLI")):
+        cancel, reads = threading.Event(), []
+        def pending():
+            reads.append(True)
+            if len(reads) >= 3:
+                cancel.set()
+            return None
+        with self.fixtures(), patch("eventguard.agent_dispatch.command", side_effect=AssertionError("No idle CLI")), \
+                patch.object(self.backend, "pending_event_id", side_effect=pending):
             code = self.invoke("watch-idle", continuous=True, max_seconds=.01,
-                               deadline_monotonic=began + .16, poll_seconds=.01)
+                               deadline_monotonic=began + 30, cancel=cancel, poll_seconds=.01)
         saved = status(self.directory / "watch-idle")
         self.assertEqual(code, 0)
         self.assertTrue(saved["continuous"])
-        self.assertEqual(saved["state"], "time_limit_reached")
+        self.assertEqual(saved["state"], "stopped")
         self.assertGreaterEqual(saved["queue_checks"], 2)
         self.assertEqual(saved["tasks_started"], 0)
         self.assertIn("last_checked_at", saved)
@@ -198,18 +208,21 @@ class DispatchTests(unittest.TestCase):
 
     def test_watch_exhausted_budget_keeps_pending_without_creating_attempts(self):
         seen = []
+        cancel = threading.Event()
         original_save = __import__("eventguard.agent_dispatch", fromlist=["_save"])._save
 
         def observe(directory, value):
             seen.append((value["state"], value.get("reason")))
             original_save(directory, value)
+            if value["state"] == "waiting_budget":
+                cancel.set()
 
         with self.fixtures(), patch.object(self.authority, "status", return_value={
                 "state": "blocked", "reason": "budget_exhausted", "remaining": 0}), \
              patch("eventguard.agent_dispatch._save", side_effect=observe), \
              patch.object(self.authority, "reserve", side_effect=AssertionError("No exhausted-budget reservation")):
             self.assertEqual(self.invoke("watch-budget", continuous=True, max_seconds=.01,
-                deadline_monotonic=time.monotonic()+.12, poll_seconds=.01), 0)
+                deadline_monotonic=time.monotonic()+30, cancel=cancel, poll_seconds=.01), 0)
         self.assertIn(("waiting_budget", "budget_exhausted"), seen)
         self.assertEqual(self.backend.pending, EVENT)
         self.assertFalse((self.directory / "watch-budget/attempts").exists())
@@ -367,12 +380,23 @@ class DispatchTests(unittest.TestCase):
         self.assertEqual(status(self.directory / "exhausted")["reason"], "event_attempt_budget_exhausted")
 
     def test_unknown_child_refuses_new_run_and_receipt_token_must_match(self):
-        with self.fixtures("slow"):
-            self.assertEqual(self.invoke("pending", max_seconds=3), 3)
-            self.assertEqual(self.invoke("refused"), 3)
-        self.assertEqual(len(self.children), 1)
-        self.assertEqual(status(self.directory / "refused")["reason"], "prior_child_exit_unconfirmed")
-        self.children[0].wait(timeout=5)
+        ready = Path(str(self.trace) + ".ready")
+        release = Path(str(self.trace) + ".release")
+        try:
+            with self.fixtures("slow"):
+                # Advance only the parent dispatcher clock after the fake CLI
+                # has really started; cold imports cannot turn this into a
+                # pre-launch expiry test. The capture worker keeps real time.
+                with patch("eventguard.agent_dispatch.time", wraps=time) as clock:
+                    clock.monotonic.side_effect = lambda: time.monotonic() + (120 if ready.exists() else 0)
+                    self.assertEqual(self.invoke("pending", max_seconds=60), 3)
+                self.assertTrue(ready.exists())
+                self.assertEqual(self.invoke("refused"), 3)
+            self.assertEqual(len(self.children), 1)
+            self.assertEqual(status(self.directory / "refused")["reason"], "prior_child_exit_unconfirmed")
+        finally:
+            release.write_text("release", encoding="ascii")
+        self.children[0].wait(timeout=10)
         self.assertTrue(status(self.directory / "pending")["child_exited"])
         saved = status(self.directory / "pending")
         path = self.directory / "pending/attempts" / saved["active_attempt_id"] / "capture-exit.json"
@@ -390,10 +414,14 @@ class DispatchTests(unittest.TestCase):
         finally:
             lease.release()
         self.backend.pending = None
-        with self.fixtures():
-            self.assertEqual(self.invoke("bind", max_seconds=.3, poll_seconds=.01), 0)
+        cancel = threading.Event()
+        def bound_then_stop():
+            cancel.set()
+            return None
+        with self.fixtures(), patch.object(self.backend, "pending_event_id", side_effect=bound_then_stop):
+            self.assertEqual(self.invoke("bind", cancel=cancel, poll_seconds=.01), 0)
             self.assertEqual(run(self.directory / "alternate", self.source, self.directory / "other-state",
-                                 execute=True, max_seconds=.3), 2)
+                                 execute=True, max_seconds=15), 2)
         self.assertEqual(status(self.directory / "alternate")["reason"], "dispatch_source_already_bound_to_other_state")
         self.assertEqual(self.children, [])
 

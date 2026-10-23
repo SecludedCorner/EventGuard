@@ -2,6 +2,32 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：情報中心操作紀錄與採集輸出硬化
+
+基底`befeed79d4ec8c5d5541ff473e11c5cf3b8af872`，同一feature；使用者明確批准EventGuard正式專案MCP，並定位為資安情報中心。新activity表記錄共享operator MCP與GUI操作意圖／結果，GUI新增操作紀錄頁籤，CLI可讀同表。最多256筆、32個running及2MiB，先保存再操作；暫停／撤回接收／停用自動agent不因記錄故障受阻。只存枚舉、時間、目標hash，不保存提示或原始例外。讀取重新驗證已存欄位，owner缺少完成回條不推定成功。新表是產品操作歷史，不是另一套事件投遞帳本，也不覆蓋聊天思考、任意shell／檔案活動或舊綁定CLI adapter。
+
+GitHub盤點另採納兩項：合計stdout/stderr超4MiB即要求自有Job合作停止，逾時只清理該Job；JSON容器最多32層並拒絕解碼後重複key。標準庫獨立實作；沒有下載或執行上游25個引擎。測試含真Windows自有合成flood，刻意忽略EOF，因此其`forcibly_terminated=true`是預期安全清理證據，不是自然退出或實機採集成功。
+
+本輪測試均使用Python **3.13.3**，fixture／合成SQLite／已安裝SDK／fake CLI／真Tk元件及標明的Windows自有Job API。**不啟動真Codex、不呼叫模型、不做Windows盤點、不啟用監看／排程**。以下紀錄不相加成另一個測試數：
+
+| 命令（專案根目錄） | 實際結果與時間 UTC | 退出及限制 |
+| --- | --- | --- |
+| `py -3.13 -B scripts/verify.py --run-dir reports/intelligence-center-001/full-001 --timeout-seconds 600` | 06:10:10；741執行、737通過、2 error、2 skip；343.711秒 | exit1；新測試錯把顯示limit設大於縮小後容量、另有fixture SQLite未關閉，皆已修。guardian自然退出，殘留0 |
+| `py -3.13 -B reports/intelligence-center-001/verify_selected.py` | 06:12:29；100/100通過；45.644秒 | exit0；activity/operator/desktop/GUI/hardening五模組，source_unchanged=true，殘留0 |
+| `py -3.13 -B scripts/verify.py --run-dir reports/intelligence-center-001/full-002 --timeout-seconds 600` | 06:17:22；420執行、411通過、6 failure、1 error、2 skip；282.314秒 | exit1，因子程序殘留提早停止，**未完成全套**。四個dispatcher案例的短啟動時限失敗；stdio producer三秒communicate取消造成殘留，自有guardian最後強制清理，remaining0。原失敗與強停不改寫成成功 |
+| `py -3.13 -B reports/intelligence-center-001/repair-check/verify_selected.py` | 06:20:58；66執行、64通過、2 error；86.793秒 | exit1；dispatcher修正通過，另兩個SDK initialize超過六秒，尚未進事件接收。guardian自然退出、殘留0 |
+| `py -3.13 -B scripts/verify.py --run-dir reports/intelligence-center-001/full-003 --timeout-seconds 600` | 06:28:12；745執行、742通過、1 error、2 skip；385.602秒 | exit1；只剩operator stdio測試initialize在10秒無回應而Queue.Empty；source_unchanged=true、128 AST無誤、殘留0，guardian自然退出，未強停 |
+| `py -3.13 -B reports/intelligence-center-001/final-review/verify_selected.py` | 06:31:09；130執行、129通過、1 error；126.045秒 | exit1；operator握手、GUI、activity與hardening通過；舊dispatcher測試假設三秒內已開始，但實際capture-skipped，讀不存在的退出回條而失敗。source_unchanged=true、殘留0、自然退出 |
+| `py -3.13 -B reports/intelligence-center-001/dispatch-check/verify_selected.py` | 06:33:47；22/22通過，0 failure/error/skip；58.543秒 | exit0；完整dispatcher模組，含ready/release同步與回條竄改拒絕；source_unchanged=true、128 AST無誤、殘留0、guardian自然退出 |
+
+dispatcher測試改以已觀察到waiting／binding後合作取消，保留外部失敗期限；stdio測試增加冷啟動握手期限，保留原事件等待／EOF停止時限，communicate逾時繼續收尾同一子程序、不重啟或遮掩原失敗。產品事件期限與模型預算沒有放寬。full-003後針對同樣的operator握手時限改為20秒。最後的dispatcher測試改成假CLI實際寫入ready後才推進**父測試**時鐘至期限；capture子程序維持真時鐘，之後由release檔合作釋放，仍核對未退出不能重開、原回條有效及竄改attempt ID後拒絕。兩項skip均為一般身分無法建立symlink，未提權繞過。
+
+最終版所有變動模組均有上述通過案例；最後兩次補驗之間只改`tests/test_agent_dispatch.py`。**沒有將129與22相加宣稱新的全套結果，也沒有在最後修正後重跑完整suite**。README為95行，修改文件的本地連結檢查無缺漏，git diff --check通過；回條`document-check.json`及最終來源差異綁定見本機同一證據目錄。
+
+正式MCP於2026-10-23T06:12:51.779831+00:00加入**專案**`.codex/config.toml`，原`eventguard_test`保留，新增`eventguard`的15個工具（含activity）。正常使用者、既有Python／SDK；未改全域config、登入、信任或安全設定。回條`reports/intelligence-center-001/project-mcp-install.json`記錄before/after SHA256、保留其他servers、monitor_started=false、model_started=false。設定本身被Git忽略，不能提交。安裝後本主對話工具清單仍只有合成四工具；子agent後來回報metadata見到正式namespace，**不能代替主對話實際呼叫證據**。目前仍未證明主對話正式status／activity接通，也未接通閒置同一聊天自動喚醒。
+
+原始測試輸出、source-manifest、verification-summary、guardian-exit及每個測試的殘留檢查保留上述reports目錄。審查發現的路徑異常穿透Stop、已存欄位重新驗證、keyword停用等邊界分別修正與補驗；最終提交綁定留`reports/intelligence-center-001/source-commit.json`。不推送資料、憑證、私人歷史或既有docs/research。
+
 ## 2026-10-23：補齊日常operator操作介面
 
 基底7865f9b267213f8d2187f101ed9f87ecb05afdac。盤點確認operator MCP程式原有13工具，但當前聊天僅載入批准的合成四工具。新增start_monitor直接轉接OperatorAPI.background_start，原有stop已經支援背景耐久暫停，未另建控制器或佇列。start_monitor沒有自由參數；test launcher固定拒絕，live需原launcher opt-in與每次人類存取開關；不建立排程、不開自動模型。原背景owner／Job限制照常，blocked不當成啟動成功。另修正capabilities的gui=false舊宣告。

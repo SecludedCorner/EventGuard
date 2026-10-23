@@ -413,13 +413,24 @@ class OperatorMCPTests(unittest.IsolatedAsyncioTestCase):
             start.assert_not_called()
         self.assertFalse((self.root / "data/background/control.json").exists())
 
+    async def test_agent_actions_are_visible_in_the_shared_activity_view(self):
+        server = self.module.build_operator_server(self.root)
+        await server.call_tool("list_events", {"limit": 1})
+        value = self.unpack(await server.call_tool("activity", {}))
+        self.assertEqual(value["total"], 1)
+        row = value["entries"][0]
+        self.assertEqual((row["actor"], row["operation"], row["state"]),
+                         ("agent_mcp", "events", "completed"))
+        again = self.unpack(await server.call_tool("activity", {}))
+        self.assertEqual(again["total"], 1, "Reading history must not create history polling noise")
+
     async def test_sdk_tools_share_cli_views_and_reject_extra_or_coercible_input(self):
         event = make_synthetic()
         EventStore(self.root / "data/test").enqueue(event)
         api = OperatorAPI(self.root, DiagnosticAPI(Fixtures()))
         server = self.module.build_operator_server(self.root, operator_api=api)
         tools = await server.list_tools()
-        self.assertEqual({tool.name for tool in tools}, {"capabilities", "status", "overview", "observation", "stop", "monitor_once", "start_monitor", "list_events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report"})
+        self.assertEqual({tool.name for tool in tools}, {"capabilities", "status", "overview", "activity", "observation", "stop", "monitor_once", "start_monitor", "list_events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report"})
         for tool, args in (("list_events", {"limit": True}), ("list_events", {"limit": "1"}), ("diagnose_event", {"event_id": event["event_id"], "port": 80}), ("inspect_event", {"event_id": event["event_id"], "namespace": "live"}), ("monitor_once", {"shell": "run"})):
             with self.assertRaisesRegex(ValueError, "invalid_operator_tool_arguments"):
                 await server.call_tool(tool, args)
@@ -448,7 +459,8 @@ class OperatorMCPTests(unittest.IsolatedAsyncioTestCase):
         transcript, requests = [], []
         try:
             send({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "fixture-no-agent", "version": "1"}}})
-            initialized = await asyncio.to_thread(incoming.get, timeout=10)
+            # Include cold Windows SDK imports; no event wait contract changes.
+            initialized = await asyncio.to_thread(incoming.get, timeout=20)
             self.assertEqual(initialized["id"], 1)
             send({"jsonrpc": "2.0", "method": "notifications/initialized"})
             transcript.append(initialized)
@@ -465,7 +477,7 @@ class OperatorMCPTests(unittest.IsolatedAsyncioTestCase):
                 request = {"jsonrpc": "2.0", "id": request_id, "method": "tools/call", "params": {"name": tool, "arguments": args}}
                 requests.append(request)
                 send(request)
-                response = await asyncio.to_thread(incoming.get, timeout=10)
+                response = await asyncio.to_thread(incoming.get, timeout=20)
                 transcript.append(response)
                 self.assertEqual(response["id"], request_id)
                 self.assertFalse(response["result"].get("isError", False))

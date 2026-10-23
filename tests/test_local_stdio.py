@@ -32,6 +32,9 @@ except ImportError:
 ROOT = Path(__file__).resolve().parents[1]
 ENTRY = ROOT / "scripts" / "eventguard_local_mcp.py"
 OWNED_CHILDREN = []
+# Allow cold imports of the installed SDK without changing the server's bounded
+# wait/EOF contracts. These are transport deadlines, not model or event waits.
+SDK_RESPONSE_TIMEOUT = timedelta(seconds=20)
 
 
 def synthetic_event(identity="evt-stdio-test"):
@@ -70,6 +73,17 @@ class OwnedTransport:
     def close_stdin(self):
         if self.process.stdin is not None and not self.process.stdin.is_closing():
             self.process.stdin.close()
+
+
+async def communicate_owned(process):
+    communication = asyncio.create_task(process.communicate())
+    try:
+        return await asyncio.wait_for(asyncio.shield(communication), timeout=15)
+    finally:
+        # Preserve a timeout failure while allowing the same child to finish
+        # draining. Never cancel its pipe reader, retry it or kill by PID.
+        if not communication.done():
+            await asyncio.wait_for(communication, timeout=10)
 
 
 @asynccontextmanager
@@ -143,7 +157,7 @@ class LocalStdioTests(unittest.IsolatedAsyncioTestCase):
                 task.cancel()
         await asyncio.gather(*self.pending_calls, return_exceptions=True)
         self.temp.cleanup()
-        self.assertLess(time.monotonic() - self.started, 20)
+        self.assertLess(time.monotonic() - self.started, getattr(self, "allowed_seconds", 60))
         self.assertEqual(sum(child.returncode is None for child in OWNED_CHILDREN), 0,
                          "remaining_owned_children must be zero without kill/terminate")
 
@@ -151,7 +165,7 @@ class LocalStdioTests(unittest.IsolatedAsyncioTestCase):
         from eventguard.local_wait import LocalWait
         producer = LocalWait(self.directory)
         async with owned_stdio(self.directory) as (transport, incoming, outgoing):
-            async with ClientSession(incoming, outgoing, read_timeout_seconds=timedelta(seconds=6)) as session:
+            async with ClientSession(incoming, outgoing, read_timeout_seconds=SDK_RESPONSE_TIMEOUT) as session:
                 initialized = await session.initialize()
                 self.assertTrue(initialized.serverInfo.name)
                 tools = await session.list_tools()
@@ -186,7 +200,7 @@ class LocalStdioTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_single_wait_refuses_model_repoll_after_expiry(self):
         async with owned_stdio(self.directory, single_wait=True) as (transport, incoming, outgoing):
-            async with ClientSession(incoming, outgoing, read_timeout_seconds=timedelta(seconds=6)) as session:
+            async with ClientSession(incoming, outgoing, read_timeout_seconds=SDK_RESPONSE_TIMEOUT) as session:
                 await session.initialize()
                 result = result_json(await session.call_tool("wait_for_event", {"timeout_seconds": 1}))
                 self.assertEqual(result["status"], "wait_expired")
@@ -198,14 +212,14 @@ class LocalStdioTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_runtime_rejects_second_stdio_process(self):
         async with owned_stdio(self.directory) as (transport, incoming, outgoing):
-            async with ClientSession(incoming, outgoing, read_timeout_seconds=timedelta(seconds=6)) as session:
+            async with ClientSession(incoming, outgoing, read_timeout_seconds=SDK_RESPONSE_TIMEOUT) as session:
                 await session.initialize()
                 second = await asyncio.create_subprocess_exec(
                     sys.executable, "-B", str(ENTRY), "--data-dir", str(self.directory),
                     stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE, env=child_environment())
                 OWNED_CHILDREN.append(second)
-                stdout, stderr = await asyncio.wait_for(second.communicate(), timeout=5)
+                stdout, stderr = await communicate_owned(second)
                 self.assertEqual(second.returncode, 3)
                 self.assertEqual(stdout, b"")
                 self.assertIn(b"active stdio server", stderr)
@@ -217,7 +231,7 @@ class LocalStdioTests(unittest.IsolatedAsyncioTestCase):
         from eventguard.local_wait import LocalWait
         LocalWait(self.directory)
         async with owned_stdio(self.directory) as (transport, incoming, outgoing):
-            async with ClientSession(incoming, outgoing, read_timeout_seconds=timedelta(seconds=6)) as session:
+            async with ClientSession(incoming, outgoing, read_timeout_seconds=SDK_RESPONSE_TIMEOUT) as session:
                 await session.initialize()
                 waiting = asyncio.create_task(session.call_tool("wait_for_event", {"timeout_seconds": 5}))
                 self.pending_calls.append(waiting)
@@ -252,7 +266,7 @@ class LocalStdioTests(unittest.IsolatedAsyncioTestCase):
                          stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
                          env=child_environment(), cwd=str(ROOT))
             OWNED_CHILDREN.append(process)
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=3)
+            stdout, stderr = await communicate_owned(process)
             self.assertEqual(process.returncode, 2)
             self.assertEqual(stdout, b"")
             self.assertIn(phrase, stderr)
@@ -260,6 +274,7 @@ class LocalStdioTests(unittest.IsolatedAsyncioTestCase):
     async def test_external_program_emits_synthetic_event_without_sdk_or_server(self):
         from eventguard.local_wait import LocalWait
         producer = LocalWait(self.directory)
+        self.allowed_seconds = 45  # Includes cold Windows process/filesystem startup.
         identities = []
         for _ in range(2):
             process = await asyncio.create_subprocess_exec(sys.executable, "-B", "-S", str(ENTRY),
@@ -267,7 +282,7 @@ class LocalStdioTests(unittest.IsolatedAsyncioTestCase):
                          stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
                          env=child_environment(), cwd=str(ROOT))
             OWNED_CHILDREN.append(process)
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=3)
+            stdout, stderr = await communicate_owned(process)
             self.assertEqual(process.returncode, 0, stderr.decode("utf-8", errors="replace"))
             identities.append(json.loads(stdout)["event_id"])
         self.assertNotEqual(*identities)

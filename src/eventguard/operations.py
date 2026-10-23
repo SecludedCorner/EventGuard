@@ -335,7 +335,7 @@ class OperatorAPI:
 
     def call(self, operation, *args, **kwargs):
         """Shared public error envelope: never forward an OS exception/path."""
-        if operation not in {"capabilities", "status", "overview", "observation", "stop", "monitor", "events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report", "background_start", "background_status", "background_stop"}:
+        if operation not in {"capabilities", "status", "overview", "activity", "observation", "stop", "monitor", "events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report", "background_start", "background_status", "background_stop"}:
             return {"status": "invalid_request", "error_code": "input_or_config_validation_failed", "raw_error_omitted": True}
         try:
             return getattr(self, operation)(*args, **kwargs)
@@ -354,7 +354,7 @@ class OperatorAPI:
         return {"tool_version": __version__, "diagnostics": DiagnosticAPI().capabilities(),
                 "monitor": "foreground or background, durable stop, singleton", "transport": ["disabled", "synthetic-only local mock"],
                 "remediation": [], "gui": True, "model_calls": 0, "real_agent_ingress": "not_configured",
-                "operator_operations": ["capabilities", "status", "overview", "observation", "stop", "events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report", "monitor", "background_start", "background_status", "background_stop"],
+                "operator_operations": ["capabilities", "status", "overview", "activity", "observation", "stop", "events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report", "monitor", "background_start", "background_status", "background_stop"],
                 "agent_required": False, "data_trust": "untrusted_data",
                 "background": {"entry": "scripts/eventguard.py background", "model_required": False,
                     "daily_monitor_limit": None, "duration_limit": None,
@@ -375,6 +375,10 @@ class OperatorAPI:
 
     def status(self):
         return status(self.runtime)
+
+    def activity(self, namespace="live", limit=100):
+        from .activity import snapshot
+        return snapshot(self.runtime.root, namespace, limit)
 
     def overview(self, namespace="live", limit=20):
         if type(limit) is not int or not 1 <= limit <= 1000:

@@ -44,6 +44,22 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual(self.controller._children, [child])
         finish.assert_not_called()
 
+    def test_journal_failure_cannot_block_revoking_agent_access(self):
+        from eventguard.activity import ActivityError
+        for method, setting in ((self.controller.set_agent_delivery, "eventguard.agent_access.set_enabled"),
+                                (self.controller.set_automatic_agent, "eventguard.agent_automation.set_enabled")):
+            for keyword in (False, True):
+                with self.subTest(method=method.__name__, keyword=keyword), \
+                        patch("eventguard.activity.begin", side_effect=ActivityError("activity_storage_unavailable")), \
+                        patch(setting, return_value={"status": "disabled", "setting_saved": True}) as change:
+                    result = method(enabled=False) if keyword else method(False)
+                    change.assert_called_once_with(self.root, False)
+                    self.assertEqual(result["activity_warning"], "activity_storage_unavailable")
+                    change.reset_mock()
+                    blocked = method(enabled=True) if keyword else method(True)
+                    change.assert_not_called()
+                    self.assertFalse(blocked["operation_started"])
+
     def test_start_failure_keeps_child_handle_for_explicit_cleanup(self):
         child = self.child(False, 1)
 

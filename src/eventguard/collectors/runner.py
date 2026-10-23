@@ -1,7 +1,6 @@
 """One query at a time; Windows-owned jobs get an EOF grace then bounded cleanup."""
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 import subprocess
@@ -11,9 +10,10 @@ import uuid
 
 from .contract import evidence, error_from_exception
 from .progress import Progress
+from .bounded_json import BoundedJSONError, loads, MAX_JSON_BYTES
 from ..processes import spawn, finish, JobPopen, ORIGINAL_POPEN
 
-MAX_OUTPUT_BYTES = 4 * 1024 * 1024
+MAX_OUTPUT_BYTES = MAX_JSON_BYTES
 
 
 class Runner:
@@ -52,6 +52,9 @@ class Runner:
         child = job.get("child")
         if isinstance(child, JobPopen):
             value.update(managed=True, pid=child.pid, created_at=child.created_at, job_name=child.job.name)
+        if job.get("oversize"):
+            value.update(output_limit_exceeded=True, output_limit_bytes=MAX_OUTPUT_BYTES,
+                         output_bytes_observed=job["output_total"])
         return value
 
     @staticmethod
@@ -68,6 +71,7 @@ class Runner:
                         pieces.append(data)
                     else:
                         job["oversize"] = True
+                        job["output_limit"].set()
             job[key] = b"".join(pieces)
         except Exception:
             job["read_error"] = True
@@ -150,7 +154,8 @@ class Runner:
                 except OSError as error:
                     launch_problem = ("error", "query_launch_failed", error)
                 if launch_problem is None:
-                    job = {"child": child, "done": threading.Event(), "output_lock": threading.Lock(), "output_total": 0}
+                    job = {"child": child, "done": threading.Event(), "output_lock": threading.Lock(),
+                           "output_limit": threading.Event(), "output_total": 0}
                     self._active = job
                     threading.Thread(target=self._watch, args=(job,), daemon=True).start()
         if busy:
@@ -160,6 +165,14 @@ class Runner:
             return result(status, note, error=error)
         while not job["done"].wait(0.025):
             observer.emit("waiting")
+            if job["output_limit"].is_set():
+                if isinstance(child, JobPopen):
+                    job["process"] = finish(child, "output_limit")
+                    job["done"].wait(3)
+                # Injected fixtures/unmanaged children remain pending until
+                # their owner ends them; exceeding a limit never grants PID
+                # termination authority.
+                return result("error", "query_output_limit_exceeded")
             if cancel is not None and cancel.is_set():
                 if isinstance(child, JobPopen):
                     job["process"] = finish(child, "cancelled")
@@ -181,9 +194,11 @@ class Runner:
         if job.get("process", {}).get("forcibly_terminated"):
             return result("error", "owned_descendants_forcibly_stopped")
         try:
-            data = json.loads(job.get("stdout", b"").decode("utf-8-sig"))
+            data = loads(job.get("stdout", b"").decode("utf-8-sig"))
             if not isinstance(data, dict) or not isinstance(data.get("rows"), list):
                 raise ValueError()
+        except BoundedJSONError as error:
+            return result("error", error.reason)
         except (ValueError, UnicodeError):
             return result("error", "invalid_query_output")
         return result("ok", "query_complete", data)

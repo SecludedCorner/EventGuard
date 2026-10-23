@@ -178,7 +178,7 @@ class Job:
 
     def terminate(self, reason):
         # The only forced termination API in the product targets our job handle.
-        if reason not in {"timeout", "cancelled", "owner_exception", "descendants_remaining", "test_teardown", "launch_failure"}:
+        if reason not in {"timeout", "cancelled", "output_limit", "owner_exception", "descendants_remaining", "test_teardown", "launch_failure"}:
             raise ValueError("invalid_job_termination_reason")
         if self.handle and self.active():
             checked(kernel().TerminateJobObject(self.handle, 1460), "owned_job_termination_failed")

@@ -1,6 +1,14 @@
 # EventGuard 接手
 
-最新要求是讓EventGuard日常功能可由本對話操作。operator adapter已有14工具；新增start_monitor轉接原背景核心，stop原已支援耐久暫停，不新增第二控制器。test scope不能啟動live；live每次呼叫仍檢查人類接收開關。reports/operator-full-001/eventguard-live.review.toml為完整正式接線候選，尚未安裝；已向使用者詢問是否由原「四個合成工具」擴為正式live操作。未回覆前不能改MCP設定或讀正式資料，也不要開額外agent。此操作接線與閒置同一對話自動喚醒是不同能力，後者仍未接通。
+最新使用者把產品定位為資安情報中心，要求所有操作經EventGuard且在GUI看得到。共享operator adapter現有15工具（含activity），開始／停止仍走原核心；GUI與operator MCP操作記於data/activity.sqlite3，最多256筆，保持running，故障不阻止Stop。只記固定動作/結果碼與目標hash，不記提示、事件全文、完整命令列；不涵蓋聊天思考、任意外部檔案編輯或舊綁定CLIadapter的每一步。
+
+使用者已明確批准EventGuard正式MCP，勿再問同一範圍。reports/intelligence-center-001/install_mcp.py已在專案.codex/config.toml加入eventguard/live/15工具，保留eventguard_test；安裝回條project-mcp-install.json。沒有啟動監看/模型/排程。仍需核對本對話是否載入新工具；未載入時明說client未刷新，不靠另一個CLI或新對話冒充。操作接線與閒置同一對話自動喚醒不同，後者仍未接通。
+
+GitHub後續採納：runner超4MiB合計輸出提早走合作寬限與owned Job cleanup，reason=output_limit；JSON最多32層且拒絕解碼後重複key。不要重讀或安裝25掃描器來替代這些實作。此批驗證已結束，原失敗及修正後的相關模組通過結果都看EVIDENCE，回條在reports/intelligence-center-001。沒有在最後修正後重跑全套；不要無變化重跑測試取代待解的client載入問題。
+
+當前維護方向見docs/MAINTENANCE_GOAL.md，接線步驟見docs/CONNECT_AGENT.md。下面保留較早交接歷史；其中待批准、待初始化CLI預算等敘述不取代上方最新範圍，不能據此啟動另一個模型或重問已批准的正式MCP。
+
+## 歷史交接（以本頁開頭及STATUS為準）
 
 最新範圍澄清：使用者表示「你一個就好了」，目標是目前這個對話收到事件；不要再把另開專用CLI當成達成同一目標，也不要重問每日CLI數量。2026-10-23 13:52台北時間，本主對話再次以原生MCP收到程式新生成的合成事件並ACK，證據在reports/chat-receive-002；這仍是活動回合主動收取。閒置同一對話的事件觸發入口尚未接通，不能以MCP註冊、手動接收或另一個CLI代替。保留既有可選CLI實作，但未啟用、不初始化其budget；不要用模型定時輪詢規避此缺口。
 

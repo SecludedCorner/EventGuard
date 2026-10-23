@@ -261,6 +261,18 @@ class GuiOwnTkWidgetTests(unittest.TestCase):
         self.evidence = {"scope": "real own Tk widgets + fixture controller; no collector/model",
                          "source_rows": 7, "model_calls": 0}
 
+    def test_operation_history_tab_shows_agent_progress_and_completion(self):
+        row = {"id": "a" * 32, "actor": "agent_mcp", "operation": "diagnose_event", "state": "running",
+               "started_at": "2026-10-23T08:00:00+00:00", "elapsed_ms": None}
+        self.controller.value["activity"] = {"state": "available", "entries": [row], "active": 1, "total": 1}
+        self.ui._apply_snapshot(copy.deepcopy(self.controller.value))
+        self.assertEqual(self.ui.activities.item(row["id"], "values")[1:4], ("Agent 工具", "唯讀查證", "執行中／待結果"))
+        row.update(state="completed", elapsed_ms=25, result_code="reviewed")
+        self.controller.value["activity"]["active"] = 0
+        self.ui._apply_snapshot(copy.deepcopy(self.controller.value))
+        self.assertEqual(self.ui.activities.item(row["id"], "values")[3], "已完成")
+        self.assertIn("執行中 0", self.ui.activity_status.get())
+
     def test_start_stays_responsive_while_controller_is_busy_then_pause_is_durable(self):
         self.controller.release.clear()
         self.ui.start_button.invoke()

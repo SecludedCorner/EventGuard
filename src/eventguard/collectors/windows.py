@@ -5,12 +5,12 @@ from datetime import datetime, timezone
 import hashlib
 import base64
 import ipaddress
-import json
 import re
 import time
 import sys
 
 from .runner import Runner
+from .bounded_json import BoundedJSONError, loads
 from .progress import Progress, invoke_with_progress
 from .contract import (SECTION_IDS, STATUSES, FIELDS, LIMITS, MAX_ERRORS,
                        clean_errors, evidence, error_from_exception)
@@ -266,7 +266,11 @@ class PowerShellBackend:
             raise ValueError("invalid_runner_output")
         if raw.get("status") == "ok":
             data = raw.get("data")
-            data = json.loads(data) if isinstance(data, str) else data
+            try:
+                data = loads(data) if isinstance(data, str) else data
+            except BoundedJSONError as error:
+                return {"status": "error", "rows": [], "truncated": False, "process": raw.get("process", {}),
+                        "errors": [evidence("provider", error.reason, exception_type="BoundedJSONError", status="error")]}
             data["process"] = raw.get("process", {})
             return data
         state = raw.get("status") if raw.get("status") in STATUSES else "unknown"
@@ -478,14 +482,14 @@ def coverage_metadata(section):
 def process_metadata(value):
     if not isinstance(value, dict):
         return {}
-    result = {key: value[key] for key in ("managed", "child_exited", "forcibly_terminated") if type(value.get(key)) is bool}
+    result = {key: value[key] for key in ("managed", "child_exited", "forcibly_terminated", "output_limit_exceeded") if type(value.get(key)) is bool}
     if isinstance(value.get("job_name"), str) and re.fullmatch(r"(?:Local|Global)\\EventGuard-[a-f0-9]{32}", value["job_name"]):
         result["job_name"] = value["job_name"]
-    for key in ("pid", "remaining_owned_processes", "exit_code"):
+    for key in ("pid", "remaining_owned_processes", "exit_code", "output_limit_bytes", "output_bytes_observed"):
         if type(value.get(key)) is int and 0 <= value[key] <= 2**32-1:
             result[key] = value[key]
     for key in ("reason", "shutdown_requested_reason"):
-        if value.get(key) in {"timeout", "cancelled", "owner_exception", "descendants_remaining", "test_teardown", "launch_failure", "natural_exit", "fixture_or_non_windows"}:
+        if value.get(key) in {"timeout", "cancelled", "output_limit", "owner_exception", "descendants_remaining", "test_teardown", "launch_failure", "natural_exit", "fixture_or_non_windows"}:
             result[key] = value[key]
     if isinstance(value.get("created_at"), str) and len(value["created_at"]) <= 64:
         try:
