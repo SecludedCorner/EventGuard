@@ -1,10 +1,12 @@
 # EventGuard 接手
 
-先讀 AGENTS、README、STATUS、docs/GUI.md、docs/EVIDENCE.md、docs/BACKGROUND.md。核對cwd/branch/HEAD/未提交變更，保留接續，不reset/clean。本批基底d46236fdd20d59ff4c9ff1c7c7091bfd497f484d，同一feature集中提交、不推送；原有docs/research/排除。
+先讀 AGENTS、README、STATUS、docs/GUI.md、docs/EVIDENCE.md、docs/BACKGROUND.md。核對cwd/branch/HEAD/未提交變更，保留接續，不reset/clean。本批基底42b495a2d8b4f6bbd54f34b735f64dd178855ebb，同一feature集中提交、不推送；原有docs/research/排除。
+
+最新：本主對話已實際取得eventguard_test四個原生MCP工具並完成新合成事件的list→receive→inspect（仍pending）→同event/query補收→ACK→相同ACK重播→inspect（已ack）。native-root-calls.json保留七個完整實際MCP回傳；native-receipt-validation.json核對生成／收到／查證／ACK集合相同，missing=[]、duplicate_receipts=[]，該事件SQLite回條1張。先前命令工具事件另有1張，不能混成同一測試。這是本對話真正工具接收，沒有啟動另外的Codex CLI模型或自動喚醒；MCP連線由Codex管理而保留。之前工具不可用與子agent失敗屬歷史，不能再當目前阻塞，也不能刪除；本回合平台更新工具清單後成功，精確載入延遲根因未定案。
 
 最新工作：本聊天透過命令工具實際接收一件程式合成事件、讀inspect、補收同event/query、明確ACK一次。找到ACKed事件對錯query／換decision誤回already_received，已改為唯讀驗既有query/result及實際來源回條；證據缺失不重建或猜成功。相同三元組才ack_replay_verified。相關模組驗證與原始操作在reports/chat-receive-001，數字只看EVIDENCE。
 
-使用者已明確批准「限定的專案MCP接線」：.codex/config.toml僅eventguard_test，指向本輪隔離operator root與test namespace，只開list_events／inspect_event／receive_event／ack_event。不含正式事件、不改其他設定、不啟動模型；.codex已忽略不提交。使用者找不到設定入口；不能繼續假定Settings→MCP servers必定可見。新子agent曾有四工具metadata，實際list_events回MCP tool eventguard_test/list_events is not available to the model並隨後移除namespace，證據native-receipt-stage1.json；未receive、query或ACK。新事件仍pending。工具metadata出現不等於可用，阻塞原因尚未定案；後續先取得用戶端/mcp狀態或實際介面，再核對有效設定。不要以SDK／CLI手動接收替代原生成功，不強停owner、刪鎖、改安全設定或把設定移到全域。
+使用者已明確批准「限定的專案MCP接線」：.codex/config.toml僅eventguard_test，指向本輪隔離operator root與test namespace，只開list_events／inspect_event／receive_event／ack_event。不含正式事件、不改其他設定、不啟動模型；.codex已忽略不提交。先前子agent的native-receipt-stage1.json保留不可用失敗；後來主對話已實際可呼叫並完成接收。不要只憑metadata判成功，不強停owner、刪鎖、改安全設定或把設定移到全域。下一步若驗證其他真事件來源或自動喚醒，必須另外核對授權，不自動擴大這次synthetic-only範圍。
 
 上游研究已補讀最新654dd716的完整25引擎catalog/plans/registry/launcher/adapter，及25個上游各README＋代表入口；不是所有repo逐行安全審計。見docs/SCANNER_ENGINES.md與SCANNER_RUNTIME_REVIEW.md；沒有安裝／執行掃描器。候選輸出超量提早停止仍未實作，勿干擾接收主線。
 

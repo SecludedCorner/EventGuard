@@ -2,7 +2,17 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
-## 2026-10-23：原生MCP實際呼叫仍受阻
+## 2026-10-23：主對話原生MCP實際接收通過
+
+基底 `42b495a2d8b4f6bbd54f34b735f64dd178855ebb`。使用者提供實際/mcp畫面確認當時沒有EventGuard。本回合核對發現預設命令環境屬隔離帳戶，與正常登入身分不同；前次CLI查不到server不能推導桌面project設定未載入。只讀查得安裝套件OpenAI.Codex 26.1016.8622.0、原生CLI 0.163.0-alpha.11.2；未變更帳戶、trust、全域MCP、安全設定或重啟應用。之後平台將eventguard_test四工具加入**本主對話**，實際呼叫成功；不能據此把環境檢查或版本查詢宣稱為已證明的修復原因，先前載入延遲的精確根因仍未定案。
+
+主agent實際呼叫原生 `list_events(limit=10)`，從回傳的pending清單才取得新合成事件ID；依序 `receive_event`、`inspect_event`、再次 `receive_event`、`ack_event`、相同 `ack_event`重播、最後 `inspect_event`。七個真MCP request參數／原始回傳保存 `reports/chat-receive-001/native-root-calls.json`；不是SDK或Python API模擬回傳。收到的是先前程式生成並等待接線的coverage合成事件：來源拒讀、未知不能當安全，沒有執行實機查詢。首次接收時間2026-10-23 **13:06:33.984 UTC+8**，ACK時間**13:06:55.985 UTC+8**；這段含接線等候，不是偵測延遲基準。
+
+命令 `py -3.13 -B reports/chat-receive-001/verify_native_receipt.py` exit **0**，`native-receipt-validation.json`：生成／唯一接收／查證／ACK集合各1且完全相同，missing=[]、duplicate_receipts=[]；兩次receive同event/query，ACK前inspect仍pending，ACK後為ack。兩次相同ACK只保留該事件**1張SQLite回條**，重播ack_replay_verified=true／new_receipt_created=false；與實際result_id匹配。資料庫另含前批命令工具事件的1張回條，總2張，分開計數。驗證helper初次把原始manifest直接hash，未先套入庫schema正規化而斷言失敗；依既有EventStore.validate_event契約修正helper後通過，未修改產品或重做投遞。
+
+本次證明**目前主agent能用原生工具接收合成事件**。沒有啟動額外Codex CLI模型、接收正式事件、重掃、部署或自動喚醒測試。ACK只表示收到，incident_conclusion仍not_assessed；工具內的real_agent_woken=false欄位保留原值，因其沒有喚醒證據，不能將人工發起回合偷換成閒置喚醒。已批准的MCP連線由Codex持續管理，非宣稱已退出的一次性測試worker；先前失敗回傳仍保留。
+
+## 2026-10-23：原生MCP先前受阻的紀錄
 
 使用者表示找不到eventguard_test／MCP設定。新子agent的工具metadata一度列出四個eventguard_test工具，實際呼叫原生 `mcp__eventguard_test__list_events`（limit=10）卻回 `isError=true`、`MCP tool eventguard_test/list_events is not available to the model`，隨後namespace被移除。原始回傳、時間與未receive／未ACK事實保存於 `reports/chat-receive-001/native-receipt-stage1.json`（2026-10-23 13:00:44 UTC+8）。這是原生工具呼叫失敗，不能用metadata出現、SDK或前批命令工具成功替代。保留待測合成事件，不盲目重試。
 
