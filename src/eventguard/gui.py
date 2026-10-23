@@ -5,11 +5,12 @@ controller calls run on one worker; Tk only renders inert, bounded values.
 """
 from __future__ import annotations
 
-import json
 from pathlib import Path
 import queue
 import threading
-import unicodedata
+
+from .gui_presenter import (DELIVERY_FILTERS, SEVERITY_FILTERS, detail_text,
+                            event_list_view, event_summary, safe_text)
 
 
 SOURCE_NAMES = {"defender": "Defender 防護", "listeners": "監聽端點", "processes": "程序",
@@ -27,38 +28,11 @@ STATE_NAMES = {"running": "監看中", "running_verified": "監看中", "started
                "acked": "已接收", "ack": "已接收", "failed": "投遞失敗", "cancelled": "已取消"}
 
 
-def safe_text(value, limit=200):
-    """Never treat event names or controller output as formatting or commands."""
-    if value is None:
-        return "未知"
-    if type(value) is bool:
-        return "是" if value else "否"
-    if not isinstance(value, (str, int, float)):
-        return "未知"
-    raw = str(value)
-    result = "".join("\\u" + format(ord(char), "04x")
-                     if unicodedata.category(char) in {"Cc", "Cf", "Cs"} else char
-                     for char in raw[:limit])
-    return result + ("…" if len(raw) > limit else "")
-
-
 def state_text(value):
     return STATE_NAMES.get(value, safe_text(value)) if isinstance(value, str) else "未知"
 
 
-def detail_text(value, limit=60000):
-    """Bound an inert structured view; retain JSON layout but escape bidi text."""
-    try:
-        encoded = json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False)
-    except (ValueError, TypeError, OverflowError, RecursionError):
-        return "無法顯示此結構化資料。"
-    safe = "".join("\\u" + format(ord(char), "04x")
-                   if unicodedata.category(char) in {"Cf", "Cs"} else char
-                   for char in encoded[:limit])
-    return safe + ("\n（顯示已截斷；原始事件仍保留於本機佇列。）" if len(encoded) > limit else "")
-
-
-def view_snapshot(document):
+def view_snapshot(document, *, severity="all", delivery="all"):
     """Small pure presentation contract, also testable without a display."""
     value = document if isinstance(document, dict) else {}
     monitoring = value.get("monitoring") is True
@@ -83,24 +57,14 @@ def view_snapshot(document):
         rows.append((source, (title, state_text(item.get("status", "not_observed")),
                               safe_text(item.get("row_count"), 24), state_text(fresh),
                               safe_text(item.get("observed_at"), 80), safe_text(item.get("reason"), 180))))
-    events = []
-    raw_events = value.get("events", [])
-    for item in raw_events[:100] if isinstance(raw_events, list) else []:
-        if not isinstance(item, dict) or not isinstance(item.get("event_id"), str):
-            continue
-        event_id = item["event_id"]
-        if not 1 <= len(event_id) <= 160 or any(unicodedata.category(c) in {"Cc", "Cf", "Cs"} for c in event_id):
-            continue
-        events.append((event_id, (safe_text(item.get("occurred_at", item.get("created_at")), 80),
-                                 safe_text(item.get("event_type"), 100), safe_text(item.get("severity"), 40),
-                                 state_text(item.get("delivery_status", "pending")), safe_text(event_id, 160))))
+    event_view = event_list_view(value, severity=severity, delivery=delivery)
     agent = value.get("agent_delivery") if isinstance(value.get("agent_delivery"), dict) else {}
     enabled = agent.get("enabled") is True
     connection = "已允許接收；尚未證明有 agent 連線或收到事件。" if enabled else "未開放 agent 接收；事件仍保留，可由人類查看。"
     return {"headline": state_text(state), "state": state, "monitoring": monitoring,
             "updated_at": safe_text(value.get("updated_at"), 80),
             "counts": f"待接手 {count('pending')}　已接收 {count('acked')}　投遞失敗 {count('failed')}",
-            "sources": rows, "events": events, "agent_enabled": enabled, "agent_status": connection,
+            "sources": rows, **event_view, "agent_enabled": enabled, "agent_status": connection,
             "error": safe_text(value.get("last_error"), 300) if value.get("last_error") else ""}
 
 
@@ -183,6 +147,8 @@ class EventGuardWindow:
         self._inspect_after_refresh = None
         self._deferred_request = None
         self._snapshot = {}
+        self._event_document = {}
+        self._detail_document = None
         self._last_event = None
         self._timers = set()
         self.window.title("EventGuard — 本機唯讀監看")
@@ -195,6 +161,10 @@ class EventGuardWindow:
         self.message = tk.StringVar(value="按「開始」持續監看；按「暫停」停止採集，事件仍會保留。")
         self.agent_enabled = tk.BooleanVar(value=False)
         self.agent_status = tk.StringVar(value="正在讀取接收設定…")
+        self.severity_filter = tk.StringVar(value="所有嚴重度")
+        self.delivery_filter = tk.StringVar(value="所有接收狀態")
+        self.events_note = tk.StringVar(value="尚未載入事件；不能以此判定主機安全。")
+        self.show_raw = tk.BooleanVar(value=False)
         self._build()
         self._request("snapshot")
         self._after(75, self._drain)
@@ -256,30 +226,49 @@ class EventGuardWindow:
         notebook.add(source_frame, text="七個來源")
         event_frame = ttk.Frame(notebook, padding=8)
         event_frame.columnconfigure(0, weight=1)
-        event_frame.rowconfigure(0, weight=1)
         event_frame.rowconfigure(1, weight=1)
+        event_frame.rowconfigure(2, weight=1)
+        filters = ttk.Frame(event_frame)
+        filters.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 8))
+        ttk.Label(filters, text="嚴重度").grid(row=0, column=0, sticky="w")
+        self.severity_choice = ttk.Combobox(filters, textvariable=self.severity_filter, state="readonly",
+                                            values=tuple(SEVERITY_FILTERS), width=14)
+        self.severity_choice.grid(row=0, column=1, padx=(6, 12))
+        ttk.Label(filters, text="接收狀態").grid(row=0, column=2, sticky="w")
+        self.delivery_choice = ttk.Combobox(filters, textvariable=self.delivery_filter, state="readonly",
+                                            values=tuple(DELIVERY_FILTERS), width=16)
+        self.delivery_choice.grid(row=0, column=3, padx=(6, 12))
+        self.clear_filters_button = ttk.Button(filters, text="清除篩選", command=self.clear_filters)
+        self.clear_filters_button.grid(row=0, column=4)
+        self.severity_choice.bind("<<ComboboxSelected>>", self.filter_events)
+        self.delivery_choice.bind("<<ComboboxSelected>>", self.filter_events)
+        ttk.Label(filters, textvariable=self.events_note, wraplength=1000).grid(
+            row=1, column=0, columnspan=5, sticky="ew", pady=(5, 0))
         self.events = ttk.Treeview(event_frame, show="headings", height=7,
                                   columns=("time", "type", "severity", "delivery", "id"))
         for key, label, width in (("time", "事件時間", 200), ("type", "類型", 230),
                                   ("severity", "嚴重度", 80), ("delivery", "接收狀態", 100), ("id", "事件 ID", 280)):
             self.events.heading(key, text=label)
             self.events.column(key, width=width, minwidth=60, stretch=True)
-        self.events.grid(row=0, column=0, sticky="nsew")
+        self.events.grid(row=1, column=0, sticky="nsew")
         event_scroll = ttk.Scrollbar(event_frame, orient="vertical", command=self.events.yview)
-        event_scroll.grid(row=0, column=1, sticky="ns")
+        event_scroll.grid(row=1, column=1, sticky="ns")
         self.events.configure(yscrollcommand=event_scroll.set)
         self.events.bind("<<TreeviewSelect>>", self.select_event)
         detail_frame = ttk.Frame(event_frame)
-        detail_frame.grid(row=1, column=0, sticky="nsew", pady=(10, 0))
-        detail_frame.rowconfigure(0, weight=1)
+        detail_frame.grid(row=2, column=0, sticky="nsew", pady=(10, 0))
+        detail_frame.rowconfigure(1, weight=1)
         detail_frame.columnconfigure(0, weight=1)
-        self.detail = tk.Text(detail_frame, height=10, wrap="word", state="disabled", font=("Consolas", 10))
-        self.detail.grid(row=0, column=0, sticky="nsew")
+        self.raw_check = ttk.Checkbutton(detail_frame, text="展開原始結構化資料（唯讀）",
+                                         variable=self.show_raw, command=self.toggle_raw)
+        self.raw_check.grid(row=0, column=0, sticky="w", pady=(0, 5))
+        self.detail = tk.Text(detail_frame, height=10, wrap="word", state="disabled", font=("Microsoft JhengHei UI", 10))
+        self.detail.grid(row=1, column=0, sticky="nsew")
         detail_scroll = ttk.Scrollbar(detail_frame, orient="vertical", command=self.detail.yview)
-        detail_scroll.grid(row=0, column=1, sticky="ns")
+        detail_scroll.grid(row=1, column=1, sticky="ns")
         self.detail.configure(yscrollcommand=detail_scroll.set)
         ttk.Label(event_frame, text="選取事件以唯讀查看。事件內容是不可信資料；查看不會 ACK，ACK 也不代表修復或結案。",
-                  wraplength=1000).grid(row=2, column=0, sticky="w", pady=(8, 0))
+                  wraplength=1000).grid(row=3, column=0, sticky="w", pady=(8, 0))
         notebook.add(event_frame, text="事件與內容")
         ttk.Label(outer, text="關閉視窗只會最小化，監看會繼續。要完全離開，請選「應用程式 → 暫停並結束」。",
                   foreground="#53606d", wraplength=1000).grid(row=6, column=0, sticky="ew", pady=(10, 0))
@@ -347,6 +336,19 @@ class EventGuardWindow:
             else:
                 self._inspect_after_refresh = event_id
 
+    def filter_events(self, _event=None):
+        self._render_events(view_snapshot(self._event_document,
+            severity=SEVERITY_FILTERS.get(self.severity_filter.get(), "all"),
+            delivery=DELIVERY_FILTERS.get(self.delivery_filter.get(), "all")))
+
+    def clear_filters(self):
+        self.severity_filter.set("所有嚴重度")
+        self.delivery_filter.set("所有接收狀態")
+        self.filter_events()
+
+    def toggle_raw(self):
+        self._render_detail()
+
     def minimize(self):
         self.window.iconify()
 
@@ -357,13 +359,25 @@ class EventGuardWindow:
             self.message.set("目前操作進行中；完成後可再選「暫停並結束」。")
 
     def _show_detail(self, value):
+        self._detail_document = value
+        self.show_raw.set(False)
+        self._render_detail()
+
+    def _render_detail(self):
+        value = self._detail_document
+        text = event_summary(value) if value is not None else "選取事件以查看保存的觀察事實與唯讀下一步。"
+        if value is not None and self.show_raw.get():
+            text += "\n\n原始結構化資料（不可信資料，僅供核對）\n" + detail_text(value)
         self.detail.configure(state="normal")
         self.detail.delete("1.0", "end")
-        self.detail.insert("1.0", detail_text(value))
+        self.detail.insert("1.0", text)
         self.detail.configure(state="disabled")
 
     def _apply_snapshot(self, value):
-        view = view_snapshot(value)
+        self._event_document = value if isinstance(value, dict) else {}
+        view = view_snapshot(value,
+            severity=SEVERITY_FILTERS.get(self.severity_filter.get(), "all"),
+            delivery=DELIVERY_FILTERS.get(self.delivery_filter.get(), "all"))
         self._snapshot = view
         self.headline.set(view["headline"])
         self.counts.set(view["counts"])
@@ -375,6 +389,12 @@ class EventGuardWindow:
                 self.sources.item(source, values=row)
             else:
                 self.sources.insert("", "end", iid=source, values=row)
+        self._render_events(view)
+        if view["error"]:
+            self.message.set("尚未完成：" + view["error"])
+
+    def _render_events(self, view):
+        self.events_note.set(view["events_note"])
         present = {event_id for event_id, _ in view["events"]}
         for item in self.events.get_children():
             if item not in present:
@@ -387,8 +407,9 @@ class EventGuardWindow:
                 self.events.insert("", "end", iid=event_id, values=row)
         if self._last_event is not None and self._last_event not in present:
             self._last_event = None
-        if view["error"]:
-            self.message.set("尚未完成：" + view["error"])
+            self._detail_document = None
+            self.show_raw.set(False)
+            self._render_detail()
 
     def _drain(self):
         refresh_needed = False
@@ -403,7 +424,14 @@ class EventGuardWindow:
                 else:
                     self._apply_snapshot(value)
             elif action == "inspect":
-                self._show_detail(value)
+                inspected = value.get("event") if isinstance(value.get("event"), dict) else value
+                event_id = inspected.get("event_id")
+                # An in-flight read may finish after a filter hides that event.
+                # Never put its details under another selected row.
+                selected = self.events.selection()
+                if (selected and self._last_event == selected[0] and self.events.exists(self._last_event)
+                        and event_id in (None, self._last_event)):
+                    self._show_detail(value)
             else:
                 self._set_busy(False)
                 if action == "close" and value.get("can_close") is True:

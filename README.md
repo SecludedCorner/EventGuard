@@ -6,6 +6,8 @@ Windows 一般權限的唯讀監看工具。人類 GUI／CLI 與可選 agent 介
 
 「允許 agent 接收事件」預設關閉；勾選才開放既有本機工具接收，取消立即阻擋後續工具讀取，既有事件仍保留。勾選不會啟動模型，也不代表 agent 已連線。操作與限制見 [GUI](docs/GUI.md)。
 
+事件先顯示觀察、未知與唯讀查證建議，技術資料按需展開；可依嚴重度／接收狀態篩選目前載入的100件，總數及截斷會明示。設計參考與已採納項目見 [研究記錄](docs/SCANNER_LESSONS.md)。
+
 目前是 [MIT](LICENSE) 工程預覽。目前受測程式與 commit 見 [EVIDENCE](docs/EVIDENCE.md)，最新狀態見 [STATUS](STATUS.md)，實測範圍與數字見 [EVIDENCE](docs/EVIDENCE.md)。
 
 ## 如何運作
@@ -68,7 +70,7 @@ GUI 的開始不需要建立排程；監看由應用持有，應用縮小後繼�
 
 ## 現況與限制
 
-- 原生 API 優先、同身分 PowerShell fallback；七來源的可讀範圍與拒讀原因見 [採集契約](docs/COLLECTOR_CONTRACT.md)。Defender／程序／監聽身分仍 partial，tasks unknown；不因缺資料提權。
+- 原生 API 優先、同身分 PowerShell fallback；七來源的可讀範圍與拒讀原因見 [採集契約](docs/COLLECTOR_CONTRACT.md)。實測狀態依執行 context 而異，最新快照見 STATUS；partial／unknown 不代表安全，不因缺資料提權。單筆壞資料保留有效列且明示不完整。
 - 子程序從建立時加入私有 Job；停止先寬限，逾時只清理本工具程序樹。啟動保存 `monitor_gap`，未確認退出不報 stopped；見 [生命週期](docs/PROCESS_LIFECYCLE.md)。
 - 每來源即時保存有界觀察；過期、截斷與拒讀均顯示。退出未確認會耐久阻擋新 worker，僅能以該私有 Job 已空／銷毀的證據恢復；不靠刪鎖或重開目錄繞過。
 - ACKed 資料與完成帳本有保留、輪替及有限上限；pending／retry／未 ACK failed 保留。去重有時間與容量窗；見 [儲存政策](docs/STORAGE_RETENTION.md)。

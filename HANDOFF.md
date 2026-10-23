@@ -1,10 +1,12 @@
 # EventGuard 接手
 
-先讀 AGENTS、README、STATUS、docs/GUI.md、docs/EVIDENCE.md、docs/BACKGROUND.md。核對cwd/branch/HEAD/未提交變更，保留接續，不reset/clean。GUI本批基底fd1e874e380512b2566dc2690368c20acd3813cd，同一feature集中提交、不推送；原有docs/research/排除。
+先讀 AGENTS、README、STATUS、docs/GUI.md、docs/EVIDENCE.md、docs/BACKGROUND.md。核對cwd/branch/HEAD/未提交變更，保留接續，不reset/clean。本批基底32f9975182e189ad3b9723d8df78e3db022cdd4e，同一feature集中提交、不推送；原有docs/research/排除。
+
+本批已依使用者指定研究 ai-security-scanner，兩個子agent分讀架構／UX，概念獨立實作後統一驗證。gui_presenter 提供人類摘要／原始JSON展開、當前最多100件本地篩選與完整性提示；observed_at修正。collector對非物件壞列留固定原因／計數及合法siblings，partial不清baseline或判恢復。研究固定commit、採納依據與未採納範圍見docs/SCANNER_LESSONS.md。命令與結果只讀EVIDENCE；不執行上游掃描器、不新增依賴。
 
 最新使用者明確要求GUI，取代舊「GUI非目標」。優先交付直接使用：EventGuard.cmd開視窗，開始／暫停，七來源與事件可見，agent接收勾選。Start-EventGuard.cmd開GUI並送出開始；Status／Stopcmd及原CLI保留。X僅縮小；暫停並結束需耐久disabled及完整退出證據。核心無模型、無每日採集期限。
 
-正式GUI本輪已開啟並開始，status當次running_verified，七來源有資料。操作意圖可由使用者隨時改變，下一步先讀status，不為驗證重啟或全機重掃。GUI生命週期綁應用：child從建立就在私有Global Job，GUI不detach；host核對應用PID+creation，parent退出／未知即合作退出。沒有繞過外部Job。獨立CLIbackground模式保留舊拒絕外部Job契約。
+正式GUI前批已開啟並開始，status當次running_verified，七來源有資料；本批保留、不重啟／重掃，新UI於下次正常開啟載入，不能宣稱已熱更新。操作意圖可由使用者隨時改變，下一步先讀status，不為驗證重啟或全機重掃。GUI生命週期綁應用：child從建立就在私有Global Job，GUI不detach；host核對應用PID+creation，parent退出／未知即合作退出。沒有繞過外部Job。獨立CLIbackground模式保留舊拒絕外部Job契約。
 
 agent_access是固定data/agent-delivery.json耐久開關，預設off。只有live適用，既有test/synthetic契約保留；每次adaptercall重新檢查，關閉不回傳metadata、不ACK，live dispatcher不啟動模型。人類OperatorAPI不受影響，pending/query保留。勾選只代表允許既有client接收，不等於已連線或喚醒目前聊天，不啟動模型。不得冒用舊有限驗收批准。
 

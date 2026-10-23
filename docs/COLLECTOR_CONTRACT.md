@@ -53,6 +53,7 @@ fallback = WindowsCollectors(backend="powershell") # 明確比較／原生 API �
 - 異常類型／操作／原因碼限制為最多 96 字元的 ASCII 識別字。HRESULT 是有號 32-bit 或對應數值；Win32 碼只在實際取得時填入，否則 null。本工具的路徑／容量政策不偽造 OS 錯誤碼。
 - CIM NativeErrorCode／StatusCode 另作 provider_code，例如 AccessDenied；**不是 Win32 錯誤 2**。通用 HRESULT 0x80131500 本身也不能當成 AccessDenied，須看 provider_code／CategoryInfo 證據。
 - errors 最多 64 筆，error_count 保留實際錯誤總數，errors_truncated 明示省略。資料列上限亦明示；超限不變成完整成功。
+- 外層必須有合法 status 及 rows list；外層錯誤仍回 error。有界前綴內的非物件列個別略過，記 object／ContractError／invalid_collector_row、invalid_row_count；保留合法列，有可用觀察則 partial，否則 error。attempt 保留 source_status、收斂後 status 與錯誤計數，滿64筆也保留此契約原因；不記壞列原文，不從上限後補撿資料。auto 不以 fallback 掩蓋壞列或截斷。partial 不用來清空 baseline 或確認恢復。
 - section／health／status／DiagnosticAPI 不放原始例外全文、stderr、帳號或錯誤路徑。只有明確啟用的本機驗收 evidence_sink 另存原始輸出／OS FormatMessage；正常監看不記 raw text。
 - monitor 的 health 保留上述安全 coverage；健康檔讀寫上限同為 2 MiB，其他 runtime/config JSON 原有上限維持不變。CLI status 的唯讀 SQLite 連線會明確 close。
 
@@ -93,7 +94,8 @@ COM 遞迴最多 4096 個可見資料夾、深度 32，含可見的 hidden tasks
 ## 測試與本機證據
 
 - `tests/test_collector_contract.py`：同一份七來源 fixture 通過 native／fallback 封裝，涵蓋 success、denied、partial、截斷、無 fallback 的失敗、必要 fallback 的歷史保留、PID 時間正規化、錯誤最小化、ABI、HRESULT 格式化與大型 coverage 經真 health/status 保存。fixture 不代表實機 provider 成功。
-- 既有 collector／diagnostics、core、rules 測試保留。實際 discovered/pass/skip 與 source hashes 以本機 `reports/phase1-collectors-001/full-summary.json` 為單一測試數來源；不把之前的測試數累加。
+- `tests/test_collector_rows.py`：七來源 native／fallback 混合壞列、全壞列、錯誤上限、列前綴上限、fallback 不掩蓋、外層錯誤仍拒絕、partial 不判 listener 恢復或清 baseline。皆為合成契約，不代表主機已產生同類故障。
+- 既有 collector／diagnostics、core、rules 測試保留。最新命令、discovered/pass/skip 與 source hashes 只看 [EVIDENCE](EVIDENCE.md)；`reports/phase1-collectors-001/full-summary.json` 是原Phase1的歷史數字，不累加或替代本批結果。
 - 實機 source JSON、原始 stdout/stderr／OS 訊息、命令、時間、source hashes、程序退出回條位於 `reports/phase1-collectors-001`，受 Git 忽略。`monitor-final` 是一般權限下一輪真實七來源，`powershell-final` 是同上下文的一次逐來源 fallback 對照；其餘目錄保留初輪、修正與 schtasks 對照。
 - `monitor-final/status.json` 是實際 CLI status 回傳；不是手寫矩陣。隔離 runtime 下的 monitor 已 stopped、runner_pending=false、singleton 可重新取得。helper exit 0 表示量測完成及正常退出，**不表示所有來源 status=ok**。
 

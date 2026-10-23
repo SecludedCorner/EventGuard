@@ -316,26 +316,46 @@ class WindowsCollectors:
                 errors = clean_errors(data.get("errors"))
                 if data["status"] not in ("ok",) and not errors:
                     errors = [evidence("provider", "backend_reason_unavailable", status=data["status"])]
+                # Inspect only the existing bounded prefix. One malformed
+                # object must not erase independently usable sibling rows, or
+                # masquerade as an unavailable API that merits fallback.
+                invalid_rows = sum(not isinstance(row, dict) for row in data["rows"][:LIMITS[section_id]])
+                reported_errors = data.get("error_count", 0)
+                error_count = max(len(errors), reported_errors) if type(reported_errors) is int else len(errors)
+                errors_truncated = data.get("errors_truncated") is True
+                if invalid_rows:
+                    row_error = evidence("object", "invalid_collector_row", exception_type="ContractError",
+                                         operation=section_id + ".row", status="error")
+                    # Retain the contract cause even when the provider has
+                    # already filled the evidence budget. Remaining causes are
+                    # counted, never copied from hostile row text or repr().
+                    errors_truncated = errors_truncated or len(errors) + invalid_rows > MAX_ERRORS
+                    errors = ([row_error] + errors + [row_error] * (min(invalid_rows, MAX_ERRORS) - 1))[:MAX_ERRORS]
+                    error_count += invalid_rows
                 attempt = {"backend": name, "status": data["status"], "errors": errors,
                            "elapsed_ms": int((time.monotonic() - before) * 1000)}
+                if invalid_rows:
+                    attempt.update(status="error", source_status=data["status"], invalid_row_count=invalid_rows,
+                                   error_count=error_count, errors_truncated=errors_truncated)
                 result["coverage"]["attempts"].append(attempt)
                 result["coverage"]["backend"] = name
                 # Same ordinary token only. Denials, partial data and pending operations are not retried.
-                if (self.backend == "auto" and name == "native" and data["status"] == "not_applicable"
+                if (not invalid_rows and self.backend == "auto" and name == "native" and data["status"] == "not_applicable"
+                        and len(data["rows"]) <= LIMITS[section_id]
                         and any(e["reason_code"] == "api_unavailable" for e in errors)
-                        and not any(r.get("status") in ("ok", "partial") for r in data["rows"])):
+                        and not any(isinstance(r, dict) and r.get("status") in ("ok", "partial") for r in data["rows"][:LIMITS[section_id]])):
                     names.append("powershell")
             result["status"] = data["status"]
             result["coverage"]["process"] = process_metadata(data.get("process"))
             result["coverage"]["errors"] = errors
-            result["coverage"]["error_count"] = max(len(errors), data.get("error_count", 0)) if type(data.get("error_count", 0)) is int else len(errors)
-            result["coverage"]["errors_truncated"] = data.get("errors_truncated") is True
+            result["coverage"]["error_count"] = error_count
+            result["coverage"]["errors_truncated"] = errors_truncated
             result["coverage"]["checks"] = clean_checks(data.get("checks"))
             rows = data["rows"]
             truncated = data.get("truncated") is True or len(rows) > LIMITS[section_id]
             for row in rows[:LIMITS[section_id]]:
                 if not isinstance(row, dict):
-                    raise ValueError("invalid_row")
+                    continue
                 safe = {key: redact(row[key]) for key in FIELDS[section_id] if key in row and isinstance(row[key], (str, int, float, bool, type(None)))}
                 if safe.get("status") not in STATUSES:
                     safe["status"] = "unknown"
@@ -365,6 +385,13 @@ class WindowsCollectors:
                         if safe["status"] == "ok":
                             safe["status"] = "unknown"
                 result["rows"].append(safe)
+            if invalid_rows:
+                usable = any(row["status"] in ("ok", "partial")
+                             and any(value is not None for key, value in row.items() if key != "status")
+                             for row in result["rows"])
+                result["status"] = "partial" if usable else "error"
+                result["coverage"].update(invalid_row_count=invalid_rows, reason="invalid_collector_row")
+                attempt["status"] = result["status"]
             if result["status"] == "ok" and (truncated or errors or any(r["status"] != "ok" and not optional_absence(section_id, r) for r in result["rows"])):
                 result["status"] = "partial"
             result["coverage"]["truncated"] = truncated
@@ -422,7 +449,7 @@ def coverage_metadata(section):
               "truncated": source.get("truncated") is True}
     if source.get("process"):
         result["process"] = process_metadata(source["process"])
-    for key in ("error_count", "row_limit", "row_count", "usable_row_count", "process_identity_missing_count"):
+    for key in ("error_count", "row_limit", "row_count", "usable_row_count", "invalid_row_count", "process_identity_missing_count"):
         value = source.get(key)
         if type(value) is int and 0 <= value <= 2**31-1:
             result[key] = value
@@ -438,6 +465,10 @@ def coverage_metadata(section):
         result["reason"] = reason
     attempts = source.get("attempts", [])
     result["attempts"] = [{"backend": a["backend"], "status": a["status"], "errors": clean_errors(a.get("errors")),
+                           **({"source_status": a["source_status"]} if a.get("source_status") in STATUSES else {}),
+                           **{key: a[key] for key in ("invalid_row_count", "error_count")
+                              if type(a.get(key)) is int and 0 <= a[key] <= 2**31-1},
+                           **({"errors_truncated": a["errors_truncated"]} if type(a.get("errors_truncated")) is bool else {}),
                            **({"elapsed_ms": a["elapsed_ms"]} if type(a.get("elapsed_ms")) is int and 0 <= a["elapsed_ms"] <= 2**31-1 else {})}
                           for a in (attempts[:2] if isinstance(attempts, list) else []) if isinstance(a, dict)
                           and a.get("backend") in ("native", "powershell") and a.get("status") in STATUSES]

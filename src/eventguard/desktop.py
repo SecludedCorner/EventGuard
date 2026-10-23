@@ -196,6 +196,8 @@ class DesktopController:
                 "monitoring": monitoring, "updated_at": datetime.now(timezone.utc).isoformat(),
                 "namespace": "live", "sources": sources, "counts": count_view,
                 "events": listing.get("events", []), "events_truncated": listing.get("truncated"),
+                "events_total": listing.get("total") if type(listing.get("total")) is int and listing["total"] >= 0 else None,
+                "events_limit": 100,
                 "agent_delivery": agent, "last_action": self._last_action,
                 "last_error": self._last_error or _code(document.get("last_error")) or _code(document.get("error_code")) or (
                     "monitor_outside_live_namespace" if not scope_matches else None),

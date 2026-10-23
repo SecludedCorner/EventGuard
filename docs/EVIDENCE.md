@@ -2,11 +2,23 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：研究 ai-security-scanner 並直接採納
+
+基底 `32f9975182e189ad3b9723d8df78e3db022cdd4e`，同一feature。兩個子agent分別讀採集與結果介面，固定公開commit `46b7d1900fc25ef8ae4e4b568b638c915f28d130`；主線另核對README、LICENSE、adapter及混合壞列測試、篩選與技術展開程式。來源及取捨見 [SCANNER_LESSONS](SCANNER_LESSONS.md)。未執行上游程式或測試，未下載依賴；只參考設計概念並獨立實作，無程式／資產複製或授權更動。
+
+**目前完整數字唯一來源**：`reports/scanner-study-001/full-001/verification-summary.json`。命令 `py -3.13 -B scripts/verify.py --run-dir reports/scanner-study-001/full-001 --timeout-seconds 600 --scope full`；在正常一般使用者桌面context驗證（有限sandbox例外，沒有UAC或Windows提權），Python **3.13.3**，2026-10-23T03:56:47.584648+00:00：**684 discovered、682 passed、0 failure/error、2 symlink權限skip、122 AST**，161.884秒，exit **0**。passed_checks/source_unchanged=true、per_test_residuals=[]；guardian自然exit0、child_exited=true、remaining_owned_processes=0、forcibly_terminated=false。沒有再重跑mock子集或累加舊結果。
+
+本批新增合成採集列隔離、呈現、真Tk自身元件及Desktop總數契約案例。七來源native／fallback遇非物件壞列保留合法siblings，部分資料不升格完整，也不觸發錯誤恢復或清baseline；列／錯誤上限、不啟動fallback掩蓋、外層仍拒絕及不記壞文字均有斷言。人類摘要沿用既有guidance，原JSON預設收合；篩選只作用於載入的最多100件，儲存總數／截斷明示，零結果不能視為安全；選取與晚到回覆、observed_at與不可信控制字元均驗證。
+
+命令 `py -3.13 -B reports/scanner-study-001/visual_probe.py` exit **0**：只渲染本工具Tk視窗＋公開合成控制器，`synthetic-window.bmp`與`visual-result.json`保留畫面與斷言，已視覺檢查。兩筆事件、中文摘要、正確時間、嚴重度／接收狀態篩選、顯示／載入／總數及截斷提示可見；raw_collapsed/human_sections_verified=true。測試視窗正常退出，沒有長期程序、原生採集、ACK、模型或排程操作；不擷取其他應用或桌面。這是合成介面證據，不是正式監看或真agent。
+
+原有正式GUI／監看保留，本批不讀寫其事件、不為更新而重啟或全機重掃；已開視窗不熱更新，新介面於下次正常開啟載入。本批沒有真模型、接收器連線、正式壞資料注入、登出／重開機、24小時soak、Task建立／Run、服務、提權或安全設定變更。source-commit回條綁受測bytes及本批文件；reports、runtime、憑證、私人歷史及原有docs/research不提交、不推送。
+
 ## 2026-10-23：可直接操作的 GUI
 
 基底 `fd1e874e380512b2566dc2690368c20acd3813cd`，同一 feature；最新使用者明確要求開始／暫停、可見狀態與agent開關，取代舊GUI非目標。兩層互斥ownership實作後統一驗證；核心仍使用既有Python3.13標準庫／tkinter，不下載安裝、不提權／UAC、不改安全設定／執行政策、不建立排程或服務、不啟動模型。操作見 [GUI](GUI.md)。
 
-**目前完整數字唯一來源**：`reports/gui-001/full-001/verification-summary.json`。命令 `py -3.13 -B scripts/verify.py --run-dir reports/gui-001/full-001 --timeout-seconds 600 --scope full`；在正常一般使用者桌面context驗證（有限sandbox例外，不是Windows提權），Python **3.13.3**，2026-10-23T01:59:57.766146+00:00：**664 discovered、662 passed、0 failure/error、2 symlink權限skip、119 AST**，197.795秒，exit **0**。passed_checks/source_unchanged=true、per_test_residuals=[]；guardian自然exit0、child_exited=true、remaining_owned_processes=0、forcibly_terminated=false。fixture／mock子集包含於本次，不另重跑或累加。
+**前批完整數字來源**：`reports/gui-001/full-001/verification-summary.json`。命令 `py -3.13 -B scripts/verify.py --run-dir reports/gui-001/full-001 --timeout-seconds 600 --scope full`；在正常一般使用者桌面context驗證（有限sandbox例外，不是Windows提權），Python **3.13.3**，2026-10-23T01:59:57.766146+00:00：**664 discovered、662 passed、0 failure/error、2 symlink權限skip、119 AST**，197.795秒，exit **0**。passed_checks/source_unchanged=true、per_test_residuals=[]；guardian自然exit0、child_exited=true、remaining_owned_processes=0、forcibly_terminated=false。fixture／mock子集包含於本次，不另重跑或累加。
 
 新增GUI按鈕／接收勾選／唯讀選取、X最小化、退出未確認保留視窗、UIworker序列化與中斷收尾測試；真Tk自身元件使用fixturecontroller，不是實機採集或真agent。`reports/gui-001/visual_probe.py`只渲染本工具Tk視窗及公開合成資料；命令 `py -3.13 -B reports/gui-001/visual_probe.py` exit0，`synthetic-window.bmp`／visual-result保存自身畫面，已視覺檢查七列、開始／暫停與勾選可見。沒有擷取其他應用或桌面；合成截圖不當成正式監看證明。
 

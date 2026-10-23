@@ -26,8 +26,10 @@ class FixtureController:
                       "sources": [{"source_id": "defender", "status": "partial", "row_count": 2,
                                    "freshness": {"state": "fresh"}, "observed_at": "2026-10-23T04:00:00+00:00"}],
                       "counts": {"pending": 1, "acked": 0, "failed": 0},
-                      "events": [{"event_id": "synthetic-example-1", "event_type": "listener_change",
-                                  "severity": "low", "delivery_status": "pending"}],
+                      "events": [{"event_id": "synthetic-example-1", "event_type": "listener.changed",
+                                  "observed_at": "2026-10-23T04:00:00+00:00",
+                                  "severity": "warning", "delivery_status": "pending"}],
+                      "events_total": 1, "events_truncated": False,
                       "agent_delivery": {"enabled": False}, "model_calls": 0}
 
     def _called(self, action):
@@ -55,8 +57,12 @@ class FixtureController:
 
     def inspect(self, event_id):
         self._called("inspect")
-        return {"event_id": event_id, "scope": "synthetic", "delivery_status": "pending",
-                "incident_conclusion": "not_assessed"}
+        event = next(item for item in self.value["events"] if item["event_id"] == event_id)
+        return {"event": copy.deepcopy(event), "scope": "synthetic", "incident_conclusion": "not_assessed",
+                "guidance": {"observation": "保存的合成監聽觀察，不代表外部可達或惡意。",
+                             "binding_facts": {"protocol": "TCP", "port": 43210},
+                             "next_steps": ["核對保存的 port 與綁定範圍。"],
+                             "uncertainties": ["process_binding_missing"]}}
 
     def close(self):
         self._called("close")
@@ -280,6 +286,73 @@ class GuiOwnTkWidgetTests(unittest.TestCase):
         self.wait_for(lambda: "synthetic-example-1" in self.ui.detail.get("1.0", "end"))
         self.assertFalse(any(action == "ack" for action, _ in self.controller.calls))
         self.assertEqual(self.controller.value["events"][0]["delivery_status"], "pending")
+
+    def test_readable_summary_is_default_and_raw_checkbox_only_reveals_saved_data(self):
+        self.wait_for(lambda: not self.ui.worker.pending)
+        self.ui.events.selection_set("synthetic-example-1")
+        self.ui.select_event()
+        self.wait_for(lambda: "連接埠：43210" in self.ui.detail.get("1.0", "end"))
+        summary = self.ui.detail.get("1.0", "end")
+        self.assertIn("觀察事實", summary)
+        self.assertIn("未知與限制", summary)
+        self.assertIn("建議的唯讀查證", summary)
+        self.assertNotIn('"binding_facts"', summary)
+        self.assertFalse(self.ui.show_raw.get())
+        inspections = sum(action == "inspect" for action, _ in self.controller.calls)
+        self.ui.raw_check.invoke()
+        self.assertIn('"binding_facts"', self.ui.detail.get("1.0", "end"))
+        self.ui.raw_check.invoke()
+        self.assertNotIn('"binding_facts"', self.ui.detail.get("1.0", "end"))
+        self.assertEqual(inspections, sum(action == "inspect" for action, _ in self.controller.calls))
+        self.assertFalse(any(action in {"ack", "diagnose", "start"} for action, _ in self.controller.calls))
+        self.assertEqual(self.ui.detail.cget("state"), "disabled")
+
+    def test_real_widgets_filter_loaded_rows_and_clear_without_touching_events(self):
+        second = {"event_id": "synthetic-example-2", "event_type": "coverage.degraded",
+                  "severity": "high", "delivery_status": "ack", "observed_at": "2026-10-23T04:01:00+00:00"}
+        self.controller.value["events"].append(second)
+        self.controller.value.update(events_total=101, events_truncated=True)
+        self.ui._apply_snapshot(copy.deepcopy(self.controller.value))
+        before = copy.deepcopy(self.controller.value)
+        self.assertEqual(self.ui.events.item("synthetic-example-1", "values")[0], "2026-10-23T04:00:00+00:00")
+        self.ui.severity_filter.set("高")
+        self.ui.severity_choice.event_generate("<<ComboboxSelected>>")
+        self.window.update()
+        self.assertEqual(self.ui.events.get_children(), ("synthetic-example-2",))
+        self.assertIn("顯示 1 / 已載入 2；儲存總數 101", self.ui.events_note.get())
+        self.assertIn("清單已截斷", self.ui.events_note.get())
+        self.ui.delivery_filter.set("待接手")
+        self.ui.delivery_choice.event_generate("<<ComboboxSelected>>")
+        self.window.update()
+        self.assertEqual(self.ui.events.get_children(), ())
+        self.assertIn("不代表沒有事件或主機安全", self.ui.events_note.get())
+        self.ui.clear_filters_button.invoke()
+        self.assertEqual(self.ui.events.get_children(), ("synthetic-example-1", "synthetic-example-2"))
+        self.assertEqual(self.controller.value, before)
+        self.assertFalse(any(action in {"ack", "diagnose", "start", "pause"} for action, _ in self.controller.calls))
+
+    def test_late_inspection_cannot_show_hidden_event_details_after_filter_changes(self):
+        entered, release = threading.Event(), threading.Event()
+        original = self.controller.inspect
+        def inspect(event_id):
+            entered.set()
+            release.wait(timeout=2)
+            return original(event_id)
+        self.wait_for(lambda: not self.ui.worker.pending)
+        with patch.object(self.controller, "inspect", side_effect=inspect):
+            try:
+                self.ui.events.selection_set("synthetic-example-1")
+                self.ui.select_event()
+                self.wait_for(entered.is_set)
+                self.ui.severity_filter.set("嚴重")
+                self.ui.filter_events()
+                release.set()
+                self.wait_for(lambda: not self.ui.worker.pending)
+                self.wait_for(lambda: self.ui.worker.results.empty())
+                self.assertNotIn("synthetic-example-1", self.ui.detail.get("1.0", "end"))
+                self.assertIsNone(self.ui._last_event)
+            finally:
+                release.set()
 
     def test_window_close_minimizes_and_unconfirmed_exit_keeps_window(self):
         with patch.object(self.window, "iconify") as minimize:

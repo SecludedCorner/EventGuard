@@ -162,6 +162,20 @@ class DesktopTests(unittest.TestCase):
         self.controller.api.call.assert_called_once_with("inspect_event", "event-1", namespace="live")
         self.assertFalse(value["system_query_executed"])
 
+    def test_event_snapshot_exposes_total_and_loaded_window_without_new_query(self):
+        self.controller.api.call.return_value = {
+            "event_list": {"events": [{"event_id":"synthetic-1"}], "total":487, "truncated":True},
+            "event_storage": {"state":"available","counts":{"pending":487}}}
+        value=self.controller.snapshot()
+        self.assertEqual(value["events_total"],487)
+        self.assertEqual(value["events_limit"],100)
+        self.assertTrue(value["events_truncated"])
+        self.assertEqual(len(value["events"]),1)
+        self.controller.api.call.assert_called_once_with("overview",namespace="live",limit=100)
+        self.controller.api.call.reset_mock()
+        self.controller.api.call.return_value["event_list"]["total"]=True
+        self.assertIsNone(self.controller.snapshot()["events_total"])
+
     def test_fixture_monitor_cannot_be_presented_as_live_monitoring(self):
         self.controller.api.call.return_value = {
             "current_monitor": {"state": "running_verified", "namespace": "test", "scope_matches": False},
