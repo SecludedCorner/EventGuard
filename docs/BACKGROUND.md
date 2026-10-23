@@ -10,7 +10,7 @@
 .\Stop-EventGuard.cmd
 ```
 
-Start 現在啟動背景控制程序，保存 enabled 意圖；沒有每天／一小時的採集停止期限，不使用模型額度。Status 分開核對背景 owner PID＋建立時間、私有 Job、heartbeat、目前採集 owner、coverage、保存資料及事件。Stop 先耐久寫 disabled，再合作停止；未確認退出不判成功。重新登入不會推翻明確手動停止，需再次 Start 才啟用。
+Start 現在開啟 [GUI](GUI.md) 並啟動應用持有的監看 host，保存 enabled 意圖；沒有每天／一小時的採集停止期限，不使用模型額度。GUI 關閉視窗只最小化；暫停並結束才停止。Status 分開核對背景 owner PID＋建立時間、私有 Job、heartbeat、目前採集 owner、coverage、保存資料及事件。Stop 先耐久寫 disabled，再合作停止；未確認退出不判成功。
 
 等價 CLI 為 `background start/status/stop`。要在終端前景觀察來源進度，仍可明確使用 `monitor`；它不是新的背景啟動入口。事件持續保存在同一 `data/live/eventguard.sqlite3`，人類／已連接的可選 stdio client 用原有 events list/inspect/diagnose/receive/ack 接手；沒有新增另一套接收帳本。無事件不叫模型；有事件也不自行花模型額度。
 

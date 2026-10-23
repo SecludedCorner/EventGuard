@@ -1,6 +1,10 @@
 # EventGuard
 
-Windows 一般權限的唯讀監看工具。核心能獨立採集、記錄變化、查看事件與匯出報告；人類 CLI 與可選 agent 介面共用操作核心。正常監看不呼叫模型。
+Windows 一般權限的唯讀監看工具。人類 GUI／CLI 與可選 agent 介面共用核心。正常監看不呼叫模型。
+
+**日常使用：雙擊 `EventGuard.cmd`，按「開始」持續監看、按「暫停」停止。** 視窗顯示七來源可見性、事件數與事件內容；關閉視窗只最小化，選「應用程式 → 暫停並結束」才完全離開。`Start-EventGuard.cmd` 會開啟視窗並開始。使用既有 Python 3.13／tkinter，沒有新增安裝。
+
+「允許 agent 接收事件」預設關閉；勾選才開放既有本機工具接收，取消立即阻擋後續工具讀取，既有事件仍保留。勾選不會啟動模型，也不代表 agent 已連線。操作與限制見 [GUI](docs/GUI.md)。
 
 目前是 [MIT](LICENSE) 工程預覽。目前受測程式與 commit 見 [EVIDENCE](docs/EVIDENCE.md)，最新狀態見 [STATUS](STATUS.md)，實測範圍與數字見 [EVIDENCE](docs/EVIDENCE.md)。
 
@@ -12,7 +16,7 @@ flowchart LR
     W[Windows 唯讀來源] --> J[私有 Job 內的 collector worker]
     J --> M[Monitor 與確定性規則]
     M --> S[SQLite 耐久事件與 ACK]
-    H[人類 CLI] --> O[共用 OperatorAPI]
+    H[人類 GUI / CLI] --> O[共用 OperatorAPI]
     A[可選 stdio agent 工具] --> O
     O --> S
     O --> Q[事件綁定唯讀查證]
@@ -56,7 +60,7 @@ py -3.13 -B scripts/eventguard.py sources show --source-id listeners --namespace
 py -3.13 -B scripts/eventguard.py stop
 ```
 
-也可執行 Start／Status／Stop-EventGuard.cmd。Stop 先保存 disabled，登入排程不會推翻手動停止；再次 Start 才啟用。監看逐來源回報進度／筆數，無模型也能運作。終端預設文字，管線預設 JSON，可用 `--format text|json` 固定。
+GUI 的開始不需要建立排程；監看由應用持有，應用縮小後繼續運作。Status／Stop-EventGuard.cmd 仍可查看／耐久暫停。獨立 CLI background start 的生命週期契約保留，與 GUI 應用持有模式分開。終端預設文字，管線預設 JSON，可用 `--format text|json` 固定。
 
 重開機後於同一使用者登入時恢復，使用 [背景監看契約](docs/BACKGROUND.md) 的低權限 ONLOGON 排程；建立／立即執行仍需批准。若啟動端受外部 Job 約束，回報 `independent_background_unverifiable`，不繞過它；排程可直接執行同步 host。前景除錯仍可用 `monitor`。
 
@@ -70,7 +74,7 @@ py -3.13 -B scripts/eventguard.py stop
 - ACKed 資料與完成帳本有保留、輪替及有限上限；pending／retry／未 ACK failed 保留。去重有時間與容量窗；見 [儲存政策](docs/STORAGE_RETENTION.md)。
 - 背景 supervisor 對異常／保存背壓以程式等待後重試；事件先落 SQLite。沒有事件不叫模型，有事件也由人類或已連接的可選接收者接手。
 - [24 小時 soak](docs/SOAK_PLAN.md) 尚未執行，真實狀態注入／登出重開機仍未驗證。排程實際安裝狀態見 STATUS，沒有服務、登入前監看或全天候承諾。
-- 不提供 EDR／鑑識、自動處置、GUI 或 Linux 原生採集。沒有事件、ACK 或診斷都不能證明主機安全。
+- 不提供 EDR／鑑識、自動處置或 Linux 原生採集。沒有事件、ACK 或診斷都不能證明主機安全。
 - 執行資料與憑證不入 Git。歷史有限 Codex 通路驗收見 [歷史入口](docs/history/README.md)；不是正常使用的前置條件或新的模型授權。
 - 可選 CLI 共用[每日耐久預算與未知退出閘道](docs/AGENT_BUDGET.md)；未初始化或證據不足就阻擋，不因換目錄重置。接收失敗可由人類接手；不把人類 ACK 升格為 agent 驗收成功。
 

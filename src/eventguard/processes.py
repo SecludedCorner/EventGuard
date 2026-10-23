@@ -417,7 +417,35 @@ def detach_owned(child, keeper_receipt):
     handle number is never authority: duplicate it from our still-owned child
     and compare the actual kernel object with the job we created.
     """
-    if not isinstance(child, JobPopen) or getattr(child, "_persistent_host", False) is not True:
+    return _verify_host_keeper(child, keeper_receipt, transfer=True)
+
+
+def spawn_application_host(argv, *, job_name, **kwargs):
+    """An application owns this host for its lifetime, including ancestor Jobs."""
+    if os.name != "nt":
+        raise JobError("windows_application_job_required")
+    _private_job_name(job_name)
+    if not job_name.startswith("Global\\"):
+        raise ValueError("persistent_global_job_required")
+    if kwargs.get("shell") or kwargs.get("creationflags", 0) & 0x01000000:
+        raise ValueError("persistent_job_breakaway_or_shell_rejected")
+    if any(kwargs.get(key) == subprocess.PIPE for key in ("stdin", "stdout", "stderr")):
+        raise ValueError("persistent_host_requires_independent_stdio")
+    child = spawn(argv, job_name=job_name, **kwargs)
+    if not isinstance(child, JobPopen):
+        raise JobError("application_owned_job_required")
+    child._application_host = True
+    return child
+
+
+def retain_application_host(child, keeper_receipt):
+    """Verify the same ready/keeper, retaining the application's Job ownership."""
+    return _verify_host_keeper(child, keeper_receipt, transfer=False)
+
+
+def _verify_host_keeper(child, keeper_receipt, *, transfer):
+    marker = "_persistent_host" if transfer else "_application_host"
+    if not isinstance(child, JobPopen) or getattr(child, marker, False) is not True:
         raise JobError("persistent_owned_host_required")
     with child.cleanup_lock:
         with _LOCK:
@@ -445,15 +473,18 @@ def detach_owned(child, keeper_receipt):
             _kill_on_close(duplicate)
             if child.poll() is not None:
                 raise JobError("persistent_host_exited_before_handoff")
-            receipt = {"managed": True, "ownership_transferred": True, "detached": True,
+            receipt = {"managed": True, "ownership_transferred": transfer, "detached": transfer,
                        "pid": child.pid, "created_at": child.created_at, "session_id": value["session_id"],
                        "job_name": child.job.name, "child_exited": None, "exit_code": None,
-                       "forcibly_terminated": False, "lifetime_limited": bool(child._persistent_parent_job),
+                       "forcibly_terminated": False, "lifetime_limited": bool(child._persistent_parent_job) if transfer else True,
                        "reason": "host_private_job_keeper_verified"}
-            child.job.close()
-            child.detached = True
-            with _LOCK:
-                _OWNED.discard(child)
+            if transfer:
+                child.job.close()
+                child.detached = True
+                with _LOCK:
+                    _OWNED.discard(child)
+            else:
+                receipt["lifetime_owner"] = "application"
             return receipt
         finally:
             if duplicate.value:

@@ -1,0 +1,29 @@
+# EventGuard 視窗操作
+
+雙擊根目錄 `EventGuard.cmd`，不需要終端指令。需要既有 Python 3.13 與 tkinter；缺少時回報，不下載安裝。`Start-EventGuard.cmd` 會開啟視窗並送出開始要求。
+
+| 操作 | 實際效果 |
+| --- | --- |
+| 開始 | 啟動同一耐久 Monitor，無每日或一小時採集期限；不呼叫模型 |
+| 暫停 | 先耐久保存 disabled，再合作停止本工具查詢；事件與 baseline 留原位置 |
+| 關閉視窗 | 最小化到工作列，應用與監看繼續；可從工作列恢復 |
+| 應用程式 → 暫停並結束 | 確認本工具 host／子程序退出後才離開；未知時保留視窗與錯誤 |
+| 七個來源 | 顯示筆數、可見性、觀察時間、新鮮度及固定拒讀原因；只讀保存觀察 |
+| 事件與內容 | 選取保存事件查看；不自動 ACK，也不執行事件內容中的指令 |
+| 允許 agent 接收事件 | 保存本安裝接收開關；預設關閉；開啟也不啟動模型或自動連線 |
+
+按鈕與背景 worker 分開，來源慢查詢不阻塞 Tk 畫面。狀態每五秒由普通程式讀取，不由模型輪詢。未知、部分可讀、拒讀與過期不等於安全。
+
+GUI 使用同一 OperatorAPI／SQLite；沒有另外一套採集、事件或 ACK。監看 child 從建立時在私有 Job，GUI 保留 Job handle；host 同時核對應用 PID＋建立時間，應用意外退出／身分未知時合作停止，不留下無 owner 的持續採集。這是應用生命週期，沒有繞過外部 Job 或啟用服務。
+
+agent 開關不是裝飾：live MCP 的操作每次先查開關，關閉時不回傳事件／來源 metadata、不接收或 ACK；live dispatcher 也不會啟動 agent。人類的 CLI／GUI 操作不受影響；pending／query 仍保留，可由人類接手或稍後重新開放。已經回傳給接收者的資料不能收回。明示 test／synthetic 契約不受此 live 開關改寫。
+
+可選接收者仍須明確連接現有入口：
+
+```text
+py -3.13 -B scripts/eventguard_inbox_mcp.py --operator-root . --namespace live --allow-live
+```
+
+這是 stdio client 的 command／args，並非啟動模型的指令。沒有自動註冊 MCP、網路 listener 或喚醒目前聊天。畫面會如實顯示「尚未證明 agent 連線或收到事件」。任何真模型呼叫仍需當次批准。
+
+登入後自動恢復是另外一次 [背景排程](BACKGROUND.md) 設定，目前未獲批准／建立。GUI 的開始／暫停可以直接使用；不把開啟視窗或有限測試當作實際重開機、長時 soak 或全天候成功。完整當前驗證見 [EVIDENCE](EVIDENCE.md)。

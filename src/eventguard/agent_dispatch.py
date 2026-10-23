@@ -442,6 +442,13 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
              "execute": execute, "events": [], "reason": None}
     write_json(directory / "dispatch.json", {"kind": KIND, "run_id": state["run_id"]})
     _save(directory, state)
+    if allow_live:
+        from .agent_access import guard
+        blocked = guard(ROOT, "live")
+        if blocked is not None:
+            state.update(state="blocked", reason=blocked["reason"])
+            _save(directory, state)
+            return 2
     executable = shutil.which(str(codex))
     if importlib.util.find_spec("mcp") is None or executable is None:
         state.update(state="blocked", reason="missing_existing_codex_or_mcp_sdk")
@@ -507,6 +514,9 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
         state.update(state="waiting", reason=None)
         _save(directory, state)
         while state["tasks_started"] < max_tasks:
+            if allow_live and guard(ROOT, "live") is not None:
+                state.update(state="blocked_pending", reason="agent_delivery_disabled")
+                break
             if _check_stop(directory, state, cancel):
                 state["state"] = "stopped"
                 break

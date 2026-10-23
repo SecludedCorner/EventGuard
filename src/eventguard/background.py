@@ -280,12 +280,23 @@ def _host_argv(runtime, run_id, job_name, fixture, max_cycles):
     return argv
 
 
-def start(root, *, resume=False, ready_timeout=20, fixture=None, max_cycles=None):
+def start(root, *, resume=False, ready_timeout=20, fixture=None, max_cycles=None,
+          lifetime_owner="independent", child_owner=None):
     """Explicit enable + one bounded private-Job handoff; no monitor time cap."""
     runtime, child, generation, handoff = Runtime(root), None, None, None
+    if lifetime_owner not in {"independent", "application"} or (
+            lifetime_owner == "application" and not callable(child_owner)) or (
+            lifetime_owner == "independent" and child_owner is not None):
+        raise ValueError("invalid_background_lifetime_owner")
     if type(resume) is not bool or type(ready_timeout) not in (int, float) or not math.isfinite(ready_timeout) or not 1 <= ready_timeout <= 60:
         raise ValueError("invalid_background_start_bounds")
     _fixture(runtime, fixture, max_cycles)
+    application_owner = None
+    if lifetime_owner == "application":
+        application_owner = processes.identity()
+        if (application_owner.get("state") != "alive" or type(application_owner.get("pid")) is not int
+                or _date(application_owner.get("created_at")) is None):
+            return {"state": "blocked", "reason": "application_owner_identity_unverifiable", "model_calls": 0}
     run_id, job_name = uuid.uuid4().hex, "Global\\EventGuard-" + uuid.uuid4().hex
     try:
         with _mutation(runtime):
@@ -307,9 +318,12 @@ def start(root, *, resume=False, ready_timeout=20, fixture=None, max_cycles=None
             launch = {"kind": LAUNCH_KIND, "run_id": run_id, "generation": control["generation"],
                       "namespace": control["namespace"], "job_name": job_name, "state": "launch_intent",
                       "session_id": _session(), "started_at": _stamp()}
+            if application_owner is not None:
+                launch.update(lifetime_owner="application", application_owner={key: application_owner[key] for key in ("pid", "created_at")})
             _write(runtime, "launch.json", launch)
             try:
-                child = processes.spawn_persistent(_host_argv(runtime, run_id, job_name, fixture, max_cycles),
+                launch_host = processes.spawn_application_host if lifetime_owner == "application" else processes.spawn_persistent
+                child = launch_host(_host_argv(runtime, run_id, job_name, fixture, max_cycles),
                     job_name=job_name, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                     cwd=str(ROOT))
             except OSError as error:
@@ -322,6 +336,8 @@ def start(root, *, resume=False, ready_timeout=20, fixture=None, max_cycles=None
                 return {"state": "blocked", "reason": launch["reason"], "namespace": control["namespace"],
                         "desired_enabled": True, "model_calls": 0, "child_exited": True if known else None,
                         "external_job_escape_attempted": False}
+            if child_owner is not None:
+                child_owner(child)
             launch.update(state="started", pid=child.pid, created_at=child.created_at)
             _write(runtime, "launch.json", launch)
         deadline = time.monotonic() + ready_timeout
@@ -333,14 +349,17 @@ def start(root, *, resume=False, ready_timeout=20, fixture=None, max_cycles=None
             if (ready and ready.get("kind") == READY_KIND and ready.get("run_id") == run_id
                     and ready.get("generation") == control["generation"] and ready.get("job_name") == job_name
                     and ready.get("pid") == child.pid and ready.get("created_at") == child.created_at):
-                handoff = processes.detach_owned(child, ready["job_keeper"])
+                handoff = (processes.retain_application_host(child, ready["job_keeper"]) if lifetime_owner == "application"
+                           else processes.detach_owned(child, ready["job_keeper"]))
                 persisted = True
                 try:
                     _write(runtime, "handoff.json", {"run_id": run_id, "generation": control["generation"],
+                        "lifetime_owner": lifetime_owner,
                         "transferred_at": _stamp(), "process": handoff})
                 except (OSError, ValueError, RuntimeError):
                     persisted = False
                 return {**status(root), "handoff": handoff, "state": "started",
+                        "lifetime_owner": lifetime_owner, "lifetime_limited": handoff.get("lifetime_limited"),
                         "reason": "private_job_keeper_verified" if persisted else "host_transferred_handoff_record_unavailable",
                         "handoff_persisted": persisted, "evidence_write_failed": not persisted,
                         "model_calls": 0, "external_parent_job_may_limit_lifetime": handoff.get("lifetime_limited") is True}
@@ -473,7 +492,7 @@ def serve(root, *, run_id=None, job_name=None, fixture=None, max_cycles=None):
     if (run_id is None) != (job_name is None) or run_id is not None and (not _token(run_id) or type(job_name) is not str or not JOB.fullmatch(job_name)):
         raise ValueError("background_host_identity_invalid")
     hidden = run_id is not None
-    control, lease = None, None
+    control, lease, application_owner = None, None, None
     done, cancelled, control_fault, active_lock = threading.Event(), threading.Event(), threading.Event(), threading.RLock()
     active, thread, run, cancel_reason = [None], None, None, ["durable_stop_observed"]
     try:
@@ -497,6 +516,11 @@ def serve(root, *, run_id=None, job_name=None, fixture=None, max_cycles=None):
                 launch = _read(runtime, "launch.json")
                 if not launch or launch.get("run_id") != run_id or launch.get("job_name") != job_name or launch.get("generation") != control["generation"]:
                     raise BackgroundError("background_launch_identity_mismatch")
+                if launch.get("lifetime_owner") == "application":
+                    application_owner = launch.get("application_owner")
+                    if (not isinstance(application_owner, dict) or type(application_owner.get("pid")) is not int
+                            or _date(application_owner.get("created_at")) is None):
+                        raise BackgroundError("application_owner_identity_unverifiable")
                 keeper = processes.adopt_current_job(job_name)
             else:
                 previous = status(root)
@@ -509,6 +533,8 @@ def serve(root, *, run_id=None, job_name=None, fixture=None, max_cycles=None):
             owner = {"kind": OWNER_KIND, "run_id": run_id, "generation": control["generation"],
                 "namespace": control["namespace"], "pid": held["pid"], "created_at": held["created_at"],
                 "session_id": held["session_id"], "job_name": job_name, "started_at": _stamp()}
+            if application_owner is not None:
+                owner.update(lifetime_owner="application", application_owner=application_owner)
             _write(runtime, "launch.json", dict(owner, kind=LAUNCH_KIND, state="started"))
             _write(runtime, "owner.json", owner)
             run = {"kind": RUN_KIND, "run_id": run_id, "namespace": control["namespace"],
@@ -530,6 +556,15 @@ def serve(root, *, run_id=None, job_name=None, fixture=None, max_cycles=None):
         def watch_control():
             next_heartbeat = time.monotonic()
             while not done.wait(.5):
+                if application_owner is not None:
+                    observed = processes.identity(application_owner["pid"])
+                    if observed.get("state") != "alive" or observed.get("created_at") != application_owner["created_at"]:
+                        cancel_reason[0] = "application_owner_exit_or_unverifiable"
+                        cancelled.set()
+                        with active_lock:
+                            if active[0] is not None:
+                                active[0].cancel.set()
+                        return
                 try:
                     desired = _control(runtime)
                     if desired is None:

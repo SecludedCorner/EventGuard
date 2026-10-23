@@ -2,11 +2,39 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：可直接操作的 GUI
+
+基底 `fd1e874e380512b2566dc2690368c20acd3813cd`，同一 feature；最新使用者明確要求開始／暫停、可見狀態與agent開關，取代舊GUI非目標。兩層互斥ownership實作後統一驗證；核心仍使用既有Python3.13標準庫／tkinter，不下載安裝、不提權／UAC、不改安全設定／執行政策、不建立排程或服務、不啟動模型。操作見 [GUI](GUI.md)。
+
+**目前完整數字唯一來源**：`reports/gui-001/full-001/verification-summary.json`。命令 `py -3.13 -B scripts/verify.py --run-dir reports/gui-001/full-001 --timeout-seconds 600 --scope full`；在正常一般使用者桌面context驗證（有限sandbox例外，不是Windows提權），Python **3.13.3**，2026-10-23T01:59:57.766146+00:00：**664 discovered、662 passed、0 failure/error、2 symlink權限skip、119 AST**，197.795秒，exit **0**。passed_checks/source_unchanged=true、per_test_residuals=[]；guardian自然exit0、child_exited=true、remaining_owned_processes=0、forcibly_terminated=false。fixture／mock子集包含於本次，不另重跑或累加。
+
+新增GUI按鈕／接收勾選／唯讀選取、X最小化、退出未確認保留視窗、UIworker序列化與中斷收尾測試；真Tk自身元件使用fixturecontroller，不是實機採集或真agent。`reports/gui-001/visual_probe.py`只渲染本工具Tk視窗及公開合成資料；命令 `py -3.13 -B reports/gui-001/visual_probe.py` exit0，`synthetic-window.bmp`／visual-result保存自身畫面，已視覺檢查七列、開始／暫停與勾選可見。沒有擷取其他應用或桌面；合成截圖不當成正式監看證明。
+
+完整suite另有**真Windows有限應用Job**：保留父應用Job handle而不detach、明確暫停自然退出；合成parent正常退出後，host以原PID＋建立時間觀測owner退出，合作取消／退出，outer Job remaining0且未強停。原有獨立背景CLI的外部Job拒絕契約保留，沒有使用test-only allow_parent_job作正式入口。第二層審查找到keeper可能留下孤兒與fixture誤顯live兩項，已修parent存活監看、namespace拒絕與相應測試；詳見lifecycle-evidence。
+
+agent開關SDK函式案例：公開合成事件以live-profile寫隔離root；off時receive不回傳event metadata，on後receive取得同event/query，off後ACK被拒且仍pending，人類API可ACK一次。這是真已安裝SDK工具函式＋SQLite，**不是agent或模型**。gate設定損壞／保存失敗明示，pending／query不清空。live dispatcher在off時不檢查CLI或啟動模型；正常GUI不呼叫dispatcher。人類共用核心不受agent gate阻擋。
+
+正式命令 `py -3.13 -B scripts/eventguard_gui.py --start` 在正常一般使用者context已開啟可見視窗並持續運作（當次exec session35464；GUI是明示保留的正式應用，不是測試殘留）。`py -3.13 -B scripts/eventguard.py --format json status`只讀回保存狀態，原始JSON留 `reports/gui-001/live-status.json`：background **running**、current_monitor **running_verified**、model_calls **0**、七來源均fresh且有筆數。這份狀態是當次快照，使用者可隨時按暫停，後續不能假定仍運作。
+
+| 正式來源 | 狀態／總列數 | 界線 |
+| --- | --- | --- |
+| defender | partial／11 | 一般權限保存觀察；不是安全或受侵判定 |
+| listeners | partial／198 | 一般權限保存觀察；不是安全或受侵判定 |
+| processes | partial／595 | 一般權限保存觀察；不是安全或受侵判定 |
+| startup | ok／39 | 一般權限保存觀察；不是安全或受侵判定 |
+| services | ok／315 | 一般權限保存觀察；不是安全或受侵判定 |
+| tasks | ok／218 | 一般權限保存觀察；不是安全或受侵判定 |
+| versions | ok／1 | 一般權限保存觀察；不是安全或受侵判定 |
+
+正常使用者本輪tasks可讀，與前批受限context的unknown不同；這是不同執行context的實際證據，不能反推所有歷史拒讀根因。新鮮度、觀察上限與不確定性仍保留；事件均先存本機，沒有自動ACK或處置。
+
+沒有實際登出／重開機、24小時soak、Phase7狀態注入或真模型／接收器連線驗收。使用者沒有批准前次排程plan，故沒有Task mutation或Run；原plan因新來源變更失效。GUI開始不需要排程，但登入後自動恢復仍未啟用。source-commit回條綁受測bytes與本批文件；runtime、含本機metadata的JSON／SQLite／畫面、私人研究及憑證均不提交、不推送。
+
 ## 2026-10-23：背景監看、耐久啟停與登入恢復入口
 
 基底 `08a4ef8ff7e5762c499b7cb270de1e86a0361822`，同一 feature 分支。依本次授權完成一般權限背景功能、兩層互斥 ownership 開發、主線整合及功能完成後統一驗證。契約見 [BACKGROUND](BACKGROUND.md)，範圍見 [維護目標](MAINTENANCE_GOAL.md)。沒有真模型／Codex、提權／UAC、下載安裝、變更安全設定、服務或排程 mutation；原有研究與執行資料保留、不推送。
 
-**目前完整數字唯一來源**：`reports/background-001/full-003/verification-summary.json`。命令 `py -3.13 -B scripts/verify.py --run-dir reports/background-001/full-003 --timeout-seconds 600 --scope full`；Windows／Python **3.13.3**，2026-10-23T01:02:20.976464+00:00：**613 discovered、611 passed、0 failure/error、2 symlink 權限 skip、111 AST**，202.398 秒、exit **0**。passed_checks/source_unchanged=true，per_test_residuals=[]；guardian child_exited=true、exit0、remaining_owned_processes=0、forcibly_terminated=false。scope 為 fixture／SDK／Python fake CLI 與分列真 Windows owned Job APIs，不是 provider 掃描／真 agent／重開機／長時證據。
+**前批完整數字來源**：`reports/background-001/full-003/verification-summary.json`。命令 `py -3.13 -B scripts/verify.py --run-dir reports/background-001/full-003 --timeout-seconds 600 --scope full`；Windows／Python **3.13.3**，2026-10-23T01:02:20.976464+00:00：**613 discovered、611 passed、0 failure/error、2 symlink 權限 skip、111 AST**，202.398 秒、exit **0**。passed_checks/source_unchanged=true，per_test_residuals=[]；guardian child_exited=true、exit0、remaining_owned_processes=0、forcibly_terminated=false。scope 為 fixture／SDK／Python fake CLI 與分列真 Windows owned Job APIs，不是 provider 掃描／真 agent／重開機／長時證據。
 
 命令 `py -3.13 -B scripts/verify.py --run-dir reports/background-001/mock-final-002 --timeout-seconds 180 --scope mock`：**104/104 通過**、0 failure/error/skip，10.346 秒、exit0，source_unchanged=true、無殘留。mock 是 full 子集、不相加，不代表 Linux 原生支援或遠端 CI。full/mock source-manifest 同一最終來源；source-commit.json 另綁本地提交與文件。
 

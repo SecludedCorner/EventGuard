@@ -1,0 +1,205 @@
+"""Application lifetime controller shared by a small local desktop window.
+
+The GUI owns its host Job and stays alive while monitoring. This is deliberately
+different from an independently detached background process: no ancestor Job,
+security policy, scheduler or model authorization is bypassed. Methods are
+synchronous and intended for the GUI's single worker, never its Tk thread.
+"""
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from pathlib import Path
+import re
+import threading
+
+from . import background, processes
+from .operations import OperatorAPI, SOURCES
+
+CODE = re.compile(r"[a-z][a-z0-9_]{0,95}\Z")
+
+
+def _code(value, fallback=None):
+    return value if type(value) is str and CODE.fullmatch(value) else fallback
+
+
+def _confirmed(receipt):
+    return (isinstance(receipt, dict) and receipt.get("child_exited") is True
+            and type(receipt.get("remaining_owned_processes")) is int
+            and receipt["remaining_owned_processes"] == 0)
+
+
+class DesktopController:
+    """Own only EventGuard children; expose saved facts without claiming safety."""
+
+    def __init__(self, root):
+        self.root = Path(root).resolve()
+        self.api = OperatorAPI(self.root)
+        self._lock = threading.RLock()
+        self._children = []
+        self._receipts = []
+        self._last_action = None
+        self._last_error = None
+        self._closed = False
+
+    def _own(self, child):
+        # Called by background.start immediately after atomic private Job spawn,
+        # including failures before the host's ready handshake completes.
+        self._children.append(child)
+
+    def _remember(self, action, result):
+        state = result.get("state", result.get("status"))
+        failure = state in {"blocked", "error", "invalid_request", "unknown",
+                            "shutdown_unconfirmed", "stop_not_persisted", "startup_failed"}
+        self._last_action = {"action": action, "state": _code(state, "unknown"),
+                             "reason": _code(result.get("reason", result.get("error_code")))}
+        self._last_error = self._last_action["reason"] if failure else None
+        return result
+
+    def _error(self, action, code):
+        return self._remember(action, {"state": "blocked", "reason": code,
+            "model_calls": 0, "raw_error_omitted": True})
+
+    def start(self):
+        with self._lock:
+            if self._closed:
+                return self._error("start", "desktop_controller_closed")
+            self._release_exited()
+            try:
+                previous = background.status(self.root)
+                if (previous.get("namespace") == "test"
+                        and previous.get("host_liveness") not in {"not_recorded", "exited_verified"}):
+                    return self._error("start", "monitor_outside_live_namespace")
+                result = background.start(self.root, lifetime_owner="application", child_owner=self._own)
+            except (OSError, ValueError, TypeError, RuntimeError):
+                return self._error("start", "desktop_start_failed")
+            if result.get("namespace") not in (None, "live"):
+                return self._error("start", "monitor_outside_live_namespace")
+            return self._remember("start", result)
+
+    def _release_exited(self):
+        """Close only our handles after existing Job/PID exit proof.
+
+        This does not initiate termination. The background stop path owns the
+        cooperative deadline and verified, private Job-only timeout policy.
+        """
+        remaining = []
+        for child in self._children:
+            try:
+                if child.poll() is None or child.job.active() != 0:
+                    remaining.append(child)
+                    continue
+                receipt = processes.finish(child, reason="cancelled", grace=0, request_stop=False)
+                if _confirmed(receipt):
+                    self._receipts.append(receipt)
+                    self._receipts = self._receipts[-32:]
+                else:
+                    remaining.append(child)
+            except (OSError, ValueError, TypeError, RuntimeError):
+                remaining.append(child)
+        self._children = remaining
+        return not remaining
+
+    def pause(self):
+        with self._lock:
+            try:
+                current = background.status(self.root)
+                if (current.get("namespace") == "test"
+                        and current.get("host_liveness") not in {"not_recorded", "exited_verified"}):
+                    return dict(self._error("pause", "monitor_outside_live_namespace"), can_close=False)
+                result = background.stop(self.root, grace_seconds=10)
+            except (OSError, ValueError, TypeError, RuntimeError):
+                return self._error("pause", "desktop_stop_failed")
+            released = self._release_exited()
+            host_gone = result.get("host_liveness") in {"not_recorded", "exited_verified"}
+            if _confirmed(result.get("process")):
+                host_gone = True
+            confirmed = (result.get("desired_enabled") is False and host_gone
+                         and result.get("state") in {"stopped", "disabled"} and released)
+            value = dict(result, child_exited=True if confirmed else None,
+                         application_children_released=released,
+                         application_receipts=list(self._receipts), can_close=confirmed)
+            if not confirmed and value.get("state") in {"stopped", "disabled"}:
+                value.update(state="shutdown_unconfirmed", reason="desktop_child_exit_unconfirmed")
+            return self._remember("pause", value)
+
+    def close(self):
+        with self._lock:
+            if self._closed:
+                return {"state": "closed", "can_close": True, "desired_enabled": False,
+                        "child_exited": True, "model_calls": 0}
+            result = self.pause()
+            if result.get("can_close") is True:
+                self._closed = True
+                result = dict(result, state="closed")
+            return self._remember("close", result)
+
+    def set_agent_delivery(self, enabled):
+        with self._lock:
+            if self._closed:
+                return self._error("agent_delivery", "desktop_controller_closed")
+            if type(enabled) is not bool:
+                return self._error("agent_delivery", "agent_delivery_boolean_required")
+            try:
+                from .agent_access import set_enabled
+                result = set_enabled(self.root, enabled)
+            except (ImportError, OSError, ValueError, TypeError, RuntimeError):
+                return self._error("agent_delivery", "agent_delivery_policy_unavailable")
+            return self._remember("agent_delivery", result)
+
+    def inspect(self, event_id):
+        with self._lock:
+            return self.api.call("inspect_event", event_id, namespace="live")
+
+    def snapshot(self):
+        """Read one saved overview; no collector, model or scheduling operation."""
+        with self._lock:
+            document = self.api.call("overview", namespace="live", limit=100)
+            try:
+                from .agent_access import status
+                agent = status(self.root)
+            except (ImportError, OSError, ValueError, TypeError, RuntimeError):
+                agent = {"status": "blocked", "enabled": False, "delivery_allowed": False,
+                         "reason": "agent_delivery_policy_unavailable", "receiver_state": "not_verified",
+                         "model_calls": 0}
+            bg = document.get("background") or {}
+            monitor = document.get("current_monitor") or {}
+            coverage = document.get("source_coverage") or {}
+            storage = document.get("event_storage") or {}
+            counts = storage.get("counts") or {}
+            known = storage.get("state") in {"available", "not_created"}
+            sources = []
+            for source in SOURCES:
+                item = coverage.get(source) or {}
+                errors = item.get("errors") or []
+                error = errors[0] if isinstance(errors, list) and errors and isinstance(errors[0], dict) else {}
+                evidence = {"reason": _code(item.get("reason")) or _code(error.get("reason_code")),
+                            "stage": error.get("stage") if error.get("stage") in {"launch", "provider", "object", "field", "policy"} else None}
+                for name in ("hresult", "win32_error"):
+                    value = error.get(name)
+                    evidence[name] = value if type(value) is int and -(2**31) <= value <= 2**32-1 else None
+                sources.append({"source_id": source, "status": item.get("status", "not_observed"),
+                    "row_count": item.get("row_count"), "observed_at": item.get("observed_at"),
+                    "freshness": item.get("freshness") or {"state": "unknown"},
+                    **evidence, "current_coverage": item.get("current_coverage", "unknown")})
+            scope_matches = (monitor.get("scope_matches") is not False
+                             and monitor.get("namespace") in (None, "live"))
+            monitoring = True if scope_matches and monitor.get("state") == "running_verified" else (
+                False if monitor.get("state") == "not_started" or bg.get("host_liveness") == "exited_verified" else None)
+            # Retry is still unacknowledged; a failed delivery also remains in
+            # durable storage and is displayed independently, never discarded.
+            count_view = {"pending": counts.get("pending", 0) + counts.get("retry", 0) if known else None,
+                          "acked": counts.get("ack", 0) if known else None,
+                          "failed": counts.get("failed", 0) if known else None}
+            listing = document.get("event_list") or {}
+            state = bg.get("state") or document.get("status") or "unknown"
+            return {"state": state, "desired_enabled": bg.get("desired_enabled"),
+                "monitoring": monitoring, "updated_at": datetime.now(timezone.utc).isoformat(),
+                "namespace": "live", "sources": sources, "counts": count_view,
+                "events": listing.get("events", []), "events_truncated": listing.get("truncated"),
+                "agent_delivery": agent, "last_action": self._last_action,
+                "last_error": self._last_error or _code(document.get("last_error")) or _code(document.get("error_code")) or (
+                    "monitor_outside_live_namespace" if not scope_matches else None),
+                "background": bg, "monitor": monitor, "operator_summary": document.get("operator_summary"),
+                "application_owned_children": len(self._children), "model_calls": 0,
+                "agent_required": False, "reboot_recovery_verified": False,
+                "lifetime_owner": "application", "data_trust": "untrusted_data"}
