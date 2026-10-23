@@ -25,3 +25,5 @@ py -3.13 -B scripts/eventguard.py activity --namespace live --limit 100
 - owner PID加建立時間確認已退出而缺少結束回條，顯示「中斷，結果未確認」；不能改成成功。owner不可確認就維持未確認執行狀態，不猜測結束。
 
 正式MCP需人類開啟接收權限；註冊本身不啟動監看或模型。執行日常操作的記錄不等於漏洞已修補；ACK只代表收到。既有視窗不熱更新，新增頁籤於下次正常開啟時載入。
+
+operator可接受多client；狀態變更另用短期操作鎖，busy會顯示受阻，不自動重試。讀取與Stop不被該鎖阻擋；Stop仍核對固定scope及owner，不因其他client正在查證而失去暫停入口。2026-10-23本主聊天已用正式activity工具讀到本輪capabilities／overview的完成紀錄；這是同表讀取證據，沒有宣稱已操作或熱更新既有GUI視窗。

@@ -22,7 +22,7 @@ from eventguard.diagnostics.review import review, query_plan, event_view
 from eventguard.events.store import EventStore, CapacityError
 from eventguard.operations import OperatorAPI
 from eventguard.queue_inbox import QueueInbox, QueueInboxError
-from eventguard.runtime import Runtime, InstanceLock
+from eventguard.runtime import Runtime, InstanceLock, atomic_json
 from eventguard.synthetic import make_synthetic
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -361,6 +361,31 @@ class OperatorTests(unittest.TestCase):
             self.assertTrue(owner.stop_requested())
         finally:
             owner.release()
+
+    def test_scoped_stop_does_not_follow_owner_replaced_after_scope_check(self):
+        runtime = self.api.runtime
+        atomic_json(runtime.path("data/monitor-owner.json"), {"instance_id": "a" * 32})
+        runtime.save_health({"namespace": "test", "instance_id": "a" * 32})
+        original = runtime.request_stop
+
+        def changed_owner(*, expected_instance_id):
+            atomic_json(runtime.path("data/monitor-owner.json"), {"instance_id": "b" * 32})
+            return original(expected_instance_id=expected_instance_id)
+
+        with patch.object(runtime, "request_stop", side_effect=changed_owner):
+            result = self.api.stop("test")
+        self.assertEqual((result["status"], result["reason"]), ("busy", "monitor_owner_changed"))
+        self.assertFalse(runtime.path("data/stop-request.json").exists())
+
+    def test_scoped_stop_without_valid_owner_cannot_fall_back_to_global_stop(self):
+        runtime = self.api.runtime
+        with patch.object(runtime, "request_stop", side_effect=AssertionError("must remain scoped")):
+            self.assertEqual(self.api.stop("test")["status"], "not_running")
+            for owner in ({}, {"instance_id": None}, {"instance_id": "x" * 32}, []):
+                atomic_json(runtime.path("data/monitor-owner.json"), owner)
+                runtime.save_health({"namespace": "test"})
+                self.assertEqual(self.api.stop("test")["reason"], "monitor_scope_unverifiable")
+        self.assertFalse(runtime.path("data/stop-request.json").exists())
 
 
 class OperatorMCPTests(unittest.IsolatedAsyncioTestCase):

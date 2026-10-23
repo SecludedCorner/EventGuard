@@ -117,11 +117,17 @@ required = true
 
 由client載入後，先核對**這個聊天**的工具清單，再呼叫正式`status`、`activity`，確認GUI操作紀錄出現相同操作。不要用子agent的工具清單、SDK測試或舊eventguard_test成功代替主聊天接通。正式事件receive／ACK應只在明確處理該事件時操作；ACK不是漏洞修補或案件結束。
 
+2026-10-23本主聊天已實際呼叫正式capabilities／status／activity，後者讀到相同操作；沒有接收／ACK正式backlog。原始工具回傳與當次唯讀狀態留本機`reports/goal-center-001`。這證明本聊天工具可用，仍不是閒置喚醒或GUI畫面已熱更新的證據。
+
+operator允許多個client同時連接。狀態變更工具共用短期`operator-mutation.lock`；忙碌回`operator_operation_busy`、`operation_started=false`，不自動重試。讀取與Stop不等這把鎖；Stop重新核對namespace及原owner/run，換代回busy，不停止新owner。若操作可能已完成但回條失敗，回`operation_may_have_completed=true`，先查事件／操作紀錄，不能直接重做。舊事件綁定adapter的`inbox-owner.lock`仍維持單owner。
+
+舊版operator曾以終身`operator-stdio.lock`擋住另一個聊天；本輪實際啟動exit3後已改用上述短期鎖。保留鎖檔及舊失敗證據，不靠刪鎖或停止別人的client修復。先前所有載入延遲不全能歸因於這個原因；當前是否接通仍以工具實際回傳為準。官方[app-server介面](https://learn.chatgpt.com/docs/app-server)提供MCP重新載入方法；此聊天沒有可呼叫的reload工具，不假設使用者UI一定存在Restart按鈕。
+
 若要讓agent使用日常完整操作介面，operator adapter現有15工具：capabilities、status、overview、activity、observation、start_monitor、stop、monitor_once、list_events、inspect_event、diagnose_event、receive_event、ack_event、retry_event、report。開始／停止共用既有背景核心，不啟用模型；工具能力表見 [HUMAN_AGENT_INTERFACE](HUMAN_AGENT_INTERFACE.md)。eventguard_test仍是四工具合成入口；正式eventguard的批准及實際載入結果另查STATUS，不能只因設定存在就聲稱接通。
 
 - 先讀 AGENTS、README、STATUS、HANDOFF，核對分支／HEAD／未提交工作與當前程序；不要重做舊驗收或碰正式 backlog。
 - 核心順序：`Monitor → EventStore → QueueInbox → agent_dispatch → 單次 CLI/MCP → query/result → 原來源 ACK`。事件先落盤；提示不含事件 ID／內容，工具才提供最小七欄。
-- dispatcher 用單次 `-c` 設定綁定一個事件，read-only、shell 關閉，關閉此專案的 `eventguard_test`，不寫全域 MCP、不複製登入。
+- dispatcher／舊相容驗收用單次 `-c` 綁定一個事件，read-only、shell關閉，明確停用本專案已知的`eventguard`與`eventguard_test`，保留該任務自己的eventguard_inbox／eventguard_local，不寫全域MCP、不複製登入。這不是隔離所有未知平台工具的保證；本輪只有離線argv/TOML核對，沒有真CLI重驗。
 - 要稱自動通路成功，必須有「先無事件等待 → 程式入列 → 實際 CLI receive/query/ACK → ID 集合相同 → 自然退出」證據。fixture、SDK、fake CLI、手動聊天及真 CLI 各自記錄。
 - 執行資料含本次 JSONL／內部記錄，不上傳；文件只放必要摘要。無事件不啟動模型，錯誤不能拿其他來源／新目錄重試來遮掩。
 

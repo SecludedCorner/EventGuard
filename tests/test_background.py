@@ -116,6 +116,111 @@ class BackgroundTests(unittest.TestCase):
         self.assertEqual(value["state"], "stopped")
         self.assertEqual(bg._path(self.runtime, "control-invalid.json").read_bytes(), b"invalid fixture control")
 
+    def test_scoped_stop_rejects_changed_namespace_without_changing_control(self):
+        self.enable()
+        path = bg._path(self.runtime, "control.json")
+        before = path.read_bytes()
+        with patch.object(bg.processes, "stop_persistent") as stop:
+            value = bg.stop(self.root, grace_seconds=0, expected_namespace="test")
+        self.assertEqual(value["reason"], "background_outside_launcher_namespace")
+        self.assertEqual(path.read_bytes(), before)
+        self.assertFalse(bg._path(self.runtime, "stop.json").exists())
+        stop.assert_not_called()
+
+    def test_scoped_stop_cannot_rename_or_repair_unknown_control(self):
+        path = bg._path(self.runtime, "control.json")
+        path.parent.mkdir(parents=True)
+        path.write_bytes(b"invalid fixture control")
+        value = bg.stop(self.root, grace_seconds=0, expected_namespace="test")
+        self.assertEqual(value["reason"], "background_scope_unverifiable")
+        self.assertEqual(path.read_bytes(), b"invalid fixture control")
+        self.assertFalse(bg._path(self.runtime, "control-invalid.json").exists())
+        self.assertFalse(bg._path(self.runtime, "stop.json").exists())
+
+    def test_scoped_stop_without_control_preserves_unknown_scope(self):
+        value = bg.stop(self.root, grace_seconds=0, expected_namespace="test")
+        self.assertEqual(value["reason"], "background_scope_unverifiable")
+        self.assertFalse(bg._path(self.runtime, "control.json").exists())
+
+    def test_scoped_stop_can_disable_matching_fixture_without_host(self):
+        self.enable(fixture=True)
+        value = bg.stop(self.root, grace_seconds=0, expected_namespace="test")
+        self.assertEqual(value["state"], "stopped")
+        self.assertFalse(bg._control(self.runtime)["enabled"])
+        self.assertEqual(bg._control(self.runtime)["namespace"], "test")
+
+    def test_scoped_stop_rejects_owner_outside_matching_control_scope(self):
+        self.enable(fixture=True)
+        self.owner()  # An old live owner does not become a test-scoped target.
+        before = bg._path(self.runtime, "control.json").read_bytes()
+        with patch.object(bg.processes, "stop_persistent") as stop:
+            value = bg.stop(self.root, grace_seconds=0, expected_namespace="test")
+        self.assertEqual(value["reason"], "background_outside_launcher_namespace")
+        self.assertEqual(bg._path(self.runtime, "control.json").read_bytes(), before)
+        stop.assert_not_called()
+
+    def test_scoped_stop_does_not_follow_replacement_owner_after_disable(self):
+        for namespace in ("live", "test"):
+            with self.subTest(replacement_namespace=namespace):
+                self.enable(fixture=True)
+                owner = self.owner()
+                owner["namespace"] = "test"
+                bg._write(self.runtime, "owner.json", owner)
+                original_status = bg.status
+                calls = 0
+
+                def replacement(root):
+                    nonlocal calls
+                    calls += 1
+                    if calls == 2:
+                        self.enable(fixture=namespace == "test")
+                        new_owner = dict(owner, namespace=namespace, run_id="d" * 32,
+                                         job_name="Global\\EventGuard-" + "e" * 32)
+                        bg._write(self.runtime, "owner.json", new_owner)
+                    return original_status(root)
+
+                with patch.object(bg, "status", side_effect=replacement), \
+                        patch.object(bg.processes, "stop_persistent") as stop:
+                    value = bg.stop(self.root, grace_seconds=0, expected_namespace="test")
+                self.assertEqual((value["state"], value["reason"]), ("busy", "background_owner_changed"))
+                self.assertTrue(bg._control(self.runtime)["enabled"])
+                self.assertEqual(bg._control(self.runtime)["namespace"], namespace)
+                stop.assert_not_called()
+
+    def test_invalid_scoped_stop_namespace_is_rejected_without_control_write(self):
+        for namespace in ("elsewhere", [], 1, True):
+            with self.subTest(namespace=namespace), self.assertRaisesRegex(ValueError, "invalid_background_stop_namespace"):
+                bg.stop(self.root, grace_seconds=0, expected_namespace=namespace)
+        self.assertFalse(bg._path(self.runtime, "control.json").exists())
+
+    def test_scoped_stop_reports_reenabled_control_before_new_launch_is_written(self):
+        for existing_owner in (False, True):
+            with self.subTest(existing_owner=existing_owner):
+                self.enable(fixture=True)
+                if existing_owner:
+                    owner = self.owner()
+                    owner["namespace"] = "test"
+                    bg._write(self.runtime, "owner.json", owner)
+                original_status = bg.status
+                calls = 0
+
+                def reenabled(root):
+                    nonlocal calls
+                    calls += 1
+                    if calls == 2:
+                        # A concurrent Start has saved enabled, but its new
+                        # launch/owner has not yet replaced the old run ID.
+                        self.enable(fixture=True)
+                    return original_status(root)
+
+                with patch.object(bg, "status", side_effect=reenabled), \
+                        patch.object(bg.processes, "stop_persistent") as stop:
+                    value = bg.stop(self.root, grace_seconds=0, expected_namespace="test")
+                self.assertEqual((value["state"], value["reason"]), ("busy", "background_owner_changed"))
+                self.assertTrue(value["desired_enabled"])
+                self.assertTrue(bg._control(self.runtime)["enabled"])
+                stop.assert_not_called()
+
     def test_external_parent_job_block_retains_enabled_intent_but_never_claims_started(self):
         with patch.object(bg.processes, "spawn_persistent", side_effect=bg.processes.JobError("independent_background_unverifiable")):
             value = bg.start(self.root)

@@ -435,17 +435,22 @@ def _verified_stop(runtime, current):
                 reason="owned_job_forcibly_terminated" if receipt.get("forcibly_terminated") else "background_exit_verified")
 
 
-def stop(root, *, grace_seconds=10):
+def stop(root, *, grace_seconds=10, expected_namespace=None):
     """Persist disabled first, cooperate, then terminate only a proven own Job."""
     if type(grace_seconds) not in (int, float) or not math.isfinite(grace_seconds) or not 0 <= grace_seconds <= 30:
         raise ValueError("invalid_background_stop_bounds")
+    if expected_namespace is not None and (type(expected_namespace) is not str or expected_namespace not in {"live", "test"}):
+        raise ValueError("invalid_background_stop_namespace")
     runtime = Runtime(root)
-    disabled_written = False
+    disabled_written, scoped_owner, scoped_run = False, None, None
     try:
         with _mutation(runtime):
             try:
                 control = _control(runtime)
             except (OSError, ValueError, TypeError, RuntimeError):
+                if expected_namespace is not None:
+                    return {"state": "blocked", "reason": "background_scope_unverifiable",
+                            "desired_enabled": None, "model_calls": 0, "process_terminated": False}
                 # Explicit disable is safe even when old control metadata is
                 # corrupt. It never clears event data, a Job or a budget.
                 invalid = _path(runtime, "control.json")
@@ -453,6 +458,26 @@ def stop(root, *, grace_seconds=10):
                     invalid.replace(_path(runtime, "control-invalid.json"))
                 control = None
             current = status(root)
+            if expected_namespace is not None:
+                if control is None:
+                    return {"state": "blocked", "reason": "background_scope_unverifiable",
+                            "desired_enabled": None, "model_calls": 0, "process_terminated": False}
+                if control["namespace"] != expected_namespace:
+                    return dict(current, state="not_applicable", reason="background_outside_launcher_namespace",
+                                process_terminated=False)
+                recorded_owner, recorded_launch = _read(runtime, "owner.json"), _read(runtime, "launch.json")
+                if any(value is not None and not isinstance(value, dict) for value in (recorded_owner, recorded_launch)):
+                    return dict(current, state="blocked", reason="background_scope_unverifiable",
+                                process_terminated=False)
+                scoped_owner = _selected_owner(recorded_owner, recorded_launch)
+                if scoped_owner is not None:
+                    if not isinstance(scoped_owner, dict) or scoped_owner.get("namespace") not in {"live", "test"}:
+                        return dict(current, state="blocked", reason="background_scope_unverifiable",
+                                    process_terminated=False)
+                    if scoped_owner["namespace"] != expected_namespace:
+                        return dict(current, state="not_applicable", reason="background_outside_launcher_namespace",
+                                    process_terminated=False)
+                scoped_run = current.get("run_id")
             if control is None:
                 control = {"kind": CONTROL_KIND, "namespace": "live", "fixture": None, "max_cycles": None}
             control.update(enabled=False, generation=uuid.uuid4().hex, updated_at=_stamp(), reason="explicit_stop")
@@ -462,13 +487,21 @@ def stop(root, *, grace_seconds=10):
         until = time.monotonic() + grace_seconds
         while time.monotonic() < until:
             current = status(root)
+            if expected_namespace is not None and (current.get("namespace") != expected_namespace or current.get("run_id") != scoped_run or current.get("desired_enabled") is not False):
+                return dict(current, state="busy", reason="background_owner_changed", process_terminated=False,
+                            disabled_persisted=True)
             if current["host_liveness"] in {"not_recorded", "exited_verified"}:
                 return _verified_stop(runtime, current)
             time.sleep(.2)
         current = status(root)
+        if expected_namespace is not None and (current.get("namespace") != expected_namespace or current.get("run_id") != scoped_run or current.get("desired_enabled") is not False):
+            return dict(current, state="busy", reason="background_owner_changed", process_terminated=False,
+                        disabled_persisted=True)
         if current["host_liveness"] in {"not_recorded", "exited_verified"}:
             return _verified_stop(runtime, current)
-        owner = _selected_owner(_read(runtime, "owner.json"), _read(runtime, "launch.json"))
+        # A scoped client can stop only the Job selected under control.lock,
+        # even if another client starts a replacement after the grace period.
+        owner = scoped_owner if expected_namespace is not None else _selected_owner(_read(runtime, "owner.json"), _read(runtime, "launch.json"))
         if not _owner_valid(owner):
             return dict(current, state="shutdown_unconfirmed", desired_enabled=False, reason="background_owner_unverifiable")
         receipt = processes.stop_persistent(owner["job_name"], pid=owner["pid"], created_at=owner["created_at"],
@@ -476,7 +509,11 @@ def stop(root, *, grace_seconds=10):
         _write(runtime, "stop-receipt.json", {"run_id": owner["run_id"], "at": _stamp(), "process": receipt})
         confirmed = (receipt.get("child_exited") is True and type(receipt.get("remaining_owned_processes")) is int
                      and receipt["remaining_owned_processes"] == 0)
-        return {**status(root), "state": "stopped" if confirmed else "shutdown_unconfirmed",
+        current = status(root)
+        if expected_namespace is not None and (current.get("namespace") != expected_namespace or current.get("run_id") != scoped_run or current.get("desired_enabled") is not False):
+            return dict(current, state="busy", reason="background_owner_changed", process=receipt,
+                        disabled_persisted=True)
+        return {**current, "state": "stopped" if confirmed else "shutdown_unconfirmed",
                 "reason": "owned_job_forcibly_terminated" if receipt.get("forcibly_terminated") else "background_exit_verified" if confirmed else "background_exit_unconfirmed",
                 "desired_enabled": False, "process": receipt, "model_calls": 0}
     except (OSError, ValueError, TypeError, RuntimeError) as error:

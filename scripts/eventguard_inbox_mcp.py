@@ -10,6 +10,37 @@ from typing import Literal
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 _ID = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
+_OPERATOR_MUTATIONS = frozenset({"background_start", "monitor", "diagnose_event", "receive_event",
+                                 "ack_event", "retry_event", "report"})
+
+
+def _operator_call(root, operation, function):
+    """Serialize state-changing calls, never the client's lifetime or Stop."""
+    if operation not in _OPERATOR_MUTATIONS:
+        return function()
+    from eventguard.acceptance_control import FileLease
+    from eventguard.runtime import Runtime
+    lease, started = None, False
+    try:
+        lease = FileLease(Runtime(root).path("data/operator-mutation.lock"))
+        if not lease.acquire():
+            return {"status": "busy", "reason": "operator_operation_busy", "operation_started": False,
+                    "automatic_retry_allowed": False, "model_calls": 0}
+        started = True
+        result = function()
+        lease.release()
+        return result
+    except (OSError, ValueError, RuntimeError):
+        return {"status": "error" if started else "blocked",
+                "reason": "operator_operation_unconfirmed" if started else "operator_lock_unavailable",
+                "operation_may_have_completed": started, "operation_started": started,
+                "automatic_retry_allowed": False, "model_calls": 0}
+    finally:
+        if lease is not None:
+            try:
+                lease.release()
+            except (OSError, ValueError, RuntimeError):
+                pass  # Already reported uncertainty; never force another owner.
 
 
 def _sdk_server(name, validate):
@@ -107,7 +138,7 @@ def build_operator_server(root, namespace="test", allow_live=False, operator_api
             if operation == "background_start" and namespace != "live":
                 return {"state": "blocked", "reason": "live_monitor_control_not_in_test_scope",
                         "model_calls": 0}
-            return api.call(operation, *args, **kwargs)
+            return _operator_call(root, operation, lambda: api.call(operation, *args, **kwargs))
         if operation == "activity":
             return execute()  # Reading history does not generate more history.
         from eventguard.activity import call as recorded_call
@@ -240,7 +271,10 @@ def main(argv=None):
             from eventguard.runtime import Runtime
             runtime = Runtime(args.operator_root)
             runtime.ensure()
-            owner_path = runtime.path("data/operator-stdio.lock")
+            # Independent clients share per-operation leases and SQLite
+            # transactions. A lifetime lease prevents the parent chat from
+            # connecting while another chat/subagent owns an idle server.
+            owner_path = None
         else:
             if args.state_dir is None or args.event_id is None:
                 raise ValueError("bound_event_scope_required")
@@ -254,8 +288,8 @@ def main(argv=None):
         return 2
     try:
         from eventguard.acceptance_control import FileLease
-        owner = FileLease(owner_path)
-        if not owner.acquire():
+        owner = FileLease(owner_path) if owner_path is not None else None
+        if owner is not None and not owner.acquire():
             print("EventGuard: this inbox state already has an active stdio owner.", file=sys.stderr)
             return 3
         try:
@@ -263,7 +297,8 @@ def main(argv=None):
             # naturally. There is no model wait or forced process cleanup.
             server.run(transport="stdio")
         finally:
-            owner.release()
+            if owner is not None:
+                owner.release()
     except KeyboardInterrupt:
         return 0
     except Exception:

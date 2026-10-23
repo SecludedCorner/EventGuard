@@ -90,13 +90,15 @@ python -B scripts/eventguard_inbox_mcp.py --operator-root . --namespace test
 
 同一 scope 的事件清單／檢視使用完全相同的結構化資料，沒有為 agent 把「重讀摘要」改名成診斷。CLI 與 MCP 的新公開操作也共用固定錯誤 envelope，不回傳原始 OS 例外或私人錯誤路徑。
 
+operator的多個stdio client不持有終身exclusive鎖。MCP狀態變更操作以短期lease序列化，忙碌明示`operator_operation_busy`且不開始、不自動重試；讀取與Stop不經該鎖。SQLite／QueueInbox／背景核心仍保留自己的交易與ownership，這不是所有GUI/CLI動作共用的一筆全域交易。scoped Stop在控制鎖內核對namespace，綁原instance/run與Job；換代後回busy，不能追停新owner。無效instance ID不得退化為global Stop。人類未指定scope的全域暫停行為保留；legacy單事件stdio仍只有一個owner。
+
 完整operator adapter共有15個工具（含activity）。`start_monitor`只呼叫現有背景核心；`stop`已能對該scope耐久暫停，不另建第二套控制器。開始不啟用自動agent、不初始化模型預算、不建立排程。既有背景Job／owner限制仍有效；若回blocked，不能宣稱已開始或繞過限制。test launcher的start_monitor固定拒絕，不能因連合成佇列而啟動正式採集。
 
 目前使用者已批准EventGuard正式MCP方向，要求所有操作在EventGuard看得到。實際註冊、工具載入與呼叫結果仍須核對STATUS；程式有15工具不等於client已載入。共享operator每次操作寫入[操作紀錄](ACTIVITY.md)，不把工具輸出當成授權。
 
 「整個可供agent使用」指正常產品操作：狀態／coverage、保存觀察、開始／暫停、固定唯讀查證、事件接收／ACK／重試與報告。它不包含任意命令、提權、系統修補、任意檔案、排程安裝或自動模型啟用。資料存取開關仍由人類控制，agent不能自行給自己權限。這也不解決閒置聊天喚醒，後者需要另一個已驗證的client事件觸發入口。
 
-長期前景監看仍用 CLI；MCP `monitor_once` 一次一輪，避免讓模型靠永久工具等待維持監看。Phase 3 已將 native 呼叫移入私有 Job worker；到期／取消先留寬限，再只清理本工具 Job，保存實際退出或未確認狀態。清理本身另有有限等待，30 秒不是硬即時總上限，詳見 [生命週期](PROCESS_LIFECYCLE.md)。未驗證全天候、任意既有聊天接續或將工具載入目前 agent。
+長期前景監看仍用 CLI；MCP `monitor_once` 一次一輪，避免讓模型靠永久工具等待維持監看。Phase 3 已將 native 呼叫移入私有 Job worker；到期／取消先留寬限，再只清理本工具 Job，保存實際退出或未確認狀態。清理本身另有有限等待，30 秒不是硬即時總上限，詳見 [生命週期](PROCESS_LIFECYCLE.md)。目前主聊天已實際使用正式工具，未驗證全天候、閒置自動喚醒或任意既有聊天接續。
 
 未知退出會保存跨重啟閘道；Runner 也不會覆蓋同輪上一個未知子樹。再次啟動先僅 QUERY 記錄的私有 named Job，確認為空／已銷毀才恢復，拒讀與缺失身分保持 blocked。已接收而無成功 agent trace 的事件可在全部子樹確認退出後以 `received_without_agent_proof` 歸檔，passed 仍 false；完整 evidence 位置與 attempts 留存，不清預算。如果 receiver 證據已先輪替而無法重證則保持背壓，不能猜成功。
 

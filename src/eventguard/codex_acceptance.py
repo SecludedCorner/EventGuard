@@ -55,7 +55,11 @@ def command(codex, python, runtime, evidence_dir=None, *, single_wait=True, allo
     return [codex, "exec", "--ignore-user-config", "--ephemeral", "-C", str(ROOT),
             "-s", "read-only", "--json", "-c", "features.shell_tool=false",
             "-c", "sqlite_home=" + json.dumps(str(evidence_dir / "codex-state")),
-            "-c", "log_dir=" + json.dumps(str(evidence_dir / "codex-log")), "-c", config, "-"]
+            "-c", "log_dir=" + json.dumps(str(evidence_dir / "codex-log")), "-c", config,
+            # Retained legacy argv inspection must preserve the same separation:
+            # project human/chat servers do not belong in a synthetic task.
+            "-c", "mcp_servers.eventguard_test.enabled=false",
+            "-c", "mcp_servers.eventguard.enabled=false", "-"]
 
 
 KIND = "eventguard-codex-synthetic-acceptance-v2"

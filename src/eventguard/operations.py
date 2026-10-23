@@ -476,18 +476,27 @@ class OperatorAPI:
         if background_path.is_file():
             current = _background_status(self.runtime)
             if namespace is None or current.get("namespace") == namespace:
-                background_result = self.background_stop()
+                background_result = (self.background_stop() if namespace is None else
+                                     self.background_stop(expected_namespace=namespace))
         if namespace is not None:
             self.runtime.data_dir(namespace, create=False)  # Validate scope.
             owner_path = self.runtime.path("data/monitor-owner.json")
-            if owner_path.is_file():
-                owner, health = read_json(owner_path), self.runtime.health()
-                if health.get("namespace") != namespace or health.get("instance_id") != owner.get("instance_id"):
-                    return background_result or {"status": "not_applicable", "reason": "monitor_outside_launcher_namespace", "process_terminated": False}
-        result = self.runtime.request_stop()
+            if not owner_path.is_file():
+                return background_result or {"status": "not_running", "reason": "no_current_owner_record", "process_terminated": False}
+            owner, health = read_json(owner_path), self.runtime.health()
+            instance_id = owner.get("instance_id") if isinstance(owner, dict) else None
+            if not isinstance(health, dict) or type(instance_id) is not str or re.fullmatch(r"[a-f0-9]{32}", instance_id) is None:
+                return background_result or {"status": "blocked", "reason": "monitor_scope_unverifiable", "process_terminated": False}
+            if health.get("namespace") != namespace or health.get("instance_id") != owner.get("instance_id"):
+                return background_result or {"status": "not_applicable", "reason": "monitor_outside_launcher_namespace", "process_terminated": False}
+            result = self.runtime.request_stop(expected_instance_id=instance_id)
+        else:
+            result = self.runtime.request_stop()
         if background_result is not None:
             return {**background_result, "monitor_stop": result,
-                    "note": "Background remains disabled until an explicit start; ACK and pending events are unchanged."}
+                    "note": ("Background remains disabled until an explicit start; ACK and pending events are unchanged."
+                             if background_result.get("desired_enabled") is False else
+                             "Background state may have changed; inspect status. ACK and pending events are unchanged.")}
         return result
 
     def background_start(self):
@@ -497,9 +506,9 @@ class OperatorAPI:
     def background_status(self):
         return _background_status(self.runtime)
 
-    def background_stop(self, grace_seconds=10):
+    def background_stop(self, grace_seconds=10, *, expected_namespace=None):
         from .background import stop
-        return stop(self.runtime.root, grace_seconds=grace_seconds)
+        return stop(self.runtime.root, grace_seconds=grace_seconds, expected_namespace=expected_namespace)
 
     def monitor(self, **kwargs):
         from .monitor import Monitor

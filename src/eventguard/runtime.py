@@ -261,14 +261,29 @@ class Runtime:
         with path.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps({"at":utc_now(),"code":str(code)[:80],"details":safe}, ensure_ascii=False)+"\n")
 
-    def request_stop(self):
+    def request_stop(self, expected_instance_id=None):
+        if expected_instance_id is not None and (type(expected_instance_id) is not str
+                or re.fullmatch(r"[a-f0-9]{32}", expected_instance_id) is None):
+            raise ValueError("invalid_expected_monitor_instance")
         owner = self.path("data/monitor-owner.json")
         if not owner.exists():
+            if expected_instance_id is not None:
+                return {"status":"busy", "reason":"monitor_owner_changed", "process_terminated":False}
             return {"status":"not_running", "reason":"no_current_owner_record", "process_terminated":False}
-        value = read_json(owner)
+        try:
+            value = read_json(owner)
+        except FileNotFoundError:
+            if expected_instance_id is not None:
+                return {"status":"busy", "reason":"monitor_owner_changed", "process_terminated":False}
+            raise
+        if expected_instance_id is not None and (not isinstance(value, dict)
+                or value.get("instance_id") != expected_instance_id):
+            return {"status":"busy", "reason":"monitor_owner_changed", "process_terminated":False}
         instance = value.get("instance_id")
         if not isinstance(instance,str) or len(instance)!=32:
             raise ValueError("invalid_owner_record")
+        # The request stays bound to the owner observed above. If it exits and
+        # a new owner appears during this write, the new instance ignores it.
         atomic_json(self.path("data/stop-request.json"), {"instance_id":instance,"requested_at":utc_now()})
         return {"status":"stop_requested", "instance_id":instance, "process_terminated":False,
                 "note":"Cooperative stop first; owned Windows query jobs receive a grace period then job-only cleanup."}

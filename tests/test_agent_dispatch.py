@@ -146,8 +146,25 @@ class DispatchTests(unittest.TestCase):
         self.assertIn("features.shell_tool=false", args)
         self.assertIn("features.unbounded_connection_retries=false", args)
         self.assertIn("mcp_servers.eventguard_test.enabled=false", args)
+        self.assertIn("mcp_servers.eventguard.enabled=false", args)
         self.assertNotIn(EVENT, PROMPT)
         self.assertFalse(any("bypass" in arg for arg in args))
+
+    def test_project_chat_servers_disabled_for_each_event_bound_mode(self):
+        for allow_live in (False, True):
+            for allow_ack in (False, True):
+                with self.subTest(allow_live=allow_live, allow_ack=allow_ack):
+                    args = command("codex.exe", "python.exe", self.source, self.state_dir,
+                                   EVENT, self.directory, allow_live=allow_live, allow_ack=allow_ack)
+                    overrides = [args[index + 1] for index, value in enumerate(args[:-1]) if value == "-c"]
+                    config = tomllib.loads("\n".join(overrides))
+                    servers = config["mcp_servers"]
+                    self.assertEqual(set(servers), {"eventguard_inbox", "eventguard_test", "eventguard"})
+                    self.assertEqual(servers["eventguard_test"], {"enabled": False})
+                    self.assertEqual(servers["eventguard"], {"enabled": False})
+                    self.assertEqual(servers["eventguard_inbox"]["enabled_tools"],
+                                     list(TOOLS if allow_ack else TOOLS[:2]))
+                    self.assertEqual(args[-1], "-")
 
     def test_no_execute_and_no_event_make_zero_cli_calls(self):
         with self.fixtures():

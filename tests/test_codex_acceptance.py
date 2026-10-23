@@ -73,6 +73,22 @@ class AcceptanceTests(unittest.TestCase):
         self.assertNotIn("default_tools_approval_mode", server)
         self.assertNotIn("approval_policy", config)
 
+    def test_legacy_argv_disables_project_chat_servers_without_changing_tool_scope(self):
+        for single_wait in (False, True):
+            for allow_ack in (False, True):
+                with self.subTest(single_wait=single_wait, allow_ack=allow_ack):
+                    args = legacy.command("codex.exe", "python.exe", Path("runtime"),
+                                          single_wait=single_wait, allow_ack=allow_ack)
+                    overrides = [args[index + 1] for index, value in enumerate(args[:-1]) if value == "-c"]
+                    servers = tomllib.loads("\n".join(overrides))["mcp_servers"]
+                    self.assertEqual(set(servers), {"eventguard_local", "eventguard_test", "eventguard"})
+                    self.assertEqual(servers["eventguard_test"], {"enabled": False})
+                    self.assertEqual(servers["eventguard"], {"enabled": False})
+                    self.assertEqual(servers["eventguard_local"]["enabled_tools"],
+                                     ["wait_for_event", "query_evidence"] + (["ack_event"] if allow_ack else []))
+                    self.assertEqual("--single-wait" in servers["eventguard_local"]["args"], single_wait)
+                    self.assertEqual(args[-1], "-")
+
     def test_retired_launchers_never_create_or_overwrite_directory_even_when_capability_exists(self):
         with patch.object(legacy, "spawn") as launch, patch.object(legacy.shutil, "which", return_value="codex.exe"):
             for action in ("run", "retry"):

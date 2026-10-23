@@ -2,6 +2,36 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：建立持續目標、主聊天正式工具與多client修復
+
+基底`bf99496cf3d73601fc2d8a1bf50c1c2fe8709b66`，分支`feat/local-codex-acceptance`；保留既有研究及附件。依使用者「建立目標，繼續完成」建立active目標，未設定token預算。本批一般權限，不啟動監看／本機inventory／真Codex或模型，不建排程／服務、不改安全設定或全域MCP。專案MCP沿用既有批准與設定，SHA256=`b851bc89137e133f1eb1e023ec74d9ffe384e154e2b2bed6eeadaee6362a70d0`，未再修改。
+
+**具體故障與修正。** 真正使用已批准正式profile做initialize/tools-list時，child在回應前exit3；stderr長65bytes，SHA256=`82047e5e7752fa14412e0c381567babdb21f30c0791172e482c1a2b58f4a9ebf`，逐位元匹配程式固定訊息`EventGuard: this inbox state already has an active stdio owner.`。這證明當時有OS lease owner，不是僅憑鎖檔存在推測。程式原把operator整段stdio生命週期鎖成單連線；本輪改為短期mutation鎖，讀取及Stop繞過此鎖。沒有刪鎖檔或找出／終止現有owner；也沒有把所有歷史client載入延遲歸因於同一原因。
+
+scoped Stop在background控制鎖內驗namespace，保存原owner/run；寬限後換代回busy，強制收尾只用原選定Job。Runtime request_stop接受expected_instance_id，缺失／換代不追隨新owner；OperatorAPI無效ID固定拒絕，不能退化成global stop。人類無scope停止保留。legacy bound adapter維持exclusive stdio owner。兩個有界CLI argv builder另明確停用已知`eventguard`／`eventguard_test`，保留自身eventguard_inbox／eventguard_local；不宣稱隔離所有未知平台工具或已做真CLI驗收。
+
+| 命令（根目錄） | 實際結果／UTC | 範圍與退出 |
+| --- | --- | --- |
+| `py -3.13 -B reports/bounded-cli-scope-001/verify_command_scope.py` | 07:43:36.764559；5/5通過，0.659秒 | 純argv/TOML，Popen patched禁止啟動；exit0，model0 |
+| `py -3.13 -B reports/goal-center-001/probe_operator.py`（修正前，輸出operator-metadata-001） | 07:44:36.259591；passed=false、initialize未回應，20.007秒 | 真profile/stdio，不呼叫業務工具；child自然exit3、remaining0、未強停，保留原失敗 |
+| `py -3.13 -B reports/goal-center-001/verify_selected.py` | 07:59:00.900986；116執行、115通過、0failure/error、1skip，46.291秒 | Python3.13.3；operator_api/clients、stop_binding、background、agent_dispatch、codex_acceptance、delivery_validation。130 AST無誤，source_unchanged=true、per_test_residuals=[]、guardian自然exit0／remaining0／未強停 |
+| `py -3.13 -B reports/goal-center-001/probe_operator.py`（修正後，輸出operator-metadata-002） | 07:59:07.959060；passed=true，15工具、1.852秒 | 同一正式設定SHA；只initialize/tools-list/EOF，child自然exit0、remaining0、未強停；不是聊天工具載入的替代證據 |
+| `py -3.13 -B reports/goal-center-001/verify_native.py` | 07:59:01.541059；passed=true | 本主聊天原生MCP完整回傳對照合成manifest及SQLite唯讀驗證；exit0，沒有另開模型 |
+
+新雙client測試啟動兩個真正Python/SDK stdio transport，各列15工具且同時存活。另一個legacy operator lease被測試持有時仍可連線；mutation busy時receive回未開始，list及Stop可用。解除後兩client收同event/query，ACK及重播只1張來源回條；事件仍pending才ACK。另確認legacy bound第二owner仍exit3。三個child退出碼為0/0/3、reader均退出、remaining0、均未強停。這是**真Windows私有Job／SDK協定＋合成fixture**，不是模型接收證明。實際request/response與receipt保留`selected-001/lifecycle-evidence.json`。skip為一般身分無法建立symlink，未提權。
+
+**本主聊天真工具另列。** deferred catalog在本輪新增正式`mcp__eventguard`的15工具，root實際呼叫capabilities／status／activity均isError=false。activity讀到本輪capabilities及overview完成紀錄；`main-chat-formal-tools.json`、`main-chat-formal-activity.json`保存實際回傳。當次status為background stopped／desired_enabled=false，既有pending保留；current_monitor無owner且舊heartbeat過期。本輪不接收或ACK這批正式事件，也不把歷史coverage當新掃描／安全證明。工具載入成功與本輪鎖修正同時發生，沒有足夠client內部證據證明修正是此次平台重載的唯一原因。
+
+另外程式向既有批准的**隔離test佇列**只新增一件synthetic listener，producer不向對話提示event ID；root原生list取得ID，receive→inspect（pending）→再次receive→ACK→相同ACK重播→inspect（ack）。event ID=`evt-7beed3e4ebcd495e85b3f5af1bcb4118`，query ID=`query-ce7ca798f2e4e56542242496702d950199f5dce3`。生成／收到／查證／ACK集合各1且相同，missing=[]、duplicate_receipts=[]；兩次receive同query、兩次ACK只新增1張SQLite receipt，receiver_receipt_id與result_id相符，incident_conclusion保持not_assessed。manifest、七次完整原生回傳及核對結果留`reports/goal-center-001/native-*`。合成四工具與正式三次狀態操作分開，不宣稱正式backlog已處理。
+
+完整回歸命令`py -3.13 -B scripts/verify.py --run-dir reports/goal-center-001/full-001 --timeout-seconds 600`，08:04:23.984453 UTC完成：**764執行、762通過、0failure/error、2symlink權限skip**，Python3.13.3、267.299秒，130 AST無誤、source_unchanged=true、per_test_residuals=[]，guardian自然exit0、remaining0、未強停。證據`full-001/verification-summary.json`、source-manifest、unit-tests與lifecycle-evidence。部分故障注入案例刻意需owned Job強制清理，這與guardian自然退出分開記錄，不冒充其child自然退出。
+
+完整suite之後的唯讀複查發現更窄的回報競態：同namespace的Start已重存enabled=true、但尚未寫新launch時，run ID仍舊；Stop原可誤回stopped/desired_enabled=false。最後只改`src/eventguard/background.py`及`tests/test_background.py`，scoped檢查增加desired_enabled必為false；新測試涵蓋有／無舊owner，均不得誤報停止或追停。**最終版**命令`py -3.13 -B reports/goal-center-001/verify_stop_final.py`重驗operator_api/clients、stop_binding、background、core_cli、agent_access、operator_workflow；08:05:55.754491 UTC完成，Python3.13.3，**124/124通過**、0failure/error/skip，25.535秒、130 AST無誤，source_unchanged=true、per_test_residuals=[]，guardian自然exit0／remaining0／未強停。結果與全套不相加，不宣稱最後補修後重跑全套；來源差異及最終提交綁定留`source-commit.json`。
+
+**待驗證。** 本輪是活動回合主動呼叫，不是閒置喚醒；沒有新真模型、OS重啟、排程安裝、24小時soak或Phase7實機注入。共享GUI表存在及MCP可讀不等於舊GUI視窗熱更新。文件檢查與最終commit/source對照留本機同一目錄；不把相關模組、純argv與歷史測試相加冒充全套。
+
+前一則使用者要求的GitHub回饋另已完成：公開[issue #88](https://github.com/TED-H-com/ai-security-scanner/issues/88)附三份公開MD，upstream main基準be38e83eba90a39ca3167f5dd4da2da97598f805；另一項依SECURITY政策提交私人報告。API回讀逐文核對，證據只留`reports/upstream-feedback-001`；不在本儲存庫公開私人內容，不自動追蹤或另傳訊息。
+
 ## 2026-10-23：情報中心操作紀錄與採集輸出硬化
 
 基底`befeed79d4ec8c5d5541ff473e11c5cf3b8af872`，同一feature；使用者明確批准EventGuard正式專案MCP，並定位為資安情報中心。新activity表記錄共享operator MCP與GUI操作意圖／結果，GUI新增操作紀錄頁籤，CLI可讀同表。最多256筆、32個running及2MiB，先保存再操作；暫停／撤回接收／停用自動agent不因記錄故障受阻。只存枚舉、時間、目標hash，不保存提示或原始例外。讀取重新驗證已存欄位，owner缺少完成回條不推定成功。新表是產品操作歷史，不是另一套事件投遞帳本，也不覆蓋聊天思考、任意shell／檔案活動或舊綁定CLI adapter。

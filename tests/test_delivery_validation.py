@@ -33,6 +33,9 @@ class DeliveryValidationTests(unittest.TestCase):
                                          for name in server["enabled_tools"]})
         self.assertNotIn("default_tools_approval_mode", server)
         self.assertIn('features.unbounded_connection_retries=false', multiple)
+        for args in (single, multiple, read_only):
+            self.assertIn('mcp_servers.eventguard_test.enabled=false', args)
+            self.assertIn('mcp_servers.eventguard.enabled=false', args)
 
     def test_prepare_is_durable_finite_and_never_launches_model(self):
         with tempfile.TemporaryDirectory() as temp, patch.object(validation, 'capture') as capture:
