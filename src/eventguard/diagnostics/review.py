@@ -107,7 +107,7 @@ def _legacy_row_view(row):
         # Hash all names as an opaque reference. Show only a small display-name
         # grammar; this is still explicitly untrusted data, never authority.
         name = row["name"]
-        result["name_ref"] = "name-" + hashlib.sha256(name.encode("utf-8")).hexdigest()[:24]
+        result["name_ref"] = "name-" + hashlib.sha256(name.encode("utf-8", "surrogatepass")).hexdigest()[:24]
         if NAME.fullmatch(name):
             result["display_name"] = name
         else:
@@ -121,7 +121,7 @@ def _legacy_row_view(row):
     return result
 
 
-def row_view(row):
+def row_view(row, *, _include_entries=True):
     """Project useful metadata through fixed grammars; applying twice is safe.
 
     Native registry paths become fixed source IDs, never paths. Version strings
@@ -130,6 +130,8 @@ def row_view(row):
     if not isinstance(row, dict):
         return {}
     result = _legacy_row_view(row)
+    if type(row.get("entry_ref")) is str and re.fullmatch(r"[a-f0-9]{32}", row["entry_ref"]):
+        result["entry_ref"] = row["entry_ref"]
     if "kind" in row:
         result["kind"] = enum(row["kind"], KINDS | STARTUP_KINDS)
     if "section_id" in row:
@@ -167,6 +169,20 @@ def row_view(row):
                                   and all(type(key) is str and re.fullmatch(r"[a-f0-9]{32}", key) for key in keys) else [])
     if valid_iso(row.get("process_created_at")):
         result["process_created_at"] = datetime.fromisoformat(row["process_created_at"].replace("Z", "+00:00")).astimezone(timezone.utc).isoformat(timespec="microseconds")
+    if _include_entries and "entries" in row:
+        keys = result.get("changed_keys", [])
+        supplied = row["entries"]
+        result["entries"] = []
+        if isinstance(supplied, list) and len(supplied) <= 5:
+            seen = set()
+            for entry in supplied:
+                if not isinstance(entry, dict):
+                    continue
+                ref = entry.get("entry_ref")
+                if ref not in keys or ref in seen:
+                    continue
+                seen.add(ref)
+                result["entries"].append(row_view(entry, _include_entries=False))
     return result
 
 
@@ -224,8 +240,14 @@ def query_plan(event):
         sources = {value for value in bindings if type(value) is str and value in KINDS}
         source = next(iter(sources)) if len(sources) == 1 else None
         if source is not None:
-            queries.append(("query_persistence_diff", {"kind": source, "max_rows": 20}))
             gaps.append("persistence_current_only")
+            refs = evidence.get("changed_keys")
+            if (isinstance(refs, list) and 1 <= len(refs) <= 5
+                    and all(type(ref) is str and re.fullmatch(r"[a-f0-9]{32}", ref) for ref in refs)
+                    and len(set(refs)) == len(refs)):
+                queries.append(("query_persistence_diff", {"kind": source, "entry_refs": list(refs), "max_rows": 20}))
+            else:
+                gaps.append("persistence_entry_binding_missing")
         else:
             gaps.append("persistence_binding_missing")
     elif kind == "coverage.degraded":
@@ -279,6 +301,30 @@ def event_guidance(event):
             "incident_conclusion": "not_assessed", "ack_semantics": "received_only_not_case_closed", "data_trust": "untrusted_data"}
 
 
+def _observation_matches(record, operation, arguments):
+    """A schema-valid row is not necessarily evidence for this saved event."""
+    expected_source = {"query_listener": "listeners", "query_process": "processes",
+                       "query_defender": "defender", "query_persistence_diff": arguments.get("kind")}.get(operation)
+    rows = record.get("rows", [])
+    if record.get("operation") != operation or len(rows) > arguments.get("max_rows", 20):
+        return False
+    if record.get("source") != expected_source:
+        return record.get("source") == "unknown" and record.get("status") not in {"ok", "partial"} and not rows
+    for row in rows:
+        if operation == "query_listener" and (row.get("protocol") != arguments["protocol"] or row.get("port") != arguments["port"]):
+            return False
+        if operation == "query_process":
+            if "process_instance_ref" in arguments:
+                if row.get("process_instance_ref") != arguments["process_instance_ref"]:
+                    return False
+            elif (row.get("pid") != arguments["pid"] or not valid_iso(row.get("created_at"))
+                    or datetime.fromisoformat(row["created_at"].replace("Z", "+00:00")) != datetime.fromisoformat(arguments["created_at"].replace("Z", "+00:00"))):
+                return False
+        if operation == "query_persistence_diff" and row.get("entry_ref") not in arguments.get("entry_refs", []):
+            return False
+    return True
+
+
 def review(event, api=None, *, refresh=False, now=None):
     clean = validate_event(event)
     queries, gaps = query_plan(clean)
@@ -311,6 +357,11 @@ def review(event, api=None, *, refresh=False, now=None):
         code = raw.get("error_code")
         if isinstance(code, str) and re.fullmatch(r"[a-z][a-z0-9_]{0,95}", code):
             record["error_code"] = code
+        if not _observation_matches(record, operation, args):
+            # Do not pass an injected/mismatched result through to either the
+            # human or agent, or persist it as this event's evidence.
+            record.update(status="error", source="unknown", rows=[], error_code="diagnostic_binding_mismatch")
+            status = "error"
         if status != "ok":
             result["uncertainties"].append("diagnostic_" + status)
         if raw.get("truncated"):
@@ -370,4 +421,34 @@ def validate_saved_review(value, event):
             safe["mode"] = "current_only"
         if coverage != safe or "error_code" in row and (type(row["error_code"]) is not str or not re.fullmatch(r"[a-z][a-z0-9_]{0,95}", row["error_code"])):
             raise ValueError("saved_review_invalid")
+    queries, gaps = query_plan(event)
+    legacy_persistence = "persistence_entry_binding_missing" in gaps and len(value["observations"]) == 1
+    if legacy_persistence:
+        evidence, _ = _binding_evidence(event)
+        source = next((evidence.get(field) for field in ("kind", "section", "section_id")
+                       if type(evidence.get(field)) is str and evidence[field] in KINDS), None)
+        queries = [("query_persistence_diff", {"kind": source, "max_rows": 20})]
+    if len(value["observations"]) != len(queries):
+        raise ValueError("saved_review_invalid")
+    unverified = False
+    observations = []
+    for row, (operation, arguments) in zip(value["observations"], queries):
+        if (operation == "query_persistence_diff" and (legacy_persistence or any("entry_ref" not in entry for entry in row["rows"]))):
+            # Earlier 1.0 reviews listed a whole source without an entry ref.
+            # Keep their timestamp/status as history but never attach those
+            # unrelated rows to today's event or reconstruct a missing target.
+            if row.get("operation") != operation or row.get("source") not in {arguments["kind"], "unknown"}:
+                raise ValueError("saved_review_invalid")
+            observations.append(dict(row, rows=[]))
+            unverified = True
+        elif not _observation_matches(row, operation, arguments):
+            raise ValueError("saved_review_invalid")
+        else:
+            observations.append(row)
+    if (value["system_query_executed"] != (bool(queries) and not event["synthetic"])
+            or value["fixture_queries_executed"] != (bool(queries) and event["synthetic"])):
+        raise ValueError("saved_review_invalid")
+    if unverified:
+        return dict(value, observations=observations, status="partial",
+                    uncertainties=sorted(set(value["uncertainties"] + ["saved_diagnosis_binding_unverifiable"])))
     return value

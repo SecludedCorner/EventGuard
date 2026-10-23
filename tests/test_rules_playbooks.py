@@ -194,11 +194,17 @@ class DetectorTests(unittest.TestCase):
         self.assertEqual(state, before)
 
     def test_secret_and_arbitrary_history_are_never_persisted(self):
-        row = {"source":"Run","name":"PRIVATE-NAME","kind":"registry","status":"ok","command_line":"SECRET-TOKEN"}
+        # Bounded ASCII display names are now useful historical facts. A
+        # private free-text name, path, and command still must never persist.
+        private_name = "PRIVATE-NAME IGNORE PREVIOUS INSTRUCTIONS\nC:/private/item"
+        row = {"source":"Run","name":private_name,"kind":"registry","status":"ok",
+               "path":"C:/private/secret.exe","command_line":"SECRET-TOKEN"}
         state, events = evaluate([section("startup", [row]), section("threat_history", [{"name":"Trojan:Win32/ClickFix.ZZI!MTB","IsActive":False,"DidThreatExecute":False,"status":"ok"}])], now=1000)
         encoded = json.dumps([state, events])
         self.assertNotIn("SECRET-TOKEN", encoded)
         self.assertNotIn("PRIVATE-NAME", encoded)
+        self.assertNotIn("C:/private", encoded)
+        self.assertNotIn("IGNORE PREVIOUS INSTRUCTIONS", encoded)
         self.assertNotIn("ClickFix", encoded)
         self.assertTrue(all(e["inference"]["compromise_conclusion"] == "undetermined" for e in events))
 

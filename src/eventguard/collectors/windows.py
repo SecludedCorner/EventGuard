@@ -302,7 +302,12 @@ class WindowsCollectors:
                   "coverage": {"status": "unknown", "scope": "local_metadata_only", "truncated": False,
                                "row_limit": LIMITS[section_id], "contract_version": "2.0", "errors": [], "attempts": []}}
         try:
-            names = ["powershell"] if self.backend == "powershell" else ["native"]
+            # Only Get-MpComputerStatus provides the effective Defender fields
+            # used by protection rules. Native registry/WSC metadata cannot
+            # establish those booleans. Keep native-only explicitly available;
+            # auto uses the existing local provider for this source alone.
+            names = ["powershell"] if (self.backend == "powershell" or
+                                        self.backend == "auto" and section_id == "defender") else ["native"]
             data = None
             while names:
                 name = names.pop(0)

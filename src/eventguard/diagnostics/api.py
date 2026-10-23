@@ -7,6 +7,7 @@ import time
 import uuid
 
 from ..collectors.windows import WindowsCollectors, SECTION_IDS, FIELDS, STATUSES, redact, utc_now, coverage_metadata
+from ..rules.detector import persistence_key
 
 MAX_ROWS = 100
 OPERATIONS = {
@@ -14,7 +15,7 @@ OPERATIONS = {
     "query_listener": {"keys": {"protocol", "port"}, "section": "listeners"},
     "query_process": {"keys": {"pid", "created_at", "process_instance_ref"}, "section": "processes"},
     "query_defender": {"keys": {"view"}, "section": "defender"},
-    "query_persistence_diff": {"keys": {"kind"}, "section": None},
+    "query_persistence_diff": {"keys": {"kind", "entry_refs"}, "section": None},
     "query_version": {"keys": {"product_id"}, "section": "versions"},
 }
 
@@ -82,6 +83,11 @@ class DiagnosticAPI:
         elif operation == "query_persistence_diff":
             if args.get("kind") not in ("startup", "services", "tasks"):
                 return finish("error", "invalid_request")
+            refs = args.get("entry_refs")
+            if "entry_refs" in args and (not isinstance(refs, list) or not 1 <= len(refs) <= 5
+                    or any(type(ref) is not str or not re.fullmatch(r"[a-f0-9]{32}", ref) for ref in refs)
+                    or len(set(refs)) != len(refs)):
+                return finish("error", "invalid_request")
             section = args["kind"]
             result["coverage"]["mode"] = "current_only"
             result["coverage"]["baseline_comparison"] = "not_implemented"
@@ -110,7 +116,13 @@ class DiagnosticAPI:
             for row in sample["rows"]:
                 if not isinstance(row, dict):
                     raise ValueError()
-                safe_rows.append({key: redact(value) for key, value in row.items() if key in FIELDS[section] and isinstance(value, (str, int, float, bool, type(None)))})
+                clean = {key: redact(value) for key, value in row.items() if key in FIELDS[section] and isinstance(value, (str, int, float, bool, type(None)))}
+                if operation == "query_persistence_diff":
+                    # Compute before redaction: task paths and registry views
+                    # affect identity but never become query output.
+                    clean["entry_ref"] = persistence_key(section, row)
+                    clean.pop("task_path", None)
+                safe_rows.append(clean)
             rows = safe_rows
             if sample["status"] not in ("ok", "partial"):
                 # A failed section can contain partial/provider placeholder
@@ -135,6 +147,8 @@ class DiagnosticAPI:
                         return finish("unknown", "stale_process_instance")
                 if not rows:
                     return finish("unknown", "process_not_observed")
+            elif operation == "query_persistence_diff" and args.get("entry_refs") is not None:
+                rows = [row for row in rows if row["entry_ref"] in args["entry_refs"]]
             result["rows"] = rows[:max_rows]
             result["truncated"] = len(rows) > max_rows or (sample.get("coverage", {}).get("truncated") is True)
             if result["truncated"] and result["status"] == "ok":

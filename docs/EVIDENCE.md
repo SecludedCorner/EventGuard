@@ -2,6 +2,30 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：收斂本機資安監測、資料品質與真工具接收
+
+基底`11d2dd76d99742fcc3b4715c2ff8d1b92aae77ca`，同一feature。人類最新要求回到「本機監測→保存→agent可分析／必要時收event」，排程與proxy不再是前置。未建立排程、服務或自啟，未啟動另一個Codex／模型，未改安全設定或執行政策。MCP實際操作的回傳、實機資料與ID只留本機忽略`reports/security-core-001`，不提交真資安紀錄。
+
+**真實資料流程（修正前當版已運行MCP）。** 本主聊天實際呼叫正式`monitor_once`，08:32:58 UTC開始，七來源各執行一次並保存觀察與事件。Defender/listeners/processes為partial，startup/services/tasks/versions為ok，各有資料、evaluation_status=committed，所有查詢child自然exit0／remaining0，monitor最終stopped／cycles1／model_calls0。這是有限唯讀實測，沒有持續恢復已暫停的背景，也不是24小時或OS重開機證據。
+
+主聊天從本輪新生事件選一件真listener事件，實際`inspect_event→diagnose_event→receive_event→ack_event→inspect_event`；查證是固定事件port的即時唯讀查詢，結果partial、當時未再觀測到端點且缺程序綁定，沒有把查無資料判恢復。保存診斷後事件仍pending；ACK decision=`needs_more_evidence`，只表示已收到，incident_conclusion保持not_assessed。`py -3.13 -B reports/security-core-001/verify_native_flow.py`於08:57:08.692253 UTC exit0，核對實際工具回傳／來源payload hash／同event/query／saved review／SQLite receiver_receipt_id，選定集合生成／查證／收到／ACK各1且相同、missing_for_selected=[]、duplicate_receipts=[]、該事件回條1張。只驗一件，沒有宣稱正式backlog全送完。報告工具另實際匯出JSON／HTML，路徑在native-report-tool.json；正式activity可回查本輪操作。
+
+**四項實作。** (1) listener身分不可比時保留同端點舊事件、重置恢復streak，不因ref暫失產新件或誤resolved；可比較PID重用與真正消失仍按原規則。(2) persistence新事件保存最多5筆entries，opaque entry_ref對照原changed_keys，固定enum及ASCII80名稱投影，不存路徑／命令；目標消失後仍可讀歷史。typed query只接受事件refs並在max_rows前篩選，避免25個舊service遮住新目標。(3) 新／保存查證核對operation/source/port/程序實例/ref；錯配拒絕，舊未綁定cache清列並明示unverifiable。(4) Defender auto改採既有Get-MpComputerStatus七項有效狀態；其他六來源原生優先，通用拒讀／partial不重試政策不變。native-only配置／WSC仍不升格為有效狀態。
+
+**Defender一般使用者實測另列。** `py -3.13 -B reports/security-core-001/probe_defender.py`一次明確powershell backend，08:39:31 UTC啟動，status=ok、七欄、provider無錯誤；證據defender-provider-001.json。修改選路後`py -3.13 -B reports/security-core-001/probe_auto_defender.py`於08:48:29 UTC啟動，auto實際backend=powershell、七欄ok、passed=true；證據defender-auto-002.json。兩個程序各自然exit0、無強停、remaining0／runner_pending=false，未改Defender設定。這是當前一般使用者可讀性，不改寫以前sandbox CIM拒讀或native-only partial證據，也不表示主機安全。
+
+**Fixture與整合驗證分開。** analysis子agent命令`py -3.13 -B reports/analysis-evidence-regression-003/verify.py`，Python3.13.3，相關75/75通過、exit0；Popen0／nativecollect0／model0、source_unchanged=true。新增23項歷史目標、同名task路徑、截斷前ref篩選、對抗名稱與cache錯配測試；舊規則隱私canary改為含指令／路徑／控制字元並保留不落原文斷言。listener子agent以原碼跑新7項為6fail/1pass，記憶體套最小patch後新7＋舊6全通過；與rules合跑曾因舊canary契約衝突有1fail，該失敗保留，最終已整合修正。不以記憶體patch測試取代root當版統測。
+
+完整回歸命令`py -3.13 -B scripts/verify.py --run-dir reports/security-core-001/full-001 --timeout-seconds 600`到期限未完成，停在watch測試階段；worker_summary缺失、source_unchanged=true、passed_checks=false。guardian exit1460、forcibly_terminated=true／reason=timeout／remaining0，**不是全套通過或自然退出**。原輸出與回條完整保留。後續僅補驗本輪受影響模組與截止時未完成的watch／stdio；結果另記，不能與部分全套或子agent數字相加冒充全套。
+
+補驗命令`py -3.13 -B reports/security-core-001/verify_selected.py`，Python3.13.3，09:02:03.141741 UTC完成：190/190通過、0 failure/error/skip，112.576秒。範圍為collector契約／diagnostics、listener身分與恢復、persistence evidence、review binding、guidance、rules、OperatorAPI、transport、watch與local stdio；fixture／SDK／fake CLI及明確標記的Windows owned-job API，不執行主機盤點或模型。133個Python檔AST無誤、source_unchanged=true、per_test_residuals=[]；guardian自然exit0、未強停、remaining0、passed_checks=true。精確模組、回條與逐項輸出在selected-001/verification-summary.json、guardian-exit.json、unit-tests.txt。這是相關模組通過，沒有冒充完整suite。
+
+失敗helper另保留：native-flow初版錯把附delivery欄位的資料直接hash而失敗，修為validate_event後比對，同一保存資料重驗通過，沒有重跑實機採集。先前獲批准的proxy helper使用不存在的收尾reason而exit1，未保存連線／child回條，不能宣稱收尾確認；依人類方向不再重試，紀錄在reports/wake-queue-research-001/proxy-metadata-001/helper-failure.json。
+
+`py -3.13 -B reports/security-core-001/check_release.py`於09:08:57 UTC exit0：README 95行、所改文件本機連結無缺漏、當版程式與selected／full啟動前manifest一致，實機flow／Defender／相關suite結果可讀且通過、全套逾時失敗如實保留，HTML存在。僅核對既有檔案，未追加採集／模型；最後文件整理後同命令再核對，結果在document-check.json。
+
+當版程式與完整source hashes、文件檢查及最後本地commit綁定留`reports/security-core-001/source-commit.json`。已啟動的舊GUI／MCP不視為熱更新；新證據形狀的fixture／新SDK測試與上述既有主聊天真事件分開。一般權限下process/listener身分仍可能拒讀，沒有完整防毒掃描、漏洞可利用性、idle-chat wake、24小時soak或OS重開機承諾。
+
 ## 2026-10-23：既有聊天喚醒前置與當版登入恢復dry-run
 
 基底`af839b36a4f43efbc5e273680ba2f597edb93df1`，同一feature；上一目標回合有實質程式／真工具／合成驗證進展。本回合保留現有explicit_stop，不啟動監看、模型、server/daemon或排程。兩個子agent分讀喚醒入口與登入恢復，root整合；本批只有文件變更與本機忽略的探測／回條。

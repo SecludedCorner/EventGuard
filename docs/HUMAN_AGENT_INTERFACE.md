@@ -107,6 +107,8 @@ operator的多個stdio client不持有終身exclusive鎖。MCP狀態變更操作
 - 從耐久事件 ID 讀取及核對 payload hash，按固定事件型別綁定既有操作；agent 不能換 PID、port、來源、命令或路徑。規則、名稱、工具輸出及事件本身都不提供授權。
 - listener 以事件 protocol／port 查證；只有已保存的 process_instance_ref 才能查原程序實例。舊事件缺該 ref 時明示 process_binding_missing，不從今天的 PID 建立時間補出歷史身分。
 - persistence 僅 startup／services／tasks 的 current_only；Defender 保留 partial／unknown 與 authority。coverage 事件不自動觸發全來源重掃。沒有威脅歷史、簽章或未實作的 playbook 操作擴充。
+- 新persistence事件保存最多5筆目標entries，entry_ref與changed_keys一致；含固定狀態及有界名稱投影，沒有路徑或命令。目標日後消失時仍能讀歷史事實。查證只按事件refs在截斷前篩選，避免列出前20個無關服務；目前查無結果不等於恢復。
+- 新查證與保存快取都驗operation／來源／port／程序實例／entry_ref綁定。舊persistence快取缺ref時清空無法綁定列並標saved_diagnosis_binding_unverifiable；沒有目標ref的舊事件不自動改為整來源查詢。名稱仍是不可信資料，ACK與安全判斷分開。
 - 名稱預設有 opaque name_ref，只有 ASCII `[A-Za-z0-9_.-]` 且 ≤80 字元才附 display_name；其他名稱省略。路徑不進入共用事件／診斷事實。即使顯示名稱符合格式，仍只是 untrusted_data，不可能成為命令或授權。
 - 診斷列 observations、coverage、uncertainties、觀測時間；incident_conclusion 固定 not_assessed。空列不等於恢復，ACK、查證、案件結案分開。保存診斷不改 outbox 的 pending／ACK／receipt。
 - 每事件最多保留一份最新診斷，存於同一 SQLite 的 event_reviews；每份 ≤64 KiB，受原 outbox byte cap 與 ACK reserve 約束。超限明確報錯、回滾，不刪 pending；既有事件輪替時同時清理其診斷，不另建立無限帳本。

@@ -223,6 +223,42 @@ def _persistence_key(section_id, row):
     return _hash(metadata, 32)
 
 
+def persistence_key(section_id, row):
+    """The existing baseline identity, shared by event-bound diagnostics."""
+    if section_id not in {"startup", "services", "tasks"} or not isinstance(row, dict):
+        raise ValueError("invalid_persistence_identity")
+    return _persistence_key(section_id, row)
+
+
+def _persistence_entry(section_id, row, key):
+    """Save a small typed historical fact, never paths or command contents."""
+    name = row.get("name", "")
+    result = {"entry_ref": key, "name_ref": "name-" + hashlib.sha256(name.encode("utf-8", "surrogatepass")).hexdigest()[:24],
+              "status": row.get("status") if row.get("status") in STATUSES else "unknown"}
+    if re.fullmatch(r"[A-Za-z0-9_.-]{1,80}", name):
+        result["display_name"] = name
+    else:
+        result["name_omitted"] = True
+    for field, choices in (("state", {"running", "stopped", "paused", "start_pending", "stop_pending", "continue_pending", "pause_pending", "ready", "disabled", "queued", "unknown"}),
+                           ("start_mode", {"boot", "system", "auto", "automatic", "manual", "disabled"})):
+        value = row.get(field)
+        if isinstance(value, str):
+            value = value.lower().replace(" ", "_")
+            result[field] = value if value in choices else "unknown"
+    if type(row.get("kind")) is str and row["kind"] in {"registry", "registry_empty", "registry_missing", "folder", "folder_empty", "folder_skipped"}:
+        result["kind"] = row["kind"]
+    if type(row.get("registry_view")) is str and row["registry_view"] in {"Registry32", "Registry64"}:
+        result["registry_view"] = row["registry_view"]
+    sources = {hive + "\\Software\\Microsoft\\Windows\\CurrentVersion\\" + key_name:
+               prefix + "_" + ("run_once" if key_name == "RunOnce" else "run")
+               for hive, prefix in (("CurrentUser", "current_user"), ("LocalMachine", "local_machine"))
+               for key_name in ("Run", "RunOnce")}
+    sources.update({"Startup": "current_user_startup", "CommonStartup": "common_startup"})
+    if type(row.get("source")) is str and row["source"] in sources:
+        result["source"] = sources[row["source"]]
+    return result
+
+
 def _listener_process_binding(row, process_section):
     """Use identity observed in this evaluation only; never invent it from PID."""
     candidate = row
@@ -301,6 +337,14 @@ def evaluate(sections, state=None, now=None, host_id="local-host", cooldown=300)
                 _recover(current, "protection:settings", instant, generated)
         elif section_id == "listeners":
             present = set()
+            # Index existing episodes once rather than scan every active
+            # record for each of the collector's bounded endpoint rows.
+            endpoint_records = {}
+            for key, record in current["active"].items():
+                if key.startswith("listener:") and isinstance(record.get("evidence"), dict):
+                    endpoint = _hash([record["evidence"].get(field)
+                                      for field in ("protocol", "address", "port", "pid")], 32)
+                    endpoint_records.setdefault(endpoint, []).append((key, record))
             for row in rows:
                 if not isinstance(row, dict) or row.get("status") != "ok" or row.get("protocol") not in ("TCP", "UDP") or type(row.get("port")) is not int:
                     continue
@@ -318,6 +362,28 @@ def evaluate(sections, state=None, now=None, host_id="local-host", cooldown=300)
                 if binding:
                     identity_parts.append(binding["process_instance_ref"])
                 identity = "listener:" + _hash(identity_parts, 32)
+                # A readable endpoint and an unreadable owner are different
+                # observations. Missing owner identity cannot prove that a
+                # previously observed instance disappeared, or create a new
+                # endpoint solely because its identity evidence was lost.
+                endpoint = _hash(identity_parts[:4], 32)
+                same_endpoint = endpoint_records.get(endpoint, [])
+                if not binding and any(record["evidence"].get("process_instance_ref") for _, record in same_endpoint):
+                    for key, record in same_endpoint:
+                        present.add(key)
+                        record["recovery_count"] = 0
+                    continue
+                if binding:
+                    compatible = [key for key, record in same_endpoint
+                                  if record["evidence"].get("process_instance_ref") == binding["process_instance_ref"]]
+                    if not compatible:
+                        # Learning an identity refines the original endpoint
+                        # observation; only comparable different refs establish
+                        # a new process instance on an otherwise equal endpoint.
+                        compatible = [key for key, record in same_endpoint
+                                      if not record["evidence"].get("process_instance_ref")]
+                    if compatible:
+                        identity = compatible[0]
                 present.add(identity)
                 evidence = {"protocol": row["protocol"], "address": str(address), "port": row["port"], "scope": "all_interfaces"}
                 if pid is not None:
@@ -325,26 +391,32 @@ def evaluate(sections, state=None, now=None, host_id="local-host", cooldown=300)
                 evidence.update(binding)
                 _observe(current, identity, "listener.changed", "listener-diff", "warning", evidence,
                          status, instant, cooldown, generated)
+                if not any(key == identity for key, _ in same_endpoint):
+                    endpoint_records.setdefault(endpoint, []).append((identity, current["active"][identity]))
             if status == "ok":
                 for identity in list(current["active"]):
                     if identity.startswith("listener:") and identity not in present:
                         _recover(current, identity, instant, generated)
         elif section_id in ("startup", "services", "tasks"):
-            keys = {_persistence_key(section_id, row) for row in rows
-                    if isinstance(row, dict) and row.get("status") == "ok" and row.get("kind") not in ("registry_empty", "folder_empty") and isinstance(row.get("name"), str) and row.get("name")}
+            entries = {_persistence_key(section_id, row): _persistence_entry(section_id, row, _persistence_key(section_id, row))
+                       for row in rows if isinstance(row, dict) and row.get("status") == "ok"
+                       and row.get("kind") not in ("registry_empty", "folder_empty") and isinstance(row.get("name"), str) and row.get("name")}
+            keys = set(entries)
             baseline = current["baselines"].get(section_id)
             if baseline is None:
                 if status == "ok":
                     current["baselines"][section_id] = {"keys": sorted(keys)}
                     if keys:
                         _observe(current, "inventory:" + section_id, "persistence.changed", "persistence-inventory", "info",
-                                 {"section": section_id, "kind": section_id, "count": len(keys), "changed_keys": sorted(keys)[:5], "reason": "initial_inventory"},
+                                 {"section": section_id, "kind": section_id, "count": len(keys), "changed_keys": sorted(keys)[:5],
+                                  "entries": [entries[key] for key in sorted(keys)[:5]], "reason": "initial_inventory"},
                                  status, instant, cooldown, generated, managed=False)
                 continue
             previous = set(baseline["keys"])
             for key in sorted(keys - previous):
                 _observe(current, "persistence:" + section_id + ":" + key, "persistence.changed", "persistence-diff", "warning",
-                         {"section": section_id, "kind": section_id, "count": 1, "changed_keys": [key], "reason": "added_metadata"},
+                         {"section": section_id, "kind": section_id, "count": 1, "changed_keys": [key],
+                          "entries": [entries[key]], "reason": "added_metadata"},
                          status, instant, cooldown, generated)
             if status == "ok":
                 for identity in list(current["active"]):

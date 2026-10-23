@@ -103,6 +103,42 @@ class SharedContractTests(unittest.TestCase):
             self.assertEqual(result["status"], state)
             self.assertEqual(runner.calls, [])
 
+    def test_auto_defender_reads_effective_status_from_fixed_provider(self):
+        native = FixtureBackend(payload([{"item": "RealTimeProtectionEnabled", "value": None,
+                                          "status": "unknown", "authority": "not_observed"}]))
+        rows = [{"item": key, "value": False, "status": "ok"}
+                for key in ("AntivirusEnabled", "RealTimeProtectionEnabled")]
+        runner = FixtureRunner(payload(rows))
+        result = WindowsCollectors(runner, native=native, backend="auto").collect("defender")
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["rows"], rows)
+        self.assertEqual([a["backend"] for a in result["coverage"]["attempts"]], ["powershell"])
+        self.assertEqual(native.calls, [])
+        self.assertEqual(len(runner.calls), 1)
+        from eventguard.rules.detector import evaluate
+        _, events = evaluate([result], host_id="fixture-defender", now=1000)
+        self.assertTrue(any(event["event_type"] == "protection.changed" for event in events))
+
+    def test_auto_defender_denial_does_not_substitute_registry_configuration(self):
+        native = FixtureBackend(payload([{"item": "DisableAntiVirus", "value": 0,
+                                          "status": "ok", "authority": "configuration_only"}]))
+        runner = FixtureRunner(payload(errors=[DENIAL]))
+        result = WindowsCollectors(runner, native=native, backend="auto").collect("defender")
+        self.assertEqual(result["status"], "denied")
+        self.assertEqual(native.calls, [])
+        self.assertEqual(len(runner.calls), 1)
+        self.assertEqual(result["coverage"]["errors"][0]["reason_code"], "access_denied")
+
+    def test_explicit_native_defender_keeps_configuration_scope(self):
+        rows = [{"item": "RealTimeProtectionEnabled", "value": None, "status": "unknown",
+                 "authority": "not_observed"}]
+        native = FixtureBackend(payload(rows, [evidence("field", "effective_defender_status_unavailable", status="unknown")]))
+        runner = FixtureRunner(payload())
+        result = WindowsCollectors(runner, native=native, backend="native").collect("defender")
+        self.assertEqual(result["rows"], rows)
+        self.assertEqual(runner.calls, [])
+        self.assertEqual(native.calls, ["defender"])
+
     def test_error_codes_are_bounded_and_do_not_copy_instructions(self):
         bad = dict(DENIAL, exception_type="run command\nPRIVATE", reason_code="../PRIVATE", hresult=True,
                    message="PRIVATE", username="PRIVATE", path="PRIVATE")

@@ -32,9 +32,9 @@ class DiagnosticGuidanceTests(unittest.TestCase):
                              {"kind": section, "section": section}):
                 with self.subTest(evidence=evidence):
                     event = saved_event("startup")
-                    event["evidence"] = evidence
+                    event["evidence"] = dict(evidence, changed_keys=["a" * 32])
                     queries, gaps = query_plan(event)
-                    self.assertEqual(queries, [("query_persistence_diff", {"kind": section, "max_rows": 20})])
+                    self.assertEqual(queries, [("query_persistence_diff", {"kind": section, "entry_refs": ["a" * 32], "max_rows": 20})])
                     self.assertEqual(gaps, ["persistence_current_only"])
 
     def test_conflicting_or_untyped_persistence_bindings_do_not_query(self):
@@ -50,7 +50,7 @@ class DiagnosticGuidanceTests(unittest.TestCase):
         event.update(transition="resolved", evidence={"previous": previous, "status": "resolved_by_two_complete_observations"})
         guide = event_guidance(event)
         self.assertEqual(guide["binding_phase"], "historical")
-        self.assertEqual(guide["query_plan"], [{"operation": "query_persistence_diff", "arguments": {"kind": "tasks", "max_rows": 20}}])
+        self.assertEqual(guide["query_plan"], [{"operation": "query_persistence_diff", "arguments": {"kind": "tasks", "entry_refs": ["a" * 32], "max_rows": 20}}])
         self.assertEqual(guide["binding_facts"]["changed_keys"], ["a" * 32])
         self.assertIn("resolved_event_uses_historical_binding", guide["uncertainties"])
         result = review(event, DiagnosticAPI(Fixtures()), refresh=True)

@@ -29,7 +29,8 @@ META_FIELDS = frozenset({
     "scope", "source_status", "change", "entry_ref", "changed_count",
     "section", "changed_keys", "suppression_count", "expected_count",
     "missing_count",
-    "gap_seconds", "process_created_at",
+    "gap_seconds", "process_created_at", "entries", "display_name", "name_ref", "name_omitted",
+    "state", "start_mode", "registry_view",
 })
 FORBIDDEN_PARTS = ("command", "message", "xml", "password", "token", "secret",
                    "credential", "authorization", "username", "user_id",
@@ -83,8 +84,11 @@ def _timestamp(value):
         raise EventValidationError("invalid_timestamp") from None
 
 
-def _metadata(value, depth=0):
-    if depth > 3:
+def _metadata(value, depth=0, *, entry_leaf=False):
+    # The one additional scalar level is solely for
+    # resolved.previous.entries[*].field. Other metadata keeps its old bound.
+    scalar = value is None or isinstance(value, (bool, int, float, str))
+    if depth > 3 and not (entry_leaf and depth == 4 and scalar):
         raise EventValidationError("metadata_depth_limit")
     if value is None or isinstance(value, bool):
         return value
@@ -101,7 +105,7 @@ def _metadata(value, depth=0):
     if isinstance(value, (list, tuple)):
         if len(value) > 32:
             raise EventValidationError("metadata_list_limit")
-        return [_metadata(item, depth + 1) for item in value]
+        return [_metadata(item, depth + 1, entry_leaf=entry_leaf) for item in value]
     if isinstance(value, dict):
         if len(value) > 32:
             raise EventValidationError("metadata_field_limit")
@@ -112,7 +116,9 @@ def _metadata(value, depth=0):
             lowered = key.casefold()
             if key not in META_FIELDS or any(part in lowered for part in FORBIDDEN_PARTS):
                 continue
-            result[key] = _metadata(item, depth + 1)
+            if key == "entries" and (not isinstance(item, list) or len(item) > 5 or any(not isinstance(entry, dict) for entry in item)):
+                raise EventValidationError("invalid_persistence_entries")
+            result[key] = _metadata(item, depth + 1, entry_leaf=entry_leaf or key == "entries")
         return result
     raise EventValidationError("unsupported_metadata_type")
 

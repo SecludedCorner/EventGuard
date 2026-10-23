@@ -8,7 +8,7 @@ Windows 一般權限的唯讀監看工具。人類 GUI／CLI 與可選 agent 介
 
 「允許 agent 接收事件」預設關閉；勾選才開放既有本機工具接收，取消立即阻擋後續工具讀取，既有事件仍保留。勾選不會啟動模型，也不代表 agent 已連線。操作與限制見 [GUI](docs/GUI.md)。
 
-要有事件才自動啟動專用 agent，另開「自動交給專用 agent」並選既有 `codex.exe`；無事件由 Python 等待。每日最多5次、pending保留，開視窗本身不呼叫模型。初次設定、手動聊天MCP與自動模式的差異見 [接線指南](docs/CONNECT_AGENT.md)。
+採集與規則由本機程式執行，事件先存SQLite；人類或agent之後可讀保存資料、執行固定唯讀查證並匯出報告。正式MCP已在本聊天實際完成一件本機事件的讀取／查證／接收／ACK；ACK只代表收到。可選自動交付另見[接線指南](docs/CONNECT_AGENT.md)，不必設定排程、proxy或聊天喚醒才能使用監看。
 
 事件先顯示觀察、未知與唯讀查證建議，技術資料按需展開；可依嚴重度／接收狀態篩選目前載入的100件，總數及截斷會明示。設計參考與已採納項目見 [研究記錄](docs/SCANNER_LESSONS.md)。
 
@@ -82,7 +82,7 @@ GUI 的開始不需要建立排程；監看由應用持有，應用縮小後繼�
 
 ## 現況與限制
 
-- 原生 API 優先、同身分 PowerShell fallback；七來源的可讀範圍與拒讀原因見 [採集契約](docs/COLLECTOR_CONTRACT.md)。實測狀態依執行 context 而異，最新快照見 STATUS；partial／unknown 不代表安全，不因缺資料提權。單筆壞資料保留有效列且明示不完整。
+- 六來源原生API優先；Defender自動模式讀既有Get-MpComputerStatus的七項有效狀態。可讀範圍與拒讀原因見[採集契約](docs/COLLECTOR_CONTRACT.md)；partial／unknown不代表安全，不因缺資料提權。持久化事件保存有界目標事實供後續分析，身分缺失不誤判listener恢復。
 - 子程序從建立時加入私有 Job；停止先寬限，逾時只清理本工具程序樹。啟動保存 `monitor_gap`，未確認退出不報 stopped；見 [生命週期](docs/PROCESS_LIFECYCLE.md)。
 - 每來源即時保存有界觀察；過期、截斷與拒讀均顯示。退出未確認會耐久阻擋新 worker，僅能以該私有 Job 已空／銷毀的證據恢復；不靠刪鎖或重開目錄繞過。
 - ACKed 資料與完成帳本有保留、輪替及有限上限；pending／retry／未 ACK failed 保留。去重有時間與容量窗；見 [儲存政策](docs/STORAGE_RETENTION.md)。

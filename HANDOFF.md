@@ -1,5 +1,13 @@
 # EventGuard 接手
 
+最新人類指示已收斂：把本機資安監測、資料保存、agent可分析／必要時收event做好，不把proxy、排程或idle-chat wake當開發前提。使用者允許必要程式權限，但沒有批准登入任務，勿再詢問或自行註冊。既有GUI的Start/Pause與共享MCP即可使用，正常採集無模型。
+
+本輪基底11d2dd76：已用主聊天正式工具monitor_once完成真實七來源，inspect/diagnose/receive/ACK一件本輪新生真事件；ACK為needs_more_evidence，仍not_assessed，完整SQLite/工具對照在reports/security-core-001。另真PS Defender七欄可讀，auto已來源特定改採有效provider；native-only仍是配置/WSC範圍。修listener身分gap誤resolved、persistence歷史entries與ref-filter、cache target binding；詳情和統一測試看EVIDENCE。已運行舊GUI/MCP不假稱熱更新；新載入使用當版程式。
+
+proxy批准後helper用不存在的Job reason導致exit1，沒有保存連線及child回條；只保留失敗、不再重試。新指示取代下方舊「等metadata／排程批准才繼續」；舊排程digest因這輪source改動失效。既有research/attachments與私人runtime不提交。
+
+## 前批接手紀錄（非目前待辦；以本頁開頭及 STATUS 為準）
+
 最新續行基底af839b36。本輪沒有產品碼變動；取得既有Codex CLI0.163.0-alpha.11.2的queue/proxy help，以及當版登入恢復真dry-run。一般使用者任務absent（已確認folder後GetTask80070002）；sandbox GetFolder80070003屬不同身分unknown，兩者分開。新plan只register、不Run，現有explicit_stop不變。方案SHA與批准內容見docs/WAKE_RECOVERY_GATES.md，不重查或重建相同方案。
 
 唯讀control socket探測已備妥在reports/wake-queue-research-001/proxy_probe.py，只initialize＋精確目前thread/read(includeTurns=false)，不送queue/turn、不開server。**自動核准審查拒絕**：metadata亦被認定私人Codex session存取且缺精確授權，helper沒有執行、proxy沒有啟動；不可改用另一方法繞過。先等這項明確批准，再探測一次；即使成功仍不是idle wake，模型傳送另有批准關卡。真排程註冊也仍需本次SHA批准。目標維持active，不能宣稱已完成或自行解除Pause。

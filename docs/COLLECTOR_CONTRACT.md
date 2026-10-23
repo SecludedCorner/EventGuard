@@ -9,12 +9,13 @@
 ```python
 from eventguard.collectors.windows import WindowsCollectors
 
-collector = WindowsCollectors()                  # auto：原生優先
+collector = WindowsCollectors()                  # auto：六來源原生；Defender有效狀態provider
 section = collector.collect("listeners")          # 同步唯讀；不是啟動 agent
 fallback = WindowsCollectors(backend="powershell") # 明確比較／原生 API 不可用時的 fallback
 ```
 
-- auto 先做一次 native。僅當 native 是 not_applicable、原因含 api_unavailable、且沒有可用資料列時，才做一次同身分 PowerShell fallback；兩次結果留在 coverage.attempts。
+- auto對Defender使用既有本機Get-MpComputerStatus七欄，因原生登錄／WSC不提供規則所需的有效防護布林值；該provider拒讀就保留denied，不用登錄設定代替。這是單一來源的主路徑選擇，不是通用partial重試。
+- 其餘六來源先做一次native。僅當native是not_applicable、原因含api_unavailable、且沒有可用資料列時，才做一次同身分PowerShell fallback；兩次結果留在coverage.attempts。
 - denied、partial、unknown、timeout、cancelled、busy、error 不自動重試或轉另一身分。原生有部分資料時，不用 fallback 的單一結果覆蓋已觀察事實。
 - 注入 `runner` 的舊測試預設走 powershell fixture；可明確指定 backend，避免單元測試意外採集主機。
 - 正常 monitor 使用 auto，transport 仍 disabled，不啟動模型。沒有新增命令列／MCP 診斷操作。
@@ -59,14 +60,14 @@ fallback = WindowsCollectors(backend="powershell") # 明確比較／原生 API �
 
 ## 七來源的等價範圍與差異
 
-| 來源／列上限 | native 主路徑 | PowerShell fallback | 共用欄位／限制 |
+| 來源／列上限 | native 路徑 | PowerShell 路徑 | 共用欄位／限制 |
 | --- | --- | --- | --- |
 | listeners／1000 | iphlpapi GetExtendedTcpTable TCP OWNER_PID_LISTENER、GetExtendedUdpTable UDP OWNER_PID，IPv4/IPv6 | Get-NetTCPConnection Listen、Get-NetUDPEndpoint | protocol/address/port/pid/scope/status；總上限含 TCP＋UDP；scope 不代表網際網路可達 |
 | processes／2000 | Toolhelp snapshot；OpenProcess 僅 PROCESS_QUERY_LIMITED_INFORMATION；image name／process times | 限定 Win32_Process CIM 欄位 | PID/name/path/path_status/created_at/process_instance_ref/status；不讀命令列。單 PID 或欄位拒讀不抹去可列舉 PID/name |
 | services／500 | SCM ENUMERATE_SERVICE；EnumServicesStatusExW；只讀服務登錄 Start DWORD | 限定 Win32_Service CIM 欄位 | name/state/start_mode/status；不呼叫 QueryServiceConfig 以免取得 binary command／account；Start 讀不到則 partial |
 | startup／1000 | winreg 開鍵，RegEnumValueW 的 lpData/lpcbData 均 NULL，只取 value 名稱；SHGetKnownFolderPath＋scandir 名稱 | Registry.GetValueNames 與固定本機 Startup 目錄名稱 | source/name/registry_view/kind/status；HKCU/HKLM、32/64 view、Run/RunOnce；不讀 value 命令或捷徑內容 |
 | tasks／300 | 本機 Task Scheduler COM，Connect 無 server/account/password；只取 Name/Path/State | Get-ScheduledTask 限定欄位 | name/task_path/state/status；task_path 統一為資料夾路徑，避免和完整 task path 混用；不讀 XML/Definition/Actions |
-| defender／20 | 五項允許的 Defender 設定 DWORD＋WscGetSecurityProviderHealth 的 antivirus 彙總 | Get-MpComputerStatus 七欄 | item/value/status/authority；見下節，兩者的觀察能力**不相等** |
+| defender／20 | 明確native模式：五項設定DWORD＋WSC antivirus彙總 | auto預設：Get-MpComputerStatus七欄 | item/value/status/authority；兩者觀察能力不相等，不互相代換 |
 | versions／10 | 固定目前 Python interpreter 的版本資源 ProductVersion 字串；缺字串時才用 fixed version tuple | 同一 interpreter 檔案的 FileVersionInfo.ProductVersion | product/version/path/status；只讀既有固定檔案 metadata；不掃產品、簽章或漏洞 |
 
 process created_at 統一為 UTC、六位微秒再產生 instance_ref；同一 PID＋相同時刻的不同時區／精度字串會得到同一 ref。DiagnosticAPI 比較實際時刻，仍拒絕 PID 重用。無建立時間者不製造 instance_ref。
@@ -77,7 +78,9 @@ PowerShell 的 interpreter 路徑以 UTF-8 base64 **資料字串**嵌入固定�
 
 native 讀取的設定為 DisableAntiSpyware、DisableAntiVirus、DisableRealtimeMonitoring、DisableBehaviorMonitoring、TamperProtection DWORD。值是 configuration_only；缺鍵／值依實際錯誤標 n-a，不假定為 0。TamperProtection 數字不轉成即時啟用／停用判斷。
 
-SecurityCenterAntivirusHealth 是 aggregate_antivirus，可能包含其他防毒產品，不等於 Defender 狀態。AMServiceEnabled、AntivirusEnabled、RealTimeProtectionEnabled、BehaviorMonitorEnabled、IsTamperProtected、AntivirusSignatureVersion、AntivirusSignatureLastUpdated 七個有效狀態在此 native 路徑均為 null／unknown／not_observed。有設定資料仍是 partial；不以設定值製造 protection.changed 的啟用／停用事實。fallback 若實際可讀才提供其觀察結果，本次 provider 拒讀如實保留。
+SecurityCenterAntivirusHealth 是 aggregate_antivirus，可能包含其他防毒產品，不等於 Defender 狀態。AMServiceEnabled、AntivirusEnabled、RealTimeProtectionEnabled、BehaviorMonitorEnabled、IsTamperProtected、AntivirusSignatureVersion、AntivirusSignatureLastUpdated 七個有效狀態在此 native 路徑均為 null／unknown／not_observed。有設定資料仍是 partial；不以設定值製造 protection.changed 的啟用／停用事實。fallback 若實際可讀才提供其觀察結果，歷史 provider 拒讀如實保留。
+
+2026-10-23一般使用者實測既有[Get-MpComputerStatus](https://learn.microsoft.com/en-us/powershell/module/defender/get-mpcomputerstatus)七欄可讀，故auto改採這條來源特定主路徑。修改前native-only與歷史provider拒讀證據仍保留，不能改寫成當時已讀到有效狀態；修改後auto實測與fixture分見EVIDENCE。未改Defender設定、未提權，其他六來源的fallback政策不變。
 
 ### Tasks 路徑評估
 
@@ -87,7 +90,7 @@ COM 遞迴最多 4096 個可見資料夾、深度 32，含可見的 hidden tasks
 
 ## 成本、取消與尚未具備的保證
 
-所有 native API handle／COM reference 在 finally 釋放。Phase 3 起，每個 native section 在一個短期 Python worker／私有 Job 內執行；正常七來源不啟動 PowerShell，但會有七個循序 Python 子程序。auto fallback 最多再一次，同一 Runner 只有一個 in-flight 查詢。原有間隔不變，query_timeout_seconds 範圍為 (0,60] 秒。
+所有native API handle／COM reference在finally釋放。每個native section在短期Python worker／私有Job內執行；目前auto正常七來源為六個Python worker加一個Defender PowerShell子程序。其餘來源的必要fallback最多再一次，同一Runner只有一個in-flight查詢。原有間隔不變，query_timeout_seconds範圍為(0,60]秒。
 
 單一 OS／COM 呼叫卡住時，父 Runner 可在期限或取消後留寬限，再只清理私有 Job；coverage.process 包含實際 child exit／強停／殘留證據。詳見 [PROCESS_LIFECYCLE](PROCESS_LIFECYCLE.md)。這項行為以真 Job API 與 hanging fixture 驗證，不等於每種 provider 故障或全天候驗證。排程仍 dry-run、soak 尚未執行。
 
