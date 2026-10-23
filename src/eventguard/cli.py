@@ -14,6 +14,22 @@ def parser():
     p.add_argument("--format",choices=("auto","json","text"),default="auto",
                    help="auto: 終端可讀文字、管線JSON；text: 人類摘要；json: 機器介面")
     sub=p.add_subparsers(dest="command",required=True)
+    intelligence=sub.add_parser("advisories",help="本機公告追蹤與靜態適用性比對。不呼叫模型。")
+    intel_sub=intelligence.add_subparsers(dest="advisory_command",required=True)
+    for action in ("start","check"):
+        command=intel_sub.add_parser(action,help="手動啟動背景追蹤" if action=="start" else "只執行一輪擷取及比對")
+        command.add_argument("--config",type=Path,help="專案config目錄內的設定檔")
+    intel_sub.add_parser("status",help="來源新鮮度、待收事件、共用預算及進度")
+    stop_intel=intel_sub.add_parser("stop",help="合作停止本工具的公告背景程序")
+    stop_intel.add_argument("--grace-seconds",type=float,default=15)
+    cases=intel_sub.add_parser("cases",help="查閱本機公告及適用性證據。不送給模型。")
+    case_selector=cases.add_mutually_exclusive_group()
+    case_selector.add_argument("--case-id")
+    case_selector.add_argument("--event-id")
+    host=intel_sub.add_parser("_serve",help=argparse.SUPPRESS)
+    host.add_argument("--host-root",type=Path,required=True)
+    host.add_argument("--run-id",required=True)
+    host.add_argument("--job-name",required=True)
     run=sub.add_parser("run",help="前景啟動採集、本機Web與通知。按Ctrl+C停止。不呼叫模型。")
     run.add_argument("--port",type=int,default=8765)
     run.add_argument("--max-seconds",type=float,help="選填。有限試跑秒數（1..3600）。")
@@ -76,7 +92,7 @@ def parser():
     listing.add_argument("--limit",type=int,default=100)
     listing.add_argument("--offset",type=int,default=0)
     listing.add_argument("--severity",choices=("info","warning","high","critical"))
-    listing.add_argument("--source",choices=("defender","listeners","processes","startup","services","tasks","versions","monitor","unknown"))
+    listing.add_argument("--source",choices=("defender","listeners","processes","startup","services","tasks","versions","monitor","advisories","unknown"))
     listing.add_argument("--status",choices=("new","read","handled","ignored"))
     detail=eventsub.add_parser("detail",help="查看事件詳情與處置狀態。不採集、不ACK。")
     detail.add_argument("--namespace",choices=("live","test"),default="live")
@@ -122,6 +138,26 @@ def parser():
 
 
 def execute(args,runtime,progress=None):
+    if args.command=="advisories":
+        from .intelligence import engine, service
+        if args.advisory_command=="start":
+            return service.start(runtime.root,args.config)
+        if args.advisory_command=="status":
+            return service.status(runtime.root)
+        if args.advisory_command=="stop":
+            return service.stop(runtime.root,grace_seconds=args.grace_seconds)
+        if args.advisory_command=="check":
+            return engine.cycle(runtime.root,args.config)
+        if args.advisory_command=="_serve":
+            return service.serve(args.host_root,args.run_id,args.job_name)
+        from .intelligence.store import IntelligenceStore
+        path=runtime.path("data/advisories/intelligence.sqlite3")
+        if not path.exists():
+            return {"cases":[],"state":"not_started","model_calls":0}
+        store=IntelligenceStore(path,readonly=True)
+        if args.event_id:
+            return store.event_case(args.event_id) or {"state":"unknown","reason":"event_case_not_found"}
+        return store.advisory(args.case_id) if args.case_id else {"cases":store.cases(),"model_calls":0}
     operator=OperatorAPI(runtime.root)
     if args.command=="run":
         if not args.fixture and args.max_cycles is not None:
@@ -291,13 +327,15 @@ def main(argv=None,root=None):
         result=execute(args,Runtime(root),ProgressPrinter(sys.stderr) if human and args.command=="monitor" else None)
         show(result)
         if isinstance(result,dict):
-            if args.command in {"background","run"} or args.command=="stop" and "desired_enabled" in result:
+            if args.command in {"background","run","advisories"} or args.command=="stop" and "desired_enabled" in result:
                 state=result.get("state")
                 if state=="busy":
                     return 3
                 if state in {"blocked","startup_failed","stop_not_persisted"}:
                     return 2
                 if state in {"unknown","shutdown_unconfirmed"}:
+                    return 5
+                if args.command=="advisories" and state in {"partial","error"}:
                     return 5
             if result.get("valid") is False or result.get("status") in {"invalid_request","invalid_playbooks","invalid_event","conflict"} or result.get("error_code") in {"invalid_request","process_instance_required","product_not_allowlisted"}:
                 return 2

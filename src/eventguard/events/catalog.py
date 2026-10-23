@@ -15,7 +15,7 @@ from .store import EventStore, StoreError, event_payload_hash, _disposition_time
 STATUSES = frozenset({"new", "read", "handled", "ignored"})
 SEVERITIES = frozenset({"info", "warning", "high", "critical"})
 SOURCES = ("defender", "listeners", "processes", "startup", "services", "tasks", "versions")
-SOURCE_FILTERS = frozenset((*SOURCES, "monitor", "unknown"))
+SOURCE_FILTERS = frozenset((*SOURCES, "monitor", "advisories", "unknown"))
 
 # Only fixed paths and fixed enum constants enter this SQL. User filters are
 # bound parameters. Filter the whole database before applying LIMIT/OFFSET.
@@ -29,6 +29,7 @@ _SOURCE_SQL = "CASE " + " ".join(
 ) + """ WHEN json_extract(e.payload,'$.event_type')='listener.changed' THEN 'listeners'
     WHEN json_extract(e.payload,'$.event_type')='protection.changed' THEN 'defender'
     WHEN json_extract(e.payload,'$.event_type')='monitor_gap' THEN 'monitor'
+    WHEN json_extract(e.payload,'$.event_type')='advisory.changed' THEN 'advisories'
     ELSE 'unknown' END"""
 
 

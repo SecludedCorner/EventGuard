@@ -1,0 +1,7 @@
+{
+  "synthetic": true,
+  "assets": [
+    {"ecosystem":"linux","component":"linux-kernel","version":"6.1.0","facts":{"observed_at":"2026-10-23T00:00:00Z","distribution":"example-only","module_present":true,"module_builtin":"unknown","module_loaded":false,"service_enabled":"unknown","reachable":"unknown","container":true,"host_kernel":"unknown","deployed":"unknown","running":"unknown"}},
+    {"ecosystem":"rust","component":"webpki-roots","version":"1.0.9","facts":{"observed_at":"2026-10-23T00:00:00Z","feature_state":"unknown","tls_backend":"unknown","root_source":"unknown","deployed":"unknown","running":"unknown"}}
+  ]
+}

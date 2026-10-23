@@ -1,0 +1,297 @@
+{
+  "schema_version": 1,
+  "namespace": "live",
+  "inventory": {
+    "paths": []
+  },
+  "failure_threshold": 3,
+  "sources": [
+    {
+      "id": "zdi-upcoming",
+      "adapter": "zdi",
+      "url": "https://www.zerodayinitiative.com/advisories/upcoming/",
+      "interval_seconds": 3600,
+      "stale_after_seconds": 86400,
+      "tracking_ids": [
+        "ZDI-CAN-33549",
+        "ZDI-CAN-33774",
+        "ZDI-CAN-33367",
+        "ZDI-CAN-34068",
+        "ZDI-CAN-34076",
+        "ZDI-CAN-32005"
+      ],
+      "important": true,
+      "max_bytes": 4194304
+    },
+    {
+      "id": "rustsec-webpki-roots",
+      "adapter": "rustsec",
+      "url": "https://raw.githubusercontent.com/rustsec/advisory-db/main/crates/webpki-roots/RUSTSEC-2026-0381.md",
+      "interval_seconds": 3600,
+      "stale_after_seconds": 86400,
+      "tracking_ids": [
+        "RUSTSEC-2026-0381"
+      ],
+      "important": true
+    },
+    {
+      "id": "rustsec-rustls-webpki",
+      "adapter": "rustsec",
+      "url": "https://raw.githubusercontent.com/rustsec/advisory-db/main/crates/rustls-webpki/RUSTSEC-2026-0382.md",
+      "interval_seconds": 3600,
+      "stale_after_seconds": 86400,
+      "tracking_ids": [
+        "RUSTSEC-2026-0382"
+      ],
+      "important": true
+    },
+    {
+      "id": "rustsec-webpki-root-certs",
+      "adapter": "rustsec",
+      "url": "https://raw.githubusercontent.com/rustsec/advisory-db/main/crates/webpki-root-certs/RUSTSEC-2026-0383.md",
+      "interval_seconds": 3600,
+      "stale_after_seconds": 86400,
+      "tracking_ids": [
+        "RUSTSEC-2026-0383"
+      ],
+      "important": true
+    },
+    {
+      "id": "rust-official-blog",
+      "adapter": "feed",
+      "url": "https://blog.rust-lang.org/feed.xml",
+      "interval_seconds": 3600,
+      "stale_after_seconds": 86400,
+      "tracking_ids": [
+        "CVE-2026-111943",
+        "RUSTSEC-2026-0382"
+      ],
+      "component": "rust-toolchain",
+      "ecosystem": "Rust",
+      "important": true
+    },
+    {
+      "id": "uv-official-advisories",
+      "adapter": "github_advisories",
+      "url": "https://api.github.com/repos/astral-sh/uv/security-advisories?per_page=100",
+      "interval_seconds": 3600,
+      "stale_after_seconds": 86400,
+      "tracking_ids": [
+        "GHSA-hq85-5cpj-mr62"
+      ],
+      "conditions": {
+        "tls_backend": "unknown",
+        "trust_roots": "unknown",
+        "deployment": "unknown"
+      },
+      "important": true
+    },
+    {
+      "id": "cargo-official-advisories",
+      "adapter": "github_advisories",
+      "url": "https://api.github.com/repos/rust-lang/cargo/security-advisories?per_page=100",
+      "interval_seconds": 7200,
+      "stale_after_seconds": 172800,
+      "tracking_ids": [],
+      "component": "cargo",
+      "ecosystem": "Rust",
+      "important": true
+    },
+    {
+      "id": "rustup-official-advisories",
+      "adapter": "github_advisories",
+      "url": "https://api.github.com/repos/rust-lang/rustup/security-advisories?per_page=100",
+      "interval_seconds": 7200,
+      "stale_after_seconds": 172800,
+      "tracking_ids": [],
+      "component": "rustup",
+      "ecosystem": "Rust",
+      "important": true
+    },
+    {
+      "adapter": "html",
+      "interval_seconds": 21600,
+      "stale_after_seconds": 172800,
+      "important": false,
+      "html_markers": [
+        "ZDI-CAN-"
+      ],
+      "id": "lkml-33549",
+      "url": "https://lore.kernel.org/lkml/BYAPR01MB3830472B5702C089B0BBB77D80662%40BYAPR01MB3830.prod.exchangelabs.com/",
+      "tracking_ids": [
+        "ZDI-CAN-33549"
+      ],
+      "component": "linux-kernel",
+      "ecosystem": "Linux"
+    },
+    {
+      "adapter": "html",
+      "interval_seconds": 21600,
+      "stale_after_seconds": 172800,
+      "important": false,
+      "html_markers": [
+        "ZDI-CAN-"
+      ],
+      "id": "lkml-33774",
+      "url": "https://lore.kernel.org/lkml/BYAPR01MB383076AC412E19C48CFBEAE980662%40BYAPR01MB3830.prod.exchangelabs.com/",
+      "tracking_ids": [
+        "ZDI-CAN-33774"
+      ],
+      "component": "linux-kernel",
+      "ecosystem": "Linux"
+    },
+    {
+      "adapter": "html",
+      "interval_seconds": 21600,
+      "stale_after_seconds": 172800,
+      "important": false,
+      "html_markers": [
+        "ZDI-CAN-"
+      ],
+      "id": "lkml-33367",
+      "url": "https://lore.kernel.org/lkml/BYAPR01MB3830CECF5D0871064C59BA0280662%40BYAPR01MB3830.prod.exchangelabs.com/",
+      "tracking_ids": [
+        "ZDI-CAN-33367"
+      ],
+      "component": "linux-kernel",
+      "ecosystem": "Linux"
+    },
+    {
+      "adapter": "html",
+      "interval_seconds": 21600,
+      "stale_after_seconds": 172800,
+      "important": false,
+      "html_markers": [
+        "ZDI-CAN-"
+      ],
+      "id": "lkml-34068",
+      "url": "https://lore.kernel.org/all/?q=ZDI-CAN-34068",
+      "tracking_ids": [
+        "ZDI-CAN-34068"
+      ],
+      "component": "linux-kernel",
+      "ecosystem": "Linux"
+    },
+    {
+      "adapter": "html",
+      "interval_seconds": 21600,
+      "stale_after_seconds": 172800,
+      "important": false,
+      "html_markers": [
+        "ZDI-CAN-"
+      ],
+      "id": "lkml-34076",
+      "url": "https://lore.kernel.org/all/?q=ZDI-CAN-34076",
+      "tracking_ids": [
+        "ZDI-CAN-34076"
+      ],
+      "component": "linux-kernel",
+      "ecosystem": "Linux"
+    },
+    {
+      "adapter": "html",
+      "interval_seconds": 21600,
+      "stale_after_seconds": 172800,
+      "important": false,
+      "html_markers": [
+        "ZDI-CAN-"
+      ],
+      "id": "lkml-32005",
+      "url": "https://lore.kernel.org/all/?q=ZDI-CAN-32005",
+      "tracking_ids": [
+        "ZDI-CAN-32005"
+      ],
+      "component": "connman",
+      "ecosystem": "system"
+    },
+    {
+      "adapter": "html",
+      "interval_seconds": 21600,
+      "stale_after_seconds": 172800,
+      "important": false,
+      "html_markers": [
+        "68f410faedaf6ee74d81e574733c50ebcc1bd8ed"
+      ],
+      "id": "kernel-33774-commit",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/linkinjeon/smb.git/commit/?id=68f410faedaf6ee74d81e574733c50ebcc1bd8ed",
+      "tracking_ids": [
+        "ZDI-CAN-33774"
+      ],
+      "component": "linux-kernel",
+      "ecosystem": "Linux"
+    },
+    {
+      "adapter": "html",
+      "interval_seconds": 21600,
+      "stale_after_seconds": 172800,
+      "important": false,
+      "html_markers": [
+        "Information on source package linux"
+      ],
+      "id": "debian-linux",
+      "url": "https://security-tracker.debian.org/tracker/source-package/linux",
+      "tracking_ids": [
+        "ZDI-CAN-33549",
+        "ZDI-CAN-33774",
+        "ZDI-CAN-33367",
+        "ZDI-CAN-34068",
+        "ZDI-CAN-34076"
+      ],
+      "component": "linux",
+      "ecosystem": "Debian"
+    },
+    {
+      "adapter": "html",
+      "interval_seconds": 21600,
+      "stale_after_seconds": 172800,
+      "important": false,
+      "html_markers": [
+        "Information on source package connman"
+      ],
+      "id": "debian-connman",
+      "url": "https://security-tracker.debian.org/tracker/source-package/connman",
+      "tracking_ids": [
+        "ZDI-CAN-32005"
+      ],
+      "component": "connman",
+      "ecosystem": "Debian"
+    },
+    {
+      "id": "cve-emsign",
+      "adapter": "cve",
+      "url": "https://cveawg.mitre.org/api/cve/CVE-2026-111943",
+      "interval_seconds": 21600,
+      "stale_after_seconds": 172800,
+      "tracking_ids": [
+        "CVE-2026-111943"
+      ],
+      "important": false
+    }
+  ],
+  "storage": {
+    "max_records": 4096,
+    "max_changes": 16384,
+    "max_bytes": 33554432,
+    "cooldown_seconds": 3600
+  },
+  "rules": {
+    "enabled_reasons": [
+      "possible_relevance",
+      "fix_available",
+      "exploitation_confirmed",
+      "exposure_changed",
+      "withdrawn",
+      "source_stale",
+      "recovered"
+    ],
+    "severity": {
+      "possible_relevance": "warning",
+      "fix_available": "warning",
+      "exploitation_confirmed": "high",
+      "exposure_changed": "warning",
+      "withdrawn": "info",
+      "source_stale": "warning",
+      "recovered": "info"
+    }
+  }
+}

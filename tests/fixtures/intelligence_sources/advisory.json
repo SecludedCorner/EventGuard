@@ -1,0 +1,1 @@
+{"id":"RUSTSEC-2026-0381","aliases":["CVE-2026-111943"],"published":"2026-10-19T12:00:00Z","modified":"2026-10-21T06:30:02Z","summary":"Synthetic root bundle fixture","affected":[{"package":{"ecosystem":"crates.io","name":"webpki-roots"},"ranges":[{"type":"SEMVER","events":[{"introduced":"0"},{"fixed":"1.0.10"}]}]}]}

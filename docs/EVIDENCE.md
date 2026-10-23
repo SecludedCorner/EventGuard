@@ -2,6 +2,36 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：公告追蹤與靜態適用性
+
+基底 `bb6ecff55efbd86bd178e7b0005f077bca765ac9`。沿用 `feat/local-codex-acceptance`。本批只有新功能證據目錄 `reports/advisory-tracker-001`。正式背景與真模型未啟用。原 dot 追蹤不變。
+
+三個子任務實作來源、盤點／版本及 SQLite。root 整合 CLI、背景 Job、原事件入口與驗收。核心沒有新增依賴或 MCP import。snapshot 七欄不變，只新增事件枚舉。未改帳本初始化或每日五次政策。
+
+| 命令 | 實際結果 | 範圍 |
+| --- | --- | --- |
+| `py -3.13 -B scripts/verify.py --run-dir reports/advisory-tracker-001/verify-001 --timeout-seconds 600` | 1,066 run；1,062 pass；1 error；3 skip；exit 1。`source_unchanged=false` | 首次統測。ZDI 實抓修復在測試期間完成，設定 4 MiB 與已載入 2 MiB validator 不符。本輪保留，不當成固定版本通過 |
+| 同命令，run-dir 改 `verify-002` | 1,077 run；1,073 pass；1 error；3 skip；exit 1。`source_unchanged=true` | 錯誤為新增 control 損壞測試未建立 host.lock 的父目錄。正式隔離背景 start／status／stop 已通過 |
+| `py -3.13 -B reports/advisory-tracker-001/verify-delta.py` | 225 run；224 pass；1 skip；exit 0。`passed_checks=true`；受測來源不變 | 修正測試前置目錄。加範例 facts 解析、synthetic 隔離及盤點失敗可見性。重驗 10 個相關模組。沿用 verify 的私有 Job worker，沒有另加產品 harness |
+| `py -3.13 -B reports/advisory-tracker-001/public-fetch.py` | 一般使用者有限 10 來源 GET。6 success；ZDI body_too_large；2 TLS 驗證失敗；Debian timeout；exit 0（探測程序正常結束，非全來源成功） | 真公開 HTTP。不是合成資料或模型 |
+| ZDI 單次 HEAD 與修復後 GET | HEAD 200，2,403,491 bytes。GET success。六 ID 集合相同，32005=connman；exit 0 | `public-fetch-zdi-retry.json`。ZDI 設 4 MiB，上限仍有界。未繞過 TLS |
+| `py -3.13 -B reports/advisory-tracker-001/replay-public.py replay-public-003` | 7 個已成功實抓來源；8 案件；10 事件。生成／receive／query／ACK 各 10，集合相同；missing=[]。第二輪新增 0；exit 0 | 真公開正規化資料＋6 個合成資產。直接 backend calls。模型 0。不是實機適用性或真 agent 驗收 |
+| `.\EventGuard.cmd advisories status --format json` | exit 0；not_started；agent_enabled=false；budget_unavailable；剩餘未知 | 只查看現有計數。私人舊佇列數值不提交。沒有啟用、初始化或重置。沒有讀私人 session 或憑證 |
+
+第二次統測與最後差集去重後為 **1,079 unique：1,076 pass、3 skip、0 failure/error**。不是在最終來源重跑全套。測試索引為 `combined-index.json`。Python **3.13.3**。最終差集 AST 共 **160** 檔無語法錯誤。
+
+三個 skip 是兩項既有 symlink 權限測試，以及受限環境的原生通知。沒有將 skip 記為 pass。兩次統測與最後差集 guardian 都自然退出，owned remaining=0、forcibly_terminated=false。差集的 `lifecycle-evidence.json` 包含隔離合成背景 start／status／stop 與完整私有 Job 退出回條。沒有測試後殘留。
+
+重播一曾因人工 facts 用非 canonical 生態名稱而只讀到 Rust 三資產。coverage 明示 invalid_facts_asset。其「passed」只涵蓋當時 ID 集合，不能當 Linux／uv 適用性驗收。重播二修正，重播三用最終程式再驗並要求 inventory success、6 資產。前次證據未覆寫。
+
+實抓成功為 ZDI、RustSec 三案、Rust feed、uv 官方 API、CVE API。LKML／kernel git 的錯誤為 `tls_verification_failed`；Debian 為 `timeout`。未改憑證、安全設定、代理或驗證旗標。ZDI 日期只視為 vendor notified。未確認的 CVE、核心 commit 或發行版 backport 仍未知。官方來源與查核時間見 ADVISORY_SOURCES。
+
+實作後另驗證：預設 facts 範例可讀，但含 synthetic 標記時不能進 live scope；來源換 URL 不沿用舊 ETag／快取；同 CVE 多元件不輪流告警；來源失敗在退避期間仍可見；pending 不改寫；outbox 成功而 mark 失敗後以相同事件位元組補送；ACK 前故障保留同 query 與已保存結果。這些都是離線／合成範圍。
+
+正式 `data/background/control.json` 前後 SHA256 均為 `78F20282862F179B8DEB4AF769BD0692932EC273AE930C13375E987781CB41BA`。未解除既有停止。`source-manifest.json` 綁定受測位元組，提交後 `source-commit.json` 核對實際 commit。只提交功能、設定、測試與文件。不提交 reports、data、附件或既有私人研究。不推送。
+
+尚未驗證：正式長期 HTTP、24 小時 soak、Linux 主機盤點、實際部署／運作版本、真模型 trace／工具接收／自然退出及 dot 交接。七欄不足以提供漏洞完整診斷；完整證據留本機。ACK 只表示收到。正式啟用與有限真模型驗收另等批准，不要求排程或重開 Codex。
+
 ## 2026-10-23：本機產品六項功能
 
 本批基底為`98968ba4435fa178a4b8d05cc721150440f46186`。分支不變。以最新產品範圍為準。MCP 接線、閒置喚醒與開機自啟改為選配。它們不再阻擋工作。本輪不做 proxy、排程或模型呼叫。

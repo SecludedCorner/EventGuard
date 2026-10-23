@@ -1,49 +1,44 @@
 # EventGuard 現況
 
-更新：2026-10-23。分支：`feat/local-codex-acceptance`。本批基底：`98968ba`。
+更新：2026-10-23。分支：`feat/local-codex-acceptance`。本批基底：`bb6ecff`。
 
-產品是本機程式。正常採集、比對、保存與顯示均不呼叫模型。
+EventGuard 是本機程式。採集、規則、保存、CLI／Web 與通知不需要模型。
 
-## 本批功能
+## 新增：公告追蹤與適用性
 
-| 功能 | 用法 | 範圍 |
-| --- | --- | --- |
-| 單一啟動 | `.\EventGuard.cmd run` | 前景啟動既有採集、Web 與通知。Ctrl+C 收尾自身 Job |
-| 事件列表 | Web「事件」或 `events list` | 全庫篩選後分頁。顯示嚴重度、來源、時間與處置狀態 |
-| 事件詳情 | 「查看」或 `events detail --event-id <ID>` | 只讀保存事實、建議與已存診斷。不重新採集 |
-| 處置狀態 | 詳情按鈕或 `events set-status` | 新增、已讀、已處理、忽略。SQLite 耐久保存。不自動 ACK |
-| 規則檔 | `config/rules.json`、Web「規則」 | 五條預設。固定條件。每輪重讀。壞檔明示錯誤 |
-| 七來源頁 | Web「來源狀態」或 `sources list` | 最後時間、結果、階段、原因碼與建議。拒讀不當成安全 |
-| 本機通知 | run 預設啟用 | high／critical 事件。成功回條去重。已處理、忽略不通知 |
+- 普通背景程序定時擷取。提供 `advisories start / status / stop`。不建立服務、排程或開機自啟。
+- 18 個可設定官方來源。支援 JSON、RustSec TOML、RSS／Atom 及有界 HTML。
+- 條件請求、快取、退避、速率限制、解析失敗與新鮮度。失敗不當成沒有漏洞。
+- 只讀允許的 lockfile、manifest 或人工 facts。不執行工具鏈、套件或 build.rs。
+- 版本、feature、TLS roots、部署、backport、核心模組與可達性分開判讀。缺證據保留未知。
+- SQLite 保存來源、別名、分元件證據與待送變化。重啟去重。滿載明示阻擋，不丟 pending。
+- `advisory.changed` 沿用原 EventStore、QueueInbox 與 ACK。snapshot 仍為七欄。
+- CLI／Web 可篩選資安公告事件。`advisories cases --event-id <ID>` 查本機完整證據。
 
-網址：[http://127.0.0.1:8765](http://127.0.0.1:8765)。Web 只綁本機。修改狀態須通過來源與 CSRF 檢查。
+操作與事件處理表見 [ADVISORY_TRACKER](docs/ADVISORY_TRACKER.md)。官方查核與未知映射見 [ADVISORY_SOURCES](docs/ADVISORY_SOURCES.md)。
 
 ## 本批驗證
 
-先完成產品功能，再執行統一測試。命令、測試數、失敗與差集結果只列 [EVIDENCE](docs/EVIDENCE.md)。本批唯一新證據目錄為 `reports/local-product-001`。它對應上列新功能。
+命令、測試數、失敗與修復只列 [EVIDENCE](docs/EVIDENCE.md)。唯一新證據批次是 `reports/advisory-tracker-001`。程式、測試與文件集中提交。不提交執行資料或私人研究。
 
-已用瀏覽器操作合成資料。查看事件、篩選、改成已讀。另一個新程序確認狀態仍在。七來源頁與五條規則可見。合成程序有限期執行。未啟用正式監看。
+有限實抓：ZDI 六 ID 齊全，32005 為 ConnMan。RustSec 三案、Rust feed、uv 與 CVE API 可讀。LKML／kernel git TLS 驗證失敗；Debian 本次逾時。未繞過。
 
-Windows 通知在受限測試環境被拒。另以既有一般使用者送出一次固定合成通知，OS 已接受。本次圖示與視窗已關閉。是否被使用者看見，未驗證。Web 醒目提示已驗證。
+實抓公告加合成本機資產重播：8 案件、10 事件。生成／收件／query／ACK ID 集合相同。第二輪無新事件。這是後端契約驗證，不是真模型或主機適用性證明。
 
-本輪沒有重掃主機。先前 Defender denied、tasks unknown 的真實證據仍保留。本輪來源頁使用合成案例驗證顯示與建議。不能升格為來源現在已可讀。
+Windows 隔離背景 start／status／stop 已驗證。私有 Job 自然退出。正式公告背景未啟用。既有監看停止設定不變。沒有呼叫模型或變更 dot 追蹤。
 
-## 限制
+## 限制與待批准
 
-pending 不因已處理或忽略而刪除。容量滿時仍會背壓。ACKed 資料依既有保留政策清理。
+預設盤點路徑為空。正式主機適用性未知。Linux 資料目前由操作者提供，標 `user_asserted`。HTML 只證明 ID 出現；不能自行確認修補 commit 或發行版套件映射。
 
-資料與帳本可被同一使用者修改。不是防竄改鑑識。未知、過期、ACK 或已處理都不能證明主機安全。
+七欄摘要可供 agent 收件。它不足以診斷完整漏洞。完整證據留本機。未擴大 agent 查詢授權。
 
-24 小時運轉、真實狀態注入與重開機尚未驗證。無全天候承諾。
+agent 本輪未啟用。固定預算 status 目前回 `budget_unavailable`，剩餘用量未知。沒有初始化或重置。每日上限仍為五個任務，含驗收與失敗。
 
-## 選配：本輪不做
+正式背景 start 與真模型驗收仍待批准。需要指定允許盤點路徑、來源頻率及有限任務數。無需 Codex 重啟、proxy、登入任務或排程。
 
-| 項目 | 成本 | 收益 |
-| --- | --- | --- |
-| A. Codex MCP 接線 | client 設定與維護。分析時使用模型額度 | agent 可讀事件並使用既有型別化介面 |
-| B. 閒置喚醒 | 需要可靠的事件觸發入口、模型預算與失敗處理 | 無人工訊息時也可開始分析 |
-| C. 開機自啟 | 系統整合、生命週期維護與重開機驗證 | 減少手動啟動 |
+公告 emitted 帳本沒有足夠 ACK 完成與退出保留證據前不自動刪除。滿載 blocked，可核對後調整上限。pending 始終保留。
 
-三項都不阻擋產品使用。不得要求本輪重開 Codex、proxy、登入任務或排程。
+24 小時 soak、正式長期 HTTP、實際部署版本與 dot 交接尚未驗證。原 dot 追蹤保留。ACK 不是漏洞修補或案件結束。
 
-程式、測試與文件集中在同一個本地 commit。不提交 runtime、憑證、私人歷史、研究或附件。不推送。
+Codex 主聊天 MCP、閒置喚醒及開機自啟仍是選配。它們不阻擋本機產品。

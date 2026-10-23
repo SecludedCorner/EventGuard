@@ -100,6 +100,18 @@ def render(result, command="", operation=""):
         return "EventGuard 無法完成操作："+text(result.get("reason",result.get("error_code",result["status"])))
     if command=="run":
         return "EventGuard："+state(result.get("state"))+"。模型呼叫：0。"
+    if command=="advisories":
+        if "cases" in result or "record" in result:
+            return text(json.dumps(result,ensure_ascii=False,indent=2),100000)
+        lines=["公告追蹤："+state(result.get("host_state",result.get("state","unknown"))),
+               "最後進度："+text(result.get("last_progress")),
+               "待收事件："+text(result.get("pending_events"))+"。每日剩餘任務："+text(result.get("daily_remaining")),
+               "阻塞原因："+text(result.get("blocked_reason",result.get("reason"))),
+               "agent：本輪未啟用。模型呼叫：0。"]
+        for source in result.get("sources",[]):
+            lines.append(text(source.get("source_id"))+" | 最後成功="+text(source.get("last_success_at",source.get("last_success")))
+                         +" | 新鮮度="+text(source.get("freshness"))+" | 原因="+text(source.get("error_code")))
+        return "\n".join(lines)
     if command=="rules":
         lines=["規則檔：config/rules.json。檢查通過。"]
         for rule in result.get("rules",[]):

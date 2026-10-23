@@ -16,7 +16,7 @@ HTML = """<!doctype html>
 <nav aria-label="頁面"><button data-tab="events" aria-pressed="true">事件</button><button data-tab="sources">來源狀態</button><button data-tab="rules">規則</button></nav>
 <section id="events"><h2>事件</h2><form id="filters">
 <label>嚴重度<select name="severity"><option value="">全部</option><option value="critical">嚴重</option><option value="high">高</option><option value="warning">警告</option><option value="info">資訊</option></select></label>
-<label>來源<select name="source"><option value="">全部</option><option value="defender">Defender</option><option value="listeners">監聽端點</option><option value="processes">程序</option><option value="startup">啟動項</option><option value="services">服務</option><option value="tasks">排程工作</option><option value="versions">版本</option><option value="monitor">監看程式</option><option value="unknown">未知</option></select></label>
+<label>來源<select name="source"><option value="">全部</option><option value="defender">Defender</option><option value="listeners">監聽端點</option><option value="processes">程序</option><option value="startup">啟動項</option><option value="services">服務</option><option value="tasks">排程工作</option><option value="versions">版本</option><option value="monitor">監看程式</option><option value="advisories">資安公告</option><option value="unknown">未知</option></select></label>
 <label>處置狀態<select name="status"><option value="">全部</option><option value="new">新增</option><option value="read">已讀</option><option value="handled">已處理</option><option value="ignored">忽略</option></select></label><button type="submit">篩選</button></form>
 <p id="count"></p><div class="table-wrap"><table><thead><tr><th>嚴重度</th><th>事件</th><th>來源</th><th>時間</th><th>處置狀態</th><th>詳情</th></tr></thead><tbody id="event-rows"></tbody></table></div>
 <p><button id="prev">上一頁</button> <button id="next">下一頁</button></p>
@@ -31,9 +31,9 @@ CSS = """:root{color-scheme:light;font:16px system-ui,'Microsoft JhengHei',sans-
 
 JS = """'use strict';
 const $=id=>document.getElementById(id), severity={critical:'嚴重',high:'高',warning:'警告',info:'資訊'}, handling={new:'新增',read:'已讀',handled:'已處理',ignored:'忽略'};
-const sourceNames={defender:'Defender',listeners:'監聽端點',processes:'程序',startup:'啟動項',services:'服務',tasks:'排程工作',versions:'版本',monitor:'監看程式',unknown:'未知'};
+const sourceNames={defender:'Defender',listeners:'監聽端點',processes:'程序',startup:'啟動項',services:'服務',tasks:'排程工作',versions:'版本',monitor:'監看程式',advisories:'資安公告',unknown:'未知'};
 const states={ok:'成功',partial:'部分成功',denied:'拒讀',unknown:'未知',not_applicable:'不適用',not_requested:'尚未採集',not_observed:'尚未採集',not_collected:'尚未採集',stale:'資料過期',error:'失敗',timeout:'逾時',cancelled:'已取消',busy:'忙碌',started:'監看中',running:'監看中',stopped:'已停止',blocked:'受阻',blocked_rules:'規則檔錯誤',backoff:'等待重試',shutdown_unconfirmed:'退出未確認',enabled_not_running:'目前未採集',disabled:'已停用'};
-const eventNames={'listener.changed':'監聽端點變化','protection.changed':'防護狀態變化','persistence.changed':'啟動與服務變化','coverage.degraded':'來源可見性降低','monitor_gap':'監看缺口'};
+const eventNames={'listener.changed':'監聽端點變化','protection.changed':'防護狀態變化','persistence.changed':'啟動與服務變化','coverage.degraded':'來源可見性降低','monitor_gap':'監看缺口','advisory.changed':'資安公告與適用性變化'};
 let offset=0, selected=null, tab='events', busy=false;
 function node(tag,text,cls){const e=document.createElement(tag);e.textContent=text??'';if(cls)e.className=cls;return e;}
 function when(s){if(!s)return '尚無紀錄';const d=new Date(s);return Number.isNaN(+d)?'時間未知':d.toLocaleString('zh-TW',{hour12:false});}

@@ -15,8 +15,9 @@ from ..collectors.windows import coverage_metadata
 from ..events.schema import validate_event, STATUS_VALUES
 from ..events.store import event_payload_hash
 
-EVENT_TYPES = {"listener.changed", "protection.changed", "persistence.changed", "coverage.degraded", "monitor_gap"}
+EVENT_TYPES = {"listener.changed", "protection.changed", "persistence.changed", "coverage.degraded", "monitor_gap", "advisory.changed"}
 EXPLANATIONS = {
+    "advisory.changed": "公告證據或本機適用性有重要變化。需要調查，尚未確認受影響或可利用。",
     "monitor_gap": "監看曾中斷或有未觀測區間；此期間不能判定沒有事件。",
     "listener.changed": "觀測到本機端點變化；全介面綁定不代表 Internet 可達。",
     "protection.changed": "觀測到防護 metadata 變化；需區分設定與實際有效狀態。",
@@ -254,6 +255,8 @@ def query_plan(event):
         gaps.append("coverage_event_no_automatic_source_rescan")
     elif kind == "monitor_gap":
         gaps.append("unobserved_monitor_interval")
+    elif kind == "advisory.changed":
+        gaps.append("advisory_details_local_only_no_expanded_agent_query")
     else:
         gaps.append("unsupported_event_type")
     return queries, gaps
@@ -272,8 +275,10 @@ def event_guidance(event):
     initial = kind == "persistence.changed" and evidence.get("reason") == "initial_inventory"
     titles = {"listener.changed": "本機監聽端點變化", "protection.changed": "防護 metadata 變化",
               "persistence.changed": "啟動／服務／排程 metadata 變化", "coverage.degraded": "來源可見性降低",
-              "monitor_gap": "監看存在未觀測區間"}
+              "monitor_gap": "監看存在未觀測區間", "advisory.changed": "資安公告與適用性變化"}
     next_steps = {
+        "advisory.changed": ["由人類查看 advisories cases 的保存公告、來源時間與靜態盤點結果。",
+                             "缺少部署、功能或運作版本證據時保留未知。ACK 只代表收件。修補與處置須另行批准。"],
         "listener.changed": ["核對保存的協定、port 與綁定範圍；以事件綁定唯讀查詢查看目前端點。",
                              "只有事件保存程序實例時才查同一實例；端點存在不證明外部可達或惡意。"],
         "protection.changed": ["比較保存的防護欄位變化與目前唯讀觀察，分清 configuration_only、aggregate_antivirus 與有效狀態。",

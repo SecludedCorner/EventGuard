@@ -59,6 +59,21 @@ CLI 終端預設顯示文字。管線預設輸出 JSON。可用 `--format text` 
 
 Windows 可能抑制通知。程式接受通知要求，不代表使用者已看見。可用 `run --no-notifications` 關閉系統通知。本頁提示仍保留。
 
+## 公告追蹤與適用性
+
+新增 ZDI、RustSec、Rust／Cargo／rustup、uv、CVE 與發行版來源。設定在 [config/advisories.json](config/advisories.json)。普通程式擷取、快取、比對及保存。沒有重要變化時不呼叫模型。
+
+```powershell
+.\EventGuard.cmd advisories start
+.\EventGuard.cmd advisories status
+.\EventGuard.cmd advisories cases
+.\EventGuard.cmd advisories stop
+```
+
+以上是正式操作命令。本批未自行啟用。預設盤點路徑為空，表示未知。只讀明確允許的 manifest、lockfile 或人工 facts。不執行工具鏈、套件或 build.rs。
+
+事件沿用既有佇列及七欄 snapshot。agent 預設不啟用。完整證據留本機。操作、處理表與批准範圍見 [公告追蹤](docs/ADVISORY_TRACKER.md)。官方案例與未確認內容見 [來源契約](docs/ADVISORY_SOURCES.md)。
+
 ## 限制
 
 - partial、denied、unknown、過期與空清單都不代表安全。
