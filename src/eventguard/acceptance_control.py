@@ -58,15 +58,29 @@ class FileLease:
         self.path = _guard(path)
         self.stream = None
 
-    def acquire(self):
+    def acquire(self, *, create=True):
         if self.stream is not None:
             raise LocalWaitError("acceptance_lease_already_owned")
-        stream = _guard(self.path).open("a+b")
-        stream.seek(0, 2)
-        if stream.tell() == 0:
-            stream.write(b"0")
-            stream.flush()
-        stream.seek(0)
+        if type(create) is not bool:
+            raise ValueError("invalid_lease_create")
+        try:
+            stream = _guard(self.path).open("a+b" if create else "r+b")
+        except FileNotFoundError:
+            if not create:
+                return False
+            raise
+        try:
+            stream.seek(0, 2)
+            if stream.tell() == 0:
+                if not create:
+                    stream.close()
+                    return False
+                stream.write(b"0")
+                stream.flush()
+            stream.seek(0)
+        except (OSError, ValueError):
+            stream.close()
+            raise
         try:
             if os.name == "nt":
                 import msvcrt

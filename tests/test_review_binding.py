@@ -54,6 +54,48 @@ class SavedReviewBindingTests(unittest.TestCase):
         result["system_query_executed"] = True
         self.assertRejected(result, event)
 
+    def test_admission_execution_claim_and_cache_distinguish_spawned_child(self):
+        # All inputs are in-memory observations. synthetic=False selects the
+        # production result semantics; it does not execute an OS query.
+        event = dict(listener(), synthetic=False)
+        for started in (False, True):
+            with self.subTest(started=started):
+                process = {"managed": True, "pid": 4242, "child_exited": False} if started else {}
+                class AdmissionFixture:
+                    def collect(self, source, cancel=None):
+                        return {"id": source, "status": "busy", "rows": [], "observed_at": STAMP,
+                            "coverage": {"status": "busy", "process": process, "errors": [{
+                                "stage": "policy", "reason_code": "query_admission_release_unconfirmed" if started
+                                    else "query_admission_previous_query_unconfirmed",
+                                "exception_type": "RunnerState", "status": "busy"}]}}
+                result = dict(review(event, DiagnosticAPI(AdmissionFixture()), refresh=True), namespace="live")
+                self.assertEqual(result["system_query_executed"], started)
+                self.assertFalse(result["fixture_queries_executed"])
+                self.assertEqual(result["observations"][0]["status"], "busy")
+                self.assertIs(validate_saved_review(result, event), result)
+                result["system_query_executed"] = not started
+                self.assertRejected(result, event)
+
+    def test_fallback_refusal_cannot_erase_an_earlier_attempt_execution(self):
+        event = dict(listener(), synthetic=False)
+        for legacy in (False, True):
+            with self.subTest(legacy=legacy):
+                attempts = [{"backend": "native", "status": "not_applicable"},
+                            {"backend": "powershell", "status": "busy", "process": {}}]
+                if not legacy:
+                    attempts[0]["process"] = {"managed": True, "pid": 4242, "child_exited": True}
+                class FallbackFixture:
+                    def collect(self, source, cancel=None):
+                        return {"id": source, "status": "busy", "rows": [], "observed_at": STAMP,
+                            "coverage": {"status": "busy", "process": {}, "attempts": attempts,
+                                "errors": [{"stage": "policy", "reason_code": "query_admission_busy",
+                                            "exception_type": "RunnerState", "status": "busy"}]}}
+                result = dict(review(event, DiagnosticAPI(FallbackFixture()), refresh=True), namespace="live")
+                self.assertTrue(result["system_query_executed"])
+                self.assertIs(validate_saved_review(result, event), result)
+                result["system_query_executed"] = False
+                self.assertRejected(result, event)
+
     def test_wrong_port_and_protocol_are_rejected_even_when_well_formed(self):
         event = listener()
         original = saved(event, {"listeners": [endpoint()]})

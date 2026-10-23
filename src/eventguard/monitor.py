@@ -1,6 +1,7 @@
 """Foreground headless scheduler. No service, model, external transport or daemon install."""
 from __future__ import annotations
 import copy
+from functools import partial
 import math
 import os
 from pathlib import Path
@@ -210,9 +211,18 @@ class Monitor:
                     return monitor.cancel.is_set() or lock.stop_requested() or (deadline is not None and monitor.clock() >= deadline)
             query_cancel = QueryCancel()
             state=store.load_detector_state()
+            query_admission = partial(self.runtime.query_launch, namespace=namespace, instance_id=lock.instance_id)
             if self.collectors is None and not fixture:
                 from .collectors.windows import WindowsCollectors
-                self.collectors=WindowsCollectors(timeout=config.get("query_timeout_seconds",15))
+                self.collectors=WindowsCollectors(timeout=config.get("query_timeout_seconds",15), query_admission=query_admission)
+            elif self.collectors is not None:
+                # Explicit library/fixture collectors stay injectable. An owned
+                # Runner (including its contract fixtures) uses this root's
+                # same write-ahead gate for every native/PowerShell query.
+                from .collectors.runner import Runner
+                runner = getattr(self.collectors, "runner", None)
+                if isinstance(runner, Runner):
+                    runner.admission = query_admission
             health["priority"]=self._own_low_priority()
             self.runtime.log("monitor_started",{"namespace":namespace,"instance_id":lock.instance_id})
             next_heartbeat=self.clock()
@@ -307,6 +317,7 @@ class Monitor:
                                 section={"id":key,"status":"busy","rows":[],"observed_at":utc_now(),"coverage":{"status":"busy","reason":"round_budget"}}
                                 self.not_before[key]=self.clock()+30
                             else:
+                                previous_attempt = self.last.get(key)
                                 self.last[key]=source_start
                                 self.not_before.pop(key,None)
                                 try:
@@ -317,6 +328,35 @@ class Monitor:
                                         raise ValueError("invalid_section_output")
                                 except Exception:
                                     section={"id":key,"status":"error","rows":[],"observed_at":utc_now(),"coverage":{"status":"error","reason":"collector_exception"}}
+                                coverage = section.get("coverage", {})
+                                errors = coverage.get("errors", []) if isinstance(coverage, dict) else []
+                                errors = errors if isinstance(errors, list) else []
+                                process = coverage.get("process", {}) if isinstance(coverage, dict) else {}
+                                attempts = coverage.get("attempts", []) if isinstance(coverage, dict) else []
+                                process_records = [process] + [attempt.get("process", {})
+                                    for attempt in (attempts[:2] if isinstance(attempts, list) else [])
+                                    if isinstance(attempt, dict)]
+                                spawned = any(isinstance(value, dict) and
+                                    (value.get("managed") is True or type(value.get("pid")) is int)
+                                    for value in process_records)
+                                unknown_attempt = isinstance(attempts, list) and len(attempts) > 1 and any(
+                                    not isinstance(attempt, dict) or not isinstance(attempt.get("process"), dict)
+                                    for attempt in attempts[:2])
+                                rejected = not spawned and not unknown_attempt and any(isinstance(error, dict) and type(error.get("reason_code")) is str
+                                    and error["reason_code"].startswith("query_admission_")
+                                    for error in errors)
+                                if rejected:
+                                    # Admission never launched a provider. Do
+                                    # not charge its hours-long source interval
+                                    # or replace a successful baseline with a
+                                    # claim that collection actually happened.
+                                    if previous_attempt is None:
+                                        self.last.pop(key, None)
+                                    else:
+                                        self.last[key] = previous_attempt
+                                    self.not_before[key] = self.clock() + 5
+                                    health.update(persistence_failure=True, healthy=False,
+                                                  last_error="query_admission_blocked")
                             if "elapsed_ms" not in section:
                                 section["elapsed_ms"] = max(0, int((self.clock()-source_start)*1000))
                             # A stop does not erase facts already returned by a source.

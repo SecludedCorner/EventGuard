@@ -279,14 +279,18 @@ class PowerShellBackend:
 
 
 class WindowsCollectors:
-    def __init__(self, runner=None, *, native=None, backend=None, evidence_sink=None, timeout=15):
+    def __init__(self, runner=None, *, native=None, backend=None, evidence_sink=None, timeout=15, query_admission=None):
         # An explicitly injected legacy runner remains a PowerShell fixture seam.
         self.backend = backend or ("powershell" if runner is not None else "auto")
         if self.backend not in ("auto", "native", "powershell"):
             raise ValueError("unsupported_backend")
         if type(timeout) not in (int, float) or not 0 < timeout <= 60:
             raise ValueError("invalid_collector_timeout")
-        self.runner = runner or Runner(evidence_sink=evidence_sink)
+        self.runner = runner or Runner(evidence_sink=evidence_sink, admission=query_admission)
+        if runner is not None and query_admission is not None:
+            if not isinstance(runner, Runner):
+                raise ValueError("query_admission_requires_owned_runner")
+            self.runner.admission = query_admission
         self.evidence_sink = evidence_sink
         self.powershell = PowerShellBackend(self.runner, timeout)
         if native is None:
@@ -342,7 +346,8 @@ class WindowsCollectors:
                     errors = ([row_error] + errors + [row_error] * (min(invalid_rows, MAX_ERRORS) - 1))[:MAX_ERRORS]
                     error_count += invalid_rows
                 attempt = {"backend": name, "status": data["status"], "errors": errors,
-                           "elapsed_ms": int((time.monotonic() - before) * 1000)}
+                           "elapsed_ms": int((time.monotonic() - before) * 1000),
+                           "process": process_metadata(data.get("process"))}
                 if invalid_rows:
                     attempt.update(status="error", source_status=data["status"], invalid_row_count=invalid_rows,
                                    error_count=error_count, errors_truncated=errors_truncated)
@@ -474,6 +479,7 @@ def coverage_metadata(section):
         result["reason"] = reason
     attempts = source.get("attempts", [])
     result["attempts"] = [{"backend": a["backend"], "status": a["status"], "errors": clean_errors(a.get("errors")),
+                           **({"process": process_metadata(a["process"])} if isinstance(a.get("process"), dict) else {}),
                            **({"source_status": a["source_status"]} if a.get("source_status") in STATUSES else {}),
                            **{key: a[key] for key in ("invalid_row_count", "error_count")
                               if type(a.get(key)) is int and 0 <= a[key] <= 2**31-1},

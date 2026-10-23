@@ -156,7 +156,7 @@ def execute(args,runtime,progress=None):
         if not isinstance(values,dict):
             raise ValueError("query_args_must_be_object")
         from .diagnostics.api import DiagnosticAPI
-        return DiagnosticAPI().query(args.operation,values)
+        return DiagnosticAPI(query_admission=runtime.query_launch).query(args.operation,values)
     if args.command=="events":
         if args.event_command=="receive":
             return operator.call("receive_event",args.event_id,args.namespace)

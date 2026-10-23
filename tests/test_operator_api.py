@@ -125,6 +125,31 @@ class OperatorTests(unittest.TestCase):
         report = json.loads(Path(files["json"]).read_text(encoding="utf-8"))
         self.assertEqual(report["reviews"][0]["latest_diagnosis"], saved)
 
+    def test_production_diagnosis_refuses_active_job_and_saves_no_execution_claim(self):
+        event=make_synthetic("listener")
+        event["synthetic"]=False
+        EventStore(self.root/"data/live").enqueue(event)
+        gate=self.root/"data/monitor-shutdown-gate.json"
+        atomic_json(gate,{"kind":"eventguard-monitor-shutdown-gate-v1",
+            "process":{"managed":True,"job_name":"Global\\EventGuard-"+"d"*32,
+                       "child_exited":False,"remaining_owned_processes":1}})
+        before=gate.read_bytes()
+        with patch("eventguard.processes.current_job_active",return_value=1), \
+             patch("eventguard.collectors.runner.spawn",side_effect=AssertionError("diagnosis must refuse before spawn")) as spawn:
+            result=self.api.diagnose_event(event["event_id"],"live")
+        self.assertTrue(result["saved"])
+        self.assertFalse(result["system_query_executed"])
+        self.assertFalse(result["fixture_queries_executed"])
+        self.assertTrue(result["observations"])
+        self.assertTrue(all(row["status"]=="busy" and row["rows"]==[] for row in result["observations"]))
+        self.assertEqual(gate.read_bytes(),before)
+        spawn.assert_not_called()
+        saved=self.api.inspect_event(event["event_id"],"live")["latest_diagnosis"]
+        self.assertIsNotNone(saved)
+        self.assertFalse(saved["system_query_executed"])
+        stats=EventStore(self.root/"data/live").stats()
+        self.assertEqual((stats["pending"],stats["receipt_count"]),(1,0))
+
     def test_process_binding_cannot_be_backfilled_and_pid_reuse_is_unknown(self):
         event = make_synthetic()
         event["evidence"].update(pid=42, process_instance_ref="proc-" + "a" * 24)

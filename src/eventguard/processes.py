@@ -607,6 +607,35 @@ def cleanup_owned(reason="test_teardown", grace=.2):
     return [finish(child, reason, grace) for child in children]
 
 
+def reap_exited_owned_job(name):
+    """Close only this process's original, already-empty owned Job handles.
+
+    A different client never adopts the old Runner or opens a PID. If our
+    original process handle has not signalled, keep the admission barrier.
+    """
+    _private_job_name(name)
+    with _LOCK:
+        children = [child for child in _OWNED if child.job.name == name]
+    reaped = 0
+    for child in children:
+        with child.cleanup_lock:
+            active = child.job.active()
+            if child.detached or type(active) is not int or active != 0:
+                return {"confirmed": False, "owned_handles_reaped": reaped}
+            if child.poll() is None:
+                try:
+                    child.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    return {"confirmed": False, "owned_handles_reaped": reaped}
+            receipt = finish(child, "descendants_remaining", grace=0, request_stop=False)
+            if (receipt.get("child_exited") is not True
+                    or type(receipt.get("remaining_owned_processes")) is not int
+                    or receipt["remaining_owned_processes"] != 0):
+                return {"confirmed": False, "owned_handles_reaped": reaped}
+            reaped += 1
+    return {"confirmed": True, "owned_handles_reaped": reaped}
+
+
 def remaining_owned():
     with _LOCK:
         return sum(child.job.active() for child in _OWNED if child.job.handle)

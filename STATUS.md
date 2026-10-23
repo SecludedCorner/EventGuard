@@ -1,6 +1,6 @@
 # EventGuard 現況
 
-更新：2026-10-23；分支 `feat/local-codex-acceptance`，本批基底 `ecdb479716dd7736839db7681112529e2cdf1fc7`。本批補隔離實機生命週期證據，並修復 supervisor 暫時寫入失敗後不重試的缺口；精確命令、時間、測試數、退出回條與提交對照統一見 [EVIDENCE](docs/EVIDENCE.md)。
+更新：2026-10-23；分支 `feat/local-codex-acceptance`，本批基底 `5a4c7a766503be6a99ca1c997456696c3e55bd5b`。本批補查詢啟動前的耐久Job計畫與跨client仲裁；精確命令、時間、測試數、退出回條與提交對照統一見 [EVIDENCE](docs/EVIDENCE.md)。
 
 目前重點是本機唯讀採集、耐久保存，以及人類／agent 共用查證介面。正常監看由程式執行，不呼叫模型；proxy、排程及同一聊天閒置喚醒都不是使用前提。本輪沒有建立排程、服務或自啟，沒有啟動另一個 Codex／模型。
 
@@ -16,7 +16,8 @@
 | 採集與退出 | 隔離root七來源worker、application host與SDK server皆已核實退出，未強停、殘留零；事件保持pending、未ACK | 原probe的unknown判斷及SQL計數helper失敗保留；另只讀證據核實實際嘗試／保存／退出，不把probe exit1改成成功 |
 | 容量 | ACKed／完成帳本有保留與輪替；未完成接收器收尾的原ACK proof受保護，completed耐久後才解除；status顯示未收尾數 | pin仍有上限，滿載回滾新ACK保留pending；升級前已遺失的原proof不能還原，詳見儲存政策 |
 | agent 開關 | GUI 預設關閉，勾選只開放已連接工具；最近正式接收沿用已批准接線 | 不啟動模型；連線或勾選不是自動喚醒證據 |
-| 長期背景 | GUI／新版MCP應用持有supervisor；run／heartbeat暫時寫失敗先合作取消當次採集，沿原backoff等待，可寫後才重試，不取消enabled意圖或叫模型 | 同host恢復以fixture驗證；gate完全無法落盤且singleton已釋放時，其他獨立client的admission仍待補。主聊天仍舊／正式explicit_stop；非24小時或重開機證據 |
+| 長期背景 | GUI／新版MCP應用持有supervisor；run／heartbeat暫時寫失敗先合作取消當次採集，沿原backoff等待，可寫後才重試，不取消enabled意圖或叫模型 | 主聊天仍舊／正式explicit_stop；非24小時或重開機證據 |
+| 查詢仲裁 | 新版預設Monitor／CLI query／事件diagnose先保存確切Job計畫再spawn；lease跨計畫到spawn，保存失敗零啟動，舊Job未知或恢復證據不可寫則保留閘道 | rootless library須明確傳hook；舊client未熱更新；測試與真Windows合成程序分列EVIDENCE，不代表真磁碟故障或新來源盤點 |
 | 狀態輸出 | overview合併完全相同的安全錯誤樣本，保留總數、截斷、不同錯誤碼與unknown；原status／observation不變 | sample_occurrences只計有界樣本；離線大小量測不等於模型token或實機效能 |
 | 可選自動交付 | 有 continuous dispatcher、耐久每日預算、空佇列等待、失敗保留與合作停止 | 本輪未啟用真 CLI；同一聊天閒置事件觸發未接通，不能以另一 CLI 或模型輪詢冒充 |
 | 驗證 | 新缺陷先保留主聊天實際失敗，再修復；本批驗證範圍及當版source manifest只看EVIDENCE | 前批完整回歸不代替本批新碼；fixture、SDK、fake CLI與實機分開，非24小時或新版主聊天Start成功證據 |

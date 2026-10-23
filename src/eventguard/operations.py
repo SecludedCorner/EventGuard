@@ -397,6 +397,14 @@ class OperatorAPI:
                 "remediation": [], "gui": True, "model_calls": 0, "real_agent_ingress": "not_configured",
                 "operator_operations": ["capabilities", "status", "overview", "activity", "observation", "stop", "events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event", "report", "monitor", "background_start", "background_status", "background_stop"],
                 "agent_required": False, "data_trust": "untrusted_data",
+                "query_admission": "durable_job_intent_v1",
+                "query_admission_scope": {"scope": "installation_root",
+                    "project_entrypoints": ["monitor", "query", "diagnose_event"],
+                    "production_default_collectors": True,
+                    "library_explicit_hook_required": True,
+                    "pre_spawn_guard_failure_starts_query": False,
+                    "post_spawn_release_failure_retains_child": True,
+                    "old_clients_require_reload": True},
                 "background": {"entry": "scripts/eventguard.py background", "model_required": False,
                     "daily_monitor_limit": None, "duration_limit": None,
                     "start_lifetime_owner": self._background_lifetime_owner,
@@ -727,7 +735,9 @@ class OperatorAPI:
         if diagnostic_api is None and event["synthetic"] is False:
             from .diagnostics.api import DiagnosticAPI
             from .collectors.windows import WindowsCollectors
-            diagnostic_api = DiagnosticAPI(WindowsCollectors(timeout=self.runtime.config().get("query_timeout_seconds", 15)))
+            diagnostic_api = DiagnosticAPI(WindowsCollectors(
+                timeout=self.runtime.config().get("query_timeout_seconds", 15),
+                query_admission=self.runtime.query_launch))
         result = review(event, diagnostic_api, refresh=True)
         # Native synthetic queries are denied, rather than persisted as if a
         # diagnosis happened. Fixture-injected tests are labelled in review().

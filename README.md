@@ -86,7 +86,7 @@ GUI 的開始不需要建立排程；監看由應用持有，應用縮小後繼�
 
 - 六來源原生API優先；Defender自動模式讀既有Get-MpComputerStatus的七項有效狀態。可讀範圍與拒讀原因見[採集契約](docs/COLLECTOR_CONTRACT.md)；partial／unknown不代表安全，不因缺資料提權。持久化事件保存有界目標事實供後續分析，身分缺失不誤判listener恢復。
 - 子程序從建立時加入私有 Job；停止先寬限，逾時只清理本工具程序樹。啟動保存 `monitor_gap`，未確認退出不報 stopped；見 [生命週期](docs/PROCESS_LIFECYCLE.md)。
-- 每來源即時保存有界觀察；過期、截斷與拒讀均顯示。退出未確認會耐久阻擋新 worker，僅能以該私有 Job 已空／銷毀的證據恢復；不靠刪鎖或重開目錄繞過。
+- 每來源即時保存有界觀察；過期、截斷與拒讀均顯示。新版專案入口先保存確切Job計畫再啟動worker，保存失敗就拒絕啟動；退出未確認只以該Job已空／銷毀及耐久回條恢復。舊client需正常重載；rootless library須明確傳hook，見[採集契約](docs/COLLECTOR_CONTRACT.md)。
 - ACKed 資料與完成帳本有保留、輪替及有限上限；pending／retry／未 ACK failed 保留。去重有時間與容量窗；見 [儲存政策](docs/STORAGE_RETENTION.md)。
 - 背景 supervisor 對異常／保存背壓以程式等待後重試；事件先落 SQLite。沒有事件不叫模型，有事件也由人類或已連接的可選接收者接手。
 - [24 小時 soak](docs/SOAK_PLAN.md) 尚未執行，真實狀態注入／登出重開機仍未驗證。排程實際安裝狀態見 STATUS，沒有服務、登入前監看或全天候承諾。

@@ -76,6 +76,16 @@ Runner 不只查看等待執行緒是否完成；若 managed 回條尚未證明 
 
 到期來源按最後一次實際嘗試開始時間排序，未嘗試優先、同時刻保留原順序；來源間隔也從各自實際開始計算。因 round_budget 跳過只設30秒 defer，不更新 last 或宣稱採集，避免慢來源持續搶占而讓其他來源永久 busy。45秒是啟動下一來源的預算，已啟動查詢仍遵守自己的逾時與停止契約。虛擬時鐘回歸不代表真 provider 持續故障或24小時實測。
 
-supervisor的run／heartbeat暫時寫失敗會合作取消當次Monitor，沿原backoff等待，可寫後才准許新採集，保留enabled意圖。如果Monitor收尾未確認query退出且shutdown gate也因儲存故障寫失敗，supervisor仍保留原Monitor／Runner及首次捕獲的Job證據；「marker不存在」不能清除此記憶體閘道。先恢復同一既有marker，經Runtime核實同Job empty／missing，再由原Runner.shutdown釋放其自身handle且回條確認exit/remaining0，才放行新Monitor。拒讀、錯Job或不完整回條都繼續等待，Stop／generation變更先於此檢查，不以未知當成安全退出。這是同host防線；若gate完全無法落盤且舊Monitor已釋放singleton，其他獨立client仍可能看見無marker，跨client admission尚未補齊。跨host仍依耐久gate與外層Job證據，不宣稱同使用者防篡改。
+supervisor的run／heartbeat暫時寫失敗會合作取消當次Monitor，沿原backoff等待，可寫後才准許新採集，保留enabled意圖。如果Monitor收尾未確認query退出且shutdown gate也因儲存故障寫失敗，supervisor仍保留原Monitor／Runner及首次捕獲的Job證據；「marker不存在」不能清除此記憶體閘道。先恢復同一既有marker，經Runtime核實同Job empty／missing，再由原Runner.shutdown釋放其自身handle且回條確認exit/remaining0，才放行新Monitor。拒讀、錯Job或不完整回條都繼續等待，Stop／generation變更先於此檢查，不以未知當成安全退出。
+
+### 查詢啟動前保存與跨 client 仲裁
+
+新版的專案入口使用`Runtime.query_launch`：在同安裝根目錄的固定`data/query-admission.lock`取得短期OS lease，先核實舊Job，再將新查詢的確切`Global\\EventGuard-<uuid>`及`phase=launch_intent`原子保存、fsync到既有`monitor-shutdown-gate.json`，最後才建立私有Job子程序。lease涵蓋保存到spawn返回；另一client不能把「尚未spawn所以Job不存在」誤認成退出並清除計畫。native與PowerShell共用同一Runner hook，沒有新增查詢佇列或控制器。
+
+建立／取得lease、保存計畫或舊Job核實失敗，就回busy及policy／`query_admission_*`固定原因碼，不啟動查詢、不偽裝provider拒讀。spawn後才發生lease釋放錯誤則保留原child、managed／PID及收尾責任，不宣稱零執行。所有gate寫入、核實與清除使用同一lease；恢復須先確認確切Job空／已銷毀，再耐久保存recovered回條，最後才移除gate。owner退出只會釋放lease，不是Job已退出的證據。
+
+同process若還持有該Job的原child handle，只在原Job已空、原process已退出時收尾並釋放；另一process不收養handle、不依PID停止或查找其他程序。已完成回條供原Runner讀取，避免它永遠pending。固定gate／recovered／lease檔不隨查詢次數增加，不是抗同使用者竄改的邊界。
+
+保護範圍是**新版專案入口**的預設Monitor、CLI query與OperatorAPI事件診斷（GUI／新載入MCP共用）。單獨使用`WindowsCollectors`／`Runner`的library呼叫必須明確傳入root-bound hook；任意注入collector／fake library不被默認升格為全域保護。舊server不會熱更新。Monitor對零啟動的admission拒絕不扣來源的長間隔，保留baseline，走既有保存背壓及短期defer；事件診斷仍保存busy／unknown，但`system_query_executed=false`。實際已spawn的失敗不套用此零執行判定；各backend attempt保留安全process回條，不能讓fallback的零啟動覆蓋先前native已執行。舊多attempt缺process證據時亦不宣稱零啟動。
 
 精確測試數、時間、命令、失敗修正與證據目錄統一見 [EVIDENCE](EVIDENCE.md)；本文件不是新授權或全天候承諾。

@@ -1,6 +1,7 @@
 """One query at a time; Windows-owned jobs get an EOF grace then bounded cleanup."""
 from __future__ import annotations
 
+from contextlib import nullcontext
 import os
 from pathlib import Path
 import subprocess
@@ -12,18 +13,22 @@ from .contract import evidence, error_from_exception
 from .progress import Progress
 from .bounded_json import BoundedJSONError, loads, MAX_JSON_BYTES
 from ..processes import spawn, finish, JobPopen, ORIGINAL_POPEN
+from ..runtime import QueryAdmissionError
 
 MAX_OUTPUT_BYTES = MAX_JSON_BYTES
 
 
 class Runner:
-    def __init__(self, popen_factory=None, executable=None, evidence_sink=None):
+    def __init__(self, popen_factory=None, executable=None, evidence_sink=None, admission=None):
+        if admission is not None and not callable(admission):
+            raise ValueError("invalid_query_admission")
         self._popen = popen_factory or subprocess.Popen
         self.executable = str(executable or (Path(os.environ.get("SystemRoot", r"C:\Windows")) /
                               "System32/WindowsPowerShell/v1.0/powershell.exe"))
         self._lock = threading.Lock()
         self._active = None
         self.evidence_sink = evidence_sink
+        self.admission = admission
 
     @property
     def pending(self):
@@ -35,7 +40,7 @@ class Runner:
         if not job["done"].is_set():
             return True
         if isinstance(job.get("child"), JobPopen):
-            receipt = job.get("process", {})
+            receipt = getattr(job["child"], "receipt", None) or job.get("process", {})
             return (receipt.get("child_exited") is not True
                     or type(receipt.get("remaining_owned_processes")) is not int
                     or receipt["remaining_owned_processes"] != 0)
@@ -51,6 +56,7 @@ class Runner:
         value = dict(job.get("process", {}))
         child = job.get("child")
         if isinstance(child, JobPopen):
+            value.update(getattr(child, "receipt", None) or {})
             value.update(managed=True, pid=child.pid, created_at=child.created_at, job_name=child.job.name)
         if job.get("oversize"):
             value.update(output_limit_exceeded=True, output_limit_bytes=MAX_OUTPUT_BYTES,
@@ -107,7 +113,7 @@ class Runner:
             observer.emit("completed")
             elapsed = int((time.monotonic() - started) * 1000)
             problem = error_from_exception(error, "launch", "PowerShellLaunch", note) if error else evidence(
-                "policy" if status in ("busy", "cancelled", "timeout") else "provider", note,
+                "policy" if status in ("busy", "cancelled", "timeout") or note.startswith("query_admission_") else "provider", note,
                 exception_type="RunnerState", operation="PowerShellQuery", status=status)
             if self.evidence_sink is not None:
                 self.evidence_sink({"kind": "native_worker_process" if _argv else "powershell_process", "argv": argv,
@@ -130,6 +136,9 @@ class Runner:
             return result("error", "invalid_deadline")
         if cancel is not None and cancel.is_set():
             return result("cancelled", "cancelled_before_query")
+        managed = os.name == "nt" and self._popen is ORIGINAL_POPEN
+        if self.admission is not None and not managed:
+            return result("busy", "query_admission_managed_job_required")
         # Never invoke an observer while holding the runner state lock: an
         # observer may query pending/last_process when publishing its snapshot.
         observer.emit("launch")
@@ -142,22 +151,28 @@ class Runner:
                 try:
                     prefix = "[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false); $ProgressPreference='SilentlyContinue'; "
                     argv = _argv or [self.executable, "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", prefix + script]
-                    child = spawn(argv, popen_factory=self._popen,
-                                        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), shell=False,
-                                        **({"job_name": "Global\\EventGuard-" + uuid.uuid4().hex}
-                                           if os.name == "nt" and self._popen is ORIGINAL_POPEN else {}))
+                    job_name = "Global\\EventGuard-" + uuid.uuid4().hex if managed else None
+                    admission = self.admission(job_name) if self.admission is not None else nullcontext()
+                    with admission:
+                        child = spawn(argv, popen_factory=self._popen,
+                                            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), shell=False,
+                                            **({"job_name": job_name} if managed else {}))
+                        job = {"child": child, "done": threading.Event(), "output_lock": threading.Lock(),
+                               "output_limit": threading.Event(), "output_total": 0}
+                        self._active = job
+                        threading.Thread(target=self._watch, args=(job,), daemon=True).start()
+                except QueryAdmissionError as error:
+                    allowed = {"query_admission_busy", "query_admission_storage_unavailable", "query_admission_release_unconfirmed",
+                               "query_admission_previous_query_unconfirmed", "query_admission_invalid_scope"}
+                    note = error.args[0] if error.args and type(error.args[0]) is str and error.args[0] in allowed else "query_admission_storage_unavailable"
+                    launch_problem = ("busy", note, None)
                 except PermissionError as error:
                     launch_problem = ("denied", "query_launch_access_denied", error)
                 except FileNotFoundError as error:
                     launch_problem = ("not_applicable", "builtin_powershell_unavailable", error)
                 except OSError as error:
                     launch_problem = ("error", "query_launch_failed", error)
-                if launch_problem is None:
-                    job = {"child": child, "done": threading.Event(), "output_lock": threading.Lock(),
-                           "output_limit": threading.Event(), "output_total": 0}
-                    self._active = job
-                    threading.Thread(target=self._watch, args=(job,), daemon=True).start()
         if busy:
             return result("busy", busy)
         if launch_problem is not None:

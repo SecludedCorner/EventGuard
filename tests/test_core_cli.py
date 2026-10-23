@@ -43,11 +43,42 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(code,0)
         self.assertEqual(value["model_calls"],0)
         self.assertTrue(value["gui"])
+        self.assertEqual(value["query_admission"],"durable_job_intent_v1")
+        self.assertTrue(value["query_admission_scope"]["library_explicit_hook_required"])
+        self.assertFalse(value["query_admission_scope"]["pre_spawn_guard_failure_starts_query"])
+        self.assertTrue(value["query_admission_scope"]["post_spawn_release_failure_retains_child"])
         self.assertFalse((self.root/"data").exists())
         code,value=self.command("status")
         self.assertEqual(code,0)
         self.assertEqual(value["agent_ingress"],"not_configured")
         self.assertFalse((self.root/"data").exists())
+
+    def test_raw_query_refuses_another_clients_unconfirmed_job_without_spawn(self):
+        runtime=Runtime(self.root)
+        runtime.ensure()
+        gate=runtime.path("data/monitor-shutdown-gate.json")
+        atomic_json(gate,{"kind":"eventguard-monitor-shutdown-gate-v1",
+            "process":{"managed":True,"job_name":"Global\\EventGuard-"+"d"*32,
+                       "child_exited":False,"remaining_owned_processes":1}})
+        before=gate.read_bytes()
+        with patch("eventguard.processes.current_job_active",return_value=1), \
+             patch("eventguard.collectors.runner.spawn",side_effect=AssertionError("guard must refuse before spawn")) as spawn:
+            code,value=self.command("query","query_version")
+        self.assertEqual(code,3)
+        self.assertEqual(value["status"],"busy")
+        self.assertEqual(value["rows"],[])
+        self.assertTrue(any(e["stage"]=="policy" and e["reason_code"].startswith("query_admission_")
+                            for e in value["coverage"]["errors"]))
+        self.assertEqual(gate.read_bytes(),before)
+        spawn.assert_not_called()
+
+    def test_invalid_query_does_not_create_a_guard_or_start_a_worker(self):
+        with patch("eventguard.collectors.runner.spawn",side_effect=AssertionError("invalid input cannot launch")) as spawn:
+            code,value=self.command("query","query_version","--args",'{"product_id":"not_allowed"}')
+        self.assertEqual(code,2)
+        self.assertEqual(value["error_code"],"product_not_allowlisted")
+        self.assertFalse((self.root/"data").exists())
+        spawn.assert_not_called()
 
     def test_normal_fixture_zero_events_no_live_data(self):
         monitor=Monitor(self.root)

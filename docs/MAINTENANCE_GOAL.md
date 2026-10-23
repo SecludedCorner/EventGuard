@@ -1,6 +1,6 @@
 # EventGuard 維護目標
 
-更新：2026-10-23；目標建立基底`bf99496cf3d73601fc2d8a1bf50c1c2fe8709b66`，本批基底`ecdb479`。依使用者「建立目標，繼續完成」已建立持續目標，狀態active、未設token預算。方向是**本機資安情報中心**：人類與agent經EventGuard取得觀察、理解事件、執行允許的操作，並在產品內看到正在做什麼及結果。沿用feature與資料，不reset/clean；既有研究與附件保留。
+更新：2026-10-23；目標建立基底`bf99496cf3d73601fc2d8a1bf50c1c2fe8709b66`，本批基底`5a4c7a7`。依使用者「建立目標，繼續完成」已建立持續目標，未設token預算；即時狀態以目標工具為準。方向是**本機資安情報中心**：人類與agent經EventGuard取得觀察、理解事件、執行允許的操作，並在產品內看到正在做什麼及結果。沿用feature與資料，不reset/clean；既有研究與附件保留。
 
 ## 本輪完成與驗證
 
@@ -14,6 +14,8 @@
 
 續行補一次ecdb479新server／隔離live root的真七來源嘗試、保存及EOF退出；Defender denied、tasks unknown不改寫可讀或安全，正式Pause未變。helper exit1保留，另只讀核實狹義證據，沒有重掃。另修run/heartbeat暫時寫失敗後host退出但enabled仍true、需手動Start的具體缺陷：保留supervisor、取消當次採集、metadata可寫後才依既有backoff重試；相關fixture及當版回歸見EVIDENCE。不把有限實機／fixture升格長期、OS登入或本聊天新版Start完成。
 
+本批先以兩個獨立Monitor重現gate寫失敗後另一client仍採集的反例，再在現有Runner／Runtime加入啟動前耐久Job計畫。共同短期lease涵蓋計畫到spawn及恢復，舊Job未知／保存失敗不開始；預設Monitor、CLI query、事件diagnose共用，沒有新控制器、查詢佇列或權限。零啟動拒絕不扣來源長間隔、不宣稱system query已執行；library hook與舊client邊界明示。具體失敗、測試及來源綁定見EVIDENCE。
+
 - 沿用七來源、耐久事件、事件綁定查證與報告；不新增另一套控制器或事件佇列。
 - 正式MCP已在本主聊天載入15工具，實際呼叫capabilities／status／activity；前批只驗capabilities／status／activity；本輪另接收與ACK一件本輪新生真事件，未接管其餘backlog。GUI操作紀錄與工具共用同表，實際工具可讀到本輪操作；既有視窗是否已載入新版頁籤仍不推定。
 - 隔離合成入口由本主聊天實際list→receive→inspect→補收→ACK→重播ACK；核對SQLite只新增一張回條，保留ACK前pending證據。
@@ -26,7 +28,7 @@
 
 正常監看由程式等待，不因模型額度停止。人類能獨立操作；agent只使用相同的型別化能力，不能給自己開權限。操作紀錄不收集聊天思考、任意shell／檔案操作或私人原文；它也不是抗同使用者竄改的安全稽核帳本。
 
-1. 保持正式工具可用、跨client補收／冪等ACK與人類操作相容；本輪測試及提交綁定見EVIDENCE。另補query退出未知且gate不可寫／singleton已釋放時的跨client admission：本批只保同supervisor記憶體fence，不能以此宣稱所有client均阻擋；下一批先重現跨client反例再修，不加新採集面或權限。
+1. 保持正式工具可用、跨client補收／冪等ACK與人類操作相容；本輪測試及提交綁定見EVIDENCE。新碼跨client query admission已接到預設專案入口，但本主聊天capability仍舊；需client正常重新載入EventGuard，再核對`start_lifetime_owner=application`及`query_admission=durable_job_intent_v1`，才驗一次有限Start/Status/Stop。此聊天無reload工具，不強停、改其他MCP或重試proxy來替代。
 2. **閒置時自動喚醒同一聊天仍未接通**。需能由事件觸發目前client的指定聊天入口，並有明確模型授權，才做「先閒置→程式入列→本聊天工具接收」驗收；不得以另一個CLI或定時模型輪詢代替。MCP註冊與本輪活動回合接收不能達成此門檻。
 3. 長期監看與重開機恢復：現有GUI／supervisor及耐久暫停保留；登入排程仍未批准，程式變更後舊審查digest失效。建立前須產生當版dry-run計畫；實際登入／OS重啟與24小時soak另外核實。
 4. 外部漏洞情報匯入、跨主機整合及Phase7真狀態注入尚未驗證，不藉本輪擴增功能面。

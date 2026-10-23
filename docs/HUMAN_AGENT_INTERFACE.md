@@ -104,7 +104,9 @@ operator MCP的`start_monitor`選用既有application-owned核心，與CLI預設
 
 長期前景監看仍用 CLI；MCP `monitor_once` 一次一輪，避免讓模型靠永久工具等待維持監看。Phase 3 已將 native 呼叫移入私有 Job worker；到期／取消先留寬限，再只清理本工具 Job，保存實際退出或未確認狀態。清理本身另有有限等待，30 秒不是硬即時總上限，詳見 [生命週期](PROCESS_LIFECYCLE.md)。目前主聊天已實際使用正式工具，未驗證全天候、閒置自動喚醒或任意既有聊天接續。
 
-未知退出會保存跨重啟閘道；Runner 也不會覆蓋同輪上一個未知子樹。再次啟動先僅 QUERY 記錄的私有 named Job，確認為空／已銷毀才恢復，拒讀與缺失身分保持 blocked。已接收而無成功 agent trace 的事件可在全部子樹確認退出後以 `received_without_agent_proof` 歸檔，passed 仍 false；完整 evidence 位置與 attempts 留存，不清預算。如果 receiver 證據已先輪替而無法重證則保持背壓，不能猜成功。
+新版專案Monitor、CLI query與事件diagnose在查詢spawn前先保存確切私有Job計畫，短期lease涵蓋計畫到spawn，避免另一client在尚未建立Job時清除它。保存失敗就不啟動查詢；舊Job未確認則busy，恢復證據未保存也不清gate。capabilities的`query_admission=durable_job_intent_v1`與scope可核對載入版本，rootless library須明確傳hook；舊server不熱更新。診斷若全部在policy閘道被拒且零spawn，`system_query_executed=false`，busy／unknown仍可保存供人類查看；不是查證完成或安全結論。細節見[生命週期](PROCESS_LIFECYCLE.md)。
+
+Runner也不會覆蓋同輪上一個未知子樹。再次啟動先僅QUERY記錄的私有named Job，確認為空／已銷毀才恢復，拒讀與缺失身分保持blocked。已接收而無成功agent trace的事件可在全部子樹確認退出後以`received_without_agent_proof`歸檔，passed仍false；完整evidence位置與attempts留存，不清預算。如果receiver證據已先輪替而無法重證則保持背壓，不能猜成功。
 
 ## 查證與信任邊界
 

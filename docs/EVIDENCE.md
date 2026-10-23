@@ -2,6 +2,26 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：查詢啟動前耐久保存、跨 client 仲裁與實際執行回條
+
+本批基底`5a4c7a766503be6a99ca1c997456696c3e55bd5b`，同一feature，保留research及附件。正式控制仍disabled/explicit_stop、原bytes/hash未變；無新主機盤點、事件接收／ACK、真模型、Codex CLI、proxy探測、排程或安全設定變更。正式主聊天本批一次真正capabilities仍缺application lifetime與新query admission標記，原回傳留`reports/query-admission-001/native-capabilities-before.json`；與前兩個目標回合是相同client reload阻塞，沒有重試Start。
+
+`py -3.13 -B reports/global-admission-001/reproduce_before.py`於10:57:26.944581 UTC保留原碼反例，before-result.json為defect_reproduced=true、safety_passed=false：兩個獨立真Monitor與OS InstanceLock，但來源／未知Runner是fixture。第一個query退出未確認、shutdown gate寫入PermissionError後marker不存在、singleton釋放，第二個Monitor仍採集七個fixture來源。child/provider/model皆0，source未變；不是實機磁碟故障。顯式任意collector注入仍是library seam，after不以在fixture手動補marker假稱所有入口已保護。
+
+修正在既有Runtime／Runner內加入root-bound query_launch hook，不另建控制器：固定query-admission.lock涵蓋舊Job核實、確切Global Job計畫atomic/fsync及spawn返回；保存失敗不spawn，未知Job保持閘道。所有gate write/recover/unlink同lease；先有exact Job空／missing證據與耐久recovered回條才clear，owner退出僅釋lease不等於子樹已退出。同process只能釋放自己原本持有且已退出的child／空Job handle，另一client不收養、不開PID、不動其他程序。預設Monitor→WindowsCollectors→Runner、CLI query與OperatorAPI diagnose均接此hook；獨立library須明確傳hook、舊MCP不熱更新。新capability明示scope、pre-spawn拒絕及post-spawn釋lease失敗保留child的差別。
+
+Monitor對確實零spawn的policy拒絕保留baseline、不扣長來源間隔，按既有保存背壓／短defer恢復。診斷保存busy／unknown但不虛稱已執行system query，cache驗證一致。審查另找到native已執行後fallback零spawn可能抹掉前一attempt的問題；每attempt現保留安全process投影，任何已spawn attempt都不能回退last或宣稱整來源零執行。舊多attempt缺process證據亦保守保留已嘗試語義，不補造成功或安全結論。
+
+| 根目錄命令 | 實際結果／UTC | 範圍與退出 |
+| --- | --- | --- |
+| `py -3.13 -B reports/global-admission-001/verify_admission.py` | 11:14:28.687846完成；319 run、317 pass、1 fail、1 symlink權限skip；85.491秒 | focused-001保留唯一新測試時序fail：原合成query exit0後立即assert Job.active0，當下仍1；source不變、無逐測試殘留，guardian自然exit1、未強停、remaining0。不能列整組通過 |
+| `py -3.13 -B reports/global-admission-001/verify_reap.py` | 11:15:53.703892完成；只重測該case，1/1通過；0.227秒 | focused-002；測試改為最多3秒自然等待同一Job清空，沒有finish／強停來湊條件；產品source未改 |
+| `py -3.13 -B reports/global-admission-001/verify_projection.py` | 11:20:08.832234完成；最後受影響差集49/49通過；4.893秒 | focused-003；完整review_binding／collector_contract／monitor_admission_barrier，另capability與production diagnosis兩個精確case，覆蓋per-attempt投影、cache、Monitor與新欄位 |
+
+後兩組均Python3.13.3、137個Python AST無誤、0failure/error/skip、source_unchanged=true、per_test_residuals=[]，guardian自然exit0、未強停、remaining0。初組其餘已通過項目保留，不重跑或把三組數量相加為完整suite；final-evidence-index.json核對323個不同test，最終322通過、1skip，列明各版本manifest差異及最終有效範圍。Windows case僅固定合成Python worker／私有Job及跨process lease，不是新Windows provider盤點、真磁碟故障、模型、主聊天新版Start、長期或OS重啟證據。其他case為fixture／SDK／fake CLI，與前批七來源實機與真工具投遞分開。
+
+原始before-output、unit-tests、lifecycle-evidence、source-manifest、guardian-exit與每組verification-summary均留`reports/global-admission-001`。只讀文件／source／正式Pause核對為`py -3.13 -B reports/global-admission-001/check_release.py`，結果見document-check.json；最後本地commit綁定source-commit.json。執行資料、真事件、憑證與私人歷史不提交、不推送。本主聊天需client正常結束舊EventGuard MCP連線並載入新碼後，核對兩項capability，才可驗一次有限Start/Status/Stop；此聊天無reload工具，不強停或追proxy旁支。24小時、登入／重啟及閒置同聊天事件觸發仍未通過，不宣告整體目標完成。
+
 ## 2026-10-23：隔離實機生命週期與 supervisor metadata 故障恢復
 
 本批基底`ecdb479716dd7736839db7681112529e2cdf1fc7`，同一feature；正式背景仍disabled/explicit_stop。本主聊天一次capabilities／status核對仍是舊server、沒有新lifetime標記，所以不再呼叫其Start；原生回傳留`reports/operator-live-001/native-*-before.json`。沒有連proxy、建立排程／服務、自啟、提權或真模型任務。

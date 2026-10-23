@@ -31,8 +31,10 @@ def valid_iso(value):
 
 
 class DiagnosticAPI:
-    def __init__(self, collectors=None):
-        self.collectors = collectors or WindowsCollectors()
+    def __init__(self, collectors=None, *, query_admission=None):
+        # Project entry points pass their Runtime guard explicitly. Standalone
+        # library callers and injected fixture collectors do not acquire a root.
+        self.collectors = collectors or WindowsCollectors(query_admission=query_admission)
 
     def capabilities(self):
         return {"schema_version": "1.0", "read_only": True, "external_transport": False,

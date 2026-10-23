@@ -14,8 +14,10 @@ section = collector.collect("listeners")          # 同步唯讀；不是啟動 
 fallback = WindowsCollectors(backend="powershell") # 明確比較／原生 API 不可用時的 fallback
 ```
 
+專案入口會傳入`WindowsCollectors(query_admission=runtime.query_launch)`，由共用Runner在spawn前保存確切私有Job計畫；取得lease／保存失敗或舊Job退出未確認，回busy、policy／`query_admission_*`且零啟動。這不是provider denied。Monitor綁定namespace／instance，CLI query及事件診斷綁定同安裝root。上面的rootless library例子不自帶全域仲裁；library整合需明確傳hook，顯式fixture注入也不能據此聲稱真Job保護。完整順序、spawn後錯誤與恢復證據見[生命週期](PROCESS_LIFECYCLE.md)。
+
 - auto對Defender使用既有本機Get-MpComputerStatus七欄，因原生登錄／WSC不提供規則所需的有效防護布林值；該provider拒讀就保留denied，不用登錄設定代替。這是單一來源的主路徑選擇，不是通用partial重試。
-- 其餘六來源先做一次native。僅當native是not_applicable、原因含api_unavailable、且沒有可用資料列時，才做一次同身分PowerShell fallback；兩次結果留在coverage.attempts。
+- 其餘六來源先做一次native。僅當native是not_applicable、原因含api_unavailable、且沒有可用資料列時，才做一次同身分PowerShell fallback；兩次結果及各自安全process回條留在coverage.attempts。fallback被閘道拒絕不能抹去前一個native已執行的事實；舊多attempt結果缺process證據時不推定整來源零啟動。
 - denied、partial、unknown、timeout、cancelled、busy、error 不自動重試或轉另一身分。原生有部分資料時，不用 fallback 的單一結果覆蓋已觀察事實。
 - 注入 `runner` 的舊測試預設走 powershell fixture；可明確指定 backend，避免單元測試意外採集主機。
 - 正常 monitor 使用 auto，transport 仍 disabled，不啟動模型。沒有新增命令列／MCP 診斷操作。

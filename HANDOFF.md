@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+本批基底5a4c7a7，收尾跨client查詢保存閘道。先保留原碼兩個獨立Monitor的反例：shutdown gate寫失敗、singleton釋放後，另一client仍採集；這是fixture控制流程，非Windows真故障。新Runtime.query_launch以固定query-admission.lock覆蓋「先atomic/fsync保存確切Global Job計畫→spawn返回」，所有恢復／寫gate／clear同鎖；舊Job未知或保存失敗零啟動。預設Monitor、CLI query、OperatorAPI diagnose共用hook；rootless library需明確傳hook，任意collector注入不是正式保護。零啟動policy拒絕不扣長間隔／不宣稱system_query_executed；同process僅回收已空原Job且原process已退出的自身handle。測試失敗、修正、統測及最終來源綁定見EVIDENCE與reports/global-admission-001，不把fixture升格真磁碟故障。
+
+本主聊天本批capability仍缺application lifetime／新query admission標記；這個同一reload阻塞已連續三個目標回合出現。先完成本批必要測試、文件、本地提交與完成稽核；若無其他必要安全工作，將目標標blocked並停止，不能以重複檢查或新增旁支維持運轉。外部條件是client正常結束舊EventGuard MCP連線並重新建立；本聊天無reload工具，不發明UI按鈕、不讀私人proxy/session、不強停server。載入新碼後才有限Start/Status/Stop，不重做已通過的七來源／真事件／合成通路。正式Pause及原backlog保留；本輪無模型、排程或新實機盤點。
+
 最新續行基底ecdb479：一次新版正式entry／隔離live root的真Windows七來源採集及正常EOF已完成；不是本聊天client。七來源均有新observed_at/saved_at、同Monitor instance／host PID+creation、backend attempt及evaluation committed；Defender denied、tasks unknown，其他來源有資料。host/server自然exit0、owned Jobs無殘留，事件仍pending無ACK，正式Pause bytes未變。probe因錯排unknown及錯SQL表名exit1原樣保留，不重掃；只讀verify_saved.py的real-collection-evidence-002.json另核實狹義實際嘗試／耐久保存／退出及隔離activity。證據在reports/operator-live-001，不提交真事件或原始回傳。
 
 本輪另已重現並修復run/heartbeat一次寫失敗讓host永久退出但enabled=true的缺陷：改保留supervisor與enabled，合作cancel當次Monitor，沿既有backoff等待；metadata可寫前不新採集，Stop／generation／未知query閘道不放寬。before與最終相關測試、source hashes及提交綁定見reports/supervisor-recovery-001及EVIDENCE。這項故障恢復是fixture證據，不能當成真磁碟故障或24小時實測；先前隔離實機code是ecdb479，不混成這次補修已重掃。本聊天本輪capabilities仍舊，未重試Start或proxy，正式背景保持暫停。

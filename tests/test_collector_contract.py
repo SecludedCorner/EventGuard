@@ -96,6 +96,40 @@ class SharedContractTests(unittest.TestCase):
         self.assertEqual([a["backend"] for a in result["coverage"]["attempts"]], ["native", "powershell"])
         self.assertEqual(result["coverage"]["attempts"][0]["errors"][0]["reason_code"], "api_unavailable")
 
+    def test_fallback_admission_rejection_retains_earlier_native_process_evidence(self):
+        missing = payload(errors=[evidence("launch", "api_unavailable", status="not_applicable")])
+        missing["process"] = {"managed": True, "pid": 4343, "created_at": "2026-10-23T00:00:00.000000+00:00",
+            "job_name": "Global\\EventGuard-" + "d" * 32, "child_exited": True,
+            "remaining_owned_processes": 0, "forcibly_terminated": False,
+            "raw_command": "PRIVATE UNTRUSTED PROCESS COMMAND"}
+        native = FixtureBackend(missing)
+        class AdmissionBlockedRunner(FixtureRunner):
+            def run(self, *args, **kwargs):
+                self.calls.append((args, kwargs))
+                return {"status": "busy", "process": {},
+                    "errors": [evidence("policy", "query_admission_busy", status="busy")]}
+        fallback = AdmissionBlockedRunner({})
+        section = WindowsCollectors(fallback, native=native, backend="auto").collect("versions")
+        self.assertEqual(section["status"], "busy")
+        self.assertEqual(section["coverage"]["process"], {})
+        self.assertEqual(native.calls, ["versions"])
+        self.assertEqual(len(fallback.calls), 1)
+        attempts = section["coverage"]["attempts"]
+        self.assertEqual([item["backend"] for item in attempts], ["native", "powershell"])
+        self.assertTrue(attempts[0]["process"]["managed"])
+        self.assertEqual(attempts[0]["process"]["pid"], 4343)
+        self.assertEqual(attempts[0]["process"]["job_name"], missing["process"]["job_name"])
+        self.assertEqual(attempts[1]["process"], {})
+        projected = coverage_metadata(section)
+        self.assertEqual(projected["attempts"][0]["process"], attempts[0]["process"])
+        self.assertEqual(projected["attempts"][1]["process"], {})
+        self.assertEqual(projected["attempts"][1]["errors"][0]["reason_code"], "query_admission_busy")
+        self.assertNotIn("PRIVATE", json.dumps(section))
+        self.assertNotIn("PRIVATE", json.dumps(projected))
+        self.evidence = {"scope": "fake native process metadata followed by fake fallback admission rejection; no OS child/provider",
+            "section": section, "projected_coverage": projected, "actual_os_children_started": 0,
+            "model_calls": 0, "machine_scan_executed": False}
+
     def test_denial_partial_timeout_cancel_do_not_trigger_fallback(self):
         for state in ("denied", "partial", "timeout", "cancelled", "busy", "error"):
             runner = FixtureRunner(payload())

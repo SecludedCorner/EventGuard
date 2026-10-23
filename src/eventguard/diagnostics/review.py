@@ -325,6 +325,22 @@ def _observation_matches(record, operation, arguments):
     return True
 
 
+def _query_admission_refused(record):
+    """A policy refusal is a query request, never an executed OS query."""
+    coverage = record.get("coverage", {})
+    processes = [coverage.get("process", {})]
+    attempts = coverage.get("attempts", [])
+    if len(attempts) > 1 and any(not isinstance(attempt.get("process"), dict) for attempt in attempts):
+        return False  # A legacy multi-attempt result cannot prove zero execution.
+    processes.extend(attempt.get("process", {}) for attempt in attempts)
+    return (record.get("status") == "busy" and not record.get("rows")
+            and all(process.get("pid") is None and process.get("managed") is not True for process in processes)
+            and any(error.get("stage") == "policy"
+                    and str(error.get("reason_code", "")).startswith("query_admission_")
+                    for error in coverage.get("errors", [])
+                    if isinstance(error, dict)))
+
+
 def review(event, api=None, *, refresh=False, now=None):
     clean = validate_event(event)
     queries, gaps = query_plan(clean)
@@ -369,7 +385,8 @@ def review(event, api=None, *, refresh=False, now=None):
         if status == "ok" and not record["rows"]:
             result["uncertainties"].append("not_observed_is_not_recovery")
         result["observations"].append(record)
-    result["system_query_executed"] = bool(queries) and not clean["synthetic"]
+    result["system_query_executed"] = (not clean["synthetic"]
+        and any(not _query_admission_refused(row) for row in result["observations"]))
     result["fixture_queries_executed"] = bool(queries) and clean["synthetic"]
     result["uncertainties"] = sorted(set(result["uncertainties"]))
     return dict(result, status="partial" if result["uncertainties"] else "observed")
@@ -445,7 +462,8 @@ def validate_saved_review(value, event):
             raise ValueError("saved_review_invalid")
         else:
             observations.append(row)
-    if (value["system_query_executed"] != (bool(queries) and not event["synthetic"])
+    executed = not event["synthetic"] and any(not _query_admission_refused(row) for row in value["observations"])
+    if (value["system_query_executed"] != executed
             or value["fixture_queries_executed"] != (bool(queries) and event["synthetic"])):
         raise ValueError("saved_review_invalid")
     if unverified:

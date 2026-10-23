@@ -1,5 +1,6 @@
 """Owned runtime files, bounded health and cooperative single-instance control."""
 from __future__ import annotations
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
 import os
@@ -8,6 +9,10 @@ from pathlib import Path
 import tempfile
 import time
 import uuid
+
+
+class QueryAdmissionError(RuntimeError):
+    """Fixed local admission codes, never an OS exception or query payload."""
 
 
 def utc_now():
@@ -180,6 +185,54 @@ class Runtime:
         value["truncated"] = value.get("truncated") is True or value["exported"] < value["total"]
         return value
 
+    @contextmanager
+    def _query_gate_lease(self, *, create=True):
+        from .acceptance_control import FileLease
+        try:
+            if create:
+                self.path("data").mkdir(parents=True, exist_ok=True)
+            lease = FileLease(self.path("data/query-admission.lock"))
+            if not lease.acquire(create=create):
+                raise QueryAdmissionError("query_admission_busy")
+        except QueryAdmissionError:
+            raise
+        except (OSError, ValueError, RuntimeError):
+            raise QueryAdmissionError("query_admission_storage_unavailable") from None
+        try:
+            yield
+        finally:
+            try:
+                lease.release()
+            except (OSError, ValueError, RuntimeError):
+                raise QueryAdmissionError("query_admission_release_unconfirmed") from None
+
+    @contextmanager
+    def query_launch(self, job_name, *, namespace="live", instance_id=None):
+        """Write the exact Job before spawn; hold the shared lease through spawn.
+
+        A missing Job is not exit proof during this context. Every recoverer
+        takes the same lease, so another client cannot clear a planned launch.
+        The intent survives its owner and any later metadata-write failure.
+        """
+        if (type(job_name) is not str or re.fullmatch(r"Global\\EventGuard-[a-f0-9]{32}", job_name) is None
+                or type(namespace) is not str or namespace not in {"live", "test"} or instance_id is not None and
+                (type(instance_id) is not str or re.fullmatch(r"[a-f0-9]{32}", instance_id) is None)):
+            raise QueryAdmissionError("query_admission_invalid_scope")
+        with self._query_gate_lease():
+            gate = self._monitor_shutdown_gate_locked(recover=True)
+            if gate.get("state") != "clear":
+                raise QueryAdmissionError("query_admission_previous_query_unconfirmed")
+            value = {"kind": "eventguard-monitor-shutdown-gate-v1", "recorded_at": utc_now(),
+                "phase": "launch_intent", "instance_id": instance_id, "namespace": namespace,
+                "owner_pid": os.getpid(), "owner_created_at": None, "session_id": None,
+                "process": {"managed": True, "job_name": job_name, "child_exited": False,
+                            "forcibly_terminated": False}}
+            try:
+                atomic_json(self.path("data/monitor-shutdown-gate.json"), value)
+            except (OSError, ValueError, TypeError, RuntimeError):
+                raise QueryAdmissionError("query_admission_storage_unavailable") from None
+            yield
+
     def block_monitor_shutdown(self, document):
         """Keep the last private query job unresolved across owner/lock exit."""
         from .collectors.windows import process_metadata
@@ -194,10 +247,29 @@ class Runtime:
                  "owner_pid": document.get("pid"), "owner_created_at": document.get("process_created_at"),
                  "session_id": session_id,
                  "process": process}
-        atomic_json(self.path("data/monitor-shutdown-gate.json"), value)
+        with self._query_gate_lease():
+            path = self.path("data/monitor-shutdown-gate.json")
+            if path.exists():
+                existing = read_json(path)
+                previous_process = existing.get("process") if isinstance(existing, dict) else None
+                if not isinstance(previous_process, dict) or previous_process.get("job_name") != process.get("job_name"):
+                    previous = self._monitor_shutdown_gate_locked(recover=True)
+                    if previous.get("state") != "clear":
+                        return previous  # Never overwrite another client's live/unknown Job.
+            atomic_json(path, value)
         return {"state": "blocked", "reason": "previous_query_exit_unconfirmed", "process": process}
 
     def monitor_shutdown_gate(self, *, recover=False):
+        path = self.path("data/monitor-shutdown-gate.json")
+        if not recover and not path.exists():
+            return {"state": "clear", "reason": "no_unresolved_query"}
+        try:
+            with self._query_gate_lease(create=recover):
+                return self._monitor_shutdown_gate_locked(recover=recover)
+        except (OSError, ValueError, TypeError, AttributeError, RuntimeError):
+            return {"state": "blocked", "reason": "query_admission_busy_or_unavailable", "raw_error_omitted": True}
+
+    def _monitor_shutdown_gate_locked(self, *, recover=False):
         """Query only this marker's private job; never stop or enumerate processes.
 
         Lock ownership and a missing owner PID do not prove subtree exit. A
@@ -236,6 +308,13 @@ class Runtime:
             result = {"state": "confirmed_exited", "reason": "previous_private_job_empty_or_destroyed",
                       "remaining_owned_processes": 0, "process": process}
             if recover:
+                # Only this process may release its original child handles;
+                # a new client never adopts a PID/Runner from the marker.
+                from .processes import reap_exited_owned_job
+                reaped = reap_exited_owned_job(name)
+                if reaped.get("confirmed") is not True:
+                    raise ValueError("original_owned_handle_exit_unconfirmed")
+                result["owned_handles_reaped"] = reaped["owned_handles_reaped"]
                 # Preserve the recovery evidence before clearing the barrier.
                 atomic_json(self.path("data/monitor-shutdown-recovered.json"),
                             {"kind": "eventguard-monitor-shutdown-recovered-v1", "verified_at": utc_now(),
