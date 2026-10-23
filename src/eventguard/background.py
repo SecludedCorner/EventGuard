@@ -578,8 +578,11 @@ def serve(root, *, run_id=None, job_name=None, fixture=None, max_cycles=None):
         raise ValueError("background_host_identity_invalid")
     hidden = run_id is not None
     control, lease, application_owner = None, None, None
-    done, cancelled, control_fault, active_lock = threading.Event(), threading.Event(), threading.Event(), threading.RLock()
+    done, cancelled, control_fault, state_fault, active_lock = (
+        threading.Event(), threading.Event(), threading.Event(), threading.Event(), threading.RLock())
     active, thread, run, cancel_reason = [None], None, None, ["durable_stop_observed"]
+    state_write_failures = [0]
+    unresolved_query = None
     try:
         control = _control(runtime)
         if control is None or not control["enabled"]:
@@ -638,7 +641,27 @@ def serve(root, *, run_id=None, job_name=None, fixture=None, max_cycles=None):
         def publish(**changes):
             with active_lock:
                 run.update(changes, heartbeat_at=_stamp())
-                _write(runtime, "run.json", dict(run))
+                try:
+                    _write(runtime, "run.json", dict(run))
+                except (OSError, ValueError, TypeError, RuntimeError):
+                    # Metadata backpressure stops observation, not this owner.
+                    # Keep the persisted enabled intent and wait for storage to
+                    # recover, just as for an outbox persistence failure.
+                    state_fault.set()
+                    state_write_failures[0] += 1
+                    if active[0] is not None:
+                        active[0].cancel.set()
+                    return False
+                state_fault.clear()
+                return True
+
+        def wait_backoff(reason):
+            delay_index = min(run["restart_count"], len(RESTART_DELAYS) - 1)
+            delay = RESTART_DELAYS[delay_index]
+            publish(state="backoff", reason=reason, restart_count=run["restart_count"] + 1,
+                    backoff_seconds=delay, next_retry_at=datetime.fromtimestamp(time.time() + delay, timezone.utc).isoformat())
+            # Ordinary interruptible waiting; never a model or new collection.
+            _wait_retry(cancelled, delay)
 
         def watch_control():
             next_heartbeat = time.monotonic()
@@ -664,10 +687,7 @@ def serve(root, *, run_id=None, job_name=None, fixture=None, max_cycles=None):
                         if active[0] is not None:
                             active[0].cancel.set()
                     if time.monotonic() >= next_heartbeat:
-                        try:
-                            publish(state="blocked", reason="background_control_unverifiable")
-                        except (OSError, ValueError, RuntimeError):
-                            pass
+                        publish(state="blocked", reason="background_control_unverifiable")
                         next_heartbeat = time.monotonic() + HEARTBEAT_SECONDS
                     continue
                 if stop_now:
@@ -675,21 +695,10 @@ def serve(root, *, run_id=None, job_name=None, fixture=None, max_cycles=None):
                     with active_lock:
                         if active[0] is not None:
                             active[0].cancel.set()
-                    try:
-                        publish(state="stopping", reason="durable_disabled_or_control_unverifiable")
-                    except (OSError, ValueError, RuntimeError):
-                        pass
+                    publish(state="stopping", reason="durable_disabled_or_control_unverifiable")
                     return
                 if time.monotonic() >= next_heartbeat:
-                    try:
-                        publish()
-                    except (OSError, ValueError, RuntimeError):
-                        cancel_reason[0] = "background_state_persistence_failed"
-                        cancelled.set()
-                        with active_lock:
-                            if active[0] is not None:
-                                active[0].cancel.set()
-                        return
+                    publish()
                     next_heartbeat = time.monotonic() + HEARTBEAT_SECONDS
 
         thread = threading.Thread(target=watch_control, name="eventguard-background-control", daemon=True)
@@ -706,8 +715,50 @@ def serve(root, *, run_id=None, job_name=None, fixture=None, max_cycles=None):
             if not desired["enabled"] or desired["generation"] != control["generation"]:
                 cancelled.set()
                 break
+            if unresolved_query is not None:
+                # A failed gate write must not make a previous query disappear.
+                # Retain its actual Runner and first captured Job identity until
+                # the normal durable gate proves that Job empty/missing, then
+                # release only that Runner's owned child handles.
+                recovered = False
+                try:
+                    runner = unresolved_query["runner"]
+                    pending, latest = runner.pending, runner.last_process
+                    process = unresolved_query["process"]
+                    if process is None and isinstance(latest, dict) and latest.get("managed") is True:
+                        process = unresolved_query["process"] = dict(latest)
+                    if (isinstance(process, dict) and process.get("managed") is True
+                            and isinstance(latest, dict) and latest.get("managed") is True
+                            and latest.get("job_name") == process.get("job_name")):
+                        gate = runtime.monitor_shutdown_gate(recover=True)
+                        if gate.get("state") == "clear":
+                            proof = gate.get("process") or {}
+                            if (proof.get("job_name") != process.get("job_name")
+                                    or gate.get("remaining_owned_processes") != 0):
+                                runtime.block_monitor_shutdown({"namespace": control["namespace"],
+                                    "pid": held["pid"], "process_created_at": held["created_at"],
+                                    "query_shutdown": process})
+                                gate = runtime.monitor_shutdown_gate(recover=True)
+                            if (gate.get("state") == "clear" and gate.get("remaining_owned_processes") == 0
+                                    and (gate.get("process") or {}).get("job_name") == process.get("job_name")):
+                                receipt = runner.shutdown(grace=0)
+                                recovered = (receipt.get("managed") is True and receipt.get("child_exited") is True
+                                    and receipt.get("job_name") == process.get("job_name")
+                                    and type(receipt.get("remaining_owned_processes")) is int
+                                    and receipt["remaining_owned_processes"] == 0)
+                except (OSError, ValueError, TypeError, AttributeError, RuntimeError):
+                    pass  # An unreadable Runner/Job/gate remains unknown.
+                if not recovered:
+                    publish(state="shutdown_unconfirmed", reason="monitor_query_exit_unconfirmed",
+                            monitor_state="shutdown_unconfirmed")
+                    wait_backoff("monitor_query_exit_unconfirmed")
+                    continue
+                unresolved_query = None
             began = time.monotonic()
-            publish(state="running", reason="monitor_starting", backoff_seconds=0, next_retry_at=None)
+            if not publish(state="running", reason="monitor_starting", backoff_seconds=0, next_retry_at=None):
+                wait_backoff("background_state_persistence_failed")
+                continue
+            observed_write_failures = state_write_failures[0]
 
             def progress(health):
                 monitor_state = health.get("state")
@@ -715,12 +766,19 @@ def serve(root, *, run_id=None, job_name=None, fixture=None, max_cycles=None):
                 publish(monitor_state=monitor_state, coverage_degraded=health.get("healthy") is False,
                         queue_backpressure=health.get("last_error") == "queue_capacity_or_storage_failure")
 
+            monitor = None
             try:
                 monitor = Monitor(root)
                 with active_lock:
                     active[0] = monitor
                     if cancelled.is_set():
                         break
+                    if state_fault.is_set():
+                        # A heartbeat can fail after the successful start
+                        # publication but before this active owner is assigned.
+                        # Do not enter Monitor.run until storage is writable.
+                        monitor.cancel.set()
+                        raise BackgroundError("background_state_persistence_failed")
                 health = monitor.run(fixture=fixture, max_cycles=max_cycles, on_progress=progress)
                 monitor_state = health.get("state", health.get("status"))
                 monitor_state = monitor_state if type(monitor_state) is str and monitor_state in {"starting", "running", "stopping_pending_query", "shutdown_unconfirmed", "stopped", "blocked_monitor_gap", "blocked_previous_query", "busy"} else "unknown"
@@ -734,7 +792,9 @@ def serve(root, *, run_id=None, job_name=None, fixture=None, max_cycles=None):
                     raise KeyboardInterrupt
                 if health.get("state") == "shutdown_unconfirmed":
                     publish(state="shutdown_unconfirmed", reason="monitor_query_exit_unconfirmed", monitor_state="shutdown_unconfirmed")
-                if fixture is not None and not control_fault.is_set() and health.get("state") == "stopped" and health.get("stop_reason") != "persistence_backpressure":
+                if (fixture is not None and not control_fault.is_set() and not state_fault.is_set()
+                        and state_write_failures[0] == observed_write_failures
+                        and health.get("state") == "stopped" and health.get("stop_reason") != "persistence_backpressure"):
                     publish(state="stopped", reason="bounded_fixture_completed", monitor_state=health.get("state"))
                     break
             except KeyboardInterrupt:
@@ -746,45 +806,73 @@ def serve(root, *, run_id=None, job_name=None, fixture=None, max_cycles=None):
                 reason = "monitor_exception_without_raw_error"
             finally:
                 with active_lock:
+                    runner = getattr(getattr(monitor, "collectors", None), "runner", None)
+                    if runner is not None:
+                        process = None
+                        try:
+                            pending, process = runner.pending, runner.last_process
+                            unconfirmed = (pending or not isinstance(process, dict)
+                                or process.get("managed") is True and (process.get("child_exited") is not True
+                                    or type(process.get("remaining_owned_processes")) is not int
+                                    or process["remaining_owned_processes"] != 0))
+                        except (OSError, ValueError, TypeError, AttributeError, RuntimeError):
+                            unconfirmed = True
+                        if unconfirmed:
+                            unresolved_query = {"monitor": monitor, "runner": runner,
+                                                "process": dict(process) if isinstance(process, dict) else None}
                     active[0] = None
             if cancelled.is_set():
                 break
+            if state_write_failures[0] != observed_write_failures or state_fault.is_set():
+                reason = "background_state_persistence_failed"
             if time.monotonic() - began >= 300:
                 run["restart_count"] = 0
-            delay_index = min(run["restart_count"], len(RESTART_DELAYS) - 1)
-            delay = RESTART_DELAYS[delay_index]
-            publish(state="backoff", reason=reason, restart_count=run["restart_count"] + 1,
-                    backoff_seconds=delay, next_retry_at=datetime.fromtimestamp(time.time() + delay, timezone.utc).isoformat())
-            # This ordinary wait, not a model turn, remains interruptible by stop.
-            _wait_retry(cancelled, delay)
+            wait_backoff(reason)
         if cancelled.is_set():
-            publish(state="stopped", reason=cancel_reason[0], backoff_seconds=0, next_retry_at=None)
+            publish(state="shutdown_unconfirmed" if unresolved_query is not None else "stopped",
+                    reason="monitor_query_exit_unconfirmed" if unresolved_query is not None else cancel_reason[0],
+                    backoff_seconds=0, next_retry_at=None)
         desired = _control(runtime)
-        return dict(run, desired_enabled=desired["enabled"] if desired is not None else None, host_exit_pending=True,
+        result = dict(run, desired_enabled=desired["enabled"] if desired is not None else None, host_exit_pending=True,
+                    evidence_write_failed=state_fault.is_set(),
                     note="Host function returned; only external PID/Job evidence proves process exit.")
+        if state_fault.is_set():
+            result.update(state="blocked", reason="background_state_persistence_failed")
+        if unresolved_query is not None:
+            result.update(state="shutdown_unconfirmed", reason="monitor_query_exit_unconfirmed")
+        return result
     except KeyboardInterrupt:
         disabled = _interrupt_disable(runtime, control["generation"] if control is not None else None)
         cancelled.set()
         with active_lock:
             if active[0] is not None:
                 active[0].cancel.set()
-        result = dict(run or {}, **disabled, state="stopped" if disabled["disabled_persisted"] else "stop_not_persisted",
-                      reason="explicit_keyboard_stop", model_calls=0, host_exit_pending=True,
+        result = dict(run or {}, **disabled,
+                      state="shutdown_unconfirmed" if unresolved_query is not None else "stopped" if disabled["disabled_persisted"] else "stop_not_persisted",
+                      reason="monitor_query_exit_unconfirmed" if unresolved_query is not None else "explicit_keyboard_stop",
+                      model_calls=0, host_exit_pending=True,
                       note="Host function returned; only external PID/Job evidence proves process exit.")
         if run is not None:
             try:
                 _write(runtime, "run.json", dict(run, state=result["state"], reason=result["reason"],
                        heartbeat_at=_stamp(), backoff_seconds=0, next_retry_at=None))
             except (OSError, ValueError, TypeError, RuntimeError):
-                result["evidence_write_failed"] = True
+                result.update(state="shutdown_unconfirmed" if unresolved_query is not None else "blocked",
+                              reason="monitor_query_exit_unconfirmed" if unresolved_query is not None else "background_state_persistence_failed",
+                              evidence_write_failed=True)
         # The keeper is intentionally held until natural OS exit. A host must
         # never finish/terminate its own KILL_ON_JOB_CLOSE Job from this path.
         return result
     except (OSError, ValueError, TypeError, KeyError, RuntimeError) as error:
         reason = error.args[0] if type(error) is BackgroundError else "background_host_failed"
+        evidence_write_failed = False
         if run is not None:
-            _write(runtime, "run.json", dict(run, state="blocked", reason=reason, heartbeat_at=_stamp()))
-        return {"state": "blocked", "reason": reason, "model_calls": 0, "raw_error_omitted": True}
+            try:
+                _write(runtime, "run.json", dict(run, state="blocked", reason=reason, heartbeat_at=_stamp()))
+            except (OSError, ValueError, TypeError, RuntimeError):
+                evidence_write_failed = True
+        return {"state": "blocked", "reason": reason, "model_calls": 0, "raw_error_omitted": True,
+                "evidence_write_failed": evidence_write_failed}
     finally:
         done.set()
         with active_lock:

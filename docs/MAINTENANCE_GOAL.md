@@ -1,6 +1,6 @@
 # EventGuard 維護目標
 
-更新：2026-10-23；目標建立基底`bf99496cf3d73601fc2d8a1bf50c1c2fe8709b66`，程式基底`645d8d9`。依使用者「建立目標，繼續完成」已建立持續目標，狀態active、未設token預算。方向是**本機資安情報中心**：人類與agent經EventGuard取得觀察、理解事件、執行允許的操作，並在產品內看到正在做什麼及結果。沿用feature與資料，不reset/clean；既有研究與附件保留。
+更新：2026-10-23；目標建立基底`bf99496cf3d73601fc2d8a1bf50c1c2fe8709b66`，本批基底`ecdb479`。依使用者「建立目標，繼續完成」已建立持續目標，狀態active、未設token預算。方向是**本機資安情報中心**：人類與agent經EventGuard取得觀察、理解事件、執行允許的操作，並在產品內看到正在做什麼及結果。沿用feature與資料，不reset/clean；既有研究與附件保留。
 
 ## 本輪完成與驗證
 
@@ -11,6 +11,8 @@
 本主聊天另以程式產生的合成事件驗單件／連續／batch、active inbox滿載及ACK前補收。真工具回傳、pending、同query、唯一回條及原設定復原皆通過獨立比對；詳見chat-delivery-003。產品source未變，不重跑前批全套、不藉驗收另啟模型。這補齊活動回合通路證據，仍保留下面長時／閒置／OS登入條件，沒有以局部成功宣告整個目標完成。
 
 本批實際驗正式Start，發現舊MCP錯走independent契約而被外部Job拒絕，未建立child；Stop已恢復原Pause。已改接現有application-owned核心，補多client換代／EOF只清自身Job與耐久退出回條，不啟動模型。當前聊天一次capabilities仍是舊server，需client正常重新載入後再驗Start；不把SDK fixture成功或前批全套升格成主聊天已更新。這是本輪可用性修補，不以proxy／排程作前提。
+
+續行補一次ecdb479新server／隔離live root的真七來源嘗試、保存及EOF退出；Defender denied、tasks unknown不改寫可讀或安全，正式Pause未變。helper exit1保留，另只讀核實狹義證據，沒有重掃。另修run/heartbeat暫時寫失敗後host退出但enabled仍true、需手動Start的具體缺陷：保留supervisor、取消當次採集、metadata可寫後才依既有backoff重試；相關fixture及當版回歸見EVIDENCE。不把有限實機／fixture升格長期、OS登入或本聊天新版Start完成。
 
 - 沿用七來源、耐久事件、事件綁定查證與報告；不新增另一套控制器或事件佇列。
 - 正式MCP已在本主聊天載入15工具，實際呼叫capabilities／status／activity；前批只驗capabilities／status／activity；本輪另接收與ACK一件本輪新生真事件，未接管其餘backlog。GUI操作紀錄與工具共用同表，實際工具可讀到本輪操作；既有視窗是否已載入新版頁籤仍不推定。
@@ -24,7 +26,7 @@
 
 正常監看由程式等待，不因模型額度停止。人類能獨立操作；agent只使用相同的型別化能力，不能給自己開權限。操作紀錄不收集聊天思考、任意shell／檔案操作或私人原文；它也不是抗同使用者竄改的安全稽核帳本。
 
-1. 保持正式工具可用、跨client補收／冪等ACK與人類操作相容；本輪測試及提交綁定見EVIDENCE。
+1. 保持正式工具可用、跨client補收／冪等ACK與人類操作相容；本輪測試及提交綁定見EVIDENCE。另補query退出未知且gate不可寫／singleton已釋放時的跨client admission：本批只保同supervisor記憶體fence，不能以此宣稱所有client均阻擋；下一批先重現跨client反例再修，不加新採集面或權限。
 2. **閒置時自動喚醒同一聊天仍未接通**。需能由事件觸發目前client的指定聊天入口，並有明確模型授權，才做「先閒置→程式入列→本聊天工具接收」驗收；不得以另一個CLI或定時模型輪詢代替。MCP註冊與本輪活動回合接收不能達成此門檻。
 3. 長期監看與重開機恢復：現有GUI／supervisor及耐久暫停保留；登入排程仍未批准，程式變更後舊審查digest失效。建立前須產生當版dry-run計畫；實際登入／OS重啟與24小時soak另外核實。
 4. 外部漏洞情報匯入、跨主機整合及Phase7真狀態注入尚未驗證，不藉本輪擴增功能面。

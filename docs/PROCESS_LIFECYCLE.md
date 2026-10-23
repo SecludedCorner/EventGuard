@@ -76,4 +76,6 @@ Runner 不只查看等待執行緒是否完成；若 managed 回條尚未證明 
 
 到期來源按最後一次實際嘗試開始時間排序，未嘗試優先、同時刻保留原順序；來源間隔也從各自實際開始計算。因 round_budget 跳過只設30秒 defer，不更新 last 或宣稱採集，避免慢來源持續搶占而讓其他來源永久 busy。45秒是啟動下一來源的預算，已啟動查詢仍遵守自己的逾時與停止契約。虛擬時鐘回歸不代表真 provider 持續故障或24小時實測。
 
+supervisor的run／heartbeat暫時寫失敗會合作取消當次Monitor，沿原backoff等待，可寫後才准許新採集，保留enabled意圖。如果Monitor收尾未確認query退出且shutdown gate也因儲存故障寫失敗，supervisor仍保留原Monitor／Runner及首次捕獲的Job證據；「marker不存在」不能清除此記憶體閘道。先恢復同一既有marker，經Runtime核實同Job empty／missing，再由原Runner.shutdown釋放其自身handle且回條確認exit/remaining0，才放行新Monitor。拒讀、錯Job或不完整回條都繼續等待，Stop／generation變更先於此檢查，不以未知當成安全退出。這是同host防線；若gate完全無法落盤且舊Monitor已釋放singleton，其他獨立client仍可能看見無marker，跨client admission尚未補齊。跨host仍依耐久gate與外層Job證據，不宣稱同使用者防篡改。
+
 精確測試數、時間、命令、失敗修正與證據目錄統一見 [EVIDENCE](EVIDENCE.md)；本文件不是新授權或全天候承諾。

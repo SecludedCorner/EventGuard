@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+最新續行基底ecdb479：一次新版正式entry／隔離live root的真Windows七來源採集及正常EOF已完成；不是本聊天client。七來源均有新observed_at/saved_at、同Monitor instance／host PID+creation、backend attempt及evaluation committed；Defender denied、tasks unknown，其他來源有資料。host/server自然exit0、owned Jobs無殘留，事件仍pending無ACK，正式Pause bytes未變。probe因錯排unknown及錯SQL表名exit1原樣保留，不重掃；只讀verify_saved.py的real-collection-evidence-002.json另核實狹義實際嘗試／耐久保存／退出及隔離activity。證據在reports/operator-live-001，不提交真事件或原始回傳。
+
+本輪另已重現並修復run/heartbeat一次寫失敗讓host永久退出但enabled=true的缺陷：改保留supervisor與enabled，合作cancel當次Monitor，沿既有backoff等待；metadata可寫前不新採集，Stop／generation／未知query閘道不放寬。before與最終相關測試、source hashes及提交綁定見reports/supervisor-recovery-001及EVIDENCE。這項故障恢復是fixture證據，不能當成真磁碟故障或24小時實測；先前隔離實機code是ecdb479，不混成這次補修已重掃。本聊天本輪capabilities仍舊，未重試Start或proxy，正式背景保持暫停。
+
 本批基底3e36925，實際核對正式MCP Start/Stop：舊server走獨立background契約，回blocked/independent_background_unverifiable，沒有建立子程序；已Stop恢復disabled/explicit_stop、退出核實且沒有新採集或事件變動。修正讓新載入operator adapter持有application host，沿用GUI的核心Job路徑，但不建DesktopController、不恢復auto agent。只保存本API新建立的child與可信launch scope；EOF fences Start並用namespace/run/generation/job guard停止，換代不改新控制，最後只finish自己持有Job。固定有界operator-stop-receipt保存退出與forced證據，寫失敗不宣稱clean。CLI預設仍independent。測試／來源及提交綁定見EVIDENCE的operator-start-001批次。
 
 修改後本主聊天一次真capabilities仍缺start_lifetime_owner，確定未載入本批契約；不要再重試Start。先完成本批驗證與提交，再由client正常重新載入EventGuard MCP，核對capabilities.background.start_lifetime_owner=application才做一次有限Start/Status/Stop。沒有可呼叫reload工具，不修改其他MCP、不強停server、不重試proxy或註冊排程。新SDK的fixture Job成功也不能升格成此聊天已更新。正式暫停保持；舊七來源／真事件／七件合成證據不重做。

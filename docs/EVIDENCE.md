@@ -2,6 +2,28 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：隔離實機生命週期與 supervisor metadata 故障恢復
+
+本批基底`ecdb479716dd7736839db7681112529e2cdf1fc7`，同一feature；正式背景仍disabled/explicit_stop。本主聊天一次capabilities／status核對仍是舊server、沒有新lifetime標記，所以不再呼叫其Start；原生回傳留`reports/operator-live-001/native-*-before.json`。沒有連proxy、建立排程／服務、自啟、提權或真模型任務。
+
+**實機部分與fixture分開。** `py -3.13 -B reports/operator-live-001/probe_live.py`啟動ecdb479的實際`eventguard_inbox_mcp.py --operator-root ... --namespace live --allow-live`；使用新隔離root、原設定／playbook與普通sandbox執行上下文，沒有替換Monitor／host argv／collector，沒有重用正式live資料。只在隔離root開放工具權限，不改正式開關、config、每日預算或MCP設定。SDK client不是本聊天原生工具。
+
+10:26:53.472564 UTC明確Start回started/application；七來源於本輪均有新observed_at/saved_at、實際backend attempt、同Monitor instance及host PID＋建立時間，evaluation_status=committed。Defender為denied（provider AccessDenied／PermissionDenied、CimException、HRESULT -2146233088），tasks為unknown（TaskGetFolder／COMError、HRESULT -2147024893）；listeners／processes partial，startup／services／versions ok。拒讀／未知如實保存，不推斷需要管理員、與前批不同上下文可讀結果相互替代、或主機安全。原始coverage及安全原因碼留隔離observations與health，不提交真實事件、名稱或路徑。
+
+Probe於10:28:55.136413 UTC **exit1 / validation.passed=false**：helper條件誤排除了有實際attempt的unknown，因此等到120秒期限；它的額外SQL計數亦用了錯誤表名，只記schema_not_counted，未改DB。原輸出及程式保留。期間沒有重啟server或重掃來湊成功，退出走正常stdin EOF；SDK server、application host及七來源worker各自證據均自然退出、未強停、remaining0。operator-stop-receipt保留原run／generation／Job，隔離控制回disabled，正式Pause bytes完全未變；所有本輪隔離事件保留pending、零ACK回條。
+
+後續`py -3.13 -B reports/operator-live-001/verify_saved.py`只讀既存JSON與SQLite(mode=ro/query_only)，exit0，`real-collection-evidence-002.json`為evidence_valid=true、seven_source_attempts_verified=true、lifecycle_verified=true、**all_sources_readable=false**。核對時間用timezone-aware datetime；不把helper exit1改為產品成功。它補上host/Monitor身分、source payload hash、pending／無receipt及同root activity的background_start completed/started、active0；第一次較窄只讀核對也保留。此verifier沒有子程序、provider或模型。原sdk-calls、server-exit、隔離owned stop回條、source-manifest與兩份只讀證據均保留。activity屬隔離root，不假稱出現在正式GUI帳本；不是新版主聊天Start、閒置喚醒、24小時或OS登入證據。
+
+**已重現的長期故障。** `py -3.13 -B reports/supervisor-recovery-001/reproduce.py`於10:26:54.233586 UTC exit0；before-result.json顯示defect_reproduced=true。Fake Keeper/Monitor隔離fixture只讓控制thread一次run.json寫入拋PermissionError，此後全部恢復；舊serve仍只嘗試一次Monitor、retry_waits=[]、退出後enabled=true，mocked status=enabled_not_running，必須手動Start。child/native/model attempted0，控制thread已退出、source未變。這是實際執行的控制流程反例，不是Windows磁碟故障或真OS退出證據。
+
+修補run／heartbeat發布失敗先取消當次Monitor並保留supervisor／enabled，沿原RESTART_DELAYS等待；新Monitor前必須成功耐久發布run，並在active lock內檢核故障競態。Stop／owner退出／generation變更與控制未知的邊界保留，最後回條仍不可寫則明示blocked/evidence_write_failed。已進行的ecdb479實機部分與本次故障恢復補修分開，不宣稱補修後又重掃七來源；當版測試、source hashes與最終提交綁定統一留`reports/supervisor-recovery-001`。
+
+Keepalive初版複查又以`py -3.13 -B reports/supervisor-recovery-001/reproduce_gate.py`重現未知query閘道遺忘：10:37:59.490982 UTC，安全測試實際1fail（helper exit0表示expected_failure_reproduced=true），第二個Monitor在原gate尚未保存／查證前被建立。gate-before-result.json及原測試輸出保留；該反例是uncommitted keepalive初版的控制流程，不冒稱實機或ecdb479原樣測試。child/native/model0、source未變。最小補修只在background保留原Monitor/Runner與首次Job證據；marker缺失也不放行，需同Job既有gate確認empty／missing並完成原Runner自身handle收尾，未知繼續等待、Stop及控制換代仍先處理，不改Monitor/runtime或另建控制器。
+
+剩餘界線已列回維護目標：此fence只保同supervisor重試。若gate完全無法耐久保存且Monitor已釋放singleton，其他獨立client仍可能看到無marker；本批沒有聲稱跨client磁碟故障admission已全域阻擋。這是讀碼確認的待重現／補強項，不冒充已驗證安全。OS重啟、24小時與新版主聊天Start也仍未通過；不因此縮小整體目標或宣告完成。
+
+最終fixture／相關整合命令：`py -3.13 -B reports/supervisor-recovery-001/verify_recovery.py`，2026-10-23T10:44:46.757319 UTC完成、Python3.13.3、56.731秒，**79/79通過、exit0**；0failure/error/skip、136個Python檔AST無誤、source_unchanged=true、per_test_residuals=[]，guardian自然exit0、未強停、remaining0。四模組為新test_background_persistence_recovery（9項）、test_background、test_background_integration、test_operator_monitor_owner；涵蓋heartbeat與main publish故障恢復、持續故障Stop、control未知／換代、admission競態、gate失敗與原Runner handle收尾、Ctrl+C保留未知，以及既有SDK合成Job生命週期。來源盤點／模型不執行，沒有將fixture或SDK case升格成真磁碟故障、主聊天更新或24小時證據；不重跑／累加先前全套。source-manifest、unit-tests、lifecycle-evidence、guardian-exit與verification-summary在focused-001；文件檢查與最後source/commit綁定在document-check.json及source-commit.json。
+
 ## 2026-10-23：正式 Start 缺口與 MCP 應用持有生命週期
 
 本批基底`3e3692507bceadbd7cd701b612396f7658cb6327`，同一feature；保留既有研究／附件。先實際呼叫本主聊天正式status→start_monitor→status→stop→status。Start於10:00:28 UTC回`blocked / independent_background_unverifiable`，desired_enabled=true；這是外部Job下舊server走independent契約，**未建立child**，不是監看成功或child自然退出。10:00:34 UTC Stop恢復disabled/explicit_stop；最後host已退出、remaining0、未強停。沒有新來源觀察／事件／ACK變動，也沒有啟動模型。原生回傳及EventGuard activity在`reports/operator-start-001/native-calls.json`、`activity-after.json`，可見agent_mcp的失敗開始與成功停止。

@@ -1,6 +1,6 @@
 # 長期背景監看與登入後恢復
 
-本批基底 `08a4ef8ff7e5762c499b7cb270de1e86a0361822`。使用者已要求實作及一般權限驗證；真排程建立與真模型仍需當次批准。這份契約不等於排程已安裝、實際重開機或24小時測試已完成；當前證據見 [EVIDENCE](EVIDENCE.md)。
+現行來源及實測以[STATUS](../STATUS.md)與[EVIDENCE](EVIDENCE.md)為準。正常監看由程式執行，proxy、排程或模型不是使用前提。真排程建立與真模型仍需具體批准；這份契約不等於已安裝排程、通過重開機或24小時測試。
 
 ## 正常使用
 
@@ -12,7 +12,7 @@
 
 Start 現在開啟 [GUI](GUI.md) 並啟動應用持有的監看 host，保存 enabled 意圖；沒有每天／一小時的採集停止期限，不使用模型額度。GUI 關閉視窗只最小化；暫停並結束才停止。Status 分開核對背景 owner PID＋建立時間、私有 Job、heartbeat、目前採集 owner、coverage、保存資料及事件。Stop 先耐久寫 disabled，再合作停止；未確認退出不判成功。
 
-等價 CLI 為 `background start/status/stop`。要在終端前景觀察來源進度，仍可明確使用 `monitor`；它不是新的背景啟動入口。事件持續保存在同一 `data/live/eventguard.sqlite3`，人類／已連接的可選 stdio client 用原有 events list/inspect/diagnose/receive/ack 接手；沒有新增另一套接收帳本。無事件不叫模型；有事件也不自行花模型額度。
+CLI使用相同核心的`background start/status/stop`，但Start仍要求可核實的獨立生命週期；GUI與新版MCP則由應用持有，不承諾離開應用仍存活。新版MCP需先依[接線](CONNECT_AGENT.md)核對capability；舊server不會隨source自動換版。終端前景觀察仍可明確使用`monitor`。事件持續保存在同一`data/live/eventguard.sqlite3`，人類／已連接的可選stdio client用原有events介面接手，無事件不叫模型，有事件也不自行花模型額度。
 
 ```mermaid
 flowchart LR
@@ -28,12 +28,13 @@ flowchart LR
 
 ## 生命週期、恢復與容量
 
-- 手動啟動：launcher 先將 host 原子加入私有 named Job，host 持有相同 Job 的 keeper；ready/run 身分與實際 handle 對照成功才交接。交接不是已退出回條。host 不依賴 launcher 的 stdio，stdout/stderr 不無限增長。
-- launcher 若受外部 Job 約束，不能保證關閉該工具後仍存活；production 回 `independent_background_unverifiable`，不 breakaway 或改外部 Job。測試可注入受 guardian 約束的有限 host，必須明示生命週期受限。
+- 啟動先將host原子加入私有named Job，ready/run身分與實際handle對照成功才回started。獨立CLI核實keeper後交接；GUI／新版MCP保留自身child handle及應用生命週期，正常退出合作收尾自己的Job。交接或started不是已退出回條，stdout/stderr不無限增長。
+- 獨立CLI launcher若受外部Job約束，回`independent_background_unverifiable`，不breakaway或改外部Job。GUI／MCP的application模式不逃離祖先Job，不是測試allow_parent_job或獨立存活；正常EOF僅收自身host，意外被結束未必來得及保存回條。
 - 排程直接同步執行 `background serve`。它只恢復既有 enabled 意圖，先取得同 root host lease、核對舊 owner/Job，再加入自己的私有 Job；不再啟動一個立即退出的 launcher。Task Scheduler 可以管理祖先 Job，EventGuard 不改它。
 - 新 host 與查詢 worker 的 Job 使用固定前綴加隨機 UUID 的 `Global\EventGuard-…`，可跨登入 session 核對。只有明確空／不存在才判舊 Job 已清空；拒讀為未知。舊 Local Job 缺相同 session 證據不能用新 session 的「不存在」清閘道。沒有猜測 undocumented boot GUID。
 - 正常 host 持有 keeper 直到 OS 自然退出；不提早 close 最後一個 Job handle 導致自殺。異常 owner exit 時 Windows 的 KILL_ON_JOB_CLOSE 管理本工具子樹，事件仍留 SQLite；下次 Monitor 先保存 monitor_gap，缺口不是無事件。
 - Monitor 例外、意外返回或持久化背壓由普通程式按5/15/30/60/120/300秒等待後重試。手動停止及Ctrl+C會保存disabled，不能當作意外退出重開。控制檔不可讀、未知退出及來源拒讀不能變成成功。
+- 已取得ownership後的run／heartbeat寫入暫時失敗會合作取消當次Monitor、保留enabled意圖，沿相同backoff等待。每次新採集前必須成功保存run metadata；持續失敗不忙迴圈、不叫模型，Stop／控制generation變更仍有效。未知query退出保留原閘道。若最後回條仍寫失敗，明示blocked／evidence_write_failed；初始ownership無法耐久保存仍拒絕啟動，不承諾自動繞過權限或任意OS I/O卡死。
 - 佇列滿／觀察保存失敗時停止後續新採集，保留舊 baseline 與所有 pending；報錯並等待。恢復前 monitor_gap 也必須先落盤。ACK 釋放容量後再重試；無法保存期間是可見的監看缺口，不承諾還原當時所有變化。
 - 使用原有 SQLite／ACKed保留、有限帳本、觀察投影及輪替操作日誌；只新增固定數量的背景 control/launch/owner/run/ready/handoff/stop 回條，沒有每輪新的 report 或完整 stdout 檔。配置／資料夾被同使用者篡改仍不在防護保證內。
 
@@ -53,6 +54,6 @@ py -3.13 -B scripts/eventguard_schedule.py install --dry-run --start-now --plan-
 
 這是**同一使用者登入後**恢復。登入前監看不在普通互動token範圍，不新增服務、帳戶／憑證或修改自動登入。實際重開機／登出測試由使用者另行安排，程式不主動重開機。
 
-2026-10-23當版已重新產生只註冊、`start_now=false`的dry-run方案；精確SHA與本機證據見[喚醒／恢復關卡](WAKE_RECOVERY_GATES.md)。目前保存explicit_stop，因此即使批准註冊也不解除暫停。這份新方案取代程式變動前的舊審查digest，尚未實際安裝。
+舊dry-run方案及SHA僅為[歷史研究](WAKE_RECOVERY_GATES.md)；後續source已變，不能拿舊digest建立任務，目前未安裝。正式explicit_stop保留，不因接線或驗證解除。依最新使用方向，不把登入排程作日常監看前置或持續待追問事項。
 
 目前尚未完成的長時與實機故障項目依 [SOAK_PLAN](SOAK_PLAN.md) 與 [WINDOWS_VALIDATION_PLAN](WINDOWS_VALIDATION_PLAN.md) 分開記錄；有限 fixture／owned Job 測試不能升格為已通過重開機或全天候驗收。
