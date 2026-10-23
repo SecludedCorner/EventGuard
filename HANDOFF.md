@@ -1,6 +1,10 @@
 # EventGuard 接手
 
-先讀 AGENTS、README、STATUS、docs/GUI.md、docs/EVIDENCE.md、docs/BACKGROUND.md。核對cwd/branch/HEAD/未提交變更，保留接續，不reset/clean。本批基底42b495a2d8b4f6bbd54f34b735f64dd178855ebb，同一feature集中提交、不推送；原有docs/research/排除。
+先讀 AGENTS、README、STATUS、docs/CONNECT_AGENT.md、docs/EVIDENCE.md、docs/BACKGROUND.md。核對cwd/branch/HEAD/未提交變更，保留接續，不reset/clean。本批基底72673a3657b6e30c9c594dcc6140ddd6f147b096，同一feature集中提交、不推送；原有docs/research/排除。
+
+本批新增：agent_dispatch.run(continuous=True)／CLI watch沿用原來源與固定budget跨事件、跨日待命；max_seconds只限每任務，空佇列零attempt/模型。GUI獨立auto開關與原生exe選擇，設定在忽略的data/agent-automation.json；單純開視窗不啟動，明確Start才恢復保存的選擇，Pause取消並核對owned child退出。非日額的reserve拒絕鎖定同pending，不再每poll建立空目錄。真CLI的單次設定停用project eventguard_test，避免混入聊天合成佇列。
+
+本批真驗收尚未啟動：正常使用者login status成功，但固定budget不存在，reports/idle-wake-preflight-001.json保存budget_unavailable。已詢問人類2026-10-23台北當日EventGuard專用CLI已用數（0..5或未知），未獲回答前不能當0初始化。使用者這輪已批准有限公開合成自動驗收，不需再問同一模型授權。答覆後依AGENT_BUDGET初始化，不重設已有帳本；可用額度≥2時執行reports/idle-wake-proof.py的2事件流程，只有1時改--count 1，0時保留待測。該忽略helper使用真正continuous CLI、先觀察空閒才程式入列、核對實際三工具/SQLite/自然退出；失敗先查trace，不無變化重試。未啟用正式auto、改正式GUI或建立排程。
 
 最新：本主對話已實際取得eventguard_test四個原生MCP工具並完成新合成事件的list→receive→inspect（仍pending）→同event/query補收→ACK→相同ACK重播→inspect（已ack）。native-root-calls.json保留七個完整實際MCP回傳；native-receipt-validation.json核對生成／收到／查證／ACK集合相同，missing=[]、duplicate_receipts=[]，該事件SQLite回條1張。先前命令工具事件另有1張，不能混成同一測試。這是本對話真正工具接收，沒有啟動另外的Codex CLI模型或自動喚醒；MCP連線由Codex管理而保留。之前工具不可用與子agent失敗屬歷史，不能再當目前阻塞，也不能刪除；本回合平台更新工具清單後成功，精確載入延遲根因未定案。
 

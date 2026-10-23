@@ -1,6 +1,7 @@
 """Desktop application controller fixtures; no real GUI, collector or model."""
 from pathlib import Path
 import tempfile
+import threading
 import unittest
 from unittest.mock import Mock, patch
 
@@ -219,3 +220,118 @@ class DesktopTests(unittest.TestCase):
             self.controller.start()
         self.assertEqual(len(self.controller._receipts), 32)
         self.assertEqual(self.controller._children, [])
+
+
+class DesktopAutomaticAgentTests(unittest.TestCase):
+    """Fake dispatcher only; proves control ownership without any model calls."""
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.executable = self.root / "codex.exe"
+        self.executable.write_bytes(b"inert fixture, never execute")
+        self.controller = desktop.DesktopController(self.root)
+        self.controller.api = Mock(return_value={})
+        self.entered = threading.Event()
+        self.cancel = None
+        self.invocations = []
+        self.final = {"state": "waiting", "child_exited": True, "tasks_started": 0}
+        self.enterContext(patch("eventguard.agent_access.guard", return_value=None))
+        self.enterContext(patch("eventguard.agent_dispatch.run", side_effect=self.dispatch))
+        self.enterContext(patch("eventguard.agent_dispatch.status", side_effect=lambda _: dict(self.final)))
+        self.addCleanup(self.cleanup_worker)
+
+    def dispatch(self, directory, **kwargs):
+        self.invocations.append((directory, kwargs))
+        self.cancel = kwargs["cancel"]
+        self.entered.set()
+        self.cancel.wait(timeout=3)
+        self.final.update(state="stopped", child_exited=True)
+        return 0
+
+    def cleanup_worker(self):
+        self.controller._agent_cancel.set()
+        worker = self.controller._agent_thread
+        if worker is not None:
+            worker.join(timeout=4)
+            self.assertFalse(worker.is_alive(), "fake dispatcher must not survive test teardown")
+
+    def test_reading_saved_opt_in_never_starts_dispatcher(self):
+        from eventguard.agent_automation import set_enabled
+        set_enabled(self.root, True, str(self.executable))
+        view = self.controller._automatic_snapshot()
+        self.assertTrue(view["enabled"])
+        self.assertEqual(view["state"], "armed")
+        self.assertEqual(self.invocations, [])
+
+    def test_opt_in_while_paused_only_saves_until_explicit_start(self):
+        with patch.object(desktop.background, "status", return_value={"state": "stopped"}):
+            result = self.controller.set_automatic_agent(True, str(self.executable))
+        self.assertEqual(result["state"], "armed")
+        self.assertEqual(self.invocations, [])
+        with (patch.object(desktop.background, "status", return_value={"state": "stopped"}),
+              patch.object(desktop.background, "start", return_value={"state": "started"})):
+            self.controller.start()
+        self.assertTrue(self.entered.wait(timeout=2))
+        directory, args = self.invocations[0]
+        self.assertEqual(args["source_dir"], self.root / "data/live")
+        self.assertEqual(args["state_dir"], self.root / "data/agent-delivery")
+        self.assertTrue(args["continuous"])
+        self.assertTrue(args["execute"])
+        self.assertTrue(args["allow_live"])
+        self.assertEqual(directory.parent, self.root / "reports/automatic-agent")
+
+    def test_live_monitor_click_starts_one_worker_and_disable_joins_it(self):
+        with patch.object(desktop.background, "status", return_value={"state": "running"}):
+            self.controller.set_automatic_agent(True, str(self.executable))
+            self.assertTrue(self.entered.wait(timeout=2))
+            self.controller.set_automatic_agent(True, str(self.executable))
+        self.assertEqual(len(self.invocations), 1)
+        result = self.controller.set_automatic_agent(False)
+        self.assertTrue(result["child_exited"])
+        self.assertTrue(self.cancel.is_set())
+        self.assertIsNone(self.controller._agent_thread)
+
+    def test_pause_stops_worker_but_preserves_explicit_saved_choice(self):
+        from eventguard.agent_automation import status
+        with patch.object(desktop.background, "status", return_value={"state": "running"}):
+            self.controller.set_automatic_agent(True, str(self.executable))
+        self.assertTrue(self.entered.wait(timeout=2))
+        with (patch.object(desktop.background, "status", return_value={"state": "running"}),
+              patch.object(desktop.background, "stop", return_value=DesktopTests.stopped())):
+            result = self.controller.pause()
+        self.assertTrue(result["can_close"])
+        self.assertTrue(result["automatic_agent_exited"])
+        self.assertTrue(status(self.root)["enabled"])
+        self.assertEqual(self.controller._automatic_snapshot()["state"], "armed")
+
+    def test_receive_gate_is_required_separately(self):
+        with patch("eventguard.agent_access.guard", return_value={"status": "blocked"}):
+            result = self.controller.set_automatic_agent(True, str(self.executable))
+        self.assertEqual(result["reason"], "agent_receive_permission_required")
+        self.assertEqual(self.invocations, [])
+
+    def test_missing_exe_does_not_start_or_save_enabled(self):
+        from eventguard.agent_automation import status
+        result = self.controller.set_automatic_agent(True, str(self.root / "missing.exe"))
+        self.assertEqual(result["state"], "blocked")
+        self.assertFalse(status(self.root)["enabled"])
+        self.assertEqual(self.invocations, [])
+
+    def test_unconfirmed_worker_exit_keeps_application_open(self):
+        self.controller._agent_thread = Mock()
+        self.controller._agent_thread.is_alive.return_value = True
+        with (patch.object(desktop.background, "status", return_value={"state": "running"}),
+              patch.object(desktop.background, "stop", return_value=DesktopTests.stopped())):
+            result = self.controller.close()
+        self.assertFalse(result["can_close"])
+        self.assertEqual(result["state"], "shutdown_unconfirmed")
+        self.assertFalse(self.controller._closed)
+        self.controller._agent_thread = None
+
+    def test_finished_worker_without_child_exit_proof_is_not_assumed_stopped(self):
+        self.controller._agent_thread = Mock()
+        self.controller._agent_thread.is_alive.return_value = False
+        self.controller._agent_result = {"state": "unknown"}
+        self.assertFalse(self.controller._stop_automatic_agent())
+        self.controller._agent_thread = None

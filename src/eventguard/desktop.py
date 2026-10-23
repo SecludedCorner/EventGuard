@@ -10,7 +10,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 import re
+import shutil
 import threading
+import uuid
 
 from . import background, processes
 from .operations import OperatorAPI, SOURCES
@@ -40,6 +42,13 @@ class DesktopController:
         self._last_action = None
         self._last_error = None
         self._closed = False
+        # Separate from the receive permission: only an explicit automatic
+        # processing action may start this process-local dispatcher owner.
+        self._agent_thread = None
+        self._agent_cancel = threading.Event()
+        self._agent_run_dir = None
+        self._agent_result = {"state": "disabled", "enabled": False}
+        self._agent_lock = threading.Lock()
 
     def _own(self, child):
         # Called by background.start immediately after atomic private Job spawn,
@@ -74,6 +83,8 @@ class DesktopController:
                 return self._error("start", "desktop_start_failed")
             if result.get("namespace") not in (None, "live"):
                 return self._error("start", "monitor_outside_live_namespace")
+            if result.get("state") in {"started", "starting", "running", "running_verified"}:
+                result = dict(result, automatic_agent=self._resume_automatic_agent())
             return self._remember("start", result)
 
     def _release_exited(self):
@@ -101,6 +112,9 @@ class DesktopController:
 
     def pause(self):
         with self._lock:
+            # Stop admitting agent work before stopping collection. The
+            # dispatcher owns and verifies its own private child Job.
+            self._agent_cancel.set()
             try:
                 current = background.status(self.root)
                 if (current.get("namespace") == "test"
@@ -110,13 +124,15 @@ class DesktopController:
             except (OSError, ValueError, TypeError, RuntimeError):
                 return self._error("pause", "desktop_stop_failed")
             released = self._release_exited()
+            agent_stopped = self._stop_automatic_agent()
             host_gone = result.get("host_liveness") in {"not_recorded", "exited_verified"}
             if _confirmed(result.get("process")):
                 host_gone = True
             confirmed = (result.get("desired_enabled") is False and host_gone
-                         and result.get("state") in {"stopped", "disabled"} and released)
+                         and result.get("state") in {"stopped", "disabled"} and released and agent_stopped)
             value = dict(result, child_exited=True if confirmed else None,
                          application_children_released=released,
+                         automatic_agent_exited=agent_stopped,
                          application_receipts=list(self._receipts), can_close=confirmed)
             if not confirmed and value.get("state") in {"stopped", "disabled"}:
                 value.update(state="shutdown_unconfirmed", reason="desktop_child_exit_unconfirmed")
@@ -144,7 +160,154 @@ class DesktopController:
                 result = set_enabled(self.root, enabled)
             except (ImportError, OSError, ValueError, TypeError, RuntimeError):
                 return self._error("agent_delivery", "agent_delivery_policy_unavailable")
+            if not enabled and result.get("setting_saved") is True:
+                stopped = self._stop_automatic_agent()
+                result = dict(result, automatic_agent_exited=stopped)
+                if not stopped:
+                    result.update(state="shutdown_unconfirmed", reason="automatic_agent_exit_unconfirmed")
             return self._remember("agent_delivery", result)
+
+    def _stop_automatic_agent(self):
+        """Cancel and wait; never discard an unconfirmed dispatcher owner."""
+        self._agent_cancel.set()
+        worker = self._agent_thread
+        if worker is not None:
+            worker.join(timeout=15)
+            if worker.is_alive():
+                return False
+        with self._agent_lock:
+            result = dict(self._agent_result)
+            if result.get("child_exited") is False or worker is not None and result.get("child_exited") is not True:
+                return False
+            self._agent_result = dict(result, enabled=False)
+        self._agent_thread = None
+        return True
+
+    def _automatic_snapshot(self):
+        from .agent_automation import status as settings
+        policy = settings(self.root)
+        with self._agent_lock:
+            result = dict(self._agent_result)
+        worker = self._agent_thread
+        if worker is not None and worker.is_alive() and self._agent_run_dir is not None:
+            try:
+                from .agent_dispatch import status
+                value = status(self._agent_run_dir)
+                # Only bounded operational values reach the GUI. No CLI trace,
+                # prompt, command line or event content is read here.
+                for name in ("state", "reason", "child_exited", "tasks_started", "tasks_passed", "queue_checks"):
+                    if name in value:
+                        result[name] = value[name]
+            except (OSError, ValueError, RuntimeError):
+                pass  # The worker may not have published its first receipt yet.
+        result["worker_alive"] = worker is not None and worker.is_alive()
+        result["enabled"] = policy["enabled"]
+        result["executable"] = policy["executable"]
+        if policy.get("blocked"):
+            result.update(state="blocked", reason=policy["reason"])
+        elif not result["worker_alive"] and result.get("state") in {"disabled", "stopped"} and policy["enabled"]:
+            result.update(state="armed", reason="explicit_start_required")
+        result["desktop_task_resumed"] = False
+        return result
+
+    def set_automatic_agent(self, enabled, executable=None):
+        """Explicit model opt-in; existing receive permission is insufficient.
+
+        Opening the GUI or reading status never starts a model. An explicit
+        Start may use a previously saved opt-in; Pause preserves that setting.
+        """
+        with self._lock:
+            if self._closed:
+                return self._error("automatic_agent", "desktop_controller_closed")
+            if type(enabled) is not bool:
+                return self._error("automatic_agent", "automatic_agent_boolean_required")
+            from .agent_automation import set_enabled, status as settings
+            if not enabled:
+                try:
+                    set_enabled(self.root, False)
+                except (OSError, ValueError, TypeError, RuntimeError):
+                    return self._error("automatic_agent", "automation_setting_write_failed")
+                stopped = self._stop_automatic_agent()
+                return self._remember("automatic_agent", {"state": "disabled" if stopped else "shutdown_unconfirmed",
+                    "enabled": False, "child_exited": stopped,
+                    "reason": None if stopped else "automatic_agent_exit_unconfirmed"})
+            from .agent_access import guard
+            blocked = guard(self.root, "live")
+            if blocked is not None:
+                return self._error("automatic_agent", "agent_receive_permission_required")
+            policy = settings(self.root)
+            candidate = executable if type(executable) is str and executable else policy["executable"] or shutil.which("codex.exe")
+            try:
+                set_enabled(self.root, True, candidate)
+            except (OSError, ValueError, TypeError, RuntimeError):
+                return self._error("automatic_agent", "native_codex_or_setting_unavailable")
+            # A click while monitoring is an explicit action. A saved choice
+            # in an otherwise idle window waits for the next explicit Start.
+            current = background.status(self.root)
+            if current.get("state") not in {"started", "starting", "running", "running_verified"}:
+                return self._remember("automatic_agent", {"state": "armed", "enabled": True,
+                    "reason": "explicit_start_required"})
+            return self._remember("automatic_agent", self._resume_automatic_agent())
+
+    def _resume_automatic_agent(self):
+        from .agent_automation import status as settings
+        policy = settings(self.root)
+        if not policy["enabled"]:
+            return {"state": "disabled", "enabled": False}
+        if self._agent_thread is not None and self._agent_thread.is_alive():
+            return self._automatic_snapshot()
+        if not self._stop_automatic_agent():
+            return {"state": "shutdown_unconfirmed", "reason": "automatic_agent_exit_unconfirmed"}
+        from .agent_access import guard
+        if guard(self.root, "live") is not None:
+            result = {"state": "blocked", "reason": "agent_receive_permission_required", "child_exited": True}
+            with self._agent_lock:
+                self._agent_result = result
+            return result
+        native = policy["executable"]
+        if not native or Path(native).suffix.lower() != ".exe" or not Path(native).is_file():
+            result = {"state": "blocked", "reason": "native_codex_executable_required", "child_exited": True}
+            with self._agent_lock:
+                self._agent_result = result
+            return result
+        try:
+            run_dir = self.root / "reports" / "automatic-agent" / uuid.uuid4().hex
+            run_dir.parent.mkdir(parents=True, exist_ok=True)
+            self._agent_run_dir = run_dir
+            self._agent_cancel = threading.Event()
+            cancel = self._agent_cancel
+            with self._agent_lock:
+                self._agent_result = {"state": "starting", "enabled": True, "child_exited": True}
+
+            def dispatch():
+                try:
+                    from .agent_dispatch import run, status
+                    code = run(run_dir, source_dir=self.root / "data/live",
+                               state_dir=self.root / "data/agent-delivery", codex=native,
+                               max_seconds=3600, continuous=True, allow_live=True,
+                               execute=True, cancel=cancel)
+                    final = status(run_dir)
+                    final = {name: final[name] for name in ("state", "reason", "child_exited", "tasks_started", "tasks_passed") if name in final}
+                    final.update(enabled=False, exit_code=code)
+                except Exception:
+                    # The dispatcher itself owns cleanup; absent evidence is
+                    # unknown, never a claim that a model process exited.
+                    final = {"state": "shutdown_unconfirmed", "enabled": False,
+                             "reason": "automatic_agent_failed", "child_exited": False}
+                with self._agent_lock:
+                    self._agent_result = final
+
+            self._agent_thread = threading.Thread(target=dispatch, name="EventGuard-automatic-agent", daemon=False)
+            self._agent_thread.start()
+            return {"state": "starting", "enabled": True,
+                "reason": "event_driven_dispatch_enabled", "desktop_task_resumed": False}
+        except (OSError, ValueError, RuntimeError):
+            self._agent_thread = None
+            result = {"state": "blocked", "reason": "automatic_agent_start_failed", "enabled": True,
+                      "child_exited": True}
+            with self._agent_lock:
+                self._agent_result = result
+            return result
 
     def inspect(self, event_id):
         with self._lock:
@@ -199,6 +362,7 @@ class DesktopController:
                 "events_total": listing.get("total") if type(listing.get("total")) is int and listing["total"] >= 0 else None,
                 "events_limit": 100,
                 "agent_delivery": agent, "last_action": self._last_action,
+                "automatic_agent": self._automatic_snapshot(),
                 "last_error": self._last_error or _code(document.get("last_error")) or _code(document.get("error_code")) or (
                     "monitor_outside_live_namespace" if not scope_matches else None),
                 "background": bg, "monitor": monitor, "operator_summary": document.get("operator_summary"),

@@ -6,6 +6,8 @@ Windows 一般權限的唯讀監看工具。人類 GUI／CLI 與可選 agent 介
 
 「允許 agent 接收事件」預設關閉；勾選才開放既有本機工具接收，取消立即阻擋後續工具讀取，既有事件仍保留。勾選不會啟動模型，也不代表 agent 已連線。操作與限制見 [GUI](docs/GUI.md)。
 
+要有事件才自動啟動專用 agent，另開「自動交給專用 agent」並選既有 `codex.exe`；無事件由 Python 等待。每日最多5次、pending保留，開視窗本身不呼叫模型。初次設定、手動聊天MCP與自動模式的差異見 [接線指南](docs/CONNECT_AGENT.md)。
+
 事件先顯示觀察、未知與唯讀查證建議，技術資料按需展開；可依嚴重度／接收狀態篩選目前載入的100件，總數及截斷會明示。設計參考與已採納項目見 [研究記錄](docs/SCANNER_LESSONS.md)。
 
 已補讀上游25引擎的整合碼，以及各來源repo的README／代表入口；用途、依賴與實際整合範圍見 [25引擎盤點](docs/SCANNER_ENGINES.md)、[執行邊界](docs/SCANNER_RUNTIME_REVIEW.md)。這是讀碼研究，沒有引入或執行這些引擎。
@@ -26,6 +28,10 @@ flowchart LR
     O --> Q[事件綁定唯讀查證]
     Q --> S
     O --> R[本機 JSON / HTML 報告]
+    S --> D[Python 等待 pending / 每日預算]
+    D --> C[明示啟用的短期 Codex CLI]
+    C --> I[事件綁定 QueueInbox]
+    I --> S
 ```
 
 ## 五分鐘 fixture 快速開始
@@ -68,7 +74,7 @@ GUI 的開始不需要建立排程；監看由應用持有，應用縮小後繼�
 
 重開機後於同一使用者登入時恢復，使用 [背景監看契約](docs/BACKGROUND.md) 的低權限 ONLOGON 排程；建立／立即執行仍需批准。若啟動端受外部 Job 約束，回報 `independent_background_unverifiable`，不繞過它；排程可直接執行同步 host。前景除錯仍可用 `monitor`。
 
-`events list/inspect/diagnose/receive/ack/retry` 與報告操作見 [共用介面](docs/HUMAN_AGENT_INTERFACE.md)。inspect／sources 只讀保存觀察；diagnose 才執行事件綁定查詢。可選 stdio 需既有 MCP SDK及 client 明確連接，不永久註冊、不自行啟動模型或接續桌面聊天。
+`events list/inspect/diagnose/receive/ack/retry` 與報告操作見 [共用介面](docs/HUMAN_AGENT_INTERFACE.md)。inspect／sources 只讀保存觀察；diagnose 才執行事件綁定查詢。手動 stdio 需既有 MCP SDK及 client 明確連接；自動模式僅在另行啟用後使用單次 MCP 設定，不接續桌面聊天。
 
 ## 現況與限制
 

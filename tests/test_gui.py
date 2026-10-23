@@ -31,6 +31,7 @@ class FixtureController:
                                   "severity": "warning", "delivery_status": "pending"}],
                       "events_total": 1, "events_truncated": False,
                       "agent_delivery": {"enabled": False}, "model_calls": 0}
+        self.value["automatic_agent"] = {"enabled": False, "state": "disabled"}
 
     def _called(self, action):
         self.calls.append((action, threading.get_ident()))
@@ -54,6 +55,11 @@ class FixtureController:
         self._called("set_agent_delivery")
         self.value["agent_delivery"] = {"enabled": enabled}
         return {"state": "saved", "enabled": enabled}
+
+    def set_automatic_agent(self, enabled, executable=None):
+        self._called("set_automatic_agent")
+        self.value["automatic_agent"] = {"enabled": enabled, "state": "waiting" if enabled else "disabled"}
+        return {"state": "waiting" if enabled else "disabled", "enabled": enabled}
 
     def inspect(self, event_id):
         self._called("inspect")
@@ -121,6 +127,17 @@ class GuiPresentationTests(unittest.TestCase):
         view = view_snapshot({"agent_delivery": {"enabled": True, "receiver_state": "connected"}})
         self.assertTrue(view["agent_enabled"])
         self.assertIn("尚未證明", view["agent_status"])
+        self.assertFalse(view["automatic_enabled"])
+
+    def test_automatic_wait_budget_and_attention_are_honest_separate_states(self):
+        for state, message in (("waiting", "無事件不呼叫模型"), ("waiting_budget", "每日額度已滿"),
+                               ("waiting_attention", "不自動重試"), ("armed", "按開始")):
+            view = view_snapshot({"automatic_agent": {"enabled": True, "state": state}})
+            self.assertTrue(view["automatic_enabled"])
+            self.assertFalse(view["agent_enabled"])
+            self.assertIn(message, view["automatic_status"])
+            self.assertIn("每日最多 5", view["automatic_status"])
+            self.assertIn("不接續本聊天", view["automatic_status"])
 
     def test_unexpected_mainloop_exit_attempts_controller_cleanup_and_reports_uncertainty(self):
         controller = FixtureController()
@@ -286,6 +303,19 @@ class GuiOwnTkWidgetTests(unittest.TestCase):
         self.wait_for(lambda: "synthetic-example-1" in self.ui.detail.get("1.0", "end"))
         self.assertFalse(any(action == "ack" for action, _ in self.controller.calls))
         self.assertEqual(self.controller.value["events"][0]["delivery_status"], "pending")
+
+    def test_automatic_checkbox_is_separate_from_receive_checkbox(self):
+        self.assertFalse(self.ui.automatic_enabled.get())
+        self.ui.agent_check.invoke()
+        self.wait_for(lambda: self.controller.value["agent_delivery"]["enabled"] is True)
+        self.wait_for(lambda: not self.ui._busy and not self.ui.worker.pending)
+        self.assertFalse(any(action == "set_automatic_agent" for action, _ in self.controller.calls))
+        self.ui.automatic_executable.set("C:/fixture/codex.exe")
+        self.ui.automatic_check.invoke()
+        self.wait_for(lambda: self.controller.value["automatic_agent"]["enabled"] is True)
+        self.wait_for(lambda: "無事件不呼叫模型" in self.ui.automatic_status.get())
+        self.assertTrue(self.ui.agent_enabled.get())
+        self.assertTrue(self.ui.automatic_enabled.get())
 
     def test_readable_summary_is_default_and_raw_checkbox_only_reveals_saved_data(self):
         self.wait_for(lambda: not self.ui.worker.pending)

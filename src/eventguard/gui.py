@@ -61,16 +61,31 @@ def view_snapshot(document, *, severity="all", delivery="all"):
     agent = value.get("agent_delivery") if isinstance(value.get("agent_delivery"), dict) else {}
     enabled = agent.get("enabled") is True
     connection = "已允許接收；尚未證明有 agent 連線或收到事件。" if enabled else "未開放 agent 接收；事件仍保留，可由人類查看。"
+    automatic = value.get("automatic_agent") if isinstance(value.get("automatic_agent"), dict) else {}
+    auto_enabled = automatic.get("enabled") is True
+    auto_state = automatic.get("state", "disabled")
+    auto_labels = {"disabled": "自動處理未啟用。", "armed": "已保存自動處理選擇；按開始後待命。",
+        "starting": "正在啟動事件待命。", "waiting": "等待事件；無事件不呼叫模型。",
+        "running": "專用 agent 正在處理事件。", "waiting_budget": "每日額度已滿；保留事件，等待額度恢復。",
+        "waiting_attention": "需要人類處理；事件保留，不自動重試失敗任務。",
+        "waiting_disabled": "接收權限已關閉；事件仍保留。", "stopped": "事件待命已停止。",
+        "blocked": "自動處理受阻。", "shutdown_unconfirmed": "自動處理退出尚未確認。"}
+    auto_message = auto_labels.get(auto_state, "自動處理狀態：" + safe_text(auto_state, 80))
+    if automatic.get("reason"):
+        auto_message += " 原因：" + safe_text(automatic["reason"], 120)
+    auto_message += " 每日最多 5 個任務；使用專用 agent，不接續本聊天。"
     return {"headline": state_text(state), "state": state, "monitoring": monitoring,
             "updated_at": safe_text(value.get("updated_at"), 80),
             "counts": f"待接手 {count('pending')}　已接收 {count('acked')}　投遞失敗 {count('failed')}",
             "sources": rows, **event_view, "agent_enabled": enabled, "agent_status": connection,
+            "automatic_enabled": auto_enabled, "automatic_status": auto_message,
+            "automatic_executable": safe_text(automatic.get("executable"), 2048) if automatic.get("executable") else "",
             "error": safe_text(value.get("last_error"), 300) if value.get("last_error") else ""}
 
 
 class ControllerWorker:
     """Serialize local operations without invoking Tk on a worker thread."""
-    ACTIONS = frozenset({"snapshot", "start", "pause", "set_agent_delivery", "inspect", "close"})
+    ACTIONS = frozenset({"snapshot", "start", "pause", "set_agent_delivery", "set_automatic_agent", "inspect", "close"})
 
     def __init__(self, controller):
         self.controller = controller
@@ -161,6 +176,9 @@ class EventGuardWindow:
         self.message = tk.StringVar(value="按「開始」持續監看；按「暫停」停止採集，事件仍會保留。")
         self.agent_enabled = tk.BooleanVar(value=False)
         self.agent_status = tk.StringVar(value="正在讀取接收設定…")
+        self.automatic_enabled = tk.BooleanVar(value=False)
+        self.automatic_status = tk.StringVar(value="自動處理未啟用；不呼叫模型。")
+        self.automatic_executable = tk.StringVar(value="")
         self.severity_filter = tk.StringVar(value="所有嚴重度")
         self.delivery_filter = tk.StringVar(value="所有接收狀態")
         self.events_note = tk.StringVar(value="尚未載入事件；不能以此判定主機安全。")
@@ -203,6 +221,16 @@ class EventGuardWindow:
                                            variable=self.agent_enabled, command=self.change_agent_delivery)
         self.agent_check.grid(row=0, column=0, sticky="w")
         ttk.Label(agent, textvariable=self.agent_status, foreground="#53606d").grid(row=1, column=0, sticky="w", pady=(3, 0))
+        self.automatic_check = ttk.Checkbutton(agent, text="自動交給專用 agent（會使用模型額度）",
+            variable=self.automatic_enabled, command=self.change_automatic_agent)
+        self.automatic_check.grid(row=2, column=0, columnspan=2, sticky="w", pady=(6, 0))
+        self.automatic_path = ttk.Entry(agent, textvariable=self.automatic_executable, width=72)
+        self.automatic_path.grid(row=3, column=0, sticky="ew", pady=(3, 0))
+        self.automatic_browse = ttk.Button(agent, text="選擇 codex.exe", command=self.choose_codex)
+        self.automatic_browse.grid(row=3, column=1, padx=(6, 0))
+        ttk.Label(agent, textvariable=self.automatic_status, foreground="#53606d", wraplength=1000).grid(
+            row=4, column=0, columnspan=2, sticky="w", pady=(3, 0))
+        agent.columnconfigure(0, weight=1)
         ttk.Label(outer, textvariable=self.message, wraplength=1000).grid(row=4, column=0, sticky="ew", pady=(0, 8))
         notebook = ttk.Notebook(outer)
         notebook.grid(row=5, column=0, sticky="nsew")
@@ -286,7 +314,8 @@ class EventGuardWindow:
 
     def _set_busy(self, busy):
         self._busy = busy
-        for widget in (self.start_button, self.pause_button, self.refresh_button, self.agent_check):
+        for widget in (self.start_button, self.pause_button, self.refresh_button, self.agent_check,
+                       self.automatic_check, self.automatic_browse, self.automatic_path):
             widget.configure(state="disabled" if busy else "normal")
 
     def _request(self, action, *arguments):
@@ -316,6 +345,22 @@ class EventGuardWindow:
             self.message.set("另一項操作進行中；接收設定尚未變更，請稍後再試。")
         else:
             self.message.set("正在保存 agent 接收設定；不會啟動模型。")
+
+    def choose_codex(self):
+        from tkinter import filedialog
+        path = filedialog.askopenfilename(parent=self.window, title="選擇已安裝的原生 codex.exe",
+            filetypes=(("原生 Codex", "codex.exe"), ("執行檔", "*.exe")))
+        if path:
+            self.automatic_executable.set(path)
+
+    def change_automatic_agent(self):
+        enabled = bool(self.automatic_enabled.get())
+        if not self._request("set_automatic_agent", enabled, self.automatic_executable.get() or None):
+            self.automatic_enabled.set(self._snapshot.get("automatic_enabled", False))
+            self.message.set("另一項操作進行中；自動處理設定尚未變更。")
+        else:
+            self.message.set("正在保存自動處理選擇；啟用後有事件才用模型，每日最多 5 個任務。" if enabled
+                             else "正在停止自動處理；事件仍保留。")
 
     def refresh(self):
         self._request("snapshot")
@@ -384,6 +429,10 @@ class EventGuardWindow:
         self.updated.set("最後更新：" + view["updated_at"])
         self.agent_enabled.set(view["agent_enabled"])
         self.agent_status.set(view["agent_status"])
+        self.automatic_enabled.set(view["automatic_enabled"])
+        self.automatic_status.set(view["automatic_status"])
+        if not self.automatic_executable.get():
+            self.automatic_executable.set(view["automatic_executable"])
         for source, row in view["sources"]:
             if self.sources.exists(source):
                 self.sources.item(source, values=row)
@@ -448,6 +497,8 @@ class EventGuardWindow:
                     self.message.set("已送出開始要求；以下顯示實際監看狀態。")
                 elif action == "pause":
                     self.message.set("已保存暫停設定；已保存的事件仍可查看。")
+                elif action == "set_automatic_agent":
+                    self.message.set("自動處理選擇已保存；有事件才啟動專用 agent，無事件由程式等待。")
                 else:
                     self.message.set("接收設定已保存；事件仍先落本機佇列，不會自動呼叫模型。")
                 refresh_needed = True

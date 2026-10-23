@@ -1,6 +1,8 @@
 # EventGuard 現況
 
-更新：2026-10-23；分支 feat/local-codex-acceptance，本批基底 42b495a2d8b4f6bbd54f34b735f64dd178855ebb。命令、測試數、來源與提交對照見 [EVIDENCE](docs/EVIDENCE.md)。
+更新：2026-10-23；分支 feat/local-codex-acceptance，本批基底 72673a3657b6e30c9c594dcc6140ddd6f147b096。命令、測試數、來源與提交對照見 [EVIDENCE](docs/EVIDENCE.md)。
+
+本批已實作持續事件等待與獨立自動 agent 開關：同一 Python dispatcher 跨事件／日界待命，空佇列不建立任務，預算用完保留 pending，失敗不自動重試。接線與接手步驟見 [CONNECT_AGENT](docs/CONNECT_AGENT.md)。真正自動 CLI 合成驗收仍受阻：固定每日預算未初始化，正等待人類確認今日已用任務數；前置檢查未啟動模型，不能宣稱已自動喚醒。
 
 已交付可操作的 Tk GUI。雙擊 EventGuard.cmd，按開始持續監看、暫停耐久停止；X 最小化，應用程式→暫停並結束才離開。操作走同一核心，無模型輪詢、每日採集期限或額外事件帳本。見 [GUI](docs/GUI.md)。
 
@@ -9,16 +11,17 @@
 | 項目 | 現況 | 界線 |
 | --- | --- | --- |
 | 正式 GUI | 前批已開啟並核對 running_verified；本批不重啟、不重掃，已開視窗不熱更新 | 使用者可自行暫停；新介面下次正常開啟載入，不是24小時或重開機證明 |
-| 操作 | 開始／暫停、七來源筆數與原因、中文事件摘要／未知／唯讀建議、原始資料展開、嚴重度／接收篩選、接收勾選 | 篩選僅目前最多100件，總數及截斷明示；查看不ACK、不執行事件內容、不自動處置 |
+| 操作 | 開始／暫停、七來源、中文事件摘要、原始資料、接收篩選；另有自動agent勾選與原生exe選擇 | 篩選僅目前最多100件；自動選擇預設off，讀GUI不啟動模型，明確Start才沿用保存選擇 |
 | 一般權限來源 | 前批 Defender/listeners/processes partial；startup/services/tasks/versions ok，均有資料 | 本批只驗證合成契約，不更新正式可讀性結論；部分／拒讀／過期／未知不代表安全 |
 | 採集壞列 | 七來源 native／fallback 均保留合法 sibling，非物件列帶固定原因與計數；有可用列 partial，否則 error | 外層契約錯誤仍拒絕；partial 不清 baseline、不判恢復，壞資料不進錯誤原文 |
 | agent 開關 | 預設關閉；本輪唯讀查得enabled_waiting_receiver；勾選只開放live工具，取消阻擋後續工具讀取／ACK | 開關不是MCP連接或喚醒證據；既有pending與query不丟棄，人類不受影響 |
+| 自動agent | 已有continuous dispatcher與GUI接線、單次CLI期限、空閒／日額／拒絕等待與合作停止 | 實作及離線測試不等於真CLI驗收；沒有開啟正式auto或接手正式backlog |
 | 本聊天接收 | 主agent已用原生MCP list→receive→inspect→再次receive→ACK→重播ACK→inspect；同一合成event/query，SQLite只新增一張回條 | 先前命令工具驗證與這次原生MCP證據分開；不等於閒置聊天會被自動喚醒 |
 | 限定專案MCP | eventguard_test四工具已出現在主對話且實際可呼叫；只連已批准的隔離test佇列 | 本次新合成事件已ACK；原生接收通過。沒有接正式事件、改全域／信任設定或啟動模型CLI；先前未載入的精確根因仍未定案 |
 | 應用生命週期 | GUI持有私有Global Job；host核對應用PID＋建立時間，意外owner退出後合作停止；X縮小持續運作 | 不detach、不breakaway；應用之外的Job仍可能約束其生命週期 |
 | 退出與容量 | 暫停先保存disabled，再核對本工具host／子樹；未知保留視窗。滿載保留pending／baseline且明示背壓 | ACK只表示收到，不是修復或案件結束；有有限保留／去重窗 |
 | 登入後恢復 | 既有排程入口保留，但本輪未建立、Run、服務或自啟 | 使用者沒有批准前次plan；GUI開始無須等待排程。舊plan因程式變更失效 |
-| 驗證 | 本批受影響operator／queue／保留／開關測試通過，來源未變且測試子樹自然退出；前批完整suite仍為歷史 | 不把局部測試稱全套，手動工具接收不稱原生MCP／自動喚醒；真模型、OS重啟與24小時未驗證 |
+| 驗證 | 本批完整suite已跑；新增測試的重複參數錯誤已修正並另驗該模組，精確數字與原失敗保留EVIDENCE | 不把修正後局部結果改寫成重新全套；自動真CLI、OS重啟與24小時尚未驗證 |
 
 一般權限、Python3.13標準庫與既有tkinter；無下載安裝、提權／UAC、安全設定或執行政策變更、永久MCP註冊、其他程序處置。事件與工具輸出是不可信資料。
 

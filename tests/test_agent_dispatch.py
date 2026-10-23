@@ -142,6 +142,7 @@ class DispatchTests(unittest.TestCase):
         self.assertIn("--allow-live", server["args"])
         self.assertIn("features.shell_tool=false", args)
         self.assertIn("features.unbounded_connection_retries=false", args)
+        self.assertIn("mcp_servers.eventguard_test.enabled=false", args)
         self.assertNotIn(EVENT, PROMPT)
         self.assertFalse(any("bypass" in arg for arg in args))
 
@@ -153,6 +154,196 @@ class DispatchTests(unittest.TestCase):
         self.assertEqual(self.children, [])
         self.assertEqual(status(self.directory / "preflight")["state"], "preflight_ready")
         self.assertEqual(status(self.directory / "idle")["state"], "time_limit_reached")
+
+    def test_watch_idle_outlasts_task_timeout_without_attempt_or_model(self):
+        self.backend.pending = None
+        began = time.monotonic()
+        with self.fixtures(), patch("eventguard.agent_dispatch.command", side_effect=AssertionError("No idle CLI")):
+            code = self.invoke("watch-idle", continuous=True, max_seconds=.01,
+                               deadline_monotonic=began + .16, poll_seconds=.01)
+        saved = status(self.directory / "watch-idle")
+        self.assertEqual(code, 0)
+        self.assertTrue(saved["continuous"])
+        self.assertEqual(saved["state"], "time_limit_reached")
+        self.assertGreaterEqual(saved["queue_checks"], 2)
+        self.assertEqual(saved["tasks_started"], 0)
+        self.assertIn("last_checked_at", saved)
+        self.assertFalse((self.directory / "watch-idle/attempts").exists())
+        self.assertEqual(self.authority.status()["used"], 0)
+        self.assertEqual(self.children, [])
+
+    def test_watch_receives_after_idle_then_remains_waiting_until_cooperative_stop(self):
+        target = self.directory / "watch-receive"
+        reads = []
+
+        def pending():
+            reads.append(time.monotonic())
+            if len(reads) <= 3:
+                return None
+            if not self.children:
+                return EVENT
+            stop(target)
+            return None
+
+        with self.fixtures(), patch.object(self.backend, "pending_event_id", side_effect=pending):
+            self.assertEqual(self.invoke("watch-receive", continuous=True, max_seconds=5,
+                                         poll_seconds=.01), 0)
+        saved = status(target)
+        self.assertEqual(saved["state"], "stopped")
+        self.assertEqual(saved["tasks_started"], 1)
+        self.assertEqual(saved["tasks_passed"], 1)
+        self.assertEqual(saved["events_total"], 1)
+        self.assertEqual(len(self.children), 1)
+        self.assertTrue(saved["child_exited"])
+
+    def test_watch_exhausted_budget_keeps_pending_without_creating_attempts(self):
+        seen = []
+        original_save = __import__("eventguard.agent_dispatch", fromlist=["_save"])._save
+
+        def observe(directory, value):
+            seen.append((value["state"], value.get("reason")))
+            original_save(directory, value)
+
+        with self.fixtures(), patch.object(self.authority, "status", return_value={
+                "state": "blocked", "reason": "budget_exhausted", "remaining": 0}), \
+             patch("eventguard.agent_dispatch._save", side_effect=observe), \
+             patch.object(self.authority, "reserve", side_effect=AssertionError("No exhausted-budget reservation")):
+            self.assertEqual(self.invoke("watch-budget", continuous=True, max_seconds=.01,
+                deadline_monotonic=time.monotonic()+.12, poll_seconds=.01), 0)
+        self.assertIn(("waiting_budget", "budget_exhausted"), seen)
+        self.assertEqual(self.backend.pending, EVENT)
+        self.assertFalse((self.directory / "watch-budget/attempts").exists())
+        self.assertEqual(self.children, [])
+
+    def test_watch_budget_rechecks_in_same_owner_and_resumes_when_ready(self):
+        from eventguard import agent_dispatch
+        original_status = self.authority.status
+        checks = []
+        target = self.directory / "watch-budget-ready"
+
+        def budget_status():
+            checks.append(True)
+            if len(checks) < 3:
+                return {"state": "blocked", "reason": "budget_exhausted", "remaining": 0}
+            return original_status()
+
+        def pending():
+            if self.children:
+                stop(target)
+                return None
+            return EVENT
+
+        with self.fixtures(), patch.object(self.authority, "status", side_effect=budget_status), \
+             patch.object(self.backend, "pending_event_id", side_effect=pending), \
+             patch.object(agent_dispatch, "BUDGET_CHECK_SECONDS", .01):
+            self.assertEqual(self.invoke("watch-budget-ready", continuous=True, max_seconds=5,
+                                        poll_seconds=.01), 0)
+        saved = status(target)
+        self.assertEqual(saved["state"], "stopped")
+        self.assertEqual(saved["tasks_passed"], 1)
+        self.assertGreaterEqual(len(checks), 3)
+        self.assertEqual(len(list((target/"attempts").iterdir())), 1)
+        self.assertEqual(len(self.children), 1)
+
+    def test_watch_refused_admission_latches_same_event_even_when_status_ready(self):
+        from eventguard.agent_budget import BudgetError
+        target = self.directory / "watch-admission-refused"
+        reads = []
+        seen = []
+        original_save = __import__("eventguard.agent_dispatch", fromlist=["_save"])._save
+
+        def pending():
+            reads.append(True)
+            if len(reads) >= 6:
+                stop(target)
+            return EVENT
+
+        def observe(directory, value):
+            seen.append((value["state"], value.get("reason")))
+            original_save(directory, value)
+
+        with self.fixtures(), patch.object(self.backend, "pending_event_id", side_effect=pending), \
+             patch.object(self.authority, "status", return_value={"state": "ready", "remaining": 5}), \
+             patch.object(self.authority, "reserve", side_effect=BudgetError("budget_per_event_exhausted")) as reserve, \
+             patch("eventguard.agent_dispatch._save", side_effect=observe), \
+             patch("eventguard.agent_dispatch.BUDGET_CHECK_SECONDS", .001):
+            self.assertEqual(self.invoke("watch-admission-refused", continuous=True, poll_seconds=.01), 0)
+        reserve.assert_called_once()
+        self.assertGreaterEqual(len(reads), 6)
+        self.assertIn(("waiting_attention", "budget_per_event_exhausted"), seen)
+        self.assertEqual(status(target)["state"], "stopped")
+        self.assertEqual(status(target)["tasks_started"], 0)
+        self.assertEqual(len(list((target/"attempts").iterdir())), 1)
+        self.assertEqual(self.backend.pending, EVENT)
+        self.assertEqual(self.children, [])
+
+    def test_watch_admission_latch_releases_only_when_pending_event_changes(self):
+        from eventguard.agent_budget import BudgetError
+        target = self.directory / "watch-admission-next"
+        reads = []
+
+        def pending():
+            reads.append(True)
+            if len(reads) >= 9:
+                stop(target)
+            return EVENT if len(reads) <= 4 else "synthetic-other"
+
+        with self.fixtures(), patch.object(self.backend, "pending_event_id", side_effect=pending), \
+             patch.object(self.authority, "status", return_value={"state": "ready", "remaining": 5}), \
+             patch.object(self.authority, "reserve", side_effect=BudgetError("budget_per_event_exhausted")) as reserve, \
+             patch("eventguard.agent_dispatch.BUDGET_CHECK_SECONDS", .001):
+            self.assertEqual(self.invoke("watch-admission-next", continuous=True, poll_seconds=.01), 0)
+        self.assertEqual(reserve.call_count, 2)
+        self.assertEqual([call.args[1] for call in reserve.call_args_list], [EVENT, "synthetic-other"])
+        self.assertEqual(len(list((target/"attempts").iterdir())), 2)
+        self.assertEqual(self.children, [])
+
+    def test_watch_failed_delivery_waits_for_human_without_retry(self):
+        target = self.directory / "watch-failed"
+        reads = []
+        seen = []
+        original_save = __import__("eventguard.agent_dispatch", fromlist=["_save"])._save
+
+        def pending():
+            reads.append(True)
+            if len(reads) > 4:
+                stop(target)
+            return EVENT
+
+        def observe(directory, value):
+            seen.append((value["state"], value.get("reason")))
+            original_save(directory, value)
+
+        with self.fixtures("fail"), patch.object(self.backend, "pending_event_id", side_effect=pending), \
+             patch("eventguard.agent_dispatch._save", side_effect=observe):
+            self.assertEqual(self.invoke("watch-failed", continuous=True, poll_seconds=.01), 0)
+        self.assertIn(("waiting_attention", "delivery_evidence_failed_no_automatic_retry"), seen)
+        self.assertEqual(status(target)["tasks_started"], 1)
+        self.assertEqual(status(target)["tasks_passed"], 0)
+        self.assertEqual(len(list((target/"attempts").iterdir())), 1)
+        self.assertEqual(len(self.children), 1)
+        self.assertEqual(self.backend.pending, EVENT)
+
+    def test_watch_preflight_and_already_cancelled_never_start_model(self):
+        cancellation = threading.Event()
+        cancellation.set()
+        with self.fixtures():
+            self.assertEqual(self.invoke("watch-preflight", execute=False, continuous=True), 0)
+            self.assertEqual(self.invoke("watch-cancelled", continuous=True, cancel=cancellation), 0)
+        self.assertTrue(status(self.directory/"watch-preflight")["continuous"])
+        self.assertEqual(status(self.directory/"watch-cancelled")["state"], "stopped")
+        self.assertEqual(self.children, [])
+
+    def test_watch_cli_maps_to_continuous_without_changing_normal_run(self):
+        from eventguard import agent_dispatch
+        with patch.object(agent_dispatch, "run", return_value=0) as runner, \
+             patch.object(agent_dispatch, "status", return_value={"state": "stopped"}), \
+             patch("builtins.print"):
+            self.assertEqual(main(["watch", "--run-dir", str(self.directory/"cli-watch")]), 0)
+            self.assertIs(runner.call_args.kwargs["continuous"], True)
+            self.assertIs(runner.call_args.kwargs["execute"], False)
+            self.assertEqual(main(["run", "--run-dir", str(self.directory/"cli-run")]), 0)
+            self.assertIs(runner.call_args.kwargs["continuous"], False)
 
     def test_owned_fake_capture_pass_and_receipt(self):
         with self.fixtures():

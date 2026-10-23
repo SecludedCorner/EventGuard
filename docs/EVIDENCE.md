@@ -2,6 +2,20 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：持續事件待命、GUI自動開關與接線文件
+
+基底 `72673a3657b6e30c9c594dcc6140ddd6f147b096`，同一feature。兩個子agent分工dispatcher與GUI，第三個唯讀審查；主agent整合後統一驗證。`agent_dispatch.run(continuous=True)`／CLI `watch`不受一小時host壽命或五個總任務限制；五次是固定每日預算，max_seconds是每次CLI期限。空佇列純Python等待，無attempt／reserve／模型；日額用完等待，投遞失敗不自動重試。審查抓到reserve-only拒絕可能每次poll建立空目錄，已以同event拒絕latch修正，新增針對性測試。
+
+GUI新增獨立「自動交給專用agent」及原生exe選擇，與接收權限分開；原子保存本機opt-in，讀視窗不啟動，明確Start才沿用，Pause取消並核對子樹退出。未開啟正式auto、操作正式backlog、重啟既有GUI／監看或建立排程。MCP接線與設定範本落於 [CONNECT_AGENT](CONNECT_AGENT.md)；更正LIVE_CHANNEL舊的CODEX_HOME覆寫範例，保持正常既有登入。單次CLI明示停用本project的eventguard_test，避免聊天測試佇列混入；不聲稱已隔離所有平台內建工具。
+
+**完整執行**：`py -3.13 -B scripts/verify.py --run-dir reports/idle-wake-unit-001 --timeout-seconds 600`，Python **3.13.3**，報告時間2026-10-23T05:21:39.719564+00:00，**716執行、713通過、1 error、2 skip**，198.792秒、exit **1**，124個Python檔AST無誤。error為新增test_watch_receives_after_idle_then_remains_waiting_until_cooperative_stop重複傳max_tasks，TypeError發生於進入產品run之前；兩個skip均是此身分不能建立symlink。source_unchanged=true、per_test_residuals=[]，guardian自然exit1、child_exited=true、remaining0、無強停。原報告與完整trace保留，不改寫成成功。
+
+**修正與重驗**：只移除上述測試多餘參數，產品程式不變。`py -3.13 -B reports/idle-wake-unit-002/verify_selected.py`，重用verify.worker／私有Job，選整個test_agent_dispatch模組；2026-10-23T05:22:53.791457+00:00，**22/22通過、0 error/failure/skip**、36.886秒、exit **0**。source_unchanged=true、124 AST、per_test_residuals=[]，guardian自然exit0、child_exited=true、remaining0、無強停。兩批數字不相加，不宣稱修正後再次全套；最終source與兩批manifest差異見本機source-commit回條。這些包括fixture／合成SQLite／fake CLI、真Tk元件與明示Windows私有Job測試，沒有原生盤點或真模型。
+
+**真自動驗收尚受阻**：本輪使用者已批准公開合成事件自動驗收；既有原生CLI和正常登入可用，但固定`data/agent-budget`尚未初始化。命令 `py -3.13 -B reports/idle-wake-proof.py --codex-executable <既有原生codex.exe> --count 2 --execute` 前置檢查回 `fixed_daily_budget_required`／`budget_unavailable`，工具exit **1**，未建立事件、attempt或模型程序；原始回傳留 `reports/idle-wake-preflight-001.json`。已詢問今日台北時間已啟動專用CLI數，不能在未回答時當成0。helper已準備先空閒、程式產生事件、實際三工具及同ID ACK、再空閒／第二事件、合作停止／驗證回條，但尚未執行通過。生成／接收／ACK各0；沒有缺漏或重複結論可下，不能把前批手動MCP成功當自動喚醒成功。
+
+未查原Codex sessions或憑證，未改登入、全域MCP、安全設定、系統服務或排程。執行證據留本機忽略目錄；文件與原始碼集中本地提交，不推送。重開機、真自動agent與24小時soak仍各自未驗證。
+
 ## 2026-10-23：主對話原生MCP實際接收通過
 
 基底 `42b495a2d8b4f6bbd54f34b735f64dd178855ebb`。使用者提供實際/mcp畫面確認當時沒有EventGuard。本回合核對發現預設命令環境屬隔離帳戶，與正常登入身分不同；前次CLI查不到server不能推導桌面project設定未載入。只讀查得安裝套件OpenAI.Codex 26.1016.8622.0、原生CLI 0.163.0-alpha.11.2；未變更帳戶、trust、全域MCP、安全設定或重啟應用。之後平台將eventguard_test四工具加入**本主對話**，實際呼叫成功；不能據此把環境檢查或版本查詢宣稱為已證明的修復原因，先前載入延遲的精確根因仍未定案。
