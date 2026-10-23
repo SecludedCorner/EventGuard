@@ -10,10 +10,16 @@ from .operations import OperatorAPI, store as _store, status, export_report
 
 
 def parser():
-    p=argparse.ArgumentParser(prog="eventguard",description="EventGuard 本機唯讀 headless 監看；有界 agent 接線另用 eventguard_watch.py")
+    p=argparse.ArgumentParser(prog="eventguard",description="EventGuard 本機資安監看。run 啟動採集、事件頁與通知。")
     p.add_argument("--format",choices=("auto","json","text"),default="auto",
                    help="auto: 終端可讀文字、管線JSON；text: 人類摘要；json: 機器介面")
     sub=p.add_subparsers(dest="command",required=True)
+    run=sub.add_parser("run",help="前景啟動採集、本機Web與通知。按Ctrl+C停止。不呼叫模型。")
+    run.add_argument("--port",type=int,default=8765)
+    run.add_argument("--max-seconds",type=float,help="選填。有限試跑秒數（1..3600）。")
+    run.add_argument("--fixture",help="選填。只讀tests/fixtures合成資料。")
+    run.add_argument("--max-cycles",type=int,help="fixture必填。限制合成採集輪數。")
+    run.add_argument("--no-notifications",action="store_true",help="關閉系統通知。本機頁面仍顯示高嚴重度事件。")
     sub.add_parser("capabilities")
     sub.add_parser("status")
     activity=sub.add_parser("activity",help="查看EventGuard操作進度與歷史；不啟動採集或模型")
@@ -68,6 +74,19 @@ def parser():
     listing=eventsub.add_parser("list")
     listing.add_argument("--namespace",choices=("live","test"),default="live")
     listing.add_argument("--limit",type=int,default=100)
+    listing.add_argument("--offset",type=int,default=0)
+    listing.add_argument("--severity",choices=("info","warning","high","critical"))
+    listing.add_argument("--source",choices=("defender","listeners","processes","startup","services","tasks","versions","monitor","unknown"))
+    listing.add_argument("--status",choices=("new","read","handled","ignored"))
+    detail=eventsub.add_parser("detail",help="查看事件詳情與處置狀態。不採集、不ACK。")
+    detail.add_argument("--namespace",choices=("live","test"),default="live")
+    detail.add_argument("--event-id",required=True)
+    handling=eventsub.add_parser("set-status",help="保存處置狀態。不ACK、不修改系統。")
+    handling.add_argument("--namespace",choices=("live","test"),default="live")
+    handling.add_argument("--event-id",required=True)
+    handling.add_argument("--status",choices=("new","read","handled","ignored"),required=True)
+    rules=sub.add_parser("rules",help="查看或檢查config/rules.json。不採集。")
+    rules.add_argument("action",choices=("list","validate"),default="list",nargs="?")
     for name in ("inspect", "diagnose", "receive", "retry"):
         event_operation=eventsub.add_parser(name,help="查看已存事件／明確執行事件綁定唯讀查證；不 ACK")
         event_operation.add_argument("--namespace",choices=("live","test"),default="live")
@@ -104,6 +123,16 @@ def parser():
 
 def execute(args,runtime,progress=None):
     operator=OperatorAPI(runtime.root)
+    if args.command=="run":
+        if not args.fixture and args.max_cycles is not None:
+            raise ValueError("max_cycles_requires_fixture")
+        from .application import run
+        return run(runtime.root,port=args.port,fixture=args.fixture,max_cycles=args.max_cycles,
+                   notifications=not args.no_notifications,max_seconds=args.max_seconds)
+    if args.command=="rules":
+        from .rules.configured import load_rules
+        values=load_rules(runtime.root)
+        return {"rules":values,"valid":True,"model_calls":0,"config_file":"config/rules.json"}
     if args.command=="background":
         if args.background_command=="start":
             return operator.call("background_start")
@@ -143,7 +172,10 @@ def execute(args,runtime,progress=None):
     if args.command=="overview":
         return operator.call("overview",args.namespace,args.limit)
     if args.command=="sources":
-        return operator.call("overview",args.namespace,1) if args.source_command=="list" else operator.call("observation",args.source_id,args.namespace,args.limit)
+        if args.source_command=="list":
+            from .source_status import source_status
+            return source_status(runtime.root,args.namespace)
+        return operator.call("observation",args.source_id,args.namespace,args.limit)
     if args.command=="stop":
         return operator.call("stop",args.namespace)
     if args.command=="monitor":
@@ -158,6 +190,15 @@ def execute(args,runtime,progress=None):
         from .diagnostics.api import DiagnosticAPI
         return DiagnosticAPI(query_admission=runtime.query_launch).query(args.operation,values)
     if args.command=="events":
+        if args.event_command in {"list","detail","set-status"}:
+            from .events.catalog import EventCatalog
+            catalog=EventCatalog(runtime.root,args.namespace)
+            if args.event_command=="list":
+                return catalog.list(severity=args.severity,source=args.source,status=args.status,
+                                    limit=args.limit,offset=args.offset)
+            if args.event_command=="detail":
+                return catalog.detail(args.event_id)
+            return catalog.set_status(args.event_id,args.status)
         if args.event_command=="receive":
             return operator.call("receive_event",args.event_id,args.namespace)
         if args.event_command=="ack":
@@ -227,6 +268,12 @@ def _format_args(argv):
 
 
 def main(argv=None,root=None):
+    # Windows pipes otherwise inherit the locale code page. Keep CLI text and
+    # redirected startup messages UTF-8. Native console streams retain their
+    # normal Unicode console handling; in-memory test streams stay injectable.
+    for stream in (sys.stdout,sys.stderr):
+        if stream is not None and hasattr(stream,"reconfigure") and not stream.isatty():
+            stream.reconfigure(encoding="utf-8",errors="backslashreplace")
     args=parser().parse_args(_format_args(argv))
     root=Path(root) if root else Path(__file__).resolve().parents[2]
     human=args.format=="text" or args.format=="auto" and bool(getattr(sys.stdout,"isatty",lambda:False)())
@@ -244,7 +291,7 @@ def main(argv=None,root=None):
         result=execute(args,Runtime(root),ProgressPrinter(sys.stderr) if human and args.command=="monitor" else None)
         show(result)
         if isinstance(result,dict):
-            if args.command=="background" or args.command=="stop" and "desired_enabled" in result:
+            if args.command in {"background","run"} or args.command=="stop" and "desired_enabled" in result:
                 state=result.get("state")
                 if state=="busy":
                     return 3
@@ -263,7 +310,11 @@ def main(argv=None,root=None):
             if result.get("status") in {"partial","denied","unknown","timeout"} or result.get("healthy") is False:
                 return 5
         return 0
-    except (ValueError,TypeError,json.JSONDecodeError):
+    except (ValueError,TypeError,json.JSONDecodeError) as error:
+        from .rules.configured import RulesValidationError
+        if isinstance(error,RulesValidationError):
+            show({"status":"invalid_request","error_code":str(error),"config_file":"config/rules.json"})
+            return 2
         show({"status":"invalid_request","error_code":"input_or_config_validation_failed","raw_error_omitted":True})
         return 2
     except Exception as error:

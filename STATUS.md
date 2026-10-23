@@ -1,28 +1,49 @@
 # EventGuard 現況
 
-更新：2026-10-23；分支 `feat/local-codex-acceptance`，本批基底 `5a4c7a766503be6a99ca1c997456696c3e55bd5b`。本批補查詢啟動前的耐久Job計畫與跨client仲裁；精確命令、時間、測試數、退出回條與提交對照統一見 [EVIDENCE](docs/EVIDENCE.md)。
+更新：2026-10-23。分支：`feat/local-codex-acceptance`。本批基底：`98968ba`。
 
-目前重點是本機唯讀採集、耐久保存，以及人類／agent 共用查證介面。正常監看由程式執行，不呼叫模型；proxy、排程及同一聊天閒置喚醒都不是使用前提。本輪沒有建立排程、服務或自啟，沒有啟動另一個 Codex／模型。
+產品是本機程式。正常採集、比對、保存與顯示均不呼叫模型。
 
-| 項目 | 目前能力與本輪證據 | 限制 |
+## 本批功能
+
+| 功能 | 用法 | 範圍 |
 | --- | --- | --- |
-| 人類操作 | GUI 開始／暫停、來源觀察、中文事件摘要、篩選、報告與操作紀錄；CLI 使用相同核心 | 既有視窗是否載入新版未推定；事件篩選僅目前最多100件 |
-| 本機採集 | 本批以ecdb479新server在隔離root實際嘗試並保存七來源，全部evaluation committed；listeners／processes partial，startup／services／versions ok | 本輪Defender denied、tasks unknown，原因及退出證據保留，不能升格可讀或安全；不取代前批不同上下文的結果，正式Pause未變 |
-| Defender 修正 | auto 使用既有 Get-MpComputerStatus 有效狀態；修改後一般使用者實測七欄 ok | explicit native 仍僅配置／WSC；拒讀不以設定值替代有效狀態 |
-| 事件品質 | listener 缺程序身分不誤報恢復；持久化事件保留有界目標事實，診斷先以事件 ref 篩選；快取核對目標 | 舊事件沒有的事實不回填推測；部分、拒讀、過期及未知均不代表安全 |
-| 正式 agent 介面 | 本主聊天已載入15工具；前批讀取／查證／接收／ACK 一件實際新生 listener 事件，工具與 SQLite 同 event/query、只有一張回條 | 本批真 Start 被外部 Job 拒絕、沒有建立 child；Stop 已恢復暫停。查證／ACK不等於安全或修復 |
-| 接收與 ACK | 本主聊天最新實測合成單件／連續／batch、active inbox滿載拒絕與釋放恢復；補收同event/query、ACK重播無重複回條，集合比對通過 | ACK只代表收到；本次不是跨任務退出恢復或閒置喚醒。合成config／policy已恢復，歷史紀錄保留 |
-| 操作紀錄 | GUI／正式 MCP 共用有界 activity 帳本，可看固定操作進度與結果；前批已實際匯出 JSON／HTML 報告 | 不記聊天思考、私人原文或任意外部 shell／檔案操作；非抗同使用者竄改帳本 |
-| 採集與退出 | 隔離root七來源worker、application host與SDK server皆已核實退出，未強停、殘留零；事件保持pending、未ACK | 原probe的unknown判斷及SQL計數helper失敗保留；另只讀證據核實實際嘗試／保存／退出，不把probe exit1改成成功 |
-| 容量 | ACKed／完成帳本有保留與輪替；未完成接收器收尾的原ACK proof受保護，completed耐久後才解除；status顯示未收尾數 | pin仍有上限，滿載回滾新ACK保留pending；升級前已遺失的原proof不能還原，詳見儲存政策 |
-| agent 開關 | GUI 預設關閉，勾選只開放已連接工具；最近正式接收沿用已批准接線 | 不啟動模型；連線或勾選不是自動喚醒證據 |
-| 長期背景 | GUI／新版MCP應用持有supervisor；run／heartbeat暫時寫失敗先合作取消當次採集，沿原backoff等待，可寫後才重試，不取消enabled意圖或叫模型 | 主聊天仍舊／正式explicit_stop；非24小時或重開機證據 |
-| 查詢仲裁 | 新版預設Monitor／CLI query／事件diagnose先保存確切Job計畫再spawn；lease跨計畫到spawn，保存失敗零啟動，舊Job未知或恢復證據不可寫則保留閘道 | rootless library須明確傳hook；舊client未熱更新；測試與真Windows合成程序分列EVIDENCE，不代表真磁碟故障或新來源盤點 |
-| 狀態輸出 | overview合併完全相同的安全錯誤樣本，保留總數、截斷、不同錯誤碼與unknown；原status／observation不變 | sample_occurrences只計有界樣本；離線大小量測不等於模型token或實機效能 |
-| 可選自動交付 | 有 continuous dispatcher、耐久每日預算、空佇列等待、失敗保留與合作停止 | 本輪未啟用真 CLI；同一聊天閒置事件觸發未接通，不能以另一 CLI 或模型輪詢冒充 |
-| 驗證 | 新缺陷先保留主聊天實際失敗，再修復；本批驗證範圍及當版source manifest只看EVIDENCE | 前批完整回歸不代替本批新碼；fixture、SDK、fake CLI與實機分開，非24小時或新版主聊天Start成功證據 |
-| 未執行事項 | 24小時 soak、Phase7 真狀態注入、OS 重啟／登入驗證 | 排程未註冊；舊 dry-run digest 已失效；proxy helper 曾失敗，本輪不再追該旁支 |
+| 單一啟動 | `.\EventGuard.cmd run` | 前景啟動既有採集、Web 與通知。Ctrl+C 收尾自身 Job |
+| 事件列表 | Web「事件」或 `events list` | 全庫篩選後分頁。顯示嚴重度、來源、時間與處置狀態 |
+| 事件詳情 | 「查看」或 `events detail --event-id <ID>` | 只讀保存事實、建議與已存診斷。不重新採集 |
+| 處置狀態 | 詳情按鈕或 `events set-status` | 新增、已讀、已處理、忽略。SQLite 耐久保存。不自動 ACK |
+| 規則檔 | `config/rules.json`、Web「規則」 | 五條預設。固定條件。每輪重讀。壞檔明示錯誤 |
+| 七來源頁 | Web「來源狀態」或 `sources list` | 最後時間、結果、階段、原因碼與建議。拒讀不當成安全 |
+| 本機通知 | run 預設啟用 | high／critical 事件。成功回條去重。已處理、忽略不通知 |
 
-當版程式於正常重新載入生效，不把已運行舊 GUI／MCP 視為熱更新。歷史與已失效的待批准事項留 EVIDENCE，不是目前工作前提。[接線](docs/CONNECT_AGENT.md)、[共用介面](docs/HUMAN_AGENT_INTERFACE.md)、[維護目標](docs/MAINTENANCE_GOAL.md)。
+網址：[http://127.0.0.1:8765](http://127.0.0.1:8765)。Web 只綁本機。修改狀態須通過來源與 CSRF 檢查。
 
-一般權限、Python3.13標準庫與既有 tkinter；無提權、下載安裝、安全設定或執行政策變更，不動其他程序。事件與工具輸出是不可信資料。執行資料、憑證、Codex home、私人歷史、原有 research／附件不提交；本輪僅集中本地提交，不推送。
+## 本批驗證
+
+先完成產品功能，再執行統一測試。命令、測試數、失敗與差集結果只列 [EVIDENCE](docs/EVIDENCE.md)。本批唯一新證據目錄為 `reports/local-product-001`。它對應上列新功能。
+
+已用瀏覽器操作合成資料。查看事件、篩選、改成已讀。另一個新程序確認狀態仍在。七來源頁與五條規則可見。合成程序有限期執行。未啟用正式監看。
+
+Windows 通知在受限測試環境被拒。另以既有一般使用者送出一次固定合成通知，OS 已接受。本次圖示與視窗已關閉。是否被使用者看見，未驗證。Web 醒目提示已驗證。
+
+本輪沒有重掃主機。先前 Defender denied、tasks unknown 的真實證據仍保留。本輪來源頁使用合成案例驗證顯示與建議。不能升格為來源現在已可讀。
+
+## 限制
+
+pending 不因已處理或忽略而刪除。容量滿時仍會背壓。ACKed 資料依既有保留政策清理。
+
+資料與帳本可被同一使用者修改。不是防竄改鑑識。未知、過期、ACK 或已處理都不能證明主機安全。
+
+24 小時運轉、真實狀態注入與重開機尚未驗證。無全天候承諾。
+
+## 選配：本輪不做
+
+| 項目 | 成本 | 收益 |
+| --- | --- | --- |
+| A. Codex MCP 接線 | client 設定與維護。分析時使用模型額度 | agent 可讀事件並使用既有型別化介面 |
+| B. 閒置喚醒 | 需要可靠的事件觸發入口、模型預算與失敗處理 | 無人工訊息時也可開始分析 |
+| C. 開機自啟 | 系統整合、生命週期維護與重開機驗證 | 減少手動啟動 |
+
+三項都不阻擋產品使用。不得要求本輪重開 Codex、proxy、登入任務或排程。
+
+程式、測試與文件集中在同一個本地 commit。不提交 runtime、憑證、私人歷史、研究或附件。不推送。

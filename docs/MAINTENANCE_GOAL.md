@@ -1,38 +1,39 @@
-# EventGuard 維護目標
+# EventGuard 產品目標
 
-更新：2026-10-23；目標建立基底`bf99496cf3d73601fc2d8a1bf50c1c2fe8709b66`，本批基底`5a4c7a7`。依使用者「建立目標，繼續完成」已建立持續目標，未設token預算；即時狀態以目標工具為準。方向是**本機資安情報中心**：人類與agent經EventGuard取得觀察、理解事件、執行允許的操作，並在產品內看到正在做什麼及結果。沿用feature與資料，不reset/clean；既有研究與附件保留。
+更新：2026-10-23。以本輪使用者決定為準。
 
-## 本輪完成與驗證
+EventGuard 是本機程式。它自行採集、比對規則、保存事件、顯示結果。正常運作不呼叫模型。
 
-最新人類優先序：本機資安監測→事件／觀察耐久保存→人類或agent分析與可選接收。收斂旁支，不把proxy、登入排程或閒置聊天喚醒作為此流程的前置。主聊天已完成真實七來源及一件本輪真事件的讀取／查證／接收；本輪再修資料品質與規則誤判，見EVIDENCE。
+## 必做功能
 
-最新續行修復長期故障恢復：慢來源不再餓死其餘採集；ACK原proof保護到接收器完成耐久收尾；overview去除相同錯誤樣本重複。先以fixture重現、實作後統測，不新增採集面、agent層或模型；詳見runtime-reliability證據批次。
+1. CLI 與本機 Web 列出事件。可依嚴重度、來源及處置狀態篩選。
+2. `config/rules.json` 可設定規則。提供五條預設規則。
+3. 可查看事件詳情。保存新增、已讀、已處理、忽略四種狀態。
+4. 顯示七來源的最後採集時間、結果、原因與建議。
+5. 新高嚴重度事件顯示本機通知。通知去重。不呼叫模型。
+6. `eventguard run` 啟動採集、Web 與通知。可前景執行。按 Ctrl+C 停止。
 
-本主聊天另以程式產生的合成事件驗單件／連續／batch、active inbox滿載及ACK前補收。真工具回傳、pending、同query、唯一回條及原設定復原皆通過獨立比對；詳見chat-delivery-003。產品source未變，不重跑前批全套、不藉驗收另啟模型。這補齊活動回合通路證據，仍保留下面長時／閒置／OS登入條件，沒有以局部成功宣告整個目標完成。
+處置狀態與投遞 ACK 分開。已讀或已處理不會自動 ACK。未知與拒讀不代表安全。
 
-本批實際驗正式Start，發現舊MCP錯走independent契約而被外部Job拒絕，未建立child；Stop已恢復原Pause。已改接現有application-owned核心，補多client換代／EOF只清自身Job與耐久退出回條，不啟動模型。當前聊天一次capabilities仍是舊server，需client正常重新載入後再驗Start；不把SDK fixture成功或前批全套升格成主聊天已更新。這是本輪可用性修補，不以proxy／排程作前提。
+## 選配
 
-續行補一次ecdb479新server／隔離live root的真七來源嘗試、保存及EOF退出；Defender denied、tasks unknown不改寫可讀或安全，正式Pause未變。helper exit1保留，另只讀核實狹義證據，沒有重掃。另修run/heartbeat暫時寫失敗後host退出但enabled仍true、需手動Start的具體缺陷：保留supervisor、取消當次採集、metadata可寫後才依既有backoff重試；相關fixture及當版回歸見EVIDENCE。不把有限實機／fixture升格長期、OS登入或本聊天新版Start完成。
+- Codex MCP 接線。
+- 閒置喚醒 agent。
+- 開機自啟。
 
-本批先以兩個獨立Monitor重現gate寫失敗後另一client仍採集的反例，再在現有Runner／Runtime加入啟動前耐久Job計畫。共同短期lease涵蓋計畫到spawn及恢復，舊Job未知／保存失敗不開始；預設Monitor、CLI query、事件diagnose共用，沒有新控制器、查詢佇列或權限。零啟動拒絕不扣來源長間隔、不宣稱system query已執行；library hook與舊client邊界明示。具體失敗、測試及來源綁定見EVIDENCE。
+以上三項不阻擋產品開發、驗收或使用。本輪不做。不得再次要求重開 Codex、proxy 探測、登入任務或任何排程。
 
-- 沿用七來源、耐久事件、事件綁定查證與報告；不新增另一套控制器或事件佇列。
-- 正式MCP已在本主聊天載入15工具，實際呼叫capabilities／status／activity；前批只驗capabilities／status／activity；本輪另接收與ACK一件本輪新生真事件，未接管其餘backlog。GUI操作紀錄與工具共用同表，實際工具可讀到本輪操作；既有視窗是否已載入新版頁籤仍不推定。
-- 隔離合成入口由本主聊天實際list→receive→inspect→補收→ACK→重播ACK；核對SQLite只新增一張回條，保留ACK前pending證據。
-- 修正operator終身單連線鎖造成的啟動exit3：多client可同時連接，mutation採短期鎖，讀取及Stop不被該鎖阻擋。scope與原owner/run綁定，停止不追隨新owner；legacy單事件adapter維持exclusive owner。
-- 單事件CLI argv明確停用已知eventguard／eventguard_test，保留自身事件綁定入口。這是離線argv證據，不是本輪真CLI隔離驗收。
-- 既有GitHub研究回饋已建立公開issue與依上游政策分流的私人報告；不另啟動外部掃描器。
-- 功能集中驗證後本地提交；具體命令、失敗、修正與通過範圍以 [EVIDENCE](EVIDENCE.md) 為唯一測試數來源。
+## 工作方式
 
-## 下一步與完成門檻
+- 使用中文短句。
+- 先完成功能。再統一測試。
+- 測試資料與真實來源分開。
+- 只有新功能可新增對應 reports 證據。
+- 文件與功能放在同一個 commit。不做文件單獨提交。
+- 保留既有資料、研究與附件。不 reset、clean 或推送。
 
-正常監看由程式等待，不因模型額度停止。人類能獨立操作；agent只使用相同的型別化能力，不能給自己開權限。操作紀錄不收集聊天思考、任意shell／檔案操作或私人原文；它也不是抗同使用者竄改的安全稽核帳本。
+## 完成條件
 
-1. 保持正式工具可用、跨client補收／冪等ACK與人類操作相容；本輪測試及提交綁定見EVIDENCE。新碼跨client query admission已接到預設專案入口，但本主聊天capability仍舊；需client正常重新載入EventGuard，再核對`start_lifetime_owner=application`及`query_admission=durable_job_intent_v1`，才驗一次有限Start/Status/Stop。此聊天無reload工具，不強停、改其他MCP或重試proxy來替代。
-2. **閒置時自動喚醒同一聊天仍未接通**。需能由事件觸發目前client的指定聊天入口，並有明確模型授權，才做「先閒置→程式入列→本聊天工具接收」驗收；不得以另一個CLI或定時模型輪詢代替。MCP註冊與本輪活動回合接收不能達成此門檻。
-3. 長期監看與重開機恢復：現有GUI／supervisor及耐久暫停保留；登入排程仍未批准，程式變更後舊審查digest失效。建立前須產生當版dry-run計畫；實際登入／OS重啟與24小時soak另外核實。
-4. 外部漏洞情報匯入、跨主機整合及Phase7真狀態注入尚未驗證，不藉本輪擴增功能面。
+同一筆事件可在 CLI 與 Web 查到。篩選作用於全庫。處置狀態在程式重開後仍保留。規則變更在下一輪生效。來源拒讀顯示原因。通知不因重開而重複。空佇列不呼叫模型。停止後核實本工具程序退出。
 
-先前[喚醒／恢復研究](WAKE_RECOVERY_GATES.md)保留歷史，不再是本輪前置或待追問事項。metadata probe後獲批准，但helper收尾失敗、沒有連線結論；排程未批准、不建立，舊plan已失效。若未來人類另要求閒置喚醒／OS登入恢復，仍須以真正相符的證據驗收；不把本輪工具讀取升格成這些能力。
-
-一般權限唯讀、不UAC／提權、不安裝下載、不改安全設定／執行政策、不動非本工具程序。MCP批准不包含真模型、排程建立、系統修補或自動處置；這些仍需具體批准。runtime、憑證與私人歷史不提交或上傳。
+24 小時測試與真實狀態注入未完成。不得稱為全天候保證。一般權限、唯讀採集及標準庫界線仍有效。

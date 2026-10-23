@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "rules": [
+    {
+      "id": "protection-disabled",
+      "name": "兩項防護功能關閉",
+      "enabled": true,
+      "severity": "high",
+      "conditions": [
+        {"field": "event_type", "op": "eq", "value": "protection.changed"},
+        {"field": "transition", "op": "in", "value": ["new", "escalated"]},
+        {"field": "evidence.count", "op": "gte", "value": 2}
+      ]
+    },
+    {
+      "id": "listener-all-interfaces",
+      "name": "全介面監聽端點變化",
+      "enabled": true,
+      "severity": "warning",
+      "conditions": [
+        {"field": "event_type", "op": "eq", "value": "listener.changed"},
+        {"field": "transition", "op": "eq", "value": "new"}
+      ]
+    },
+    {
+      "id": "persistence-added",
+      "name": "新增持久化項目",
+      "enabled": true,
+      "severity": "warning",
+      "conditions": [
+        {"field": "event_type", "op": "eq", "value": "persistence.changed"},
+        {"field": "transition", "op": "in", "value": ["new", "escalated"]},
+        {"field": "evidence.reason", "op": "eq", "value": "added_metadata"}
+      ]
+    },
+    {
+      "id": "persistence-baseline",
+      "name": "首次持久化盤點",
+      "enabled": true,
+      "severity": "info",
+      "conditions": [
+        {"field": "event_type", "op": "eq", "value": "persistence.changed"},
+        {"field": "transition", "op": "eq", "value": "new"},
+        {"field": "evidence.reason", "op": "eq", "value": "initial_inventory"}
+      ]
+    },
+    {
+      "id": "collection-failed",
+      "name": "採集錯誤或逾時",
+      "enabled": true,
+      "severity": "high",
+      "conditions": [
+        {"field": "event_type", "op": "eq", "value": "coverage.degraded"},
+        {"field": "transition", "op": "in", "value": ["new", "escalated"]},
+        {"field": "coverage_status", "op": "in", "value": ["error", "timeout"]}
+      ]
+    }
+  ]
+}

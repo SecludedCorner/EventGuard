@@ -2,6 +2,36 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-23：本機產品六項功能
+
+本批基底為`98968ba4435fa178a4b8d05cc721150440f46186`。分支不變。以最新產品範圍為準。MCP 接線、閒置喚醒與開機自啟改為選配。它們不再阻擋工作。本輪不做 proxy、排程或模型呼叫。
+
+新增 CLI／Web 事件檢視、可設定規則、四種處置狀態、七來源狀態頁、本機通知及單一 run 入口。Web 只綁127.0.0.1。列表先篩全庫，再分頁。事件內容用文字顯示。狀態寫入有來源與CSRF檢查。處置狀態存同一事件DB，不改payload、delivery、ACK或回條。清理原事件時同步清理處置列。pending不因已處理而刪除。
+
+規則檔含五條預設。每輪重讀。只接受固定型別條件。不用eval、自由命令或任意查詢。無匹配時保留原分類。預設不把escalated或resolved降錯級。壞檔明示錯誤，既有query仍收尾。來源頁只讀保存觀察，顯示時間、結果、stage、原因碼及建議。Defender denied與tasks unknown分開。合成0x80070003保留為路徑不可見，不改寫AccessDenied或安全。
+
+先完成全部功能，再執行以下統測。三個子任務分工資料、規則、來源與通知；root整合CLI、Web與run。執行資料只新增本功能批次`reports/local-product-001`，沒有一般接線或目標稽核的新報告。
+
+| 命令 | 結果 | 範圍 |
+| --- | --- | --- |
+| `py -3.13 -B scripts/verify.py --run-dir reports/local-product-001/full-001 --timeout-seconds 900` | 20:09:16台北完成。948 run，944 pass，1 error，3 skip。exit1。257.805秒 | 全套。原錯誤與回條保留 |
+| `py -3.13 -B reports/local-product-001/verify_delta.py` | 20:16:19台北完成。32 run，31 pass，0 error/failure，1 skip。exit0。9.653秒 | 只重測通知與本機產品兩模組。精確命令以delta-001/verification-summary.json為準 |
+| `py -3.13 -B reports/local-product-001/verify_delta.py --modules test_local_product,test_core_cli,test_cli_workflow,test_local_notifications --run-dir reports/local-product-001/delta-002` | 20:25:15台北完成。59 run，58 pass，0 error/failure，1 skip。exit0。17.26秒 | 新增UTF-8修正後的最後相關差集 |
+
+Python3.13.3。148個Python AST無錯。每組source_unchanged=true、per_test_residuals=[]。guardian皆自然退出，remaining0、forcibly_terminated=false；原全套仍exit1。回條保留shutdown_requested_reason=descendants_remaining，不把提出收尾當成從未清理。
+
+唯一error在新通知滿載測試。測試ACK後未執行來源保留清理。原事件仍存在，通知回條依法保留，因此沒有新的event_id。修正測試先maintain並確認ACKed原事件已移除，再驗證通知回條滿載恢復。pending不丟。另讓失敗重試保留已載DLL/API，避免每秒重載。補兩項fake DLL計數測試。這些不是實際Windows彈窗證據。
+
+實際啟動檔驗證另發現管線中文亂碼。CLI現在只對非tty管線固定UTF-8，不改Windows設定。修正後`.\EventGuard.cmd rules validate --format text`實際顯示「規則檔：config/rules.json。檢查通過。」及五條中文名稱，exit0。新增真owned Python子程序測試，嚴格以UTF-8解碼並核對中文。只補跑相關CLI／產品差集，其餘通過項目不重跑。
+
+`combined-index.json`按完整測試ID合併結果。951個不同測試，948通過、3略過。不是把重跑數量相加。最後來源未全套重跑。最終manifest相較全套只改notifications.py、web.py、cli.py、test_local_notifications.py與test_local_product.py，差集已覆蓋。兩項skip為symlink權限不足；另一項為受限環境notification_icon_unavailable。未為略過項提權。
+
+另以既有一般使用者送出一次固定合成Windows通知。僅使用sandbox例外，無UAC或管理員權限。實際輸出os_accepted_notification_request=true、own_icon_and_window_closed=true，命令exit0。未改系統設定。證據為windows-notification.json。這只證明OS接受要求；human_visibility_verified=false。原受限環境skip不改寫成功。
+
+瀏覽器實際操作隔離合成頁：列出事件、選high篩選、開詳情、按已讀。新程序讀同DB，確認已讀仍保存。重載頁面後同事件仍為已讀。七來源的denied／unknown、HRESULT與建議可見，五條規則可見。高嚴重度頁面提示可見。畫面為ui-event.png。兩次demo均有期限，結束後web_thread_exited=true、child_exited=true、forcibly_terminated=false、model_calls=0；原owned退出回條在demo/data/background/operator-stop-receipt.json。沒有啟用正式監看或重新盤點主機。
+
+本批測試為fixture、真loopback HTTP、SDK／fake CLI及有限Windows合成Job。先前實機七來源證據不被升格。本輪沒有真漏洞利用、24小時、重開機或長期承諾。程式與文件集中本地提交，不推送。執行資料、憑證、私人歷史、research與附件不提交。以下章節保留歷史，舊MCP阻塞與待批准事項不再是本輪產品前置。
+
 ## 2026-10-23：查詢啟動前耐久保存、跨 client 仲裁與實際執行回條
 
 本批基底`5a4c7a766503be6a99ca1c997456696c3e55bd5b`，同一feature，保留research及附件。正式控制仍disabled/explicit_stop、原bytes/hash未變；無新主機盤點、事件接收／ACK、真模型、Codex CLI、proxy探測、排程或安全設定變更。正式主聊天本批一次真正capabilities仍缺application lifetime與新query admission標記，原回傳留`reports/query-admission-001/native-capabilities-before.json`；與前兩個目標回合是相同client reload阻塞，沒有重試Start。

@@ -88,9 +88,10 @@ class OperatorTests(unittest.TestCase):
         self.assertEqual(path.read_bytes(), before)
 
     def test_cli_and_application_share_identical_event_view(self):
+        from eventguard.events.catalog import EventCatalog
         event = self.event()
         for operation, arguments, expected in (
-            ("list", (), self.api.events("test")),
+            ("list", (), EventCatalog(self.root,"test").list()),
             ("inspect", ("--event-id", event["event_id"]), self.api.inspect_event(event["event_id"], "test")),
         ):
             code, result = self.command("events", operation, "--namespace", "test", *arguments)

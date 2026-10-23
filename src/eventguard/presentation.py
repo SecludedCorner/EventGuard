@@ -98,11 +98,27 @@ def render(result, command="", operation=""):
         return "EventGuard：回傳格式未知。"
     if result.get("status") in {"error","invalid_request","conflict"}:
         return "EventGuard 無法完成操作："+text(result.get("reason",result.get("error_code",result["status"])))
+    if command=="run":
+        return "EventGuard："+state(result.get("state"))+"。模型呼叫：0。"
+    if command=="rules":
+        lines=["規則檔：config/rules.json。檢查通過。"]
+        for rule in result.get("rules",[]):
+            lines.append(text(rule.get("id"))+" | "+text(rule.get("name"))+" | "+text(rule.get("severity")))
+            lines.append("  條件："+text(json.dumps(rule.get("conditions"),ensure_ascii=False),2000))
+        return "\n".join(lines)
     if command=="background":
         return "\n".join(["EventGuard 背景操作："+text(operation),*_background_lines(result),
             "查看：background status；停止：background stop；事件：events list --namespace live。",
             "重開機登入後自動恢復需另批准排程；沒有自行建立排程或啟動模型。"])
     if command=="sources" and operation=="list":
+        if isinstance(result.get("sources"),list):
+            lines=["EventGuard 保存來源（"+text(result.get("namespace"))+"）"]
+            for source in result["sources"]:
+                lines.append(text(source.get("name"))+" | "+text(source.get("last_collected_at"))+" | "+state(source.get("saved_status"))+" | 目前："+state(source.get("status")))
+                for reason in source.get("reasons",[]):
+                    lines.append("  原因："+" / ".join(text(reason.get(k)) for k in ("stage","reason_code","win32_error","hresult_hex") if reason.get(k) is not None))
+                lines.append("  建議："+text(source.get("suggestion"),500))
+            return "\n".join(lines)
         return "\n".join(["EventGuard 保存來源（"+text(result.get("namespace"))+"）",*_source_lines(result.get("source_coverage")),
                           "查看資料：sources show --source-id <來源> --namespace "+text(result.get("namespace")),
                           "只有新鮮且可讀的觀察才有目前可見性；過期／拒讀／未知不是安全。"])
@@ -177,7 +193,23 @@ def render(result, command="", operation=""):
         return "\n".join(lines)
     if command=="events" and operation=="list":
         suffix=" --namespace "+result["namespace"] if result.get("namespace") in {"live","test"} else ""
-        return "\n".join(["事件空間="+text(result.get("namespace"))+"；總數="+text(result.get("total"))+"；截斷="+text(result.get("truncated")),*_event_lines(result.get("events")),"查證：events inspect --event-id <ID>"+suffix+"，再明確執行 events diagnose --event-id <ID>"+suffix+"。"])
+        rows=["事件空間="+text(result.get("namespace"))+"；符合條件="+text(result.get("total"))+"；尚有下一頁="+text(result.get("has_more",False)),
+              "ID | 嚴重度 | 來源 | 時間 | 處置狀態 | 事件"]
+        handling={"new":"新增","read":"已讀","handled":"已處理","ignored":"忽略"}
+        for event in result.get("events",[]):
+            rows.append(" | ".join(text(event.get(k)) for k in ("event_id","severity","source","observed_at"))+" | "+handling.get(event.get("status"),"未知")+" | "+text(event.get("event_type")))
+        if not result.get("events"):
+            rows.append("沒有符合條件的事件。這不代表主機安全。")
+        rows.append("詳情：events detail --event-id <ID>"+suffix+"。狀態：events set-status --event-id <ID> --status read"+suffix+"。")
+        return "\n".join(rows)
+    if command=="events" and operation=="set-status":
+        names={"new":"新增","read":"已讀","handled":"已處理","ignored":"忽略"}
+        return "事件 "+text(result.get("event_id"))+"。狀態已保存："+names.get(result.get("status"),"未知")+"。未執行ACK或系統處置。"
+    if command=="events" and operation=="detail":
+        return "\n".join(["事件詳情："+text(result.get("event_id")),
+                          "處置狀態："+text(result.get("status")),
+                          "來源："+text(result.get("source")),
+                          render({**result.get("interpretation",{}),"guidance":result.get("guidance",{})},"events","inspect")])
     if command=="events" and operation in {"receive","ack","retry"}:
         lines=["事件操作："+text(operation)+" / "+state(result.get("status",result.get("state"))),
                "event_id="+text(result.get("event_id")),"query_id="+text(result.get("query_id"))]

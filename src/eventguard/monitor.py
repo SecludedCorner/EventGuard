@@ -99,6 +99,7 @@ class Monitor:
             return "unchanged"
 
     def _finish(self,health,cycles,namespace):
+        blocked_rules = health.get("state") == "blocked_rules"
         runner=getattr(self.collectors,"runner",None) if self.collectors else None
         if runner and getattr(runner, "last_process", None):
             health["query_shutdown"] = runner.last_process
@@ -148,14 +149,16 @@ class Monitor:
         if receipt.get("managed") and (receipt.get("child_exited") is not True or type(receipt.get("remaining_owned_processes")) is not int or receipt["remaining_owned_processes"] != 0):
             unconfirmed()
             return
-        health.update(state="stopped",monitoring=False,stopped_at=utc_now(),heartbeat_at=utc_now(),cycles=cycles)
-        self._publish(health, "stopped", cycle=cycles)
+        health.update(state="blocked_rules" if blocked_rules else "stopped",monitoring=False,
+                      stopped_at=utc_now(),heartbeat_at=utc_now(),cycles=cycles)
+        self._publish(health, "blocked" if blocked_rules else "stopped", cycle=cycles)
         self.runtime.log("monitor_stopped",{"namespace":namespace,"count":cycles})
 
     def run(self,max_cycles=None,fixture=None,fixture_interval=0.1,on_cycle=None,max_seconds=None,deadline_monotonic=None,on_progress=None):
         from .events.store import EventStore
         from .transport.adapters import DisabledAdapter
         from .rules.detector import evaluate
+        from .rules.configured import apply_rules, load_rules, RulesValidationError
         if max_cycles is not None and (type(max_cycles) is not int or not 1<=max_cycles<=100000):
             raise ValueError("invalid_max_cycles")
         if max_seconds is not None and (type(max_seconds) not in (int,float)
@@ -169,6 +172,7 @@ class Monitor:
         if fixture and (max_cycles is None or not 0.05<=fixture_interval<=5):
             raise ValueError("fixture_requires_bounded_cycles")
         config=self.runtime.config()
+        configured_rules = load_rules(self.runtime.root)
         self._on_progress = on_progress
         namespace="test" if fixture else "live"
         frames=self._load_fixture(fixture) if fixture else None
@@ -238,6 +242,12 @@ class Monitor:
                     # Stable sorting retains SECTIONS order for equal/no attempts.
                     key=lambda key: self.last.get(key, float("-inf")))
                 if due:
+                    try:
+                        configured_rules = load_rules(self.runtime.root)
+                    except RulesValidationError as error:
+                        health.update(state="blocked_rules", monitoring=False, healthy=False,
+                                      last_error=str(error), stop_reason="invalid_rules")
+                        break
                     health["last_attempt"]=utc_now()
                     round_start=self.clock()
                     duration_limit=False
@@ -260,6 +270,7 @@ class Monitor:
                                                              cooldown=config.get("cooldown_seconds", 300))
                                 for event in events:
                                     event["synthetic"] = bool(fixture)
+                                events = apply_rules(events, configured_rules)
                                 store.commit_evaluation(new_state, events)
                                 state = new_state
                                 delivery = store.pump(DisabledAdapter())
