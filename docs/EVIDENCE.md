@@ -1003,3 +1003,62 @@ python -B reports/phase1-collectors-001/verify.py
 保留的失敗與修正：第一輪全套發現預先建立診斷表占用小型 outbox 空間，使既有滿載／ACK 輪替測試失敗；改為明確 diagnose 時才在同交易建表，失敗連 DDL 一併回滾。可讀性測試另發現原 schema 會丟棄既有 synthetic Defender 的 property，現在保留此 metadata key、共用 view 僅接受固定防護欄位枚舉。初輪／release 失敗證據及中間 final 成功快照均保留，當前版本只以 verified 為準；沒有放寬原容量或移除既有測試。
 
 尚未驗證：新 agent 介面的真模型操作／效益、重開機後的 Windows coverage、任意 OS hang 的硬性退出、長期控制／自啟、monitor_gap 與 soak。Phase 1 tasks／Defender／程序可讀性缺口未改寫為成功；診斷與 ACK 仍不代表主機安全。Phase 3–7 尚未實作，本輪不宣稱全天候或已將工具載入任意桌面聊天。具體提交由 Git 與本機 source-commit.json 綁定，不推送。
+
+
+## 2026-10-24：無模型 MCP／GUI 同一 Application 閉環
+
+分支 `feat/local-codex-acceptance`，基底 `d23c7d3ed2561fb8c855dffa342862ffa0fdb832`。交付 commit 另由本批 `source-commit.json` 綁定。未推送。
+Windows 一般使用者，Python 3.13.3；既有 MCP 1.6.0、uvicorn 0.34.2、Starlette 0.46.2、sse-starlette 2.3.3。沒有下載或模型任務。
+本機原始證據：忽略的 `reports/application-mcp-001`。核心仍標準庫；SDK 選配載入。
+
+### 本批測試數單一來源
+
+| 證據 | 命令／範圍 | 實際結果 |
+| --- | --- | --- |
+| verify-001 | 八個相關模組；420 秒期限 | SDK 連線未完成，無 worker summary。native exit 1460、forcibly_terminated=true、殘留 0。失敗，不算通過 |
+| verify-002 | 只跑 test_application_mcp；90 秒期限 | 12 run、11 pass、1 error，26.847 秒。期限與 phase 記錄定位 connect 未得 endpoint；自然 exit 1、無 force／殘留 |
+| verify-003 | 七個相關模組；240 秒期限 | 70 run、66 pass、3 errors、1 notification skip，68.284 秒。兩個 mock lease／清理錯誤，一個 stdin-open 退出逾時；自然 exit 1、無 force／殘留 |
+| verify-004 | 下列十四模組；240 秒期限 | 181 run、180 pass、0 failure/error、1 notification skip；109.281 秒，2026-10-24 11:25:26 UTC+08。source_unchanged=true、native exit 0、無 force／殘留 |
+| verify-005 | 新增真雙 client 案例後，只跑 test_application_stdio；120 秒期限 | 4/4 pass；18.744 秒，2026-10-24 11:33:34 UTC+08。source_unchanged=true、native exit 0、無 force／殘留 |
+
+兩個成功範圍不相加。verify-005 只變更已驗模組的測試，產品來源與 verify-004 相同。
+通知 skip 是 `notification_icon_unavailable`，不代表已看見通知。原始失敗完整保留。
+
+```powershell
+py -3.13 -B scripts/verify.py --run-dir reports/application-mcp-001/verify-004 --timeout-seconds 240 --module test_application_controls --module test_application_mcp --module test_application_host --module test_application_stdio --module test_application_stdio_transport --module test_application_rpc --module test_application_ui_state --module test_monitor_web_controls --module test_local_product --module test_operator_clients --module test_core_cli --module test_cli_workflow --module test_operator_api --module test_operator_monitor_owner
+py -3.13 -B scripts/verify.py --run-dir reports/application-mcp-001/verify-005 --timeout-seconds 120 --module test_application_stdio
+```
+
+範圍為 fixture、SQLite、真已安裝 SDK SSE／stdio、Windows 自有 Job／loopback；部分故障注入是 mock，不是主機資安採集。
+真雙 client 以有界 timing barrier 控制進入時刻，保留正式 Application 與原生 spawn。第二端三個並行要求回 busy；release 後只有一個真 fixture host。跨 client replay 不增 child，pending 不 ACK。協定、時序及自然退出回條見 verify-005/lifecycle-evidence.json。
+真 SSE 連續兩 server、同 server 重連、foreign Event、Host／Origin／token／body 邊界及未知回條亦有覆蓋。
+
+### 修正與可見 GUI
+
+Application 是唯一 owner；Web／MCP 共用 instance、namespace、控制鎖、revision 及 EventCatalog。stop 只停止採集；shutdown 才關閉應用。人工處置不等於 ACK。
+SSE 依賴的程序全域退出 Event 不能跨 worker loop 沿用。現在只建立與清理自身 Event，並以 transport lease 防跨 loop 並行；外來 Event 明示阻擋。未修改 site-packages。
+SDK stdin worker 在管線仍開時不可取消。Windows transport 改為 PeekNamedPipe、有界讀取及合作退出，不關閉其他 handle 或程序。
+另補合成資料標示、詳情輪詢與亂序保護；暫時 health 讀取失敗不再誤稱規則損壞。
+
+exercise.py 使用真 CLI main、隔離 root 與私有 Job。普通 Python 使用真 SDK；瀏覽器由 CUA 操作，沒有人工刷新。
+ui-validation.json 核對雙向控制、篩選、已讀／已處理、同 ID、replay、受阻、重連、頁面自動接重啟實例、pending 與退出。
+原注入 `evt-d466938628854b3e827437de8f6335f3` 跨重啟仍 handled＋pending；最後 5 pending 是一個注入加四個 monitor_gap，ACK／receipt 均 0。兩個可見應用自然 exit 0、無 force／殘留。
+該輪包含中途修正，不能整輪稱最終 source。另以 final-visible 窄驗最終產品：真 MCP 壞規則受阻、修復後開始、暫停、恢復、停止與 GUI shutdown。source-match.json 核對最終產品；應用自然 exit 0、無 force／殘留。
+最終實例 `8463727e86cf4ea89a8ffcb9dccd5ef1`；注入 `evt-de7eb9c1c44043cba144023b3e1eb2da` 留 pending，沒有 ACK。
+
+08-failed.jpg 與停止圖 hash 相同，不能作新失敗色彩證據；原檔保留並標記。
+補正 final-visible/failed-fresh.jpg 經 CUA getScreenshot 顯示真紅邊／失敗文字／MCP 來源；running-fresh.jpg 是真綠色畫面，均另存。
+16 狀態映射及 7 亂序向量以 Node VM 執行實際 served JS prefix，全部符合；不是瀏覽器網路亂序注入。該 prefix 與最終產品相同。
+
+### 專用入口與原生工具
+
+既有原生 codex.exe 執行 `mcp add eventguard-app -- <既有 Python 3.13> -B <scripts/eventguard.py> mcp --allow-live`。
+一般使用者 mcp get 查回 stdio／enabled=true，保存 host-registration-normal-user.json。sandbox 視圖曾查不到，錯誤與空輸出保留；未改 CODEX_HOME 或認證。
+`py -3.13 -B reports/application-mcp-001/registered_entry_probe.py` 使用註冊的完整原生命令及私有 Job，完成 initialize、九工具清單、capabilities／status；GET GUI /api/status 核對同一 live instance。只讀操作 metadata，不開正式事件頁、不讀事件、不採集。child exit 0、無 force／殘留，停止設定 hash 與 budget presence 不變。
+證據 registered-entry-protocol.json／registered-entry-exit.json。這是 MCP client 連線，不是模型喚醒。
+
+較早 current-chat-catalog.json 顯示新入口未載入。稍後工具系統自動加入九工具，本 session 原生呼叫 capabilities／status 成功，另存 current-chat-native-proof.json，不覆寫舊觀察。
+同一正式 instance `a3b57a57573849249ec9c7196ae3c1ad`，namespace live，stopped、revision 0、last_action=null、model_calls=0，網址 http://127.0.0.1:53573。
+未要求使用者重啟。這次自動載入不保證所有客戶端都如此，也不是閒置聊天喚醒。
+
+測試應用／採集／入口探測均合作退出；正式 MCP 控制介面由 Codex client 保留閒置，供九工具使用，並非測試殘留或 agent host。正式停止設定不變；沒有預算初始化、模型、正式長期監看、服務、排程、自啟、proxy、新登入或安全設定變更。沒有七來源重掃、24 小時、重開機或真模型驗收。執行資料、附件及研究未提交。

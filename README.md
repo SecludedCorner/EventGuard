@@ -16,7 +16,9 @@ Windows 本機資安監看程式。使用一般權限及 Python 3.13 標準庫�
 
 程式在前景執行。按 Ctrl+C 停止。關閉網頁不會停止程式。不需要排程或 Codex。
 
-頁面上方可「暫停採集」、「恢復採集」及「停止監看與網頁」。暫停會停止本應用的採集程序，頁面仍可查看事件及保存處置狀態。恢復不刪事件、不 ACK、不啟動 agent。停止程式後，再執行同一指令可開啟保存的資料。外部監看或退出不明時，控制會顯示受阻。
+頁面可開始、暫停、恢復及停止採集。「停止採集」保留網頁與 MCP，可再次開始。「關閉程式」才關閉應用。事件與人工處置會保存；不 ACK、不啟動 agent。外部監看或退出不明時，控制會顯示受阻。
+
+只開控制介面可用 `.\EventGuard.cmd run --idle`。GUI 與選配 MCP 共用同一實例。頁面自動同步真實結果、操作來源與按鈕。接線與九工具見 [應用 MCP](docs/APPLICATION_MCP.md)。
 
 實際操作與驗收界線見 [本機頁面指南](docs/LOCAL_UI_ACCEPTANCE.md)。合成頁面會明示測試資料。停止要求與實際程序退出分開確認。
 
@@ -93,6 +95,6 @@ Windows 可能抑制通知。程式接受通知要求，不代表使用者已看
 
 專用 agent 派送提供 `agent start / status / pause / resume / stop`。start 預設只預檢；加 `--execute` 才允許模型。操作、篩選與七欄封裝見 [AGENT_SERVICE](docs/AGENT_SERVICE.md)。本批未啟用。
 
-Codex 主聊天 MCP、桌面閒置喚醒及開機自啟均為選配。成本與收益見 [現況](STATUS.md)。
+Codex 接線、桌面閒置喚醒及開機自啟均為選配。MCP 操作不代表閒置喚醒。成本與收益見 [維護目標](docs/MAINTENANCE_GOAL.md)。
 
 舊 Tk GUI 仍可雙擊 `EventGuard.cmd` 開啟。歷史驗收見 [EVIDENCE](docs/EVIDENCE.md)。產品範圍見 [維護目標](docs/MAINTENANCE_GOAL.md)。本專案使用 [MIT](LICENSE)。

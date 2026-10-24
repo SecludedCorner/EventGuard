@@ -2,8 +2,21 @@
 
 先讀 AGENTS、README、STATUS。目前優先交付可獨立使用的無模型產品閉環，再銜接模型。一般使用者。核心只用標準庫。
 
-本輪接續無模型產品閉環，本批基底 `54d231c`。
-Goal UI 仍 blocked；工具不能 resume 或改寫，未假結案重建。這不阻擋已授權的本機工程。
+本輪接續無模型 MCP／GUI 同一 Application 操作閉環。本批基底 `d23c7d3`。
+Goal 已由統合者更新為 active。本 session 的 get_goal 已核對，不重建另一個目標。
+新增入口與同實例契約見 [APPLICATION_MCP](docs/APPLICATION_MCP.md)。
+`run --idle` 不採集；`mcp --allow-live` 先接已有 GUI，否則只開閒置應用。
+本輪操作閉環已驗。失敗與成功證據均在 `reports/application-mcp-001`；命令與測試數只見 EVIDENCE。
+最終來源已驗真 SSE／stdio、雙 client busy／replay、同實例 GUI、重啟保存及自然退出。
+`eventguard-app` 已註冊；已用完整命令做 live 操作 metadata 探測，未讀正式事件或採集。
+本聊天隨後自動載入九工具，原生 capabilities／status 已成功。不要求使用者重啟。
+原生正式 instance `a3b57a57573849249ec9c7196ae3c1ad` 保持 stopped，網址 `http://127.0.0.1:53573`。
+這是閒置控制應用，不是 agent host 或正式監看。其餘測試程序均已退出。
+Application lease 保留到 Web／SDK／自有採集均確認退出；回條失敗不宣稱成功。
+SSE 只清理自身 Event；stdio 只輪詢自身 stdin。不得改 site-packages 或接管外來 transport。
+
+## 前版資料保存與來源修正
+
 已補 `run` 本機頁的監看暫停／恢復／停止，並統測事件、處置與 pending 保留。
 只控制本應用實際捕捉的 Job。外部 owner、未知退出或控制世代變更時不可盲目恢復。
 本輪不呼叫模型、不啟用正式 agent host、不初始化或重設預算。模型介面保留選配。
@@ -17,13 +30,14 @@ Runtime observations 沿原 JSON 原子保存 last_success_at；失敗或不完�
 上批 `reports/local-controls-001` 的失敗、中斷與修正證據保留，不與本批加總。
 沒有宣稱七來源當前實機、長期背景、24 小時或真模型收件成功。
 
-分支 `feat/local-codex-acceptance`。本批基底 `54d231c896a5c865e4838025ae5b2d86d872d90e`。
+分支 `feat/local-codex-acceptance`。前版基底 `54d231c896a5c865e4838025ae5b2d86d872d90e`。
 保留未追蹤的 `docs/research/` 與附件。不 reset、clean、推送或提交執行資料。
 
-`Application.monitor_control` 固定 pause／resume／stop。Web 只轉交已注入的 callback，不另建 owner。
+`Application.monitor_control` 固定 start／pause／resume／stop／shutdown。Web 與九工具 MCP 共用此控制器，不另建 owner。
 pause 由 OperatorAPI 關閉實際捕捉的子程序；確認退出與回條後才標 paused。Web 與資料保留。
 resume 檢查原 namespace／run／停止後 generation，重讀規則，再由 background.start 在控制鎖內比對 generation。
-舊 owner 永久關閉；新 owner 只持有明確恢復所建立的子程序。不接管外部 host。stop 先回 HTTP 要求，主迴圈再關閉。
+舊 owner 永久關閉；新 owner 只持有明確開始／恢復所建立的子程序。不接管外部 host。
+stop 只停止採集並確認退出；shutdown 才要求主迴圈關閉控制服務。
 EventStore 既有空檔／缺表／缺必要欄位不再自動建空庫。初始化與已知 legacy migration 同一交易；失敗回滾。
 
 ## 既有事件派送契約

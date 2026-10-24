@@ -38,8 +38,8 @@ class ApplicationControlFixture(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
 
-    def application(self):
-        app = Application(self.root, port=0, fixture=FIXTURE, max_cycles=100000, notifications=False)
+    def application(self, **options):
+        app = Application(self.root, port=0, fixture=FIXTURE, max_cycles=100000, notifications=False, **options)
         self.addCleanup(app.web.close)
         return app
 
@@ -112,7 +112,7 @@ class MockApplicationControls(ApplicationControlFixture):
 
     def test_invalid_action_cannot_start_stop_or_change_events(self):
         app = self.application()
-        for action in ("start", "kill", "resume;command", "", None, [], {}):
+        for action in ("kill", "resume;command", "", None, [], {}):
             with self.subTest(kind=type(action).__name__), patch.object(background, "start") as start, \
                  patch.object(background, "stop") as stop:
                 with self.assertRaisesRegex(ValueError, "^invalid_monitor_action$"):
@@ -179,10 +179,18 @@ class MockApplicationControls(ApplicationControlFixture):
                         self.assertEqual(result["state"], "shutdown_unconfirmed" if "child_exited" in fault else "blocked")
                         self.assertFalse(app.status()["monitor_controls"]["paused"])
                         self.assertEqual(app.monitor_control("resume")["state"], "blocked")
+                        self.assertEqual(app.monitor_control("start")["state"], "blocked")
                         self.assertEqual(len(self.starts), 1)
                     finally:
                         app.cancel.set()
-                self.run_mock(app, announce, close=close)
+                try:
+                    self.run_mock(app, announce, close=close)
+                finally:
+                    # No native child exists in this mock. Release only the
+                    # fixture's own lease after checking the product fence.
+                    # Production unknown/shutdown policy remains unchanged.
+                    if app.control_services is not None:
+                        app.control_services.lease.release()
 
     def test_idempotent_controls_do_not_hide_changed_or_failed_saved_state(self):
         app = self.application()
@@ -222,11 +230,11 @@ class MockApplicationControls(ApplicationControlFixture):
                 app.cancel.set()
         self.run_mock(app, announce)
 
-    def test_stop_returns_before_cleanup_and_closed_application_cannot_resume(self):
+    def test_shutdown_returns_before_cleanup_and_closed_application_cannot_resume(self):
         app = self.application()
         def announce(_value):
-            result = app.monitor_control("stop")
-            self.assertEqual(result["state"], "stop_requested")
+            result = app.monitor_control("shutdown")
+            self.assertEqual(result["state"], "shutdown_requested")
             self.assertTrue(app.cancel.is_set())
             self.assertEqual(self.closes, [], "HTTP handler must not close its own server synchronously")
         self.run_mock(app, announce)
@@ -250,13 +258,20 @@ class MockApplicationControls(ApplicationControlFixture):
                     raise RuntimeError("bounded mock barrier expired")
             return self.fake_close(owner, grace_seconds)
         def announce(_value):
-            worker = threading.Thread(target=lambda: results.append(app.monitor_control("pause")), name="mock-app-pause")
+            worker = threading.Thread(target=lambda: results.append(app.monitor_control("pause", source="mcp",
+                operation_id="concurrent-1")), name="mock-app-pause")
             worker.start()
             try:
                 self.assertTrue(entered.wait(2))
                 self.assertEqual(app.status()["monitor_controls"]["transition"], "pause")
+                active = app.status()["last_action"]
+                self.assertEqual(active["state"], "processing")
+                self.assertEqual(active["source"], "mcp")
                 self.assertEqual(app.monitor_control("pause")["state"], "busy")
                 self.assertEqual(app.monitor_control("resume")["state"], "busy")
+                self.assertEqual(app.monitor_control("pause", operation_id="concurrent-1")["state"], "busy")
+                self.assertEqual(app.monitor_control("stop", operation_id="concurrent-1")["state"], "conflict")
+                self.assertEqual(app.status()["last_action"], active)
             finally:
                 release.set()
                 worker.join(timeout=3)
@@ -289,6 +304,134 @@ class MockApplicationControls(ApplicationControlFixture):
             write.assert_not_called()
             spawn.assert_not_called()
         self.assertFalse((self.root / "data").exists())
+
+    def test_control_only_start_has_stopped_view_and_explicit_start_stop_restart(self):
+        app = self.application(auto_start=False)
+        def announce(_value):
+            try:
+                initial = app.status()
+                self.assertEqual(initial["monitor_state"], "stopped")
+                self.assertRegex(initial["instance_id"], r"^[a-f0-9]{32}$")
+                self.assertTrue(initial["monitor_controls"]["stopped"])
+                self.assertTrue(initial["monitor_controls"]["can_start"])
+                self.assertFalse(initial["monitor_controls"]["can_resume"])
+                self.assertEqual(self.starts, [], "auto_start=False must start no collector")
+                started = app.monitor_control("start", source="mcp", operation_id="start-1")
+                self.assertEqual(started["state"], "running")
+                self.assertEqual(started["last_action"]["source"], "mcp")
+                self.assertEqual(started["last_action"]["action"], "start")
+                self.assertGreater(started["state_revision"], initial["state_revision"])
+                stopped = app.monitor_control("stop", source="gui", operation_id="stop-1")
+                self.assertEqual(stopped["state"], "stopped")
+                self.assertFalse(app.cancel.is_set(), "stop keeps the control application alive")
+                self.assertTrue(stopped["monitor_controls"]["can_start"])
+                self.assertEqual(app.monitor_control("start", source="gui", operation_id="start-2")["state"], "running")
+                self.assertEqual(len(self.starts), 2)
+                self.assertEqual(app.instance_id, initial["instance_id"])
+            finally:
+                app.cancel.set()
+        self.assertEqual(self.run_mock(app, announce)["state"], "stopped")
+
+    def test_operation_replay_and_conflict_do_not_repeat_or_regress_the_view(self):
+        app = self.application()
+        def announce(_value):
+            try:
+                first = app.monitor_control("pause", source="gui", operation_id="same-id")
+                self.assertEqual(first["state"], "paused")
+                close_count = len(self.closes)
+                repeated = app.monitor_control("pause", source="mcp", operation_id="same-id")
+                self.assertTrue(repeated["replayed"])
+                self.assertEqual(len(self.closes), close_count)
+                self.assertEqual(repeated["state_revision"], first["state_revision"])
+                self.assertEqual(repeated["last_action"]["source"], "gui")
+                conflict = app.monitor_control("stop", source="mcp", operation_id="same-id")
+                self.assertEqual(conflict["state"], "conflict")
+                self.assertEqual(conflict["last_action"], first["last_action"])
+                self.assertEqual(app.set_event_status("evt-not-written", "handled", operation_id="same-id")["state"], "conflict")
+                resumed = app.monitor_control("resume", operation_id="resume-1")
+                repeated = app.monitor_control("pause", operation_id="same-id")
+                self.assertTrue(repeated["replayed"])
+                self.assertEqual(repeated["monitor_state"], "running", "old results cannot repaint the current view")
+                self.assertGreaterEqual(repeated["state_revision"], resumed["state_revision"])
+                self.assertEqual(len(self.starts), 2)
+            finally:
+                app.cancel.set()
+        self.run_mock(app, announce)
+
+    def test_shared_event_methods_record_mcp_handling_without_ack(self):
+        app = self.application(auto_start=False)
+        event = make_synthetic("coverage")
+        store = EventStore(self.root / "data/test")
+        store.enqueue(event)
+        def announce(_value):
+            try:
+                capabilities = app.capabilities()
+                self.assertFalse(capabilities["ack_available"])
+                self.assertIn("shutdown", capabilities["monitor_actions"])
+                self.assertEqual(app.list_events(status="new")["events"][0]["event_id"], event["event_id"])
+                before = app.status()["state_revision"]
+                saved = app.set_event_status(event["event_id"], "handled", source="mcp", operation_id="event-status-1")
+                self.assertEqual(saved["state"], "event_status_updated")
+                self.assertFalse(saved["ack_performed"])
+                self.assertEqual(saved["last_action"]["action"], "set_event_status")
+                self.assertEqual(saved["last_action"]["source"], "mcp")
+                self.assertGreater(saved["state_revision"], before)
+                self.assertEqual(app.event_detail(event["event_id"])["status"], "handled")
+                self.assertEqual(store.get_event(event["event_id"])["delivery_status"], "pending")
+                again = app.set_event_status(event["event_id"], "handled", operation_id="event-status-1")
+                self.assertTrue(again["replayed"])
+                self.assertEqual(again["state_revision"], saved["state_revision"])
+                conflict = app.set_event_status(event["event_id"], "ignored", operation_id="event-status-1")
+                self.assertEqual(conflict["state"], "conflict")
+                self.assertEqual(app.event_detail(event["event_id"])["status"], "handled")
+                self.assertEqual(self.starts, [])
+            finally:
+                app.cancel.set()
+        self.run_mock(app, announce)
+
+    def test_event_status_save_failure_is_fixed_and_keeps_pending(self):
+        app = self.application(auto_start=False)
+        event = make_synthetic("listener")
+        store = EventStore(self.root / "data/test")
+        store.enqueue(event)
+        def announce(_value):
+            try:
+                with patch.object(EventStore, "set_disposition", side_effect=OSError("private instruction or path")):
+                    result = app.set_event_status(event["event_id"], "handled", operation_id="failed-status")
+                self.assertEqual(result["state"], "blocked")
+                self.assertNotIn("private instruction", str(result))
+                self.assertEqual(result["last_action"]["source"], "mcp")
+                self.assertEqual(app.event_detail(event["event_id"])["status"], "new")
+                self.assertEqual(store.get_event(event["event_id"])["delivery_status"], "pending")
+            finally:
+                app.cancel.set()
+        self.run_mock(app, announce)
+
+    def test_sources_ids_and_event_statuses_are_fixed_bounded_inputs(self):
+        app = self.application(auto_start=False)
+        for source in ("agent instructions", "MCP", "", None, []):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, "invalid_operation_source"):
+                app.monitor_control("start", source=source)
+        for identity in ("x"*129, "line\nbreak", "has space", "", 1, []):
+            with self.subTest(identity=identity), self.assertRaisesRegex(ValueError, "invalid_operation_id"):
+                app.monitor_control("start", operation_id=identity)
+        with self.assertRaisesRegex(ValueError, "invalid_event_status"):
+            app.set_event_status("evt-synthetic", "run instruction")
+        self.assertFalse((self.root / "data").exists())
+
+    def test_operation_cache_is_bounded_and_does_not_start_more_children(self):
+        app = self.application()
+        def announce(_value):
+            try:
+                self.assertEqual(app.capabilities()["operation_cache_limit"], 128)
+                for index in range(130):
+                    value = app.monitor_control("start", source="mcp", operation_id=f"bounded-{index}")
+                    self.assertEqual(value["state"], "running")
+                self.assertLessEqual(len(app._operations), 128)
+                self.assertEqual(len(self.starts), 1)
+            finally:
+                app.cancel.set()
+        self.run_mock(app, announce)
 
 
 @unittest.skipUnless(os.name == "nt", "Real Windows application-owned Job fixture")
@@ -349,7 +492,19 @@ class WindowsApplicationControls(ApplicationControlFixture):
                 self.assertEqual(detail["delivery_status"], "pending")
                 code, stopping = request("POST", "/api/monitor/stop", {})
                 self.assertEqual(code, 200, stopping)
-                self.assertEqual(stopping["state"], "stop_requested")
+                self.assertEqual(stopping["state"], "stopped")
+                self.assertFalse(app.cancel.is_set(), "stop must keep the Web/MCP application alive")
+                code, stopped_view = request("GET", "/api/status")
+                self.assertEqual(code, 200, stopped_view)
+                self.assertTrue(stopped_view["monitor_controls"]["stopped"])
+                self.assertTrue(stopped_view["monitor_controls"]["can_start"])
+                self.assertEqual(request("GET", route)[1]["status"], "handled")
+                code, restarted = request("POST", "/api/monitor/start", {})
+                self.assertEqual(code, 200, restarted)
+                self.assertEqual(restarted["state"], "running", restarted)
+                code, shutting_down = request("POST", "/api/monitor/shutdown", {})
+                self.assertEqual(code, 200, shutting_down)
+                self.assertEqual(shutting_down["state"], "shutdown_requested")
                 worker.join(timeout=15)
                 self.assertFalse(worker.is_alive(), "application stops after sending HTTP receipt")
         finally:
@@ -377,7 +532,7 @@ class WindowsApplicationControls(ApplicationControlFixture):
         self.assertEqual(outcomes[0]["model_calls"], 0)
         self.assertTrue(outcomes[0]["web"]["web_thread_exited"])
         self.assertTrue(outcomes[0]["monitor"]["child_exited"])
-        self.assertEqual(len(children), 2, "one initial host and one explicit same-scope resume")
+        self.assertEqual(len(children), 3, "initial host, same-scope resume, and explicit restart after stop")
         self.assertTrue(all(receipt["child_exited"] is True and receipt["exit_code"] == 0
                             and receipt["remaining_owned_processes"] == 0
                             and receipt["forcibly_terminated"] is False for receipt in receipts),

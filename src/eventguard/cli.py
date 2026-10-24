@@ -52,6 +52,14 @@ def parser():
     run.add_argument("--fixture",help="選填。只讀tests/fixtures合成資料。")
     run.add_argument("--max-cycles",type=int,help="fixture必填。限制合成採集輪數。")
     run.add_argument("--no-notifications",action="store_true",help="關閉系統通知。本機頁面仍顯示高嚴重度事件。")
+    run.add_argument("--idle",action="store_true",help="只開控制介面。等待明確開始採集。")
+    run.add_argument("--no-mcp",action="store_true",help="不開選配MCP listener。Web仍可使用。")
+    mcp=sub.add_parser("mcp",help="本機應用MCP stdio。接已有頁面，否則只開閒置控制介面。不呼叫模型。")
+    mcp.add_argument("--allow-live",action="store_true",help="明確允許正式資料範圍。不會自動採集。")
+    mcp.add_argument("--fixture",help="只用tests/fixtures合成資料。")
+    mcp.add_argument("--max-cycles",type=int)
+    mcp.add_argument("--port",type=int,default=0)
+    mcp.add_argument("--max-seconds",type=float)
     sub.add_parser("capabilities")
     sub.add_parser("status")
     activity=sub.add_parser("activity",help="查看EventGuard操作進度與歷史；不啟動採集或模型")
@@ -198,7 +206,8 @@ def execute(args,runtime,progress=None):
             raise ValueError("max_cycles_requires_fixture")
         from .application import run
         return run(runtime.root,port=args.port,fixture=args.fixture,max_cycles=args.max_cycles,
-                   notifications=not args.no_notifications,max_seconds=args.max_seconds)
+                   notifications=not args.no_notifications,max_seconds=args.max_seconds,
+                   auto_start=not args.idle,mcp_enabled=not args.no_mcp)
     if args.command=="rules":
         from .rules.configured import load_rules
         values=load_rules(runtime.root)
@@ -346,6 +355,18 @@ def main(argv=None,root=None):
             stream.reconfigure(encoding="utf-8",errors="backslashreplace")
     args=parser().parse_args(_format_args(argv))
     root=Path(root) if root else Path(__file__).resolve().parents[2]
+    if args.command=="mcp":
+        # stdout belongs exclusively to MCP JSON-RPC, including startup failure.
+        try:
+            if not args.fixture and args.max_cycles is not None:
+                raise ValueError("max_cycles_requires_fixture")
+            from .application_host import serve_stdio
+            return serve_stdio(root,allow_live=args.allow_live,fixture=args.fixture,
+                max_cycles=args.max_cycles,port=args.port,max_seconds=args.max_seconds)
+        except (OSError,ValueError,TypeError,RuntimeError,ImportError):
+            if sys.stderr is not None:
+                print("EventGuard MCP: startup_or_shutdown_unconfirmed",file=sys.stderr,flush=True)
+            return 4
     human=args.format=="text" or args.format=="auto" and bool(getattr(sys.stdout,"isatty",lambda:False)())
     def show(value):
         if sys.stdout is None:  # Existing pythonw.exe scheduled/background host.

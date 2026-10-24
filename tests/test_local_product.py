@@ -213,10 +213,29 @@ class ProductCliTests(ProductFixture):
         with patch("eventguard.application.run", return_value={"state": "stopped", "model_calls": 0}) as run:
             code, raw = self.command("run", "--port", "8877", "--no-notifications")
         self.assertEqual(code, 0, raw)
-        run.assert_called_once_with(self.root, port=8877, fixture=None, max_cycles=None, notifications=False, max_seconds=None)
+        run.assert_called_once_with(self.root, port=8877, fixture=None, max_cycles=None, notifications=False,
+                                    max_seconds=None, auto_start=True, mcp_enabled=True)
 
 
 class ApplicationTests(ProductFixture):
+    def test_mcp_close_failure_still_closes_web_and_owned_monitor_without_success_claim(self):
+        app = Application(self.root, port=0, notifications=False, auto_start=False)
+        try:
+            with patch("eventguard.application_host.ApplicationControlServices.close", side_effect=OSError("PRIVATE-CANARY")), \
+                 patch.object(app.owner, "close_owned_monitor", return_value={"child_exited": True}) as close:
+                result = app.run(announce=lambda _value: app.cancel.set())
+            self.assertEqual(result["state"], "shutdown_unconfirmed")
+            self.assertTrue(result["web"]["web_thread_exited"])
+            self.assertFalse(result["control_services"]["thread_exited"])
+            self.assertNotIn("PRIVATE-CANARY", json.dumps(result))
+            close.assert_called_once()
+        finally:
+            # This fixture never opened an SDK thread or collector. Release
+            # only its own simulated-unknown lease after the real Web exit.
+            if app.control_services is not None:
+                app.control_services.lease.release()
+            app.web.close()
+
     @unittest.skipUnless(os.name == "nt", "Windows local notification API")
     def test_real_windows_synthetic_notification_request_closes_own_icon(self):
         from eventguard.notifications import _WindowsBalloon, NotificationError

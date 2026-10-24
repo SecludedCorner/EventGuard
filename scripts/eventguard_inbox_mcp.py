@@ -59,11 +59,19 @@ def _sdk_server(name, validate):
             # tools finish before this scope returns; native worker jobs have
             # their own bounded stop and exit evidence.
             try:
-                async with stdio_server() as (incoming, outgoing):
+                streams_factory = getattr(self, "stdio_streams_factory", stdio_server)
+                async with streams_factory() as (incoming, outgoing):
                     sender, receiver = anyio.create_memory_object_stream(0)
                     async with anyio.create_task_group() as tasks:
                         tasks.start_soon(self._mcp_server.run, receiver, outgoing,
                                          self._mcp_server.create_initialization_options())
+                        stop_event = getattr(self, "stdio_stop_event", None)
+                        if stop_event is not None:
+                            async def observe_owner_exit():
+                                while not stop_event.is_set():
+                                    await anyio.sleep(.1)
+                                tasks.cancel_scope.cancel()
+                            tasks.start_soon(observe_owner_exit)
                         try:
                             async with sender:
                                 async for message in incoming:
@@ -133,12 +141,15 @@ def build_server(source_dir, state_dir, event_id, allow_live=False, allow_ack=Tr
     return server
 
 
-def build_operator_server(root, namespace="test", allow_live=False, operator_api=None):
+def build_operator_server(root, namespace="test", allow_live=False, operator_api=None, *, application=None):
     """Optional SDK adapter to the exact application API used by the CLI.
 
     Namespace/live scope is fixed by the human launcher, not tool arguments.
     Starting this server never starts a model or an idle monitor.
     """
+    if application is not None:
+        from eventguard.application_mcp import build_application_server
+        return build_application_server(application, server_factory=_sdk_server)
     from eventguard.operations import OperatorAPI
     if namespace not in {"live", "test"} or type(allow_live) is not bool or namespace == "live" and not allow_live:
         raise ValueError("operator_live_scope_not_authorized")
