@@ -349,7 +349,6 @@ def status(runtime):
             "monitor_shutdown_gate": _shutdown_status(health),
             "source_coverage": _coverage_status(runtime, health, now),
             "namespaces": {namespace: _namespace_status(runtime, namespace) for namespace in ("live", "test")},
-            "agent_budget": _budget_status(runtime),
             "background": _background_status(runtime),
             "agent_ingress": "not_configured", "real_agent_woken": False}
     result["operator_summary"] = _operator_summary(result)
@@ -481,7 +480,6 @@ class OperatorAPI:
                 "source_coverage": _overview_coverage(scoped["source_coverage"]),
                 "source_coverage_namespace": namespace,
                 "event_storage": document["namespaces"][namespace], "event_list": listing,
-                "agent_budget": document["agent_budget"],
                 "background": _background_status(self.runtime, namespace),
                 "progress": document["last_report"].get("progress") if monitor_namespace == namespace else None,
                 "monitor_gap": document["last_report"].get("monitor_gap") if monitor_namespace == namespace else None,
@@ -770,7 +768,7 @@ class OperatorAPI:
         if event["delivery_status"] == "failed":
             return {"status": "blocked", "reason": "failed_event_requires_explicit_retry",
                     "event_id": event_id, "namespace": namespace, "outbox_acknowledged": False,
-                    "next_steps": [_step("retry_event", "明確重試此單一失敗事件；不重設每日預算，也不啟動模型。", event_id=event_id, namespace=namespace)]}
+                    "next_steps": [_step("retry_event", "明確重試此單一失敗事件；不啟動模型。", event_id=event_id, namespace=namespace)]}
         inbox = self._operator_inbox(event_id, namespace)
         received = inbox.receive_event()
         query = inbox.query_evidence(event_id)

@@ -300,6 +300,13 @@ class Application:
             error = "saved_health_unavailable"
         from .intelligence.views import public_advisories
         advisories = public_advisories(self.runtime.root, self.namespace, limit=5)
+        from .agent_service import status as agent_service_status
+        try:
+            agent = agent_service_status(self.runtime.root)
+            if agent.get("namespace") not in (None, self.namespace):
+                agent = {"state": "not_applicable", "reason": "agent_service_outside_application_namespace", "model_calls": 0}
+        except (OSError, ValueError, RuntimeError, TypeError):
+            agent = {"state": "unknown", "reason": "agent_service_status_unavailable", "model_calls": 0}
         with self._state_lock:
             available = self._started and not self._closing and not self.cancel.is_set()
             closed = self._closing and not self._started
@@ -327,6 +334,7 @@ class Application:
                     "last_monitor_control": copy.deepcopy(self._last_control),
                     "notifications": dict(self.notification_state),
                     "advisories": advisories,
+                    "agent_service": agent,
                     "mcp": dict(self.mcp_state),
                     "model_calls": 0, "local_url": self.web.url}
 

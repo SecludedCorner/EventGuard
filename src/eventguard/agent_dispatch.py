@@ -22,9 +22,8 @@ import uuid
 
 from .acceptance_control import FileLease, read_json, write_json
 from .acceptance_evidence import _tool_result
-from .acceptance_process import CAPTURE_LIMIT, capture, open_authority, launch_hash
+from .acceptance_process import CAPTURE_LIMIT, capture
 from .capture_receipt import validate_receipt
-from .agent_budget import BudgetError
 from .local_paths import LocalWaitError, _guard
 from .queue_inbox import QueueInboxError
 from .processes import spawn, finish, JobPopen
@@ -34,7 +33,6 @@ KIND = "eventguard-bounded-agent-dispatch-v1"
 MAX_ATTEMPTS = 3
 MAX_EVENTS = 128
 HEARTBEAT_SECONDS = 5
-BUDGET_CHECK_SECONDS = 60
 TOOLS = ("receive_event", "query_evidence", "ack_event")
 _ID = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
 _TOKEN = re.compile(r"[0-9a-f]{32}\Z")
@@ -114,9 +112,12 @@ def command(codex, python, source, state, event_id, evidence, *, allow_live=Fals
             "-c", "log_dir=" + json.dumps(str(evidence / "codex-log")), "-c", config,
             # Project human/chat/application servers are unrelated to this event-bound
             # CLI task. --ignore-user-config does not omit project configuration.
-            "-c", "mcp_servers.eventguard_test.enabled=false",
-            "-c", "mcp_servers.eventguard.enabled=false",
-            "-c", "mcp_servers.eventguard-app.enabled=false", "-"]
+            # Disabled entries still require a valid transport when the CLI
+            # deserializes config, even with --ignore-user-config. Supply an
+            # inert stdio definition; enabled=false prevents starting it.
+            *[value for name in ("eventguard_test", "eventguard", "eventguard-app")
+              for value in ("-c", "mcp_servers." + name + "={enabled=false,command="
+                            + json.dumps(str(python)) + ",args=[]}")], "-"]
 
 
 def _assess_delivery(trace, evidence, event_id, exit_code, acknowledged, require_ack=True):
@@ -375,7 +376,7 @@ def maintain_ledger(path, inbox, policy=None, now=None):
             continue
         passed = [r for r in records if r.get("passed") is True]
         if not passed and not any(r.get("state") == "complete" and r.get("tree_exit_verified") is True for r in records):
-            continue  # A never-started reservation is not a failed agent delivery.
+            continue  # A never-started attempt is not a failed agent delivery.
         if not passed and not all(r.get("tree_exit_verified") is True or r.get("state") == "not_started" for r in records):
             continue  # A root exit or a receipt alone never proves the supervisor tree exited.
         last = passed[-1] if passed else records[-1]
@@ -392,7 +393,7 @@ def maintain_ledger(path, inbox, policy=None, now=None):
         if not passed:
             # A human/shared API may receive an event after an agent failure.
             # Receipt is terminal for delivery, never proof of an agent trace.
-            # Original attempts/captures and the independent daily budget stay.
+            # Original attempts/captures remain available for exit inspection.
             archive["events"][identity].update(completion="received_without_agent_proof", ack_verified=True)
         moved.append(identity)
     ordered = sorted(archive["events"], key=lambda key: (archive["events"][key]["finished_at"], key))
@@ -763,18 +764,18 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
         codex="codex", max_seconds=3600, max_tasks=5, allow_live=False, execute=False, poll_seconds=.5,
         cancel=None, deadline_monotonic=None, storage_limits=None, continuous=False, root=None,
         dispatch_enabled=None, admission_path=None, admission_run_id=None, select_event=None):
-    """Dispatch pending items, optionally staying alive between tasks and days.
+    """Dispatch pending items, optionally waiting for future events.
 
-    Continuous mode uses ``max_seconds`` per owned CLI task. Its daily admission
-    limit remains the fixed installation budget; idle time never reserves an
-    attempt. ``deadline_monotonic`` can still bound the whole owner lifetime.
+    Continuous mode uses ``max_seconds`` per owned CLI task. ``max_tasks`` is
+    a per-run bound, never a daily quota. ``deadline_monotonic`` can also bound
+    the whole owner lifetime. Idle waiting never calls a model.
     A failed item waits for human handling, never an automatic model retry.
     ``dispatch_enabled`` and the optional durable service control are rechecked
     before admission and worker creation. Pause does not cancel an active CLI.
     """
     began = time.monotonic()
     if (type(max_seconds) not in (int, float) or not 0 < max_seconds <= 3600
-            or type(max_tasks) is not int or not 1 <= max_tasks <= 5
+            or not (max_tasks is None and continuous or type(max_tasks) is int and 1 <= max_tasks <= 5)
             or type(allow_live) is not bool or type(execute) is not bool or type(continuous) is not bool
             or type(poll_seconds) not in (int, float) or not .01 <= poll_seconds <= 5
              or (dispatch_enabled is not None and not callable(dispatch_enabled))
@@ -793,7 +794,7 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
     directory.mkdir(parents=True, exist_ok=False)
     state = {"kind": KIND, "run_id": uuid.uuid4().hex, "state": "preflight", "started_at": utc(),
              "tasks_started": 0, "tasks_passed": 0, "child_exited": True, "stop_requested": False,
-             "max_seconds": max_seconds, "max_tasks": None if continuous else max_tasks, "allow_live": allow_live,
+             "max_seconds": max_seconds, "max_tasks": max_tasks, "allow_live": allow_live,
              "continuous": continuous, "queue_checks": 0, "events_total": 0, "pending_event_id": None,
              "execute": execute, "events": [], "reason": None,
              "delivery_progress": _progress(), "project_root": str(root)}
@@ -874,9 +875,7 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             state["inbox_retention"] = inbox.maintain()
         state.update(state="waiting", reason=None)
         _save(directory, state)
-        heartbeat_at = budget_checked_at = float("-inf")
-        budget = None
-        admission_attention = None
+        heartbeat_at = float("-inf")
 
         def wait_state(name, reason=None):
             nonlocal heartbeat_at
@@ -903,21 +902,17 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             if not _admission_enabled(dispatch_enabled, admission_path, admission_run_id):
                 wait_state("waiting_paused", "automatic_dispatch_paused")
                 continue
+            if continuous and max_tasks is not None and state["tasks_started"] >= max_tasks:
+                # A finite acceptance stays responsive to pause/stop without
+                # admitting another task. This is a run bound, not a day limit.
+                wait_state("waiting_task_limit", "task_limit_reached")
+                continue
             if allow_live and guard(root, "live") is not None:
                 if continuous:
                     wait_state("waiting_disabled", "agent_delivery_disabled")
                     continue
                 state.update(state="blocked_pending", reason="agent_delivery_disabled")
                 break
-            if continuous and time.monotonic() - budget_checked_at >= BUDGET_CHECK_SECONDS:
-                # Observe the durable clock during empty days as well. This is
-                # local SQLite work, not an admission or a model request.
-                try:
-                    budget = open_authority().status()
-                except BudgetError as error:
-                    budget = {"state": "blocked", "reason": str(error)}
-                state["budget"] = budget
-                budget_checked_at = time.monotonic()
             if select_event is None:
                 event_id = inbox.pending_event_id()
             else:
@@ -933,13 +928,6 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             if _check_stop(directory, state, cancel) or time.monotonic() >= deadline:
                 state["state"] = "stopped" if state["stop_requested"] else "time_limit_reached"
                 break
-            if continuous and admission_attention is not None:
-                if admission_attention[0] == event_id:
-                    wait_state("waiting_attention", admission_attention[1])
-                    continue
-                # A human handled the blocked item, or the pending head changed.
-                # Ordinary repeated polling must never retry a refused admission.
-                admission_attention = None
             if event_id is None:
                 wait_state("waiting")
                 continue
@@ -952,7 +940,6 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             if event_id in archive["events"]:
                 raise LocalWaitError("acknowledged_event_reappeared")
             records = ledger["events"].get(event_id, [])
-            prior_attempts = len(records)
             if continuous and any(record.get("state") == "complete" and record.get("passed") is not True
                                   for record in records):
                 wait_state("waiting_attention", "delivery_evidence_failed_no_automatic_retry")
@@ -964,11 +951,6 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                 raise LocalWaitError("dispatch_ledger_capacity")
             if any(record.get("passed") for record in records):
                 raise LocalWaitError("acknowledged_event_reappeared")
-            if continuous and budget is not None and budget.get("state") != "ready":
-                reason = budget.get("reason", "budget_unavailable")
-                name = "waiting_budget" if reason in {"budget_exhausted", "budget_bootstrap_usage_unknown"} else "waiting_attention"
-                wait_state(name, reason)
-                continue
             if continuous:
                 deadline = min(lifetime_deadline, time.monotonic() + max_seconds)
             if not _admission_enabled(dispatch_enabled, admission_path, admission_run_id):
@@ -1029,14 +1011,14 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                 active = None
                 break
             if not _admission_enabled(dispatch_enabled, admission_path, admission_run_id):
-                # No reservation or OS create occurred. Do not spend an event
+                # No OS create occurred. Do not spend an event
                 # retry slot merely because pause raced command preparation.
                 ledger["events"][event_id].remove(active)
                 if not ledger["events"][event_id]:
                     del ledger["events"][event_id]
                 _ledger_write(ledger_path, ledger, policy)
                 write_json(attempt_dir / "not-started.json", {**active, "state": "not_started",
-                           "child_exited": True, "reason": "paused_before_reservation"})
+                           "child_exited": True, "reason": "paused_before_worker_launch"})
                 state.update(child_exited=True, tasks_started=state["tasks_started"] - 1)
                 state["events"].pop()
                 state["events_total"] -= 1
@@ -1051,8 +1033,8 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                 write_json(attempt_dir / "attempt.json", active)
                 _ledger_write(ledger_path, ledger, policy)
             except (OSError, ValueError, RuntimeError):
-                # This continuously owned path has not reserved or called OS
-                # creation. A binding write failure cannot invent a worker.
+                # No OS creation has occurred. A binding write failure cannot
+                # invent a worker or consume a model task.
                 active.update(state="not_started", child_exited=True, cli_started=False,
                               reason="dispatch_binding_save_failed_pending_preserved", finished_at=utc())
                 _ledger_write(ledger_path, ledger, policy)
@@ -1069,74 +1051,18 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                     del ledger["events"][event_id]
                 _ledger_write(ledger_path, ledger, policy)
                 write_json(attempt_dir / "not-started.json", {**active, "state": "not_started",
-                           "child_exited": True, "reason": "paused_before_reservation"})
+                           "child_exited": True, "reason": "paused_before_worker_launch"})
                 state.update(child_exited=True, tasks_started=state["tasks_started"] - 1)
                 state["events"].pop()
                 state["events_total"] -= 1
                 active = None
                 wait_state("waiting_paused", "automatic_dispatch_paused")
                 continue
-            try:
-                authority = open_authority()
-                # Opening authority can perform local I/O. The immediately
-                # preceding gate still must be after that operation.
-                if not _admission_enabled(dispatch_enabled, admission_path, admission_run_id):
-                    raise BudgetError("dispatch_paused_before_reservation")
-                authority.reserve(token, event_id, reference["namespace"], reference["payload_hash"],
-                                  "retry" if prior_attempts else "dispatch", existing_attempts=prior_attempts,
-                                  launch_hash=launch_hash(cli_args, PROMPT))
-            except BudgetError as error:
-                # No worker has been created by this owner. A failed admission
-                # must not invent an unconfirmed source child or consume retry
-                # slots in the source ledger. Any charged global intent stays.
-                ledger["events"][event_id].remove(active)
-                if not ledger["events"][event_id]:
-                    del ledger["events"][event_id]
-                _ledger_write(ledger_path, ledger, policy)
-                write_json(attempt_dir / "not-started.json", {**active, "state": "not_started", "reason": str(error)})
-                state.update(state="blocked_pending", reason=str(error), child_exited=True,
-                             tasks_started=state["tasks_started"] - 1)
-                state["events"].pop()
-                state["events_total"] -= 1
-                active = None
-                if str(error) == "dispatch_paused_before_reservation":
-                    wait_state("waiting_paused", "automatic_dispatch_paused")
-                    continue
-                if continuous:
-                    reason = str(error)
-                    waits_for_day = reason in {"budget_exhausted", "budget_bootstrap_usage_unknown"}
-                    budget = {"state": "blocked", "reason": reason}
-                    state["budget"] = budget
-                    budget_checked_at = time.monotonic()
-                    if not waits_for_day:
-                        admission_attention = (event_id, reason)
-                    wait_state("waiting_budget" if waits_for_day else "waiting_attention", reason)
-                    continue
-                break
-            try:
-                state["budget"] = authority.status()
-            except BudgetError as error:
-                # Reserve already committed. A later status read must not erase
-                # its charge or pretend this was a refused, uncharged admission.
-                proof = {"attempt_id": token, "launch_not_started": True, "capture_complete": False}
-                write_json(attempt_dir / "capture-skipped.json", proof)
-                authority.record_not_started(token, proof)
-                active.update(state="not_started", child_exited=True, cli_started=False,
-                              finished_at=utc(), reason=str(error))
-                _ledger_write(ledger_path, ledger, policy)
-                state.update(state="blocked_pending", child_exited=True, reason=str(error),
-                             tasks_started=state["tasks_started"] - 1)
-                state["events"].pop()
-                state["events_total"] -= 1
-                active = None
-                break
             stopped = _check_stop(directory, state, cancel)
             expired = time.monotonic() >= deadline
             paused = not _admission_enabled(dispatch_enabled, admission_path, admission_run_id)
             if stopped or expired or paused:
                 proof = {"attempt_id": token, "launch_not_started": True, "capture_complete": False}
-                # A durable reservation is charged even though no worker exists.
-                authority.record_not_started(token, proof)
                 write_json(attempt_dir / "capture-skipped.json", proof)
                 active.update(state="not_started", child_exited=True, cli_started=False,
                               finished_at=utc(), reason="paused_before_worker_launch" if paused else "stop_or_deadline_before_worker_launch")
@@ -1207,7 +1133,6 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
                     active = None
                     if continuous and not state["stop_requested"] and time.monotonic() < deadline and not _admission_enabled(
                             dispatch_enabled, admission_path, admission_run_id):
-                        budget_checked_at = float("-inf")
                         wait_state("waiting_paused", "automatic_dispatch_paused")
                         continue
                     break
@@ -1228,7 +1153,6 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             if not summary["passed"]:
                 if continuous:
                     active = None
-                    budget_checked_at = float("-inf")
                     wait_state("waiting_attention", "delivery_evidence_failed_no_automatic_retry")
                     continue
                 state.update(state="blocked_pending", reason="delivery_evidence_failed_no_automatic_retry")
@@ -1236,7 +1160,6 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             state["tasks_passed"] += 1
             state.update(state="waiting", reason=None)
             active = None
-            budget_checked_at = float("-inf")
             _save(directory, state)
             if state["stop_requested"]:
                 state["state"] = "stopped"
@@ -1272,6 +1195,7 @@ def status(directory, *, read_only=False):
         raise LocalWaitError("invalid_dispatch_read_only_profile")
     directory = _guard(directory)
     state = _state(directory)
+    state.pop("budget", None)  # Historical quota data is not current authority.
     token = state.get("active_attempt_id")
     if isinstance(token, str) and _TOKEN.fullmatch(token):
         attempt = _guard(directory / "attempts" / token)
@@ -1310,7 +1234,7 @@ def status(directory, *, read_only=False):
 def stop(directory):
     directory = _guard(directory)
     state = _state(directory)
-    if state["state"] not in {"waiting", "running", "pending_child_exit", "waiting_budget", "waiting_attention", "waiting_disabled", "waiting_paused"}:
+    if state["state"] not in {"waiting", "running", "pending_child_exit", "waiting_budget", "waiting_attention", "waiting_disabled", "waiting_paused", "waiting_task_limit"}:
         return {"state": "not_running", "process_signal_sent": False}
     write_json(directory / "stop.request", {"run_id": state["run_id"], "requested_at": utc()})
     return {"state": "stop_requested", "process_signal_sent": False,

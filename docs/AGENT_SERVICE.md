@@ -15,7 +15,7 @@
 ```
 
 最後一條預設只預檢。不啟動背景或模型。不接受 cmd／bat／ps1 包裝。
-正式預檢會檢查來源、MCP SDK、接收權限及固定預算。
+正式預檢會檢查來源、MCP SDK及接收權限。App 通訊不設每日任務預算。
 登入未在預檢中驗證。CLI 可啟動也不代表能呼叫模型。
 缺能力時顯示原因。不得下載、提權或刪帳本解禁。
 
@@ -31,8 +31,8 @@
 ```
 
 start 使用現有 `data/live` 與 `data/agent-delivery`。
-`--namespace test` 改讀隔離合成範圍。它不豁免真正模型的預算或批准。
-重啟沿用同一 inbox、來源綁定、dispatcher 帳本及安裝預算。
+`--namespace test` 改讀隔離合成範圍。真正模型仍需有效批准。
+重啟沿用同一 inbox、來源綁定及 dispatcher 帳本。
 不因來源目錄、host 重開或 ACK 重置額度。
 
 pause 保存暫停，只阻擋新任務。已啟動任務不因 pause 被取消。
@@ -42,7 +42,7 @@ stop 保存停用，合作停止本 host。必要清理只限已核對的私有 
 強停或缺完整退出回條不得記為自然成功。
 這些命令不停止採集，也不刪除 pending。
 
-## 篩選及預算
+## 篩選與執行範圍
 
 編輯 [config/agent-dispatch.json](../config/agent-dispatch.json)。
 預設選 high／critical、固定事件種類及 new／read。
@@ -57,14 +57,14 @@ handled／ignored 不自動派送。這些狀態不是 ACK，原事件仍保留�
 驗證快取只放記憶體，最多 1000 筆。原文或 hash 改變就重新驗證。
 這不提供防同帳戶竄改的保證。修復資料後，可明確重啟 host；不自動重啟模型。
 
-每日最多五個任務。失敗、驗收及不確定啟動也計入。
-額度耗盡時普通 host 等待。無事件及等待額度時不呼叫模型。
-帳本缺失、壞檔或未知退出會阻擋啟動，不能默認剩餘五次。
-首次初始化及退出核對見 [AGENT_BUDGET](AGENT_BUDGET.md)。
+App 不設每日五次限制。無事件時不呼叫模型。
+人工指定的單次驗收上限仍有效，不代表產品日預算。
+歷史預算工具與資料保留，正常通訊不讀取或修改。
+未知退出與未完成收件仍阻擋盲目重試。
 
 ## 人類可看見的證據
 
-本機 Web 的「Agent 派送」頁顯示程序、心跳、待收數、預算及阻塞原因。
+本機 Web 的「Agent 派送」頁顯示程序、心跳、待收數及阻塞原因。
 頁面可暫停或停止。不提供啟動或恢復模型的按鈕。
 重新整理只讀保存狀態，不做模型輪詢。
 
@@ -109,7 +109,7 @@ Codex 桌面 queue 仍是未驗證候選，不阻擋專用 CLI 路徑。
 ## 驗收界線
 
 測試證據見 [EVIDENCE](EVIDENCE.md)。fake CLI、實際 Windows Job 與真模型分列。
-真驗須先指定合成範圍、有限任務數、固定預算與正常退出條件。
+真驗須先指定合成範圍、有限任務數與正常退出條件。
 必須核對生成／receive／query／結果／ACK 的 event ID 集合。
 只有真工具回傳及退出證據齊全，才能宣稱真正 agent 收到事件。
 ACK 不代表漏洞已修復、主機安全或人類案件結束。
@@ -120,7 +120,7 @@ ACK 不代表漏洞已修復、主機安全或人類案件結束。
 py -3.13 -B scripts/validate_delivery.py service --root reports/service-acceptance-NEW
 ```
 
-取得本輪有限批准及有效預算後，才在同一目錄加 `--codex-executable $codexExe --execute`。
+取得本輪有限批准後，才在同一目錄加 `--codex-executable $codexExe --execute`。
 程式先等空佇列，再加入事件。最多一個任務，總期限 180 秒，最後合作停止隔離 host。
 有限驗收使用既有 application-owned Job。驗收程式持有實際 child handle，不 detach、不離開外層 Job。
 父應用身分不明、退出或期限到達時，host 合作停止。CLI 啟動前也重查父應用與期限。

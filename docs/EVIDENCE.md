@@ -1,5 +1,50 @@
 # 證據與時間日誌
 
+## 2026-10-24：取消 App 日預算；單次真 CLI 通訊失敗
+
+本節取代下方早期「等待日界」的現況。基底 7663b57，未提交修改另隨程式提交。
+指令：`py -3.13 -B scripts/validate_delivery.py service --root reports/service-acceptance-eventguard-single-test-20261024-01 --codex-executable <既有原生 codex.exe> --execute`。
+時間 2026-10-24T10:25:16Z 至 10:25:33Z。Python 3.13.3；Codex CLI 0.164.0-alpha.11.1。
+唯一 event `evt-06865bfcc4874a0788c7b4114b28e3b5`。
+唯一 attempt `ab0992a7064948ef86bad8434222539e`，CLI PID 48976，建立時間 10:25:22.189816Z。
+生成／入列各1；receive/query/result/ACK各0。SQLite pending1，receipts0。無重複。
+真正原生CLI任務啟動1；觀察到的provider turn0。未量測模型請求數，不以task數當請求數。
+CLI JSONL 0 bytes。stderr為 `Error loading config.toml: invalid transport`，位置 `mcp_servers.eventguard_test`。
+CLI自然exit1，驗收exit2，17.554秒。各層子程序退出，remaining0、forcibly_terminated=false。
+單次grant已消耗。不重試模型。不是通訊、收件或喚醒成功。
+
+證據目錄同上述root。主要檔：communication-result.json、execution-exit.json、communication-final-status.json、service-owner-stop.json，以及run/attempt下的capture-start.json、capture-exit.json、codex.jsonl、codex.stderr.txt。
+原生App MCP status實際為blocked/application_not_running，live namespace。不是同次test App，也無同次GUI驗證。
+歷史authority與installation marker前後hash一致。沒有重設、刪除或換目錄。
+
+無模型工程驗證分開記錄：no-quota-unit-001 於10:20:05Z完成12/12，model_calls0；不重跑。
+失敗後只修正disabled MCP entry為完整但停用的stdio定義。transport-config-unit-001於10:28:14Z完成1/1，model_calls0；只證明TOML/命令契約。
+額外native metadata查核exit2；第一次metadata wrapper使用無效finish reason而失去回條，失敗紀錄保留。第二次有自然exit2/remaining0回條。兩者均非exec、非模型，不當作native修正成功證據。
+未重跑全套。舊預算耦合測試尚未全面遷移；先前整套數字不能當本批回歸結果。
+
+
+
+## 2026-10-24：單次模型驗收授權與保守首次初始化（等待日界）
+
+基底 `7663b57`。本次真正模型任務 **0**，不是測試通過。
+直接人類授權轉達與本session接收紀錄見唯一目錄 `reports/service-acceptance-eventguard-single-test-20261024-01`。
+Grant為 `eventguard-single-test-20261024-01`。Scope：一件七欄合成事件、最多一個native CLI模型任務、180秒、GPU0、無自動重試。
+固定authority DB/marker/journal/WAL/SHM/locks全不存在，agent host not_started/not_recorded；未動其他程序。
+以正式prepare入口建立一件manifest事件，source仍空；prepare exit0，Job remaining0、無強停。
+以正式CLI `budget initialize`首次初始化，沒有known-used參數，不假設今日0用量。
+2026-10-24T10:02:58Z：固定SQLite policy bootstrap_day=2026-10-24、bootstrap_unknown=1，今日guard used=5、remaining=0。
+`budget_bootstrap_usage_unknown`是預期保守阻擋；實際admissions/global_active/event_usage皆0，不是五次真任務。
+依實際帳本最早為2026-10-25 00:00:00+08:00，再核對quota，不改時間或重設帳本。
+`bootstrap-result.json`保留實際SQLite摘要、marker雜湊與初始化程序exit0/remaining0回條。
+原生CLI `--version`、`login status`皆exit0；版本 `codex-cli 0.164.0-alpha.11.1`，既有登入可用。
+這兩個是metadata命令，不是專用模型任務；原始登入輸出、認證與Codex home內容不保存。
+原生App MCP status目前application_not_running，只記operator context，沒有啟動GUI或模型，不冒充同App模型驗收。
+授權未消耗，service_execution/attempt/run/delivery/query/ACK尚未建立。
+`CONTINUE.md`與`continuation.json`固定同事件、同authority、同一--execute接續點；失敗或未知不得另開目錄重試。
+沒有修改程式、重跑既有套件、啟動正式監看、排程、GPU或動DeltaVault。既有統合者追蹤接續，不建立新輪詢。
+本段暫留接續資訊，不作文件單獨commit。原始執行資料均留本機，不提交。
+
+
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
 ## 2026-10-24：中文 App CLI 與一般使用者通知

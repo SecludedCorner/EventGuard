@@ -89,7 +89,7 @@ def _background_lines(value):
         lines.append("背景原因："+text(value["reason"]))
     if value.get("heartbeat_at"):
         lines.append("背景心跳："+text(value["heartbeat_at"]))
-    lines.append("背景不使用每日模型額度；手動停止會保存，需明確 start 才重新啟用。")
+    lines.append("背景等待不呼叫模型；手動停止會保存，需明確 start 才重新啟用。")
     return lines
 
 
@@ -136,12 +136,10 @@ def render(result, command="", operation=""):
     if command=="agent":
         if operation in {"inspect","export","capabilities"}:
             return json.dumps(result,ensure_ascii=False,indent=2)
-        budget=result.get("budget",result.get("agent_budget",{}))
         return "\n".join([
             "專用 agent 派送："+text(result.get("state",result.get("host_state","unknown"))),
             "目前程序："+text(result.get("host_liveness","unknown")),
             "暫停："+text(result.get("paused"))+"。待收事件："+text(result.get("pending_events")),
-            "每日剩餘任務："+text(budget.get("remaining") if budget.get("usage_known") is True else None)+"。預算原因："+text(budget.get("reason")),
             "阻塞原因："+text(result.get("reason",result.get("blocked_reason"))),
             "最後進度："+text(result.get("last_progress",result.get("heartbeat_at"))),
             "無事件由普通程式等待。ACK 只代表收到。模型用量未知時不視為零。",
@@ -153,7 +151,7 @@ def render(result, command="", operation=""):
             return text(json.dumps(result,ensure_ascii=False,indent=2),100000)
         lines=["公告追蹤："+state(result.get("host_state",result.get("state","unknown"))),
                "最後進度："+text(result.get("last_progress")),
-               "待收事件："+text(result.get("pending_events"))+"。每日剩餘任務："+text(result.get("daily_remaining")),
+               "待收事件："+text(result.get("pending_events")),
                "阻塞原因："+text(result.get("blocked_reason",result.get("reason"))),
                "agent：本輪未啟用。模型呼叫：0。"]
         for source in result.get("sources",[]):
@@ -222,9 +220,6 @@ def render(result, command="", operation=""):
             if not isinstance(item,dict):
                 continue
             lines.append(text(namespace)+" 事件庫："+state(item.get("state"))+"，總數="+text(item.get("events"))+"，狀態="+text(json.dumps(item.get("counts",{}),ensure_ascii=True),400))
-        budget=result.get("agent_budget",{})
-        if isinstance(budget,dict):
-            lines.append("可選 agent 預算："+state(budget.get("state"))+"，原因="+text(budget.get("reason")))
         lines.append("查看資料：sources show --source-id <來源>；查看事件：events list；停止：stop。")
         return "\n".join(lines)
     if command=="sources" and operation=="show":

@@ -145,9 +145,9 @@ class DispatchTests(unittest.TestCase):
         self.assertIn("--allow-live", server["args"])
         self.assertIn("features.shell_tool=false", args)
         self.assertIn("features.unbounded_connection_retries=false", args)
-        self.assertIn("mcp_servers.eventguard_test.enabled=false", args)
-        self.assertIn("mcp_servers.eventguard.enabled=false", args)
-        self.assertIn("mcp_servers.eventguard-app.enabled=false", args)
+        for name in ("eventguard_test", "eventguard", "eventguard-app"):
+            self.assertIn('mcp_servers.' + name + '={enabled=false,command='
+                          + json.dumps(str(Path("C:/Python313/python.exe"))) + ',args=[]}', args)
         self.assertNotIn(EVENT, PROMPT)
         self.assertFalse(any("bypass" in arg for arg in args))
 
@@ -161,11 +161,12 @@ class DispatchTests(unittest.TestCase):
                     config = tomllib.loads("\n".join(overrides))
                     servers = config["mcp_servers"]
                     self.assertEqual(set(servers), {"eventguard_inbox", "eventguard_test", "eventguard", "eventguard-app"})
-                    self.assertEqual(servers["eventguard_test"], {"enabled": False})
-                    self.assertEqual(servers["eventguard"], {"enabled": False})
+                    disabled = {"enabled": False, "command": "python.exe", "args": []}
+                    self.assertEqual(servers["eventguard_test"], disabled)
+                    self.assertEqual(servers["eventguard"], disabled)
                     # Use the actual registered server ID. Tool namespaces use
                     # underscores, but that is not a configuration alias.
-                    self.assertEqual(servers["eventguard-app"], {"enabled": False})
+                    self.assertEqual(servers["eventguard-app"], disabled)
                     self.assertEqual(servers["eventguard_inbox"]["enabled_tools"],
                                      list(TOOLS if allow_ack else TOOLS[:2]))
                     self.assertEqual(args[-1], "-")

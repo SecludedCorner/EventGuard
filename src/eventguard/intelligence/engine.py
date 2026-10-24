@@ -183,7 +183,6 @@ def _cycle(root, path=None, *, fetcher=None, inventory_reader=None, now=None, sy
 
 def status(root):
     from .store import IntelligenceStore
-    from ..agent_budget import public_status
     runtime = Runtime(root)
     path = runtime.path("data/advisories/intelligence.sqlite3")
     # Status before first start does not initialize an intelligence database.
@@ -206,8 +205,5 @@ def status(root):
         with closing(sqlite3.connect(outbox_path.as_uri() + "?mode=ro", uri=True)) as db:
             result["pending_events"] = db.execute("SELECT COUNT(*) FROM events WHERE delivery_status<>'ack'").fetchone()[0]
             result["pending_advisory_events"] = db.execute("SELECT COUNT(*) FROM events WHERE delivery_status<>'ack' AND json_extract(payload,'$.event_type')='advisory.changed'").fetchone()[0]
-    budget = public_status()
-    result["agent_budget"] = budget
-    result["daily_remaining"] = budget.get("remaining") if budget.get("usage_known") is True else None
     result["agent_blocked_reason"] = "not_enabled_this_round"
     return result

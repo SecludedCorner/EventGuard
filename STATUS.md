@@ -1,5 +1,25 @@
 # EventGuard 現況
 
+
+## 單次通訊實測：2026-10-24（最新）
+
+本次未能通訊。真正原生 CLI 已啟動一次。載入設定時退出：
+`Error loading config.toml: invalid transport`，位置為 `mcp_servers.eventguard_test`。
+CLI exit 1。驗收 exit 2。耗時 17.55 秒。未進入 provider turn，沒有模型回覆。
+同一合成事件生成／入列各 1；receive、query、結果、ACK 均 0。事件仍 pending，無重複。
+CLI、supervisor 與 host 已退出。無強停、無殘留。不自動重試；單次授權已消耗。
+
+最新人類指示取消 App 的每日預算限制。通訊路徑不再讀取或改寫歷史預算。
+歷史 bootstrap 與帳本保留，前後 SHA256 相同。舊 waiting_budget_day 已被取代。
+正常無事件不呼叫模型。這次驗收仍限定最多一個 CLI 任務及 180 秒。
+
+修正停用 MCP entry 的 transport 定義，並新增無模型契約測試。
+修正後的真模型通訊未重驗。額外 native metadata 查核 exit 2，不算修正成功證據。
+App MCP 實際回 application_not_running；沒有同次 GUI/MCP 收件證據。
+證據：`reports/service-acceptance-eventguard-single-test-20261024-01/communication-result.json`。
+原 stderr、CLI JSONL、SQLite、intent、各層退出回條與歷史失敗均保留。
+只提交程式、測試與文件。不提交執行資料。完整歷史見 docs/EVIDENCE.md。
+
 更新：2026-10-24，UTC+08。分支：`feat/local-codex-acceptance`。本批基底：`9903ad5`。
 
 EventGuard 可獨立採集、比對、保存及顯示。正常等待與查閱不呼叫模型。

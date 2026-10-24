@@ -128,6 +128,9 @@ def _control(root):
         raise AgentServiceError("agent_service_live_root_refused")
     if not _lifetime_valid(value):
         raise AgentServiceError("agent_service_lifetime_invalid")
+    limit = value.get("max_tasks")
+    if limit is not None and (type(limit) is not int or not 1 <= limit <= 5):
+        raise AgentServiceError("agent_service_task_limit_invalid")
     return value
 
 
@@ -179,13 +182,12 @@ def _selection_policy(root):
 
 
 def status(root):
-    """Read recorded identity, private Job, queue counts and fixed budget."""
-    from .agent_budget import public_status
+    """Read recorded identity, private Job and queue counts. No daily quota."""
     result = {"state": "not_started", "desired_enabled": False, "paused": False,
               "host_liveness": "not_recorded", "execution_verified": False,
               "real_agent_wake_verified": False, "model_calls": 0,
               "pending_disposition": "retained", "pending_events": None,
-              "ready_count": None, "attention_count": None, "budget": public_status()}
+              "ready_count": None, "attention_count": None}
     try:
         result["selection_policy"] = _selection_policy(root)
     except (OSError, ValueError, TypeError, RuntimeError):
@@ -195,6 +197,7 @@ def status(root):
         if desired:
             result.update(_lifetime_fields(desired))
             result.update(desired_enabled=desired["enabled"], paused=desired["paused"],
+                          max_tasks=desired.get("max_tasks"),
                           source_dir=desired["source_dir"], state_dir=desired["state_dir"],
                           namespace="live" if desired["allow_live"] else "test",
                           run_id=desired["run_id"], queue=_pending(desired["source_dir"]))
@@ -227,6 +230,8 @@ def status(root):
             result.update(last_progress=saved.get("last_progress"), reason=saved.get("reason"),
                           heartbeat_at=saved.get("heartbeat_at"), dispatcher=saved.get("dispatcher"),
                           dispatch_run_dir=saved.get("dispatch_run_dir"), model_calls=saved.get("model_calls"))
+            if isinstance(result["dispatcher"], dict):
+                result["dispatcher"] = {key: value for key, value in result["dispatcher"].items() if key != "budget"}
         else:
             result["model_calls"] = None
         if matches:
@@ -284,8 +289,8 @@ def _preflight(root, codex_executable, allow_live, source_dir, state_dir):
 
 def start(root, codex_executable, *, allow_live=False, source_dir=None, state_dir=None,
           execute=False, ready_timeout=15, lifetime_owner="independent", child_owner=None,
-          deadline_monotonic=None):
-    """Preflight unless explicitly executed. Never initializes a model budget."""
+          deadline_monotonic=None, max_tasks=None):
+    """Preflight unless executed. Optional max_tasks bounds this one host run."""
     if type(execute) is not bool or type(ready_timeout) not in (int, float) or not math.isfinite(ready_timeout) or not 1 <= ready_timeout <= 30:
         raise ValueError("agent_service_start_bounds_invalid")
     if (type(lifetime_owner) is not str or lifetime_owner not in {"independent", "application"}
@@ -294,13 +299,14 @@ def start(root, codex_executable, *, allow_live=False, source_dir=None, state_di
             or deadline_monotonic is not None and (type(deadline_monotonic) not in (int, float)
                 or not math.isfinite(deadline_monotonic) or deadline_monotonic < 0)):
         raise ValueError("agent_service_lifetime_invalid")
+    if max_tasks is not None and (type(max_tasks) is not int or not 1 <= max_tasks <= 5):
+        raise ValueError("agent_service_task_limit_invalid")
     try:
         root, source, state_dir, executable = _preflight(root, codex_executable, allow_live, source_dir, state_dir)
     except (OSError, ValueError, RuntimeError) as error:
         return {"state": "blocked", "reason": str(error) if type(error) is AgentServiceError else "agent_service_preflight_failed",
                 "model_calls": 0, "execute_required": True}
-    from .agent_budget import public_status
-    capability_reasons, waiting_reasons = [], []
+    capability_reasons = []
     try:
         selection_policy = _selection_policy(root)
     except (OSError, ValueError, TypeError, RuntimeError):
@@ -313,18 +319,13 @@ def start(root, codex_executable, *, allow_live=False, source_dir=None, state_di
         blocked = guard(root, "live")
         if blocked:
             capability_reasons.append(blocked["reason"])
-    budget = public_status()
-    if budget.get("state") != "ready":
-        reason = budget.get("reason") or "budget_unavailable"
-        (waiting_reasons if reason in {"budget_exhausted", "budget_bootstrap_usage_unknown"}
-         else capability_reasons).append(reason)
     preflight = {"state": "blocked" if capability_reasons else "preflight_ready", "execute_required": True,
                  "model_calls": 0, "source_dir": str(source), "state_dir": str(state_dir),
-                 "namespace": "live" if allow_live else "test", "budget": budget,
+                 "namespace": "live" if allow_live else "test", "max_tasks": max_tasks,
                  "selection_policy": selection_policy,
                  "lifetime_owner": lifetime_owner, "lifetime_limited": lifetime_owner == "application",
-                 "capability_reasons": capability_reasons, "blocked_reasons": capability_reasons + waiting_reasons,
-                 "reason": capability_reasons[0] if capability_reasons else waiting_reasons[0] if waiting_reasons else None}
+                 "capability_reasons": capability_reasons, "blocked_reasons": capability_reasons,
+                 "reason": capability_reasons[0] if capability_reasons else None}
     if not execute or capability_reasons:
         return preflight
     scope = {"lifetime_owner": lifetime_owner}
@@ -348,9 +349,10 @@ def start(root, codex_executable, *, allow_live=False, source_dir=None, state_di
         control = {"kind": KIND, "run_id": run_id, "job_name": job_name, "enabled": True,
                    "paused": bool(previous and previous["paused"]), "updated_at": _stamp(),
                    "source_dir": str(source), "state_dir": str(state_dir),
-                   "codex_executable": str(executable), "allow_live": allow_live, **scope}
+                   "codex_executable": str(executable), "allow_live": allow_live, "max_tasks": max_tasks, **scope}
         _write(root, "control.json", control)
-        _write(root, "launch.json", {"state": "launch_intent", "run_id": run_id, "job_name": job_name, **scope})
+        _write(root, "launch.json", {"state": "launch_intent", "run_id": run_id, "job_name": job_name,
+                                    "max_tasks": max_tasks, **scope})
         try:
             python = Path(sys.executable)
             hidden = python.with_name("pythonw.exe")
@@ -400,22 +402,23 @@ def start(root, codex_executable, *, allow_live=False, source_dir=None, state_di
 def _admission_barrier(wait_seconds=1):
     """Serialize after any capture already past its final launch gate.
 
-    This never refunds, reserves or finalizes an attempt. Lack of authority or
-    a busy lock remains visible; durable pause still prevents later admission.
+    The short OS-create lock has no quota. A busy lock remains visible;
+    durable pause still prevents later admission.
     """
-    from .acceptance_process import open_authority
-    from .agent_budget import BudgetError
+    from .acceptance_process import launch_gate, LaunchGateError
     deadline = time.monotonic() + wait_seconds
     while True:
         try:
-            authority = open_authority()  # Fixed installation path, never root.
-            with authority.launch_lease():
+            with launch_gate():
                 return {"admission_barrier": "confirmed", "admission_barrier_reason": "launch_gate_serialized"}
-        except BudgetError as error:
-            if error.code == "budget_launch_busy" and time.monotonic() < deadline:
+        except LaunchGateError as error:
+            reason = getattr(error, "code", str(error))
+            if reason not in {"launch_gate_busy", "launch_gate_unavailable"}:
+                reason = "launch_gate_unavailable"
+            if reason == "launch_gate_busy" and time.monotonic() < deadline:
                 time.sleep(.05)
                 continue
-            return {"admission_barrier": "unconfirmed", "admission_barrier_reason": error.code}
+            return {"admission_barrier": "unconfirmed", "admission_barrier_reason": reason}
 
 
 def pause(root):
@@ -489,6 +492,7 @@ def serve(root, run_id, job_name):
         launch = _read(root, "launch.json")
         if (not launch or launch.get("run_id") != run_id or launch.get("job_name") != job_name
                 or launch.get("application_owner") != parent or not _lifetime_valid(launch)
+                or launch.get("max_tasks") != desired.get("max_tasks")
                 or launch.get("deadline_monotonic") != desired.get("deadline_monotonic")):
             raise AgentServiceError("agent_service_application_launch_mismatch")
     keeper = processes.adopt_current_job(job_name)
@@ -520,7 +524,8 @@ def serve(root, run_id, job_name):
     def dispatch_enabled():
         current = _control(root)
         return bool(lifetime_allowed() and current and current["enabled"] and not current["paused"]
-                    and current["run_id"] == run_id and _lifetime_fields(current) == scope)
+                    and current["run_id"] == run_id and _lifetime_fields(current) == scope
+                    and current.get("max_tasks") == desired.get("max_tasks"))
     def select_event(inbox):
         from .dispatch_policy import select_pending
         return select_pending(inbox, _selection_policy(root))
@@ -552,6 +557,7 @@ def serve(root, run_id, job_name):
         monitor.start()
         code = agent_dispatch.run(directory, desired["source_dir"], desired["state_dir"],
             codex=desired["codex_executable"], allow_live=desired["allow_live"], execute=True,
+            max_tasks=desired.get("max_tasks"),
             continuous=True, cancel=cancel, root=root, dispatch_enabled=dispatch_enabled,
             admission_path=_path(root, "control.json"), admission_run_id=run_id,
             select_event=select_event, deadline_monotonic=desired.get("deadline_monotonic"))

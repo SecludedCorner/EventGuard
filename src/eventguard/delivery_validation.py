@@ -20,7 +20,7 @@ import time
 import uuid
 
 from .acceptance_control import read_json, write_json, FileLease
-from .acceptance_process import capture, CAPTURE_LIMIT, open_authority, launch_hash
+from .acceptance_process import capture, CAPTURE_LIMIT, launch_hash
 from .capture_receipt import validate_receipt
 from .events.store import event_payload_hash
 from .events.schema import validate_event
@@ -94,14 +94,11 @@ def stage(root, manifest, event_id, codex, *, read_only=False):
                    directory, allow_ack=not read_only)
     prompt = READ_PROMPT if read_only else PROMPT
     event = next(event for event in manifest["events"] if event["event_id"] == event_id)
-    authority = open_authority()
-    authority.reserve(token, event_id, "test", event_payload_hash(event), "acceptance",
-                      launch_hash=launch_hash(args, prompt))
     capture_code = capture(args, directory, token, prompt, timeout_seconds=180)
     try:
         checked = verify_stage(root, row)
         if capture_code != 0:
-            checked.update(passed=False, evidence_errors=["capture_or_budget_finalization_failed"])
+            checked.update(passed=False, evidence_errors=["capture_finalization_failed"])
     except (OSError, ValueError, RuntimeError, KeyError, TypeError):
         # Keep a concrete failure outcome beside the original receipt/trace.
         # Do not echo exception strings from mutable evidence.
@@ -221,7 +218,7 @@ def _wait_service(root, deadline, predicate):
 def _idle_service(root, deadline, tasks):
     def idle(view, dispatch):
         return (view.get("state") == "running" and view.get("host_liveness") == "alive_verified"
-                and view.get("pending_events") == 0 and dispatch.get("state") == "waiting"
+                and view.get("pending_events") == 0 and dispatch.get("state") in ({"waiting"} if tasks == 0 else {"waiting", "waiting_task_limit"})
                 and dispatch.get("tasks_started") == tasks and dispatch.get("tasks_passed") == tasks
                 and dispatch.get("child_exited") is True and (tasks != 0 or view.get("model_calls") == 0))
     before = _wait_service(root, deadline, idle)
@@ -270,7 +267,7 @@ def execute_service(root, manifest, codex):
         config.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(config_source, config)
         start = agent_service.start(root, codex, source_dir=root / "source", state_dir=root / "inbox",
-                                    allow_live=False, execute=True, ready_timeout=15,
+                                    allow_live=False, execute=True, ready_timeout=15, max_tasks=1,
                                     lifetime_owner="application", child_owner=own_child,
                                     deadline_monotonic=work_deadline)
         write_json(root / "service-start.json", start)
@@ -402,7 +399,7 @@ def _sample_matches(sample, owner, directory, tasks, dispatch_id):
             and _guard(view.get("dispatch_run_dir", "")) == directory
             and dispatch.get("run_id") == dispatch_id
             and dispatch.get("tasks_started") == tasks and dispatch.get("tasks_passed") == tasks
-            and dispatch.get("state") == "waiting" and dispatch.get("child_exited") is True
+            and dispatch.get("state") in ({"waiting"} if tasks == 0 else {"waiting", "waiting_task_limit"}) and dispatch.get("child_exited") is True
             and (tasks != 0 or view.get("model_calls") == 0))
 
 

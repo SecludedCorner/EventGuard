@@ -75,14 +75,14 @@ def view_snapshot(document, *, severity="all", delivery="all"):
     auto_state = automatic.get("state", "disabled")
     auto_labels = {"disabled": "自動處理未啟用。", "armed": "已保存自動處理選擇；按開始後待命。",
         "starting": "正在啟動事件待命。", "waiting": "等待事件；無事件不呼叫模型。",
-        "running": "專用 agent 正在處理事件。", "waiting_budget": "每日額度已滿；保留事件，等待額度恢復。",
+        "running": "專用 agent 正在處理事件。", "waiting_budget": "舊派送狀態需重新核對；事件保留，不自動啟動模型。",
         "waiting_attention": "需要人類處理；事件保留，不自動重試失敗任務。",
         "waiting_disabled": "接收權限已關閉；事件仍保留。", "stopped": "事件待命已停止。",
         "blocked": "自動處理受阻。", "shutdown_unconfirmed": "自動處理退出尚未確認。"}
     auto_message = auto_labels.get(auto_state, "自動處理狀態：" + safe_text(auto_state, 80))
     if automatic.get("reason"):
         auto_message += " 原因：" + safe_text(automatic["reason"], 120)
-    auto_message += " 每日最多 5 個任務；使用專用 agent，不接續本聊天。"
+    auto_message += " 模型任務須有有效的明確授權；使用專用 agent，不接續本聊天。"
     activity = value.get("activity") if isinstance(value.get("activity"), dict) else {}
     activity_rows = []
     entries = activity.get("entries") if isinstance(activity.get("entries"), list) else []
@@ -403,7 +403,7 @@ class EventGuardWindow:
             self.automatic_enabled.set(self._snapshot.get("automatic_enabled", False))
             self.message.set("另一項操作進行中；自動處理設定尚未變更。")
         else:
-            self.message.set("正在保存自動處理選擇；啟用後有事件才用模型，每日最多 5 個任務。" if enabled
+            self.message.set("正在保存自動處理選擇；模型任務仍須有有效的明確授權。" if enabled
                              else "正在停止自動處理；事件仍保留。")
 
     def refresh(self):
