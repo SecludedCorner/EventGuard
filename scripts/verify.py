@@ -130,6 +130,12 @@ def main(argv=None):
             selections = [item for name in args.module for item in ("--module", name)]
             child = spawn([sys.executable, "-B", str(Path(__file__).resolve()), "--_worker", "--scope", args.scope, "--run-dir", str(output), "--guardian-job-name", job_name, *selections],
                           **({"job_name": job_name} if os.name == "nt" else {}), stdout=stdout, stderr=stderr)
+            # Retain bounded ownership metadata even if the invoking terminal
+            # disappears before the final receipt. This is not an exit proof.
+            atomic_json(output / "guardian-start.json", {
+                "kind": "eventguard-verification-worker-v1", "pid": child.pid,
+                "created_at": child.created_at, "job_name": job_name,
+                "started_at": datetime.now(timezone.utc).isoformat(), "model_calls": 0})
             deadline = time.monotonic()+args.timeout_seconds
             while child.poll() is None and time.monotonic() < deadline:
                 time.sleep(.1)

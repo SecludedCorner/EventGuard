@@ -5,7 +5,7 @@ only durable receiver acceptance and never claims agent execution or case closur
 """
 from __future__ import annotations
 
-from contextlib import contextmanager, closing
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -24,6 +24,7 @@ MAX_STATE_BYTES = 4 * 1024 * 1024
 MAX_ATTEMPTS = 8
 LEASE_SECONDS = 60
 DEDUP_RETENTION = 30 * 86400
+INITIALIZATION_WAIT_SECONDS = 3.0
 
 
 class StoreError(RuntimeError):
@@ -107,52 +108,136 @@ class EventStore:
         self.path = _guard(self.directory / "eventguard.sqlite3")
         supplied = {key: value for key, value in locals().copy().items() if key in
                     {"max_events", "max_bytes", "acked_retention_seconds", "receipt_retention_seconds", "receipt_limit"} and value is not None}
-        previous = {}
-        if self.path.exists():
-            try:
-                with closing(sqlite3.connect(self.path.as_uri()+"?mode=ro", uri=True, timeout=3)) as db:
-                    if db.execute("SELECT 1 FROM sqlite_master WHERE name='meta'").fetchone():
-                        row = db.execute("SELECT value FROM meta WHERE key='storage_policy'").fetchone()
-                        previous = json.loads(row[0]) if row else {}
-            except (sqlite3.Error, ValueError):
-                raise StoreError("store_policy_unreadable") from None
+        self._lock = threading.RLock()
+        self._initialize(supplied)
+
+    @staticmethod
+    def _schema_columns(db):
+        """Known legacy stores may lack only the explicitly migrated columns."""
+        required = {
+            "meta": {"key", "value"},
+            "events": {"event_id", "payload", "delivery_status", "attempts", "created_at", "updated_at",
+                       "next_retry_at", "reason", "lease_until", "lease_token", "receipt"},
+            "receipts": {"event_id", "receipt", "acked_at"},
+        }
+        tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        if not tables:
+            return None
+        if not set(required).issubset(tables):
+            raise StoreError("store_schema_unreadable")
+        columns = {table: {row[1] for row in db.execute("PRAGMA table_info(" + table + ")")}
+                   for table in required}
+        if any(not fields.issubset(columns[table]) for table, fields in required.items()):
+            raise StoreError("store_schema_unreadable")
+        return columns
+
+    def _initialize(self, supplied):
+        """Validate before changing an existing file; initialize/migrate atomically.
+
+        A new SQLite connection can create an empty file just before it takes
+        the writer lock. Give that initializer a bounded opportunity to finish.
+        An existing empty/incomplete store is never silently repaired.
+        """
         from ..storage_policy import limits
         try:
-            self.policy = limits("outbox", {**limits("outbox", previous), **supplied})
+            limits("outbox", supplied)
         except (ValueError, TypeError):
             raise StoreError("invalid_storage_policy") from None
-        self.max_events, self.max_bytes = self.policy["max_events"], self.policy["max_bytes"]
-        self.ack_reserve_bytes=min(2*1024*1024,self.max_bytes//4)
-        self._lock = threading.RLock()
-        try:
-            if self.path.exists() and self.path.stat().st_size > self.max_bytes:
-                raise CapacityError("database_already_over_capacity")
-            with self._connect() as db:
-                db.execute("PRAGMA auto_vacuum=INCREMENTAL")
-                db.executescript("""
-                    CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
-                    CREATE TABLE IF NOT EXISTS events(
-                      event_id TEXT PRIMARY KEY,payload TEXT NOT NULL,
-                      delivery_status TEXT NOT NULL CHECK(delivery_status IN('pending','retry','ack','failed')),
-                      attempts INTEGER NOT NULL DEFAULT 0,created_at REAL NOT NULL,updated_at REAL NOT NULL,
-                      next_retry_at REAL,reason TEXT NOT NULL DEFAULT '',lease_until REAL,lease_token TEXT,
-                      receipt TEXT,payload_hash TEXT NOT NULL DEFAULT '');
-                    CREATE INDEX IF NOT EXISTS events_due ON events(delivery_status,next_retry_at,lease_until);
-                    CREATE TABLE IF NOT EXISTS receipts(event_id TEXT PRIMARY KEY,receipt TEXT NOT NULL,acked_at REAL NOT NULL,payload_hash TEXT NOT NULL DEFAULT '',
-                      pending_finalization INTEGER NOT NULL DEFAULT 0 CHECK(pending_finalization IN(0,1)));
-                """)
-                for table in ("events","receipts"):
-                    if "payload_hash" not in {row[1] for row in db.execute("PRAGMA table_info("+table+")")}:
-                        db.execute("ALTER TABLE "+table+" ADD COLUMN payload_hash TEXT NOT NULL DEFAULT ''")
-                if "pending_finalization" not in {row[1] for row in db.execute("PRAGMA table_info(receipts)")}:
-                    db.execute("ALTER TABLE receipts ADD COLUMN pending_finalization INTEGER NOT NULL DEFAULT 0 CHECK(pending_finalization IN(0,1))")
-                for row in db.execute("SELECT event_id,payload FROM events WHERE payload_hash=''").fetchall():
-                    db.execute("UPDATE events SET payload_hash=? WHERE event_id=?",(event_payload_hash(json.loads(row["payload"])),row["event_id"]))
-                db.execute("UPDATE receipts SET payload_hash=COALESCE((SELECT payload_hash FROM events WHERE events.event_id=receipts.event_id),'') WHERE payload_hash=''")
-                if previous != self.policy:
-                    db.execute("INSERT OR REPLACE INTO meta VALUES('storage_policy',?)", (json.dumps(self.policy),))
-        except (sqlite3.Error, OSError,ValueError) as exc:
-            raise StoreError("store_initialization_failed") from exc
+        allow_create = not self.path.exists()
+        deadline = time.monotonic() + INITIALIZATION_WAIT_SECONDS
+        while True:
+            db = None
+            retry_empty = False
+            phase = "policy"
+            try:
+                _guard(self.path)
+                mode = "rwc" if allow_create else "rw"
+                db = sqlite3.connect(self.path.as_uri() + "?mode=" + mode, uri=True, timeout=3)
+                db.row_factory = sqlite3.Row
+                db.execute("PRAGMA busy_timeout=3000")
+                # This is a connection-local setting, not a database rewrite.
+                # SQLite forbids changing it after BEGIN.
+                db.execute("PRAGMA synchronous=FULL")
+                # Only a path absent at entry may initialize a new database.
+                # Check again for a competing creator before this first-use
+                # PRAGMA: auto_vacuum must precede BEGIN and table creation.
+                if allow_create and self._schema_columns(db) is None:
+                    db.execute("PRAGMA auto_vacuum=INCREMENTAL")
+                # Existing files get no journal/size/schema PRAGMA before
+                # validation. Wait for another writer, then recheck its schema.
+                db.execute("BEGIN IMMEDIATE")
+                columns = self._schema_columns(db)
+                fresh = columns is None and allow_create
+                if columns is None and not fresh:
+                    if time.monotonic() >= deadline:
+                        raise StoreError("store_schema_unreadable")
+                    retry_empty = True
+                else:
+                    previous = {}
+                    if not fresh:
+                        row = db.execute("SELECT value FROM meta WHERE key='storage_policy'").fetchone()
+                        try:
+                            previous = json.loads(row[0]) if row else {}
+                        except (TypeError, ValueError):
+                            raise StoreError("store_policy_unreadable") from None
+                    try:
+                        self.policy = limits("outbox", {**limits("outbox", previous), **supplied})
+                    except (ValueError, TypeError):
+                        raise StoreError("invalid_storage_policy") from None
+                    self.max_events, self.max_bytes = self.policy["max_events"], self.policy["max_bytes"]
+                    self.ack_reserve_bytes = min(2*1024*1024, self.max_bytes//4)
+                    if self.path.stat().st_size > self.max_bytes:
+                        raise CapacityError("database_already_over_capacity")
+                    phase = "initialization"
+                    db.execute("PRAGMA journal_mode=DELETE")
+                    page_size = db.execute("PRAGMA page_size").fetchone()[0]
+                    db.execute("PRAGMA max_page_count=" + str(self.max_bytes // page_size))
+                    self._initialize_schema(db, previous)
+                    db.commit()
+                    return
+            except sqlite3.Error as exc:
+                raise StoreError("store_policy_unreadable" if phase == "policy" else "store_initialization_failed") from exc
+            except (OSError, ValueError) as exc:
+                raise StoreError("store_initialization_failed") from exc
+            finally:
+                if db is not None:
+                    try:
+                        db.rollback()
+                    finally:
+                        db.close()
+            if retry_empty:
+                # Release SQLite's writer lock so a creator delayed between
+                # opening its file and BEGIN IMMEDIATE can complete its schema.
+                time.sleep(min(.05, max(0, deadline - time.monotonic())))
+
+    def _initialize_schema(self, db, previous):
+        # Do not use executescript: it commits before executing its statements,
+        # exposing a partially initialized schema to a concurrent constructor.
+        statements = (
+            "CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL)",
+            """CREATE TABLE IF NOT EXISTS events(
+                event_id TEXT PRIMARY KEY,payload TEXT NOT NULL,
+                delivery_status TEXT NOT NULL CHECK(delivery_status IN('pending','retry','ack','failed')),
+                attempts INTEGER NOT NULL DEFAULT 0,created_at REAL NOT NULL,updated_at REAL NOT NULL,
+                next_retry_at REAL,reason TEXT NOT NULL DEFAULT '',lease_until REAL,lease_token TEXT,
+                receipt TEXT,payload_hash TEXT NOT NULL DEFAULT '')""",
+            "CREATE INDEX IF NOT EXISTS events_due ON events(delivery_status,next_retry_at,lease_until)",
+            """CREATE TABLE IF NOT EXISTS receipts(event_id TEXT PRIMARY KEY,receipt TEXT NOT NULL,
+                acked_at REAL NOT NULL,payload_hash TEXT NOT NULL DEFAULT '',
+                pending_finalization INTEGER NOT NULL DEFAULT 0 CHECK(pending_finalization IN(0,1)))""",
+        )
+        for statement in statements:
+            db.execute(statement)
+        for table in ("events", "receipts"):
+            if "payload_hash" not in {row[1] for row in db.execute("PRAGMA table_info("+table+")")}:
+                db.execute("ALTER TABLE "+table+" ADD COLUMN payload_hash TEXT NOT NULL DEFAULT ''")
+        if "pending_finalization" not in {row[1] for row in db.execute("PRAGMA table_info(receipts)")}:
+            db.execute("ALTER TABLE receipts ADD COLUMN pending_finalization INTEGER NOT NULL DEFAULT 0 CHECK(pending_finalization IN(0,1))")
+        for row in db.execute("SELECT event_id,payload FROM events WHERE payload_hash=''").fetchall():
+            db.execute("UPDATE events SET payload_hash=? WHERE event_id=?", (event_payload_hash(json.loads(row["payload"])), row["event_id"]))
+        db.execute("UPDATE receipts SET payload_hash=COALESCE((SELECT payload_hash FROM events WHERE events.event_id=receipts.event_id),'') WHERE payload_hash=''")
+        if previous != self.policy:
+            db.execute("INSERT OR REPLACE INTO meta VALUES('storage_policy',?)", (json.dumps(self.policy),))
 
     @contextmanager
     def _connect(self):

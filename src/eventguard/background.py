@@ -297,7 +297,7 @@ def _host_argv(runtime, run_id, job_name, fixture, max_cycles):
 
 
 def start(root, *, resume=False, ready_timeout=20, fixture=None, max_cycles=None,
-          lifetime_owner="independent", child_owner=None):
+          lifetime_owner="independent", child_owner=None, expected_control_generation=None):
     """Explicit enable + one bounded private-Job handoff; no monitor time cap."""
     runtime, child, generation, handoff = Runtime(root), None, None, None
     if lifetime_owner not in {"independent", "application"} or (
@@ -307,6 +307,8 @@ def start(root, *, resume=False, ready_timeout=20, fixture=None, max_cycles=None
     if type(resume) is not bool or type(ready_timeout) not in (int, float) or not math.isfinite(ready_timeout) or not 1 <= ready_timeout <= 60:
         raise ValueError("invalid_background_start_bounds")
     _fixture(runtime, fixture, max_cycles)
+    if expected_control_generation is not None and not _token(expected_control_generation):
+        raise ValueError("invalid_background_expected_generation")
     application_owner = None
     if lifetime_owner == "application":
         application_owner = processes.identity()
@@ -317,6 +319,10 @@ def start(root, *, resume=False, ready_timeout=20, fixture=None, max_cycles=None
     try:
         with _mutation(runtime):
             control = _control(runtime)
+            if expected_control_generation is not None and (
+                    control is None or control["generation"] != expected_control_generation
+                    or control["namespace"] != ("test" if fixture else "live") or control["enabled"] is not False):
+                return {"state": "blocked", "reason": "background_control_generation_changed", "model_calls": 0}
             if resume and (control is None or control["enabled"] is not True):
                 return {"state": "disabled", "reason": "manual_start_required", "desired_enabled": False, "model_calls": 0}
             current = status(root)

@@ -13,6 +13,7 @@ HTML = """<!doctype html>
 <meta name="csrf" content="__TOKEN__"><title>EventGuard 本機資安監看</title><link rel="stylesheet" href="/app.css"></head>
 <body><header><div><h1>EventGuard</h1><p>本機採集。規則比對。事件保存。正常採集不呼叫模型。</p></div><span id="run-state">正在讀取狀態</span></header>
 <main><p id="error" role="alert" hidden></p><p id="notice" role="status" hidden></p>
+<section id="monitor-control" aria-labelledby="monitor-heading"><h2 id="monitor-heading">本機資安監看</h2><p>暫停只停止採集。網頁與已存事件仍可查看。恢復只啟動採集，不會啟動 agent。</p><p id="monitor-summary">尚未取得監看狀態。控制暫不可用。</p><div id="monitor-buttons"><button id="monitor-pause" disabled>暫停採集</button><button id="monitor-resume" disabled>恢復採集</button><button id="monitor-stop" disabled>停止監看與網頁</button></div><p id="monitor-result" role="status">尚未操作。</p></section>
 <nav aria-label="頁面"><button data-tab="events" aria-pressed="true">事件</button><button data-tab="sources">來源狀態</button><button data-tab="rules">規則</button><button data-tab="agent">Agent 派送</button></nav>
 <section id="events"><h2>事件</h2><form id="filters">
 <label>嚴重度<select name="severity"><option value="">全部</option><option value="critical">嚴重</option><option value="high">高</option><option value="warning">警告</option><option value="info">資訊</option></select></label>
@@ -26,45 +27,52 @@ HTML = """<!doctype html>
 <section id="sources" hidden><h2>七個來源</h2><p>只顯示已保存的採集結果。未知、拒讀或過期都不代表安全。</p><div id="source-cards"></div></section>
 <section id="rules" hidden><h2>規則</h2><p>編輯專案的 config/rules.json。下一輪採集會讀取。規則不執行命令。</p><div id="rule-cards"></div></section>
 <section id="agent" hidden><h2>Agent 派送</h2><p>這是選配的短期專用任務。無事件由普通程式等待。此頁不會啟動模型。ACK 不是風險結案。</p><p id="agent-summary"></p><button id="agent-pause">暫停新派送</button> <button id="agent-stop">停止派送程序</button><p>恢復需在終端明確執行 agent resume --execute。採集及原事件不受這兩個按鈕影響。</p><pre id="agent-json"></pre></section>
-<footer>僅供本機使用。高嚴重度事件會顯示本頁提示。系統通知狀態：<span id="notification-state">未知</span>。<br>關閉此頁不會停止程式。回到執行終端，按 Ctrl+C 停止。</footer></main><script src="/app.js" defer></script></body></html>"""
+<footer>僅供本機使用。高嚴重度事件會顯示本頁提示。系統通知狀態：<span id="notification-state">未知</span>。<br>關閉瀏覽器頁籤不會停止程式。可按「停止監看與網頁」，或回到執行終端按 Ctrl+C。Agent 派送有獨立控制。</footer></main><script src="/app.js" defer></script></body></html>"""
 
-CSS = """:root{color-scheme:light;font:16px system-ui,'Microsoft JhengHei',sans-serif;color:#183044;background:#f1f5f7}*{box-sizing:border-box}body{margin:0}header{background:#153d50;color:white;padding:24px max(24px,calc((100vw - 1180px)/2));display:flex;justify-content:space-between;gap:24px;align-items:center}h1{margin:0;font-size:29px}header p{margin-bottom:0;color:#d5e6ed}main{max-width:1180px;margin:auto;padding:24px}nav,form,#status-buttons{display:flex;gap:12px;flex-wrap:wrap;align-items:end}button,select{font:inherit;padding:9px 12px;border:1px solid #9badb9;border-radius:6px;background:white;color:#183044}button{cursor:pointer}button:hover,button[aria-pressed=true]{background:#d9eaf0}button:disabled{opacity:.45;cursor:default}label{display:grid;gap:5px}section,article{background:white;border:1px solid #dce4e9;border-radius:10px;margin-top:20px;padding:22px}article{background:#f7fafb}h2{margin-top:0}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;border-bottom:1px solid #e3e9ed;padding:12px 9px;vertical-align:top}th{white-space:nowrap;color:#506472}td:first-child{font-weight:700}.high,.critical{color:#a12822}.warning{color:#855c04}.source-card,.rule-card{padding:16px 0;border-bottom:1px solid #dce4e9}.source-card h3,.rule-card h3{margin:0 0 10px}.reason{font:13px ui-monospace,monospace;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px ui-monospace,monospace}#notice{padding:15px;border-left:5px solid #a12822;background:#fff0eb}#error{padding:15px;background:#ffe3df;color:#7b1e19}footer{font-size:13px;line-height:1.8;color:#566d7c;margin-top:24px}[hidden]{display:none!important}@media(max-width:650px){header{display:block}main{padding:12px}section{padding:14px}form label{flex:1;min-width:130px}}"""
+CSS = """:root{color-scheme:light;font:16px system-ui,'Microsoft JhengHei',sans-serif;color:#183044;background:#f1f5f7}*{box-sizing:border-box}body{margin:0}header{background:#153d50;color:white;padding:24px max(24px,calc((100vw - 1180px)/2));display:flex;justify-content:space-between;gap:24px;align-items:center}h1{margin:0;font-size:29px}header p{margin-bottom:0;color:#d5e6ed}main{max-width:1180px;margin:auto;padding:24px}nav,form,#status-buttons,#monitor-buttons{display:flex;gap:12px;flex-wrap:wrap;align-items:end}button,select{font:inherit;padding:9px 12px;border:1px solid #9badb9;border-radius:6px;background:white;color:#183044}button{cursor:pointer}button:hover,button[aria-pressed=true]{background:#d9eaf0}button:disabled{opacity:.45;cursor:default}label{display:grid;gap:5px}section,article{background:white;border:1px solid #dce4e9;border-radius:10px;margin-top:20px;padding:22px}article{background:#f7fafb}h2{margin-top:0}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;border-bottom:1px solid #e3e9ed;padding:12px 9px;vertical-align:top}th{white-space:nowrap;color:#506472}td:first-child{font-weight:700}.high,.critical{color:#a12822}.warning{color:#855c04}.source-card,.rule-card{padding:16px 0;border-bottom:1px solid #dce4e9}.source-card h3,.rule-card h3{margin:0 0 10px}.reason{font:13px ui-monospace,monospace;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px ui-monospace,monospace}#notice{padding:15px;border-left:5px solid #a12822;background:#fff0eb}#error{padding:15px;background:#ffe3df;color:#7b1e19}footer{font-size:13px;line-height:1.8;color:#566d7c;margin-top:24px}[hidden]{display:none!important}@media(max-width:650px){header{display:block}main{padding:12px}section{padding:14px}form label{flex:1;min-width:130px}}"""
 
 JS = """'use strict';
 const $=id=>document.getElementById(id), severity={critical:'嚴重',high:'高',warning:'警告',info:'資訊'}, handling={new:'新增',read:'已讀',handled:'已處理',ignored:'忽略'};
 const sourceNames={defender:'Defender',listeners:'監聽端點',processes:'程序',startup:'啟動項',services:'服務',tasks:'排程工作',versions:'版本',monitor:'監看程式',advisories:'資安公告',unknown:'未知'};
-const states={ok:'成功',partial:'部分成功',denied:'拒讀',unknown:'未知',not_applicable:'不適用',not_requested:'尚未採集',not_observed:'尚未採集',not_collected:'尚未採集',stale:'資料過期',error:'失敗',timeout:'逾時',cancelled:'已取消',busy:'忙碌',started:'監看中',running:'監看中',stopped:'已停止',blocked:'受阻',blocked_rules:'規則檔錯誤',backoff:'等待重試',shutdown_unconfirmed:'退出未確認',enabled_not_running:'目前未採集',disabled:'已停用'};
+const states={ok:'成功',partial:'部分成功',denied:'拒讀',unknown:'未知',not_applicable:'不適用',not_requested:'尚未採集',not_observed:'尚未採集',not_collected:'尚未採集',stale:'資料過期',error:'失敗',timeout:'逾時',cancelled:'已取消',busy:'忙碌',started:'監看中',running:'監看中',paused:'已暫停',pausing:'正在暫停',resuming:'正在恢復採集',stopping:'正在停止',stop_requested:'已提出停止要求',stopped:'已停止',blocked:'受阻',blocked_rules:'規則檔錯誤',backoff:'等待重試',shutdown_unconfirmed:'退出未確認',enabled_not_running:'目前未採集',disabled:'已停用'};
 const eventNames={'listener.changed':'監聽端點變化','protection.changed':'防護狀態變化','persistence.changed':'啟動與服務變化','coverage.degraded':'來源可見性降低','monitor_gap':'監看缺口','advisory.changed':'資安公告與適用性變化'};
 let offset=0, selected=null, tab='events', busy=false;
+let monitorControls=null, monitorBusy=false, monitorStopped=false;
 function node(tag,text,cls){const e=document.createElement(tag);e.textContent=text??'';if(cls)e.className=cls;return e;}
 function when(s){if(!s)return '尚無紀錄';const d=new Date(s);return Number.isNaN(+d)?'時間未知':d.toLocaleString('zh-TW',{hour12:false});}
 async function api(path,options={}){const r=await fetch(path,{cache:'no-store',...options});const data=await r.json();if(!r.ok)throw Error(data.error_code||'操作失敗');return data;}
 function fail(error){$('error').textContent='無法完成操作：'+error.message;$('error').hidden=false;}
+function monitorControlsView(value){const valid=value&&typeof value.available==='boolean'&&typeof value.paused==='boolean'&&(value.transition===null||typeof value.transition==='string');monitorControls=valid?value:null;const enabled=valid&&value.available===true&&value.transition===null&&!monitorBusy&&!monitorStopped;$('monitor-pause').disabled=!enabled||value.paused;$('monitor-resume').disabled=!enabled||!value.paused;$('monitor-stop').disabled=!enabled;$('monitor-summary').textContent=monitorStopped?'停止要求已回覆。頁面已停止更新。請到執行終端核對退出。':!valid?'尚未取得有效監看狀態。控制暫不可用。':!value.available?'監看控制目前不可用。':monitorBusy?'正在提交監看操作。':value.transition!==null?'監看操作進行中：'+(states[value.transition]||value.transition)+'。':value.paused?'採集已暫停。網頁與事件仍可使用。':'監看未暫停。採集結果請看來源狀態。';}
+async function monitorAction(action){const c=monitorControls;if(monitorBusy||monitorStopped||!c||!c.available||c.transition!==null)return;monitorBusy=true;monitorControlsView(c);try{const d=await api('/api/monitor/'+action,{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:'{}'});const labels={pause:'暫停採集',resume:'恢復採集',stop:'停止監看與網頁'};$('monitor-result').textContent='要求：'+labels[action]+'。結果：'+(states[d.state]||d.state||'已回覆')+'。原因：'+(d.reason||'無')+'。';if(action==='stop'&&['stop_requested','stopping','stopped'].includes(d.state)){monitorStopped=true;monitorControls=null;clearInterval(refreshTimer);}else await state();}catch(e){monitorControls=null;fail(e);}finally{monitorBusy=false;monitorControlsView(monitorControls);}}
 async function events(){const q=new URLSearchParams(new FormData($('filters')));for(const [k,v] of [...q])if(!v)q.delete(k);q.set('limit','50');q.set('offset',offset);const data=await api('/api/events?'+q);$('event-rows').replaceChildren();for(const e of data.events){const tr=node('tr');tr.append(node('td',severity[e.severity]||e.severity,e.severity),node('td',eventNames[e.event_type]||e.event_type),node('td',sourceNames[e.source]||e.source),node('td',when(e.observed_at)),node('td',handling[e.status]||e.status));const td=node('td'),b=node('button','查看');b.addEventListener('click',()=>detail(e.event_id).catch(fail));td.append(b);tr.append(td);$('event-rows').append(tr);}if(!data.events.length){const tr=node('tr'),td=node('td','沒有符合條件的事件。這不代表主機安全。');td.colSpan=6;tr.append(td);$('event-rows').append(tr);}$('count').textContent='符合條件 '+data.total+' 件。本頁 '+data.events.length+' 件。';$('prev').disabled=offset===0;$('next').disabled=!data.has_more;}
 async function detail(id){const d=await api('/api/events/'+encodeURIComponent(id));selected=id;$('detail').hidden=false;$('detail-summary').textContent=(severity[d.severity]||d.severity)+' / '+(sourceNames[d.source]||d.source)+' / '+(handling[d.status]||d.status)+' / '+when(d.observed_at);$('detail-id').textContent=id;$('detail-json').textContent=JSON.stringify(d,null,2);$('guidance').replaceChildren();if(d.guidance){$('guidance').append(node('p',d.guidance.observation));for(const step of d.guidance.next_steps||[])$('guidance').append(node('p',typeof step==='string'?step:JSON.stringify(step)));}for(const b of $('status-buttons').querySelectorAll('button'))b.disabled=b.dataset.status===d.status;}
 async function sources(){const d=await api('/api/sources');$('source-cards').replaceChildren();for(const s of d.sources){const a=node('article',null,'source-card');a.append(node('h3',s.name||sourceNames[s.source_id]||s.source_id),node('p','最後採集：'+when(s.last_collected_at)+'。結果：'+(states[s.saved_status]||s.saved_status)+'。目前：'+(states[s.status]||s.status)+'。'));for(const reason of s.reasons||[])a.append(node('p',JSON.stringify(reason), 'reason'));a.append(node('p',s.suggestion));$('source-cards').append(a);}}
 async function rules(){const d=await api('/api/rules');$('rule-cards').replaceChildren();for(const r of d.rules){const a=node('article',null,'rule-card');a.append(node('h3',r.name),node('p','嚴重度：'+(severity[r.severity]||r.severity)+'。'+(r.enabled===false?'已停用':'已啟用')+'。'),node('pre',JSON.stringify(r.conditions,null,2)));$('rule-cards').append(a);}}
 async function agent(){const d=await api('/api/agent');const b=d.budget||d.agent_budget||{};$('agent-summary').textContent='程序：'+(d.host_liveness||'未知')+'。狀態：'+(d.state||d.host_state||'未知')+'。待收：'+(d.pending_events??'未知')+'。每日剩餘：'+(b.usage_known===true?b.remaining:'未知')+'。原因：'+(d.reason||d.blocked_reason||b.reason||'無')+'。';$('agent-json').textContent=JSON.stringify(d,null,2);}
 const showDetail=detail;detail=async function(id){await showDetail(id);$('delivery-json').textContent='正在讀取保存證據…';try{const d=await api('/api/events/'+encodeURIComponent(id)+'/delivery');if(selected===id)$('delivery-json').textContent=JSON.stringify(d,null,2);}catch(e){if(selected===id)$('delivery-json').textContent='投遞證據不可用：'+e.message;}};
-async function state(){const d=await api('/api/status');$('run-state').textContent=states[d.monitor_state]||d.monitor_state||'狀態未知';const n=d.notifications||{};const noticeLabels={disabled:'已關閉',waiting:'等待新事件',no_high_severity_events:'等待新事件',already_notified:'沒有待通知事件',notification_requested:'已送出系統通知要求',notification_display_cooldown:'等待下一則通知'};const noticeCode=n.reason||n.status||n.state;$('notification-state').textContent=noticeLabels[noticeCode]||(n.status==='failed'?'系統通知不可用。本頁提示仍有效。原因：'+noticeCode:noticeCode)||'等待新事件';if(d.config_error){$('error').textContent='規則檔錯誤：'+d.config_error+'。請檢查 config/rules.json。';$('error').hidden=false;}const fresh=await api('/api/events?severity=high&status=new&limit=1');const critical=await api('/api/events?severity=critical&status=new&limit=1');const count=fresh.total+critical.total;$('notice').hidden=count===0;$('notice').textContent='有 '+count+' 件新增的高嚴重度事件。請查看事件並記錄處置狀態。';}
-async function refresh(){if(busy)return;busy=true;$('error').hidden=true;try{await state();if(tab==='events')await events();if(tab==='sources')await sources();if(tab==='rules')await rules();if(tab==='agent')await agent();}catch(e){fail(e);}finally{busy=false;}}
+async function state(){let d;try{d=await api('/api/status');}catch(e){monitorControlsView(null);throw e;}monitorControlsView(d.monitor_controls);$('run-state').textContent=states[d.monitor_state]||d.monitor_state||'狀態未知';const n=d.notifications||{};const noticeLabels={disabled:'已關閉',waiting:'等待新事件',no_high_severity_events:'等待新事件',already_notified:'沒有待通知事件',notification_requested:'已送出系統通知要求',notification_display_cooldown:'等待下一則通知'};const noticeCode=n.reason||n.status||n.state;$('notification-state').textContent=noticeLabels[noticeCode]||(n.status==='failed'?'系統通知不可用。本頁提示仍有效。原因：'+noticeCode:noticeCode)||'等待新事件';if(d.config_error){$('error').textContent='規則檔錯誤：'+d.config_error+'。請檢查 config/rules.json。';$('error').hidden=false;}const fresh=await api('/api/events?severity=high&status=new&limit=1');const critical=await api('/api/events?severity=critical&status=new&limit=1');const count=fresh.total+critical.total;$('notice').hidden=count===0;$('notice').textContent='有 '+count+' 件新增的高嚴重度事件。請查看事件並記錄處置狀態。';}
+async function refresh(){if(busy||monitorStopped)return;busy=true;$('error').hidden=true;try{await state();if(tab==='events')await events();if(tab==='sources')await sources();if(tab==='rules')await rules();if(tab==='agent')await agent();}catch(e){if(!monitorStopped)fail(e);}finally{busy=false;}}
 $('filters').addEventListener('submit',e=>{e.preventDefault();offset=0;refresh();});$('prev').addEventListener('click',()=>{offset=Math.max(0,offset-50);refresh();});$('next').addEventListener('click',()=>{offset+=50;refresh();});
 for(const b of document.querySelectorAll('nav button'))b.addEventListener('click',()=>{tab=b.dataset.tab;for(const s of ['events','sources','rules','agent'])$(s).hidden=s!==tab;for(const x of document.querySelectorAll('nav button'))x.setAttribute('aria-pressed',String(x===b));refresh();});
 for(const action of ['pause','stop'])$('agent-'+action).addEventListener('click',async()=>{const b=$('agent-'+action);b.disabled=true;try{await api('/api/agent/'+action,{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:'{}'});await agent();}catch(e){fail(e);}finally{b.disabled=false;}});
+for(const action of ['pause','resume','stop'])$('monitor-'+action).addEventListener('click',()=>monitorAction(action));
 for(const b of $('status-buttons').querySelectorAll('button'))b.addEventListener('click',async()=>{if(!selected)return;b.disabled=true;try{await api('/api/events/'+encodeURIComponent(selected)+'/status',{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:JSON.stringify({status:b.dataset.status})});await detail(selected);await refresh();}catch(e){fail(e);b.disabled=false;}});
-refresh();setInterval(refresh,5000);
+const refreshTimer=setInterval(refresh,5000);refresh();
 """
 
 
 class LocalWeb:
-    def __init__(self, root, namespace="live", *, port=8765, status_provider=None):
+    def __init__(self, root, namespace="live", *, port=8765, status_provider=None, monitor_control=None):
         if type(port) is not int or not 0 <= port <= 65535:
             raise ValueError("invalid_local_port")
+        if monitor_control is not None and not callable(monitor_control):
+            raise ValueError("invalid_monitor_control")
         from .events.catalog import EventCatalog
         self.root, self.namespace = root, namespace
         self.catalog = EventCatalog(root, namespace)
         self.token = secrets.token_hex(32)
         self.status_provider = status_provider or (lambda: {"monitor_state": "unknown", "model_calls": 0})
+        self.monitor_control = monitor_control
         app = self
 
         class Server(ThreadingHTTPServer):
@@ -168,7 +176,7 @@ class LocalWeb:
                         from .rules.configured import load_rules
                         return self.reply(200, {"rules": load_rules(app.root), "model_calls": 0})
                     if route.path == "/api/status" and not query:
-                        return self.reply(200, app.status_provider())
+                        return self.reply(200, app.status())
                     if route.path == "/api/agent" and not query:
                         from .agent_service import status
                         return self.reply(200, status(app.root))
@@ -190,6 +198,20 @@ class LocalWeb:
                     if not 1 <= size <= 256:
                         raise ValueError("invalid_body_size")
                     parts = self.path.split("/")
+                    if parts[:3] == ["", "api", "monitor"] and len(parts) == 4 and parts[3] in {"pause", "resume", "stop"}:
+                        body = json.loads(self.rfile.read(size))
+                        if type(body) is not dict or body:
+                            raise ValueError("invalid_monitor_control")
+                        if app.monitor_control is None:
+                            return self.error(503, "monitor_control_unavailable")
+                        try:
+                            result = app.monitor_control(parts[3])
+                            if type(result) is not dict:
+                                raise ValueError("invalid_monitor_control_result")
+                            json.dumps(result, ensure_ascii=False, allow_nan=False)
+                        except Exception:
+                            return self.error(503, "monitor_control_failed")
+                        return self.reply(200, result)
                     if parts[:3] == ["", "api", "agent"] and len(parts) == 4 and parts[3] in {"pause", "stop"}:
                         if json.loads(self.rfile.read(size)) != {}:
                             raise ValueError("invalid_agent_control")
@@ -212,6 +234,20 @@ class LocalWeb:
         self.host = "127.0.0.1:" + str(self.server.server_port)
         self.url = "http://" + self.host
         self.thread = None
+
+    def status(self):
+        """Missing or malformed control state must leave the page disabled."""
+        saved = self.status_provider()
+        if type(saved) is not dict:
+            raise ValueError("invalid_local_status")
+        controls = {"available": False, "paused": False, "transition": None}
+        supplied = saved.get("monitor_controls")
+        if (type(supplied) is dict and set(supplied) == set(controls)
+                and type(supplied.get("available")) is bool and type(supplied.get("paused")) is bool
+                and (supplied.get("transition") is None
+                     or type(supplied.get("transition")) is str and 1 <= len(supplied["transition"]) <= 64)):
+            controls = {**supplied, "available": supplied["available"] and callable(self.monitor_control)}
+        return {**saved, "monitor_controls": controls}
 
     def start(self):
         if self.thread is not None:

@@ -1,9 +1,22 @@
 # EventGuard 現況
 
-更新：2026-10-24，UTC+08。分支：`feat/local-codex-acceptance`。本批基底：`c8b84d4`。
+更新：2026-10-24，UTC+08。分支：`feat/local-codex-acceptance`。本批基底：`bba651f`。
 
 EventGuard 是本機程式。採集、規則、事件保存、CLI／Web 與通知不需要模型。
 主聊天接線、桌面閒置喚醒及開機自啟仍是選配，不阻擋產品。
+
+## 本輪無模型工程：本批已交付
+
+基底 `bba651f`。Goal 工具仍回 `blocked`；沒有 resume／改寫介面，未假結案重建。
+依新指示先完成本機閉環，不等待模型批准。
+`run` 的 Web 已補監看本體的暫停／恢復／停止。暫停仍可查看、篩選及記錄處置；恢復保留事件與 pending。
+只控制本應用持有的子程序。世代變更、外部 owner、未知退出或回條保存失敗時不回成功。
+既有 SQLite 空檔、缺表或缺必要欄位明示錯誤，不重建為空庫。初始化與已知遷移失敗會回滾。
+合成 Windows／HTTP 流程已驗證兩個 host 自然 OS exit 0、零殘留；同一事件的 handled 與 pending 均保留。
+容量恢復、損毀、保存失敗、並行及既有 CLI／Web 的定向回歸已完成；原失敗與通知 skip 不隱藏。
+只用 fixture、合成事件及本機 HTTP／Windows Job。無模型，不啟用正式背景，不動模型預算。
+首次測試因 session 消失缺最終退出證據，保留未確認。其後兩輪有實際退出回條。
+完整命令、時間、範圍與結果只記在 [EVIDENCE](docs/EVIDENCE.md)。這不是長期監看或真模型通路驗收。
 
 ## 事件驅動的專用 agent
 

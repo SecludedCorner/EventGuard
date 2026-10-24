@@ -2,6 +2,63 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-24：無模型監看控制與事件庫重啟完整性
+
+基底 `bba651fedf5f556af57037c4fa5263c5eebd0e22`。分支維持 `feat/local-codex-acceptance`。
+依新指示先交付本機工程，不啟用模型、正式監看、agent host、排程或網路來源。
+`get_goal` 實際回 blocked；工具沒有 resume／改寫能力。未呼叫 create_goal，未假結案重建。
+
+產品缺口已補：run 的 Web 有監看本體的暫停／恢復／停止。它與 agent 派送控制分開。
+暫停先關閉本應用捕捉的 owner，核對退出與回條。Web、pending 與人類處置狀態保留。
+恢復先核對 namespace／run／generation、重讀規則，再在原控制鎖內原子比對 generation。
+不接管外部 host。未知退出、保存失敗或世代變更不回成功，不重新啟動採集。
+stop 的 HTTP 只回要求；主迴圈負責真正關閉，最終 OS 回條另行核對。
+
+EventStore 的既有空檔、缺表、缺必要欄位不再被 CREATE IF NOT EXISTS 重建成空佇列。
+初始化、policy 與已知 legacy migration 使用同一 writer transaction。失敗回滾。
+首次並行初始化的空檔窗口有界等待；損毀資料沒有被宣稱已恢復。
+
+第一輪 `reports/local-controls-001/verify-001` 因執行 session 消失而缺最終回條。
+工具實際回 `Unknown process id`。原日誌保留，不能判通過或推定自然退出。
+超過原 300 秒期限仍缺 worker-summary、guardian-exit、verification-summary。
+為此在既有 verify 入口加入固定 guardian-start 回條，保存本工具 worker 的 PID／建立時間／Job。
+這是啟動證據，不是退出證據。第二輪另用 verify-002，不覆寫第一輪。
+
+第二輪 `verify-002`：289 run、286 pass、2 failure、1 skip，exit 1。Python 3.13.3。
+18 個相關模組；完整命令在該目錄 verification-summary.json。170.088 秒，09:07:06 UTC+08 結束。
+source_unchanged=true、172 Python AST 無錯。guardian OS exit 1、remaining=0、未強停、per_test_residuals=[]。
+原失敗保留，不改寫為通過：
+
+- 新庫 auto_vacuum 回 0，預期 2。移到新庫無表且 BEGIN 前設定；既有檔不走這段。
+- Windows 操作流程第一個 host 實際 exit 1460，第二個 0。末次 HANDLE 回條 force=false，不能抵銷非零退出。
+  1460 是本工具 Job 終止碼；另一個 Job handle 的原 force 保留於 owner aggregate，不能只看末次 wrapper。
+  五秒寬限不足是目前最符合觀測的原因，尚無原 stop 文件可單獨確認 I/O 根因。
+  Application 改用既有 CLI 的十秒合作寬限，測試仍要求 OS 0、未強停及零殘留，未放寬斷言。
+
+唯一 skip 是 Windows 通知 notification_icon_unavailable，不算 pass。
+修正後只重驗受影響範圍，結果另記，不累加測試數或聲稱最終來源全套重跑。
+
+最終修後命令：
+
+```powershell
+py -3.13 -B scripts/verify.py --run-dir reports/local-controls-001/verify-003 --timeout-seconds 180 --module test_application_controls --module test_store_open_integrity --module test_local_product --module test_event_catalog --module test_events_transport --module test_storage_retention --module test_inbox_retention_recovery --module test_background_integration --module test_intelligence_integration
+```
+
+`verify-003`：134 run、133 pass、1 skip、0 failure/error，exit 0。九個受影響模組。
+Python **3.13.3**。58.950 秒，09:12:08 UTC+08 完成。source_unchanged=true；172 Python AST 無錯。
+guardian 自然 OS exit 0、remaining=0、forcibly_terminated=false、per_test_residuals=[]。
+同一通知 skip 仍保留。其餘已通過且未受修正影響的模組採 verify-002 結果，不加總為另一套測試數。
+
+`lifecycle-evidence.json` 保存真 Windows application-owned Job＋loopback HTTP 的完整操作回條。
+pause 後 Web 仍可讀七來源；指定合成事件改 handled 後，resume／stop／新 catalog 仍見同 ID、handled、pending。
+兩個實際子程序 HANDLE 均 OS exit 0、remaining=0、未強停；應用 thread 與 Web thread 均退出。
+另有真前景 CLI exit 0、SQLite 滿載恢復、同 query 重收與單次 ACK，以及離線公告結果先存再 ACK。
+後端收件與 ACK 都沒有真模型，不升格為真正 agent 已收到。
+正式監看 control SHA256 仍為 `78F20282862F179B8DEB4AF769BD0692932EC273AE930C13375E987781CB41BA`。
+固定模型 budget DB／marker 均未建立，沒有初始化或重置。沒有正式啟用、來源掃描、外部網路或排程。
+提交後以 `reports/local-controls-001/source-commit.json` 核對受測來源與 raw Git blob；執行資料不提交。
+尚未驗證瀏覽器實際點擊、24 小時、重開機與真模型通路；HTTP 測試不是視覺驗收。
+
 ## 2026-10-24：按事件查看進度與有界應用生命期
 
 基底 `c8b84d40bd4eca6c120e5455c28434ed181fcdd2`。分支維持 `feat/local-codex-acceptance`。
