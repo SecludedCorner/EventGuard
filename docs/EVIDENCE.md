@@ -2,6 +2,44 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-24：中文 App CLI 與一般使用者通知
+
+基底 `c610b616037e33ac55f99ed471623ffc99fbad22`。未改控制器、採集或儲存協定。
+補齊 `app` 文字模式：直接顯示採集狀態、實例、版本、來源、原因、可用操作及頁面。
+原本落入通用ASCII JSON，對人不易閱讀。JSON模式與API不變。
+未知不顯示已停止；重播不暗示再次操作；shutdown回條不暗示實際退出。控制字元與未知enum不成指令或例外。
+
+```powershell
+py -3.13 -B scripts/verify.py --run-dir reports/application-lifecycle-001/text-001 --timeout-seconds 120 --module test_application_cli_text --module test_cli_workflow --module test_core_cli
+```
+
+Python3.13.3。`2026-10-24T05:07:01.404381Z`：33 run/pass，0 skip/failure/error。
+guardian10.342秒、exit0、無強停、remaining0、來源不變；逐測試無殘留。
+這是CLI顯示增量，不重跑已驗的整套產品測試。
+實際原生CLI `--format text app status` 另存 `text-001/app-status-text.txt`，UTF-8中文正確。
+該次應用已不在運行，CLI正確exit2並顯示application_not_running；探測wrapper誤設assert0而失敗。
+保留真exit回條，不重開應用來改寫這個結果，也不把CLI exit2寫成通過。
+
+`2026-10-24T05:02:08Z` 另在一般使用者環境做一次真Windows通知。
+僅程式生成一件synthetic high事件，真NotificationService→Shell_NotifyIconW。
+系統接受要求；四秒後關閉自身視窗。NotificationService重新建立後回already_notified，沒有再送。
+事件仍pending，source receipt_count=0，model_calls=0。
+native child exit0、私有Job無殘留/強停。證據 `reports/notification-intent-001/native-ordinary-001/result.json` 與 `exit.json`。
+不能聲稱人已看見。先前sandbox通知skip仍保留，不改為通過。
+
+同一已批准專用入口隨後自動載入十工具，沒有要求重開Codex。
+`native-control.py` 啟動本專案100秒上限的閒置App；通知關閉，採集/模型/正式事件讀取均為零。
+2026-10-24T05:14–05:15Z：本聊天原生MCP status、實際原生CLI中文status及Web GET/status為同instance、revision0、stopped。
+實際原生shutdown_application回shutdown_requested。稍後手持HANDLE驗exit0、remaining0、無強停；Web/SDK均退出。
+關閉後原生status正確blocked/application_not_running，沒有冷啟新App。observer本身仍由Codex管理。
+證據 `reports/application-lifecycle-001/native-control-001`：ready、native-status、cli-status、web-status、native-shutdown、exit及native-after-shutdown。
+這是活躍聊天的工具操作面驗收，不是收到事件或閒置喚醒證據。
+
+七項必做條件與原Goal逐項對照在 `reports/application-lifecycle-001/product-requirements.json`。
+既有rules/source/history模組未重跑；核對相關程式/測試位元組與原受測manifest一致，原逐測試紀錄均ok。
+原歷史整輪曾有不同case-freshness清理錯誤，未冒稱該整輪通過；已修正模組及本批整合驗證另有證據。
+目前無已知未實作的無模型必要功能。真模型收件/喚醒、當前聊天十工具熱載入及長期實機均維持未驗證。
+
 ## 2026-10-24：獨立 App、共用 CLI 與公告公開投影
 
 基底 `9903ad5574e80666eb379652e7f4154d111c14b3`。分支 `feat/local-codex-acceptance`。未推送。
@@ -79,7 +117,11 @@ fixture與對抗文字均自寫，不引入上游runtime。
 本次使用 OpenAI Docs 技能查官方入口，使用 Computer Use 做真瀏覽器驗收。
 公開queue可用命令不等於此桌面閒置喚醒已驗。官方依據與一次有界模型驗收範圍見 [AGENT_EVENT_DRIVEN](AGENT_EVENT_DRIVEN.md)。
 OpenOctopus可拆工協定見 [OPENOCTOPUS_EVENT_PROTOCOL](OPENOCTOPUS_EVENT_PROTOCOL.md)；外專案尚未實作。
-本批沒有重新註冊MCP、啟用正式監看、讀正式事件、初始化預算、模型、排程或自啟。
+一般使用者公開Codex CLI只更新既有eventguard-app為Python -u stdio；同一程式與live範圍，未更動其他MCP。
+2026-10-24T04:58:34Z：CLI exit0、private Job自然退出、remaining0。回條為native-entry-refresh.json。
+較早原生catalog仍為舊九工具，status回application_instance_changed。回傳保留在native-client-after-entry-refresh.json。
+該時刻只證明設定更新；稍後才自動載入十工具，最後catalog/狀態保留在native-client-final.json。
+本批沒有啟用正式監看、讀正式事件、初始化預算、模型、排程或自啟。
 24小時、重開機、七來源目前主機實測及真模型喚醒均未執行。
 
 ## 2026-10-24：實際瀏覽器操作、成功歷史與公告時效

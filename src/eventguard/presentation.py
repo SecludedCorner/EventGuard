@@ -98,6 +98,41 @@ def render(result, command="", operation=""):
         return "EventGuard：回傳格式未知。"
     if result.get("status") in {"error","invalid_request","conflict"}:
         return "EventGuard 無法完成操作："+text(result.get("reason",result.get("error_code",result["status"])))
+    if command=="app":
+        def label(mapping,value,default):
+            return mapping.get(value,default) if isinstance(value,str) else default
+        labels={"start":"開始採集", "pause":"暫停採集", "resume":"恢復採集",
+                "stop":"停止採集", "shutdown":"關閉程式"}
+        actor={"cli":"CLI", "gui":"GUI", "mcp":"MCP", "startup":"啟動流程", "system":"系統"}
+        monitor={"running":"採集中", "paused":"採集已暫停", "stopped":"採集已停止，應用仍開啟",
+                 "blocked":"採集受阻", "unknown":"採集狀態未確認", "closing":"程式正在關閉"}
+        lines=["EventGuard 應用（"+text(result.get("namespace"))+"）",
+               "採集："+label(monitor,result.get("monitor_state"),"採集狀態未確認"),
+               "實例："+text(result.get("instance_id"))+"。狀態版本："+text(result.get("state_revision"))]
+        if result.get("state") is not None:
+            lines.append("要求結果："+state(result.get("state"))+"。原因："+text(result.get("reason",result.get("result_code"))))
+        if result.get("local_url") is not None:
+            lines.append("本機頁面："+text(result["local_url"],400))
+        last=result.get("last_action")
+        if isinstance(last,dict):
+            lines.append("最近動作："+label(labels,last.get("action"),"其他操作")+"。來源："+
+                         label(actor,last.get("source"),"未知")+"。結果："+state(last.get("state")))
+            lines.append("動作原因："+text(last.get("result_code"))+"。操作識別："+text(last.get("operation_id"),128))
+        else:
+            lines.append("最近動作：尚無紀錄。")
+        if result.get("replayed") is True:
+            lines.append("回放原操作回條。沒有再次執行；目前採集狀態以上方為準。")
+        controls=result.get("monitor_controls")
+        controls=controls if isinstance(controls,dict) else {}
+        allowed=[labels[name] for name in labels if controls.get("available") is True
+                 and controls.get("transition") is None and controls.get("can_"+name) is True]
+        lines.append("目前可用："+("、".join(allowed) if allowed else "沒有已確認可用的控制操作"))
+        if operation=="shutdown":
+            lines.append("關閉要求的回條不代表程式已退出。需另核對退出結果。")
+        elif operation=="stop":
+            lines.append("停止採集保留介面及事件；關閉程式須明確 shutdown。")
+        lines.append("模型呼叫："+text(result.get("model_calls"))+"。處置狀態與 ACK 分開。")
+        return "\n".join(lines)
     if command=="agent":
         if operation in {"inspect","export","capabilities"}:
             return json.dumps(result,ensure_ascii=False,indent=2)

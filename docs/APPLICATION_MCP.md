@@ -73,7 +73,7 @@ status 另帶最多五案公開公告摘要。inspect_event 只對公告事件�
 ```powershell
 $codexExe = (Get-Command codex.exe -CommandType Application -ErrorAction Stop).Source
 $pythonExe = py -3.13 -B -c "import sys; print(sys.executable)"
-& $codexExe mcp add eventguard-app -- $pythonExe -B "$PWD\scripts\eventguard.py" mcp --allow-live
+& $codexExe mcp add eventguard-app -- $pythonExe -u -B "$PWD\scripts\eventguard.py" mcp --allow-live
 & $codexExe mcp get eventguard-app --json
 ```
 
