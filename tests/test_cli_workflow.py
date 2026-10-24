@@ -110,6 +110,21 @@ class CliWorkflowTests(unittest.TestCase):
         self.assertIn("操作總覽",human)
         self.assertFalse((self.root/"data").exists())
 
+    def test_human_views_separate_success_attempt_and_retry_times(self):
+        success = "2026-10-24T00:00:00+00:00"
+        attempted = "2026-10-24T00:05:00+00:00"
+        retry = "2026-10-24T00:10:00+00:00"
+        shown = render({"state":"waiting", "sources":[{"source_id":"fixture", "last_success":success,
+                        "last_attempt":attempted, "next_fetch_at":retry, "consecutive_failures":3,
+                        "freshness":"stale", "error_code":"fetch_failed"}]}, "advisories", "status")
+        for expected in ("最後成功="+success, "最後嘗試="+attempted, "下次重試="+retry, "連續失敗=3", "fetch_failed"):
+            self.assertIn(expected, shown)
+        shown = render({"namespace":"test", "sources":[{"name":"Defender", "last_success_at":success,
+                        "last_collected_at":attempted, "saved_status":"denied", "status":"denied"}]}, "sources", "list")
+        self.assertIn("最後成功="+success, shown)
+        self.assertIn("最後採集="+attempted, shown)
+        self.assertIn("拒讀", shown)
+
     def test_text_controls_and_bidi_never_become_terminal_instructions(self):
         hostile="name\x1b[2J\r\n\u202erun-command"
         shown=text(hostile)

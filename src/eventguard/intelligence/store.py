@@ -136,6 +136,71 @@ def source_identity(source):
     return _hash({key: value for key, value in source.items() if key not in policy})
 
 
+def _case_status(statuses):
+    return ("possible" if "possible" in statuses else "not_applicable"
+            if statuses and all(value == "not_applicable" for value in statuses) else "unknown")
+
+
+def _current_assertion(item, source, now):
+    """A read-time projection. Historical assessment/evidence is never rewritten."""
+    reasons = set()
+    assessment, record = item["assessment"], item["record"]
+    if source is None:
+        reasons.add("source_state_missing")
+    else:
+        if source["config"].get("enabled", True) is False:
+            reasons.add("source_tracking_disabled")
+        if source["last_success"] is None:
+            reasons.add("source_success_unknown")
+        elif not source["cache_matches_config"]:
+            reasons.add("source_binding_changed")
+        if source["freshness"] == "stale":
+            reasons.add("source_evidence_stale")
+        elif source["freshness"] != "fresh":
+            reasons.add("source_freshness_unknown")
+        # An empty fetch is not a withdrawal, nor proof that an older exclusion
+        # remains current. A changed range also needs a new local assessment.
+        ids = {value.upper() for value in record.get("ids", []) + record.get("aliases", []) if isinstance(value, str)}
+        matched = False
+        for cached in source["cached_records"]:
+            if not isinstance(cached, dict) or _assertion_id(cached) != item["assertion_id"]:
+                continue
+            cached_ids = {value.upper() for value in cached.get("ids", []) + cached.get("aliases", []) if isinstance(value, str)}
+            if ids & cached_ids and _meaning(cached, {}) == _meaning(record, {}):
+                matched = True
+                break
+        if not matched:
+            reasons.add("source_assertion_not_current")
+    try:
+        observed = _epoch(item["last_seen"])
+        if observed > now:
+            reasons.add("assessment_time_unknown")
+    except IntelligenceError:
+        observed = None
+        reasons.add("assessment_time_unknown")
+    validity = assessment.get("inventory_freshness")
+    if not isinstance(validity, dict):
+        reasons.add("inventory_freshness_unknown")
+    else:
+        try:
+            start, end = _epoch(validity.get("observed_at")), _epoch(validity.get("valid_until"))
+            if validity.get("observed_at") is None or validity.get("valid_until") is None or start > now or end <= start or observed is None or start > observed:
+                reasons.add("inventory_freshness_unknown")
+            elif now >= end:
+                reasons.add("inventory_evidence_stale")
+            elif validity.get("status") != "fresh":
+                reasons.add("inventory_freshness_unknown")
+        except IntelligenceError:
+            reasons.add("inventory_freshness_unknown")
+    historical = assessment.get("status", "unknown")
+    status = historical if historical in {"possible", "not_applicable", "unknown"} and not reasons else "unknown"
+    if status == "unknown" and not reasons:
+        reasons.add("assessment_unresolved")
+    return {"status": status, "reason_codes": sorted(reasons), "evaluated_at": _iso(now),
+            "evidence_as_of": _iso(observed) if observed is not None else None,
+            "incident_conclusion": "not_assessed"}
+
+
 class IntelligenceStore:
     def __init__(self, path, max_records=None, max_changes=None,
                  max_bytes=None, cooldown_seconds=None,
@@ -520,13 +585,14 @@ class IntelligenceStore:
                 raise IntelligenceError("change_event_id_conflict")
             db.execute("UPDATE changes SET emitted_event_id=? WHERE change_id=?", (event_id, change_id))
 
-    def event_case(self, event_id):
+    def event_case(self, event_id, now=None):
         with self._connect() as db:
             row = db.execute("SELECT case_id FROM changes WHERE emitted_event_id=? ORDER BY observed DESC LIMIT 1", (_identifier(event_id),)).fetchone()
             case_id = row[0] if row else None
-        return self.advisory(case_id) if case_id else None
+        return self.advisory(case_id, now=now) if case_id else None
 
-    def advisory(self, case_id):
+    def advisory(self, case_id, now=None):
+        stamp = _epoch(now)
         with self._connect() as db:
             case_id = self._resolve(db, _identifier(case_id))
             row = db.execute("SELECT * FROM cases WHERE case_id=?", (case_id,)).fetchone()
@@ -535,21 +601,32 @@ class IntelligenceStore:
             sources = [{"source_id": item["source_id"], "assertion_id": item["assertion_id"], "record": json.loads(item["record"]),
                         "assessment": json.loads(item["assessment"]), "last_seen": _iso(item["last_seen"])}
                        for item in db.execute("SELECT * FROM case_sources WHERE case_id=? ORDER BY source_id,assertion_id", (case_id,))]
-            statuses = [item["assessment"].get("status", "unknown") for item in sources]
-            case_status = "possible" if "possible" in statuses else "not_applicable" if statuses and all(item == "not_applicable" for item in statuses) else "unknown"
+            source_states = {source_id: self._source(db.execute("SELECT * FROM sources WHERE source_id=?", (source_id,)).fetchone(), stamp)
+                             for source_id in {item["source_id"] for item in sources}}
+            for item in sources:
+                item["assessment_scope"] = "historical"
+                item["current_assessment"] = _current_assertion(item, source_states[item["source_id"]], stamp)
+            statuses = [item["current_assessment"]["status"] for item in sources]
+            case_status = _case_status(statuses)
+            current_reasons = sorted({reason for item in sources for reason in item["current_assessment"]["reason_codes"]})
             return {"case_id": case_id, "record": json.loads(row["record"]),
-                    "assessment": json.loads(row["assessment"]), "created_at": _iso(row["created"]),
+                    "assessment": json.loads(row["assessment"]), "assessment_scope": "historical",
+                    "historical_case_status": _case_status([item["assessment"].get("status", "unknown") for item in sources]),
+                    "current_assessment": {"status": case_status, "reason_codes": current_reasons,
+                                           "evaluated_at": _iso(stamp), "incident_conclusion": "not_assessed"},
+                    "created_at": _iso(row["created"]),
                     "updated_at": _iso(row["updated"]), "case_status": case_status,
                     "components": sorted({str(item["record"].get("component", "unknown")) for item in sources}),
                     "aliases": [item[0] for item in db.execute("SELECT alias FROM aliases WHERE case_id=? ORDER BY alias", (case_id,))],
                     "sources": sources}
 
-    def cases(self, limit=100):
+    def cases(self, limit=100, now=None):
         if type(limit) is not int or not 1 <= limit <= 10000:
             raise IntelligenceError("invalid_limit")
         with self._connect() as db:
             ids = [row[0] for row in db.execute("SELECT case_id FROM cases ORDER BY created,case_id LIMIT ?", (limit,))]
-        return [self.advisory(case_id) for case_id in ids]
+        stamp = _epoch(now)
+        return [self.advisory(case_id, now=stamp) for case_id in ids]
 
     def status(self, now=None):
         stamp = _epoch(now)

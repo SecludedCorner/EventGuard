@@ -46,6 +46,14 @@ class Monitor:
         from .collectors.progress import invoke_with_progress
         return invoke_with_progress(self.collectors.collect, source_id, cancel=cancel, progress=progress)
 
+    def _restore_success_history(self, namespace):
+        for key in SECTIONS:
+            try:
+                saved = self.runtime.observation(key, namespace, limit=1)
+                self.coverage[key]["last_success"] = saved.get("last_success_at") if saved is not None else None
+            except (OSError, ValueError, TypeError):
+                self.coverage[key]["last_success"] = None
+
     def _record(self, section, health, namespace, instance_id):
         from .collectors.windows import coverage_metadata
         key = section.get("id")
@@ -57,7 +65,7 @@ class Monitor:
         duration = section.get("elapsed_ms")
         self.coverage[key] = {**coverage_metadata(section), "status": status,
                               "observed_at": section.get("observed_at"),
-                              "last_success": utc_now() if status in SUCCESS else old.get("last_success"),
+                              "last_success": old.get("last_success"),
                               "row_count": len(rows), "usable_row_count": sum(
                                   row.get("status") in ("ok", "partial") and any(
                                       value is not None for field, value in row.items() if field != "status") for row in rows),
@@ -69,6 +77,7 @@ class Monitor:
         try:
             saved = self.runtime.save_observation(section, namespace, instance_id)
             self.coverage[key].update(observation_saved=True, last_persisted_at=saved["saved_at"],
+                                      last_success=saved.get("last_success_at"),
                                       saved_row_count=saved["exported"], observation_truncated=saved["truncated"])
         except (OSError, ValueError, TypeError):
             health.update(healthy=False, last_error="observation_persistence_failed", persistence_failure=True)
@@ -196,6 +205,7 @@ class Monitor:
                 health.update(state="blocked_previous_query", monitoring=False, healthy=False,
                               last_error=previous_query.get("reason", "previous_query_exit_unconfirmed"))
                 return health
+            self._restore_success_history(namespace)
             host_id=self.runtime.identity()
             if fixture:
                 host_id="fixture-"+host_id

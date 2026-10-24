@@ -123,6 +123,8 @@ def render(result, command="", operation=""):
                "agent：本輪未啟用。模型呼叫：0。"]
         for source in result.get("sources",[]):
             lines.append(text(source.get("source_id"))+" | 最後成功="+text(source.get("last_success_at",source.get("last_success")))
+                         +" | 最後嘗試="+text(source.get("last_attempt"))+" | 下次重試="+text(source.get("next_fetch_at"))
+                         +" | 連續失敗="+text(source.get("consecutive_failures"))
                          +" | 新鮮度="+text(source.get("freshness"))+" | 原因="+text(source.get("error_code")))
         return "\n".join(lines)
     if command=="rules":
@@ -139,7 +141,8 @@ def render(result, command="", operation=""):
         if isinstance(result.get("sources"),list):
             lines=["EventGuard 保存來源（"+text(result.get("namespace"))+"）"]
             for source in result["sources"]:
-                lines.append(text(source.get("name"))+" | "+text(source.get("last_collected_at"))+" | "+state(source.get("saved_status"))+" | 目前："+state(source.get("status")))
+                lines.append(text(source.get("name"))+" | 最後成功="+text(source.get("last_success_at"))
+                             +" | 最後採集="+text(source.get("last_collected_at"))+" | "+state(source.get("saved_status"))+" | 目前："+state(source.get("status")))
                 for reason in source.get("reasons",[]):
                     lines.append("  原因："+" / ".join(text(reason.get(k)) for k in ("stage","reason_code","win32_error","hresult_hex") if reason.get(k) is not None))
                 lines.append("  建議："+text(source.get("suggestion"),500))

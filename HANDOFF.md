@@ -2,16 +2,22 @@
 
 先讀 AGENTS、README、STATUS。目前優先交付可獨立使用的無模型產品閉環，再銜接模型。一般使用者。核心只用標準庫。
 
-本輪優先改為無模型產品閉環，本批已交付，基底 `bba651f`。
+本輪接續無模型產品閉環，本批基底 `54d231c`。
 Goal UI 仍 blocked；工具不能 resume 或改寫，未假結案重建。這不阻擋已授權的本機工程。
 已補 `run` 本機頁的監看暫停／恢復／停止，並統測事件、處置與 pending 保留。
 只控制本應用實際捕捉的 Job。外部 owner、未知退出或控制世代變更時不可盲目恢復。
 本輪不呼叫模型、不啟用正式 agent host、不初始化或重設預算。模型介面保留選配。
-本批證據 `reports/local-controls-001/verify-002` 保留原失敗；修後定向回歸為 `verify-003`。
-首次 `verify-001` 缺最終回條，不算通過。verify 已補 worker 啟動身分回條，與退出證據分開。
-實際命令、測試數及限制只見 EVIDENCE。沒有宣稱長期背景或真模型收件成功。
+本批已完成實際瀏覽器操作。證據、截圖、CLI／SQLite 與退出回條位於 `reports/browser-controls-001`。
+`ui-validation.json` 為 true：同一事件跨刷新／應用重啟仍 handled＋pending，兩個應用及三個 monitor 均自然退出。
+修正停止頁首、合成標示與篩選名稱。Web／CLI 新增耐久最後成功時間。
+Runtime observations 沿原 JSON 原子保存 last_success_at；失敗或不完整採集不更新成功歷史。
+公告 case_status/current_assessment 是當前投影；原 assessment 標 historical，舊資料不改寫。
+來源綁定、來源期限及靜態盤點期限都有效，才可支持目前排除。人工 facts 讀檔與 304 不刷新日期。
+原測試 WinError 32 是新測試未關 SQLite；改 closing 後只重跑該模組。命令、數字與限制只見 EVIDENCE。
+上批 `reports/local-controls-001` 的失敗、中斷與修正證據保留，不與本批加總。
+沒有宣稱七來源當前實機、長期背景、24 小時或真模型收件成功。
 
-分支 `feat/local-codex-acceptance`。本批基底 `bba651fedf5f556af57037c4fa5263c5eebd0e22`。
+分支 `feat/local-codex-acceptance`。本批基底 `54d231c896a5c865e4838025ae5b2d86d872d90e`。
 保留未追蹤的 `docs/research/` 與附件。不 reset、clean、推送或提交執行資料。
 
 `Application.monitor_control` 固定 pause／resume／stop。Web 只轉交已注入的 callback，不另建 owner。
@@ -20,7 +26,7 @@ resume 檢查原 namespace／run／停止後 generation，重讀規則，再由 
 舊 owner 永久關閉；新 owner 只持有明確恢復所建立的子程序。不接管外部 host。stop 先回 HTTP 要求，主迴圈再關閉。
 EventStore 既有空檔／缺表／缺必要欄位不再自動建空庫。初始化與已知 legacy migration 同一交易；失敗回滾。
 
-## 本批事件派送
+## 既有事件派送契約
 
 - `agent_service.py`：手動背景 start/status/pause/resume/stop。沿用原 dispatcher，不建立服務或排程。start/resume 預設不執行。
 - `dispatch_policy.py`、`config/agent-dispatch.json`：純程式枚舉篩選。未選或已處理事件仍 pending。

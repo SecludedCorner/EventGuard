@@ -99,11 +99,16 @@ def source_status(root, namespace="live"):
     rows = []
     for source_id in SECTION_IDS:
         section, saved_at, row_count, read_error = {}, None, None, False
+        success_at, success_reason = None, "source_success_not_recorded"
         try:
             observation = runtime.observation(source_id, namespace, limit=1)
             if observation is not None:
                 section = observation["section"]
                 saved_at, row_count = observation.get("saved_at"), observation.get("total")
+                success_at = _timestamp(observation.get("last_success_at"))
+                success_reason = observation.get("last_success_reason", "source_success_not_recorded")
+                if success_at is not None and success_at > now:
+                    success_at, success_reason = None, "source_success_timestamp_invalid"
         except (OSError, ValueError, TypeError, KeyError):
             read_error = True
         health_item = coverage_by_source.get(source_id, {})
@@ -132,6 +137,8 @@ def source_status(root, namespace="live"):
         if read_error:
             reasons.append(_reason("saved_observation_unreadable"))
             status = "unknown"
+        if success_reason == "source_success_timestamp_invalid":
+            reasons.append(_reason("source_success_timestamp_invalid"))
         if section and freshness == "unknown":
             reasons.append(_reason("source_timestamp_or_freshness_unknown"))
         persistence_failed = health_item.get("observation_error") == "observation_persistence_failed"
@@ -142,6 +149,8 @@ def source_status(root, namespace="live"):
         success = True if status == "ok" else False if status in {"denied", "error", "timeout", "cancelled"} else None
         rows.append({"source_id": source_id, "name": SOURCE_NAMES[source_id],
                      "last_collected_at": observed.isoformat(timespec="seconds") if observed else None,
+                     "last_success_at": success_at.isoformat(timespec="seconds") if success_at is not None else None,
+                     "last_success_state": "known" if success_at is not None else "unknown",
                      "last_saved_at": saved_at if _timestamp(saved_at) is not None else None,
                      "saved_status": saved_status, "status": status, "success": success,
                      "freshness": freshness, "age_seconds": round(age, 3) if age is not None and age >= 0 else None,

@@ -1,10 +1,11 @@
 """Evidence-limited local relevance. A match never means exploitability or safety."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import re
 
 from .versions import affected_by_osv, compare_versions, matches_cargo_requirement, matches_python_requirement, normalize_ecosystem
+from .inventory import DEFAULT_MAX_AGE_SECONDS
 
 
 def _time(value):
@@ -23,11 +24,47 @@ def _name(value):
     return value.lower().replace("_", "-")
 
 
-def _fresh(observed, now, maximum=86400):
+def _fresh(observed, now, maximum=DEFAULT_MAX_AGE_SECONDS):
     timestamp = _time(observed)
     if type(maximum) is not int or not 1 <= maximum <= 30 * 86400:
-        maximum = 86400
+        maximum = DEFAULT_MAX_AGE_SECONDS
     return timestamp is not None and -300 <= (now - timestamp).total_seconds() <= maximum
+
+
+def _inventory_freshness(inventory, refs, now):
+    """Local evidence validity only. Reading/304 must not refresh asserted facts."""
+    value = {"status": "unknown", "observed_at": None, "valid_until": None,
+             "reason_codes": ["inventory_freshness_unknown"]}
+    if now is None or not refs:
+        return value
+    observations, deadlines = [], []
+
+    def add(observed, maximum):
+        stamp = _time(observed)
+        if stamp is None or stamp > now or type(maximum) is not int or not 1 <= maximum <= 30 * 86400:
+            return False
+        observations.append(stamp)
+        deadlines.append(stamp + timedelta(seconds=maximum))
+        return True
+
+    if not add(inventory.get("collected_at"), inventory.get("max_age_seconds", DEFAULT_MAX_AGE_SECONDS)):
+        return value
+    relevant = [asset for asset in inventory.get("assets", [])
+                if isinstance(asset, dict) and asset.get("asset_id", "unknown") in refs]
+    if len(relevant) < len(set(refs)):
+        return value
+    for asset in relevant:
+        facts = asset.get("facts", {})
+        if not isinstance(facts, dict):
+            return value
+        observed = facts.get("observed_at", asset.get("observed_at", inventory.get("collected_at")))
+        if not add(observed, facts.get("max_age_seconds", DEFAULT_MAX_AGE_SECONDS)):
+            return value
+    deadline = min(deadlines)
+    return {"status": "fresh" if now < deadline else "stale",
+            "observed_at": min(observations).isoformat(timespec="seconds"),
+            "valid_until": deadline.isoformat(timespec="seconds"),
+            "reason_codes": [] if now < deadline else ["inventory_evidence_stale"]}
 
 
 def _requirements(version, values):
@@ -95,6 +132,7 @@ def evaluate(record: dict, inventory: dict, now: str | None = None) -> dict:
     output = {"status": "unknown", "reason_codes": [], "asset_refs": refs, "evidence": evidence, "fix_available": fix_available, "conditions": condition_results}
     def finish(status):
         output["status"], output["reason_codes"] = status, sorted(reasons)
+        output["inventory_freshness"] = _inventory_freshness(inventory, refs, timestamp)
         return output
     if timestamp is None:
         reasons.add("invalid_evaluation_time")
@@ -106,7 +144,7 @@ def evaluate(record: dict, inventory: dict, now: str | None = None) -> dict:
         reasons.add("advisory_evidence_unavailable")
         return finish("unknown")
     inventory_time = inventory.get("collected_at")
-    if not _fresh(inventory_time, timestamp, inventory.get("max_age_seconds", 86400)):
+    if not _fresh(inventory_time, timestamp, inventory.get("max_age_seconds", DEFAULT_MAX_AGE_SECONDS)):
         reasons.add("inventory_stale_or_undated")
         return finish("unknown")
     if inventory.get("status") in {"unknown", "denied", "error", "stale"}:
@@ -150,7 +188,7 @@ def evaluate(record: dict, inventory: dict, now: str | None = None) -> dict:
             facts = asset.get("facts", {})
             if not isinstance(facts, dict):
                 facts = {}
-            if not _fresh(facts.get("observed_at", asset.get("observed_at", inventory_time)), timestamp, facts.get("max_age_seconds", 86400)):
+            if not _fresh(facts.get("observed_at", asset.get("observed_at", inventory_time)), timestamp, facts.get("max_age_seconds", DEFAULT_MAX_AGE_SECONDS)):
                 unknown = True
                 reasons.add("asset_facts_stale_or_undated")
                 continue

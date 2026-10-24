@@ -19,6 +19,56 @@ def utc_now():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def _observation_timestamp(value):
+    if not isinstance(value, str) or len(value) > 80:
+        return None
+    try:
+        stamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if stamp.tzinfo is None or stamp.utcoffset() is None:
+            return None
+        return stamp.astimezone(timezone.utc)
+    except (ValueError, TypeError, OverflowError):
+        return None
+
+
+def _complete_observation(section):
+    """Only complete collector success can advance the persisted success time."""
+    if not isinstance(section, dict) or section.get("status") != "ok":
+        return False
+    coverage = section.get("coverage", {})
+    if not isinstance(coverage, dict) or coverage.get("status", "ok") != "ok":
+        return False
+    for field in ("truncated", "errors_truncated"):
+        if field in coverage and (type(coverage[field]) is not bool or coverage[field] is True):
+            return False
+    if "errors" in coverage and (not isinstance(coverage["errors"], list) or coverage["errors"]):
+        return False
+    if "error_count" in coverage and (type(coverage["error_count"]) is not int or coverage["error_count"] != 0):
+        return False
+    rows = section.get("rows")
+    if not isinstance(rows, list):
+        return False
+    # Missing optional Run keys are a complete observation under the existing
+    # collector contract. A partial/denied object is not complete success.
+    return all(isinstance(row, dict) and (row.get("status", "ok") == "ok" or
+        row.get("status") == "not_applicable" and row.get("kind") == "registry_missing") for row in rows)
+
+
+def _observation_success(value, now):
+    """Read one timestamp; old files can prove only their saved complete sample."""
+    section = value.get("section", {})
+    if "last_success_at" in value:
+        raw = value["last_success_at"]
+    else:
+        raw = section.get("observed_at") if _complete_observation(section) else None
+    if raw is None:
+        return None, "source_success_not_recorded"
+    stamp, saved = _observation_timestamp(raw), _observation_timestamp(value.get("saved_at"))
+    if stamp is None or saved is None or stamp > now or stamp > saved:
+        return None, "source_success_timestamp_invalid"
+    return stamp.isoformat(timespec="seconds"), "saved_complete_collection"
+
+
 def safe_child(root, relative):
     root = Path(root).absolute()
     relative = Path(relative)
@@ -154,14 +204,30 @@ class Runtime:
         duration = duration if type(duration) is int and 0 <= duration <= 2**31-1 else None
         coverage = coverage_metadata(section)
         saved_at = utc_now()
+        now = _observation_timestamp(saved_at)
+        previous_success = None
+        try:
+            previous = self.observation(source_id, namespace, limit=1)
+            if previous is not None and now is not None:
+                previous_success, _ = _observation_success(previous, now)
+        except (OSError, ValueError, TypeError):
+            # A broken previous projection cannot establish success. A new
+            # complete observation may establish its own timestamp atomically.
+            pass
+        candidate = _observation_timestamp(section.get("observed_at"))
+        if (now is not None and candidate is not None and candidate <= now and _complete_observation(section)
+                and (previous_success is None or candidate >= _observation_timestamp(previous_success))):
+            previous_success = candidate.isoformat(timespec="seconds")
         value = {"schema_version": "1.0", "namespace": namespace, "instance_id": instance_id,
                  "saved_at": saved_at, "total": total, "exported": len(safe_rows),
+                 "last_success_at": previous_success,
                  "truncated": len(safe_rows) < total or coverage.get("truncated", False),
                  "data_trust": "untrusted_data", "incident_conclusion": "not_assessed",
                  "section": {"id": source_id, "status": status, "observed_at": section.get("observed_at"),
                              "elapsed_ms": duration, "coverage": coverage, "rows": safe_rows}}
         atomic_json(self.path("data/" + namespace + "/observations/" + source_id + ".json"), value, 1024*1024)
-        return {"saved_at": saved_at, "total": total, "exported": len(safe_rows), "truncated": value["truncated"]}
+        return {"saved_at": saved_at, "total": total, "exported": len(safe_rows), "truncated": value["truncated"],
+                "last_success_at": previous_success}
 
     def observation(self, source_id, namespace="live", limit=20):
         """Read a saved projection only; absence never starts a query or creates data."""
@@ -180,6 +246,9 @@ class Runtime:
                 or not isinstance(section.get("rows"), list)
                 or type(value.get("total")) is not int or value["total"] < len(section["rows"])):
             raise ValueError("invalid_saved_observation")
+        now = _observation_timestamp(utc_now())
+        success, reason = _observation_success(value, now) if now is not None else (None, "source_success_timestamp_invalid")
+        value.update(last_success_at=success, last_success_reason=reason)
         section["rows"] = section["rows"][:limit]
         value["exported"] = len(section["rows"])
         value["truncated"] = value.get("truncated") is True or value["exported"] < value["total"]

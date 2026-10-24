@@ -25,6 +25,7 @@
 
 `status` 顯示來源最後嘗試、最後成功、新鮮度、原因碼、待送變化、待收事件、每日剩餘任務及進度。
 來源失敗不清空快取。未知當日用量時，剩餘額度顯示未知。查閱不初始化預算。
+人類文字輸出也列最後嘗試、下次重試及連續失敗次數。等待退避不會隱藏上次失敗。
 所有事件也可由既有 `events list --source advisories` 及本機 Web 檢視。
 公告全文與盤點不會因事件進入模型。
 
@@ -41,7 +42,17 @@
 目錄只讀固定 manifest 名稱。有限深度、檔案數、大小與資產數。拒絕連結及私人／建置目錄。
 不執行 rustup、Cargo、uv、套件、build.rs 或版本命令。不觸發工具鏈下載。
 lockfile 不證明已編入或部署。人工 facts 一律標 `user_asserted`。
+盤點有效期沿用原有一天預設，可用 `inventory.max_age_seconds` 設定。
+人工 facts 必須有自己的 `observed_at`；重新讀檔或 HTTP 304 不會刷新它。
+各 facts 的 `max_age_seconds` 與本輪盤點期限取最早者。缺期限、未來時間或過期都不能支持目前排除。
 Linux 本機資料在 Windows 上仍未知。未連線 Linux 主機。不掃其他主機。
+
+`cases` 的 `case_status`／`current_assessment` 是查閱當下的判定。
+`assessment`、各來源的 `assessment` 及 `historical_case_status` 保留原歷史判定。
+來源 URL／adapter／追蹤 ID 改變、快取不再相符或證據過期時，目前判定回 `unknown`，附固定原因碼。
+短暫擷取失敗不會憑空使仍有效的快取過期。來源失敗狀態仍可從 status 查看。
+舊案件缺盤點有效期時只保留歷史判定。新的有效盤點與來源重評後，才可支持目前判定。
+查閱只讀，不刪案件、不改舊事件，也不把風險判定當成處置批准。
 
 版本語意、optional features、TLS roots、模組與 backport 界線見 [適用性契約](ADVISORY_APPLICABILITY.md)。
 官方案例、查核時間、來源失敗及已知修補條件見 [來源契約](ADVISORY_SOURCES.md)。

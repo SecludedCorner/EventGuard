@@ -1,63 +1,43 @@
 # EventGuard 現況
 
-更新：2026-10-24，UTC+08。分支：`feat/local-codex-acceptance`。本批基底：`bba651f`。
+更新：2026-10-24，UTC+08。分支：`feat/local-codex-acceptance`。本批基底：`54d231c`。
 
 EventGuard 是本機程式。採集、規則、事件保存、CLI／Web 與通知不需要模型。
-主聊天接線、桌面閒置喚醒及開機自啟仍是選配，不阻擋產品。
+主聊天接線、桌面閒置喚醒及開機自啟是選配。
 
-## 本輪無模型工程：本批已交付
+## 本批交付
 
-基底 `bba651f`。Goal 工具仍回 `blocked`；沒有 resume／改寫介面，未假結案重建。
-依新指示先完成本機閉環，不等待模型批准。
-`run` 的 Web 已補監看本體的暫停／恢復／停止。暫停仍可查看、篩選及記錄處置；恢復保留事件與 pending。
-只控制本應用持有的子程序。世代變更、外部 owner、未知退出或回條保存失敗時不回成功。
-既有 SQLite 空檔、缺表或缺必要欄位明示錯誤，不重建為空庫。初始化與已知遷移失敗會回滾。
-合成 Windows／HTTP 流程已驗證兩個 host 自然 OS exit 0、零殘留；同一事件的 handled 與 pending 均保留。
-容量恢復、損毀、保存失敗、並行及既有 CLI／Web 的定向回歸已完成；原失敗與通知 skip 不隱藏。
-只用 fixture、合成事件及本機 HTTP／Windows Job。無模型，不啟用正式背景，不動模型預算。
-首次測試因 session 消失缺最終退出證據，保留未確認。其後兩輪有實際退出回條。
-完整命令、時間、範圍與結果只記在 [EVIDENCE](docs/EVIDENCE.md)。這不是長期監看或真模型通路驗收。
+- 已用實際瀏覽器操作暫停、恢復、停止、篩選、詳情、已讀與已處理。
+- 重新整理及應用重啟後，同一事件仍保留 handled 與 pending。人的處置不等於 ACK。
+- 修正停止要求回覆後頁首仍顯示監看中。要求與真正退出仍分開；不預報退出成功。
+- 合成頁明示測試資料。篩選有明確可存取名稱。
+- 七來源保存最後成功時間。後續失敗與重啟不清空它；最後採集、新鮮度及拒讀仍分開顯示。
+- 公告案件分目前判定與歷史判定。來源綁定失效或證據過期時，目前回 unknown；歷史不刪除。
+- 靜態盤點沿原有效期。重讀人工 facts 或 HTTP 304 不刷新原觀察時間。
+- 人類公告 status 可見最後嘗試、下次重試及連續失敗次數。
 
-## 事件驅動的專用 agent
+操作：`.\EventGuard.cmd run`。預設頁面 `http://127.0.0.1:8765`。
+埠已有其他程式時可用 `run --port 8877`。不停止其他程式。
+詳見 [本機頁面指南](docs/LOCAL_UI_ACCEPTANCE.md) 與 [公告追蹤](docs/ADVISORY_TRACKER.md)。
 
-- 新增 `agent start / status / pause / resume / stop`。start、resume 預設只預檢；加 `--execute` 才允許模型。
-- 普通背景 host 沿用原 dispatcher、QueueInbox、帳本及固定安裝預算。沒有第三份佇列或代理服務。
-- 可設定嚴重度、事件種類及人類狀態。預設選 high／critical、new／read；低事件不擋後方高事件。未選事件仍保留。
-- 暫停只擋新派送，不停止採集、不刪 pending、不取消已啟動任務。准入屏障未確認時明示 unconfirmed。
-- Web 新增派送頁與事件投遞階段。可暫停或停止。頁面不能啟動或恢復模型。
-- 分開記錄工具收件、query、結果、ACK、回合及程序退出。模型用量缺失時顯示未知。
-- 新增唯讀 CloudEvents 七欄匯出、嚴格驗證及同 ID 衝突檢查。它不是新接收服務，也不是喚醒證據。
-- 原驗收腳本新增 `service` 單事件案例。先等空佇列，再由程式加入事件。預設只準備；真驗尚未執行。
-- pending 在篩選前核對。壞資料會顯示固定原因，不能被當成空佇列。原事件保留，不扣新預算。
-- 新 worker 的開始及退出回條綁定同一 PID、建立時間與 attempt nonce。缺身分維持未知，不接受另一程序的回條。
-- service 驗收核對實際 SQLite 保存及 ACK 時間。UTC、monotonic 或程序身分缺證據時，不判成功。
-- CLI 未啟動與 worker 已退出分開。缺 worker 退出證據時保留 started，禁止重新准入。已確認退出的 blocked host 可由人類明確重啟。
-- CLI／Web 可按事件核對保留的 attempt、CLI 啟動、回合及退出。缺綁定或原始證據時仍未知，不採用 summary.passed 作證據。
-- `agent_started=observed` 是 CLI 程序啟動。它不是獨立的真模型來源證明。七欄匯出及 agent 工具不擴欄。
-- 有限 service 驗收由應用持有 host 的實際 HANDLE，可在既有外層 Job 內執行。父應用／期限與退出回條獨立核對，不宣稱獨立背景。
+## 證據與目前啟用狀態
 
-操作見 [AGENT_SERVICE](docs/AGENT_SERVICE.md)。測試數、命令、失敗與修復只記於 [EVIDENCE](docs/EVIDENCE.md)。
+本批使用隔離合成資料、真 CLI／應用後端、實際瀏覽器及 Windows 私有 Job。
+所有本批應用與採集子程序均有自然 OS exit 0、未強停、零殘留的回條。
+唯讀 CLI 查閱不改寫資料。原測試清理錯誤、修正及通知 skip 均保留。
+完整命令、時間、範圍與測試數只記在 [EVIDENCE](docs/EVIDENCE.md)。
+本機證據位於 `reports/browser-controls-001`，不提交 Git。
 
-## 已驗證與目前啟用狀態
+正式監看停止設定未變。正式公告背景與 agent host 未啟用。
+固定模型 budget DB／marker 未建立，沒有初始化、重置或假設用量為零。
+沒有改 MCP 設定、proxy、排程、服務、開機自啟或安全設定。
+原 Goal 工具仍回 blocked；沒有恢復介面，未假結案重建。
 
-fixture、fake CLI、真本機 HTTP 及 Windows 私有 Job 已分範圍驗證。
-隔離空佇列的 host 啟動、暫停、恢復、合作停止與實際 OS exit 0 已通過；無 provider 啟動及殘留。
-本批定向回歸已通過。另核對真 Windows worker／fake CLI 身分與自然退出。原失敗及修正記於 EVIDENCE。
-按事件查詢已驗證實際 CLI／HTTP 與合成 SQLite。正式 application-owned API 的空佇列 Windows host 已自然退出；無 provider 啟動。
-這不是模型收件或長期背景驗收。最後來源雜湊及退出證據位於 `reports/event-ingress-001`。
+## 未驗證與限制
 
-正式 agent host 為 `not_started`，未保存啟用。正式監看的停止設定與先前雜湊相同。
-固定預算 DB 與 marker 尚未建立；status 回 `budget_unavailable`。沒有初始化、重置或假設當日用量為零。
-模型真驗需要有限批准及有效預算。首次歷史未知時，既有保守初始化不發當日新額度。
-
-## 公告追蹤及限制
-
-既有公告背景提供 `advisories start / status / stop / check / cases`。
-普通程式擷取、快取、比對、保存與重啟去重。只讀允許的靜態盤點；預設路徑空白，主機適用性未知。
-既有實抓、來源失敗及合成後端重播見 EVIDENCE。正式公告背景與 dot 交接仍未啟用。
-
-七欄摘要不足以診斷完整漏洞。完整證據留本機，未擴大 agent 查詢授權。
-ACK 只代表收到，不是漏洞已修復、主機安全或案件結束。
-預算耗盡、離線、容量滿及保存失敗保留 pending。未知退出不自動再啟動。
-24 小時 soak、正式長期背景、真模型 receive→query→結果→ACK→自然退出均未驗證。
-OpenOctopus 僅完成 EventGuard 端契約與交接規格；沒有修改另一專案或向其聊天發送指令。
+本批沒有重做七來源實機採集。合成拒讀與未知不是主機當前狀態。
+24 小時 soak、重開機、正式長期背景與真模型收件通路仍未驗證。
+Windows 通知圖示在目前測試環境不可用；不能聲稱使用者已看到系統通知。
+七欄 snapshot、query／結果／ACK、每日五次耐久預算與容量政策不變。
+主聊天 queue 未驗證。OpenOctopus 只有 EventGuard 端契約，未操作另一專案。
+既有 dot 追蹤未停用。沒有推送或提交執行資料、附件及私人研究。

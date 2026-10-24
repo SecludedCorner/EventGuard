@@ -12,6 +12,7 @@ import stat
 import tomllib
 
 KNOWN_NAMES = frozenset({"Cargo.lock", "Cargo.toml", "rust-toolchain.toml", "pyproject.toml", "uv.lock"})
+DEFAULT_MAX_AGE_SECONDS = 86400  # Existing static-inventory freshness policy.
 _NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.+-]{0,127}$")
 _VERSION = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.+~:!-]{0,159}$")
 _BLOCKED_PARTS = frozenset({".git", ".codex", ".ssh", ".aws", ".azure", ".gnupg", "node_modules", "target", ".venv"})
@@ -95,6 +96,10 @@ def collect_inventory(config: dict, now: str | None = None) -> dict:
         settings = {}
     timestamp = _now(now)
     assets, coverage = [], []
+    max_age = settings.get("max_age_seconds", DEFAULT_MAX_AGE_SECONDS)
+    if type(max_age) is not int or not 1 <= max_age <= 30 * 86400:
+        return {"collected_at": timestamp, "max_age_seconds": None, "assets": [],
+                "coverage": [{"status": "error", "reason_codes": ["invalid_inventory_max_age"]}], "status": "unknown"}
     synthetic_data=[False]
     maximum = _bounded_int(settings, "max_files", 128, 1024)
     max_assets = _bounded_int(settings, "max_assets", 2048, 10000)
@@ -102,7 +107,7 @@ def collect_inventory(config: dict, now: str | None = None) -> dict:
     depth_limit = _bounded_int(settings, "max_depth", 2, 8)
     paths = settings.get("paths", [])
     if not isinstance(paths, list) or len(paths) > 128:
-        return {"collected_at": timestamp, "assets": [], "coverage": [{"status": "error", "reason_codes": ["invalid_inventory_paths"]}], "status": "unknown"}
+        return {"collected_at": timestamp, "max_age_seconds": max_age, "assets": [], "coverage": [{"status": "error", "reason_codes": ["invalid_inventory_paths"]}], "status": "unknown"}
 
     def add(ecosystem, component, version, path, kind, facts=None, requirement=None):
         if not isinstance(component, str) or not _NAME.fullmatch(component):
@@ -115,7 +120,8 @@ def collect_inventory(config: dict, now: str | None = None) -> dict:
         clean.update(_fact_values(facts))
         origin = {"kind": kind, "file_ref": _ref(path), "filename": path.name, "user_asserted": kind == "user_asserted"}
         identity = json.dumps([ecosystem, component, version, origin["file_ref"], clean], sort_keys=True).encode("utf-8")
-        asset = {"asset_id": hashlib.sha256(identity).hexdigest()[:32], "ecosystem": ecosystem, "component": component, "version": version, "origin": origin, "facts": clean, "observed_at": timestamp}
+        asset = {"asset_id": hashlib.sha256(identity).hexdigest()[:32], "ecosystem": ecosystem, "component": component, "version": version, "origin": origin, "facts": clean,
+                 "observed_at": clean.get("observed_at") if kind == "user_asserted" else timestamp}
         if isinstance(requirement, str) and len(requirement) <= 256 and not any(ord(c) < 32 for c in requirement):
             asset["declared_requirement"] = requirement
         assets.append(asset)
@@ -228,4 +234,4 @@ def collect_inventory(config: dict, now: str | None = None) -> dict:
     if len(pending) > maximum:
         coverage.append({"status": "error", "reason_codes": ["file_count_limit"]})
     failures = any(row["status"] != "success" for row in coverage)
-    return {"collected_at": timestamp, "assets": assets, "coverage": coverage,"synthetic":synthetic_data[0], "status": "partial" if failures and assets else "unknown" if failures or not coverage else "success"}
+    return {"collected_at": timestamp, "max_age_seconds": max_age, "assets": assets, "coverage": coverage,"synthetic":synthetic_data[0], "status": "partial" if failures and assets else "unknown" if failures or not coverage else "success"}

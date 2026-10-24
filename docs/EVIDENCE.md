@@ -2,6 +2,60 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-24：實際瀏覽器操作、成功歷史與公告時效
+
+基底 `54d231c896a5c865e4838025ae5b2d86d872d90e`。同一 feature 分支。沒有推送。
+本批使用 Computer Use 技能及實際瀏覽器 Playwright 操作，不以直接 HTTP 呼叫替代點擊。
+`reports/browser-controls-001/launch.py run-001`／`run-002` 啟動既有真 CLI main(root=隔離目錄)。
+CLI 仍走原 Application、背景 owner、collector fixture、規則及 EventStore。沒有 fake API 或模型。
+每次前景有 600 秒上限，外層持有實際私有 Job／子程序 HANDLE。使用 OS 選取可用埠，明確拒絕 8765。
+正式資料、其他服務、MCP、排程與模型預算未變。沒有為此下載依賴或改安全設定。
+
+實際操作保存在 `browser-actions.json` 與七張 JPEG：
+
+- 真頁面開始後產生合成事件。點暫停，再查看七來源的拒讀／未知、原因與建議。
+- 實際選來源、嚴重度及人類狀態，按篩選、查看，將同一事件標為已讀及已處理。
+- 刷新後仍可找回；點恢復、查看五條規則，再點停止。
+- 第一輪暴露停止要求已回覆但頁首仍顯示監看中；修正後第二輪實際點擊確認頁首為已提出停止要求。
+- 頁面明示合成資料。精確可存取名稱能操作下拉選單。
+- 同一目錄整個應用重啟後，實際頁面仍見相同 ID、handled 與 pending。
+- 第二輪七來源頁明示最後成功及最後採集。成功後的合成拒讀與未知保留成功歷史。
+
+開始由正式 run 入口完成；沒有冒稱瀏覽器點擊不存在的開始按鈕。
+`ui-validation.json` 的八項核對全 true。兩個 CLI 應用及三個 monitor 實際 OS exit 均 0，未強停，remaining=0。
+SQLite ACK 數為 0；指定事件仍 pending。唯讀 CLI／catalog 查閱前後，資料檔 SHA 未變。
+`sources-cli.txt` 實際顯示保存的最後成功、拒讀原因及過期狀態，不因查閱刷新時間。
+這是合成來源與真 Windows 程序／瀏覽器；沒有實機來源掃描、真模型收件或長期運轉證明。
+
+本批另補兩項契約：
+
+- 每來源只有一個耐久 last_success_at。與 observation 同一 JSON 原子保存；失敗、partial、不適用或保存失敗不提升它。
+- 公告 current assessment 在讀取時驗來源綁定與有效期。歷史 assessment、事件與 ACK 不改。
+  盤點有效期沿既有設定；人工 facts 需原始 observed_at。讀檔／304 不刷新期限，舊資料缺期限保守 unknown。
+
+統一相關測試命令：
+
+```powershell
+py -3.13 -B scripts/verify.py --run-dir reports/browser-controls-001/verify-001 --timeout-seconds 240 --module test_source_success_history --module test_intelligence_case_freshness --module test_product_sources --module test_monitor_progress --module test_monitor_admission_barrier --module test_local_product --module test_monitor_web_controls --module test_application_controls --module test_cli_workflow --module test_configured_rules --module test_intelligence_applicability --module test_intelligence_store --module test_intelligence_integration --module test_core_cli
+```
+
+結果：251 run、249 pass、1 error、1 skip，exit 1。67.558 秒，09:57:37 UTC+08 結束。
+唯一 error 是新測試兩個 sqlite3.connect context 沒有 close，Windows teardown 回 WinError 32。
+改用 closing；未修改產品程式或放寬斷言。原失敗保留。
+
+```powershell
+py -3.13 -B scripts/verify.py --run-dir reports/browser-controls-001/verify-002 --timeout-seconds 60 --module test_intelligence_case_freshness
+```
+
+修後 17 run、17 pass、0 skip/error/failure，exit 0。2.717 秒，09:59:09 UTC+08 結束。
+其餘通過且未改的模組採首輪結果，不累加成新測試數，不冒稱最終來源全套重跑。
+Python **3.13.3**。174 Python AST 無錯。兩輪 source_unchanged=true、per_test_residuals=[]。
+兩輪 guardian 都實際退出、remaining=0、未強停；首輪 OS 1、修後 OS 0。
+唯一 skip 仍為 notification_icon_unavailable，不能算 Windows 通知可見。
+正式停止 control SHA256 仍為 `78F20282862F179B8DEB4AF769BD0692932EC273AE930C13375E987781CB41BA`。
+固定模型 authority／marker 均不存在。原 Goal 仍 blocked；工具沒有恢復介面，未假結案重建。
+提交後以本批 `source-commit.json` 綁定最後受測來源。截圖、SQLite、CLI 輸出與執行資料不提交 Git。
+
 ## 2026-10-24：無模型監看控制與事件庫重啟完整性
 
 基底 `bba651fedf5f556af57037c4fa5263c5eebd0e22`。分支維持 `feat/local-codex-acceptance`。

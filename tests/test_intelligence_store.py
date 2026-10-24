@@ -227,14 +227,14 @@ class IntelligenceStoreTests(unittest.TestCase):
             self.assertEqual(len(item["record"]["content_hash"]), 64)
             self.assertIn("fetched_at", item["record"])
         self.ingest(second_record, {**self.assessment, "status": "not_applicable"}, now=1004)
-        self.assertEqual(self.store.cases()[0]["case_status"], "possible")
+        self.assertEqual(self.store.cases()[0]["historical_case_status"], "possible")
         self.assertEqual(len(self.store.cases()[0]["components"]), 2)
 
     def test_empty_successful_fetch_is_not_advisory_withdrawal(self):
         self.ingest()
         self.store.record_fetch(self.source, {"status": "success", "records": []}, 1001)
         self.assertFalse(self.store.cases()[0]["record"]["withdrawn"])
-        self.assertEqual(self.store.cases()[0]["case_status"], "possible")
+        self.assertEqual(self.store.cases()[0]["historical_case_status"], "possible")
 
     def test_future_source_clock_is_unknown_not_fresh(self):
         self.store.record_fetch(self.source, {"status": "success", "records": []}, 1001)
