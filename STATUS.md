@@ -14,8 +14,9 @@ CLI、supervisor 與 host 已退出。無強停、無殘留。不自動重試；
 正常無事件不呼叫模型。這次驗收仍限定最多一個 CLI 任務及 180 秒。
 
 修正停用 MCP entry 的 transport 定義，並新增無模型契約測試。
-修正後的真模型通訊未重驗。額外 native metadata 查核 exit 2，不算修正成功證據。
-App MCP 實際回 application_not_running；沒有同次 GUI/MCP 收件證據。
+修正後的真模型通訊未重驗。後續受支援的 native mcp get 設定解析 exit 0；舊 exit 2 查核保留。
+後續唯讀 test App 的真 SDK MCP status 與 GUI 已對上同 event/attempt、CLI失敗及pending1。這是顯示失敗證據，不是收件。
+App已自然exit0，無殘留；source/inbox位元組未變。新增模型任務0，總CLI測試仍1。
 證據：`reports/service-acceptance-eventguard-single-test-20261024-01/communication-result.json`。
 原 stderr、CLI JSONL、SQLite、intent、各層退出回條與歷史失敗均保留。
 只提交程式、測試與文件。不提交執行資料。完整歷史見 docs/EVIDENCE.md。

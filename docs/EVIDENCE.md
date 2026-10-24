@@ -1,5 +1,28 @@
 # 證據與時間日誌
 
+## 2026-10-24：失敗通訊的無模型收尾
+
+基底 d0adb12。未啟動第二個exec或agent service。原失敗及grant consumed不變。
+原驗收目錄的native-help、exec-help、mcp-list-help、debug-help均exit0，保留stdout/stderr與Job回條。
+help確認 --ignore-user-config 僅列在exec。前次metadata命令使用不支援的參數位置；舊stderr未保存，不補造原文。
+新命令：codex -C <同run root> <同一組生成-c設定> mcp get eventguard_inbox --json。
+transport-native-get-001/result.json：native config解析exit0、stderr0 bytes、enabled=true、stdio。
+此入口可能載入正常使用者設定，不等同exec的ignore-user-config分層。未改設定、未起server或模型。
+原metadata exit2及wrapper錯誤保留。新查核有intent argv、stdout/stderr及自然exit0/remaining0回條。
+
+同root的Application使用test namespace、auto_start=false、notifications=false、mcp_enabled=true。
+真SDK initialize/list_tools/status完成，10工具。GUI與MCP status對上instance 44de3ddc0db44d7aba7ddbef3f5bf9a0。
+兩者皆顯示原event evt-06865bfcc4874a0788c7b4114b28e3b5、attempt ab0992a7064948ef86bad8434222539e、CLI exit1、pending1、ACK=false。
+Web摘要新增上次CLI失敗、退出碼及event/attempt。真瀏覽器已執行該JS並保存畫面，不把停止當通訊成功。
+只驗Agent頁與MCP status。Event頁預設catalog仍是data/test；不聲稱list_events/inspect_event已接自訂source。
+GUI關閉後App自然exit0，Web/MCP/probe threads退出、remaining0、無強停。
+source/inbox檔案前後SHA256相同。採集starts0、capture-start仍1、新模型任務0。
+證據：同root/same-run-app-001的sdk-status.json、browser-view.json、failed-attempt.jpg、app-exit.json、validation.json，以及root/observe-app-process-exit.json。
+本次validation.passed只表示失敗證據顯示與退出通過。原communication-result.passed仍false，真收件仍未通過。
+未重跑12項no-quota或既有契約測試。Web本次以真GUI/MCP及資料不變查核驗證。
+
+
+
 ## 2026-10-24：取消 App 日預算；單次真 CLI 通訊失敗
 
 本節取代下方早期「等待日界」的現況。基底 7663b57，未提交修改另隨程式提交。
