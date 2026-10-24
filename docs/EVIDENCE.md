@@ -1,5 +1,38 @@
 # 證據與時間日誌
 
+## 2026-10-25：無額度契約的測試遷移
+
+時間：台北02:00–02:28；UTC 2026-10-24 18:00–18:28。Python3.13.3，C:\Python313\python.exe。
+位置：worktree分支claude/eventguard-quota-test-migration，基底f5810b5。帶入主checkout三份交接文件未提交diff，cmp位元組一致。主checkout未寫入。
+唯讀核對：git -C主checkout status／diff／rev-parse；Python讀原驗收目錄JSON；SQLite以mode=ro讀source。evt-06865bfcc4874a0788c7b4114b28e3b5仍pending、attempts0；receipts0；capture-start仍1份；data/background/control.json enabled=false。主checkout data與reports在交接後無新檔。
+基線：`py -3.13 -B scripts/verify.py --run-dir reports/verify-budget-baseline-20261025-01 --timeout-seconds 1500`加12個`--module`（acceptance_control、agent_dispatch、agent_service、budget_integration、delivery_consolidation、dispatch_inspection、dispatch_lifecycle、launch_receipts、operator_workflow、process_governance、agent_budget、budget_cli）。
+18:02:54Z–18:03:59Z。211測試，148過，3 failures，59 errors，1略過。56 errors為AttributeError open_authority；其餘為日額度斷言及MagicMock spawn。guardian自然exit1、remaining0、無強停。交接的靜態發現已實際跑出。
+修改：只改tests下13檔。fixture改為暫存launch gate＋歷史預算sentinel與拒讀；capture worker以同一fixture包裝。
+舊的reserve／日界／五次共享／預算重查／admission latch測試，改成launch intent不重用、最後pre-spawn暫停、spawn不明不重試、有限max_tasks等待、6事件無日上限、跨入口6次無上限、失敗事件latch只隨pending改變。
+另改test_gui、test_operator_status、test_intelligence_integration、test_delivery_validation的舊額度斷言或理由碼。
+驗證01：18:16:22Z–18:18:47Z。12模組208測試206過、1 error。執行中又改測試，source_unchanged=false，作廢。
+驗證02：18:19:24Z–18:23:17Z。16模組291測試288過、2 failures。新測試未先建立專用inbox，回dedicated_empty_inbox_state_required。修正後以直接Python重現該單一測試：spawn被拒，未啟動子程序；只作除錯，不作證據。
+驗證03：18:24:24Z–18:27:30Z。命令同基線，另加test_gui、test_intelligence_integration、test_operator_status、test_delivery_validation，run-dir為reports/verify-budget-migration-20261025-03。
+291測試，290過，0 failures／errors，1略過（symlink creation unavailable）。passed_checks=true、source_unchanged=true。guardian自然exit0、remaining0、無強停。model_calls0、real_agent_woken=false、machine_scan_executed=false。
+證據檔：worktree reports/verify-budget-migration-20261025-03下source-manifest、unit-tests、worker-summary、lifecycle-evidence、guardian-start／exit、verification-summary。reports不在Git。
+副作用：基線以舊fixture執行時，capture走真實gate，在worktree建立data/agent-runtime/launch.lock（1 byte，gitignored）。新fixture改用暫存gate。未刪除。
+限制：只跑受影響16模組，不是全套回歸。fake CLI與真Windows Job，不是真模型、真收件或喚醒。test_application_no_quota與test_communication_no_quota未變更，未重跑。
+
+## 2026-10-25：只交接EventGuard，停止開發
+
+時間：台北00:50；clock回2026-10-24 16:50:52 UTC。Checkpoint HEAD f5810b52064fbde8f5d59928ff139277867f2165，分支feat/local-codex-acceptance。
+命令：git status --short、git branch --show-current、git rev-parse HEAD、git diff --stat、git ls-files --others --exclude-standard。核對前無tracked/staged變更，保留2張附件與11份未追蹤研究稿。
+只讀Python查核：background.status(root)回stopped/exited_verified/desired_enabled=false；agent_service.status(root)回not_started/not_recorded；agent_service.status(原run)回stopped/exited_verified/pending1/tasks_started1。
+真App MCP status回blocked/application_not_running/live；RemoteApplication對同run/test回application_not_running。主專案test descriptor scope_invalid，未接管或修復它。
+SQLite以mode=ro查原source：event evt-06865bfcc4874a0788c7b4114b28e3b5仍pending，receipts=[]。capture-start檔案數1；continuation仍terminal_failed_no_retry。
+讀回既有no-quota-unit-001與transport-config-unit-001的verification-summary，只核對12/12與1/1原證據，不重跑、不當最終完整回歸。
+Python3.13.3、C:\Python313\python.exe；importlib.metadata查MCP SDK1.6.0。未啟動native CLI或模型。
+歷史bin/8925276705115dea/codex.exe已不存在。同一安裝找到bin/2993767bd1dfb009/codex.exe，SHA256 1103e9e09c71fa2cd0afd6d8f3b9a2d63174fe8efd7cb5bd09f1cb14ef58a098。只查檔案metadata/hash；新CLI版本、登入與新帳號能力未知。
+collaboration.list_agents只列/root running，沒有開發子agent工作。本goal依使用者要求update_goal回paused，未complete。
+已重新讀AGENTS/README/STATUS/HANDOFF、最新EVIDENCE、DEVELOPMENT及App/agent通路文件；已知歷史預算與未執行描述以新checkpoint明確取代，歷史保留。
+本輪只更新既有HANDOFF/STATUS/EVIDENCE，保存完整Prompt、進度、限制、阻擋與下一步。未新增reports/交接資料夾，未提交文件單獨commit，未push。
+沒有新採集、測試、CLI、server或模型啟動。未修改或停止其他專案或既有工作；無新程序需清理。
+
 ## 2026-10-24：失敗通訊的無模型收尾
 
 基底 d0adb12。未啟動第二個exec或agent service。原失敗及grant consumed不變。

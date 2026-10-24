@@ -117,13 +117,15 @@ class IntelligenceIntegration(unittest.TestCase):
         self.assertEqual(outbox.stats()["total"], 1)
         self.assertEqual(outbox.get_event(saved["event_id"])["event_id"], saved["event_id"])
 
-    def test_budget_exhausted_status_does_not_drop_or_start(self):
+    def test_status_has_no_daily_quota_and_does_not_drop_or_start(self):
         self.run_cycle()
-        with patch("eventguard.agent_budget.public_status", return_value={"state": "blocked", "reason": "budget_exhausted", "remaining": 0, "usage_known": True}), patch("subprocess.Popen", side_effect=AssertionError("no model")):
+        with patch("eventguard.agent_budget.public_status", side_effect=AssertionError("historical budget read")), \
+                patch("subprocess.Popen", side_effect=AssertionError("no model")):
             value = engine.status(self.root)
-        self.assertEqual(value["daily_remaining"], 0)
         self.assertEqual(value["pending_events"], 1)
-        self.assertEqual(value["agent_budget"]["reason"], "budget_exhausted")
+        self.assertNotIn("daily_remaining", value)
+        self.assertNotIn("agent_budget", value)
+        self.assertEqual(value["agent_blocked_reason"], "not_enabled_this_round")
 
     def test_failure_remains_visible_during_backoff_and_check_exit_is_partial(self):
         def failed(source,previous,now=None):
@@ -198,10 +200,11 @@ class IntelligenceIntegration(unittest.TestCase):
 
     def test_status_before_start_does_not_initialize_and_cli_is_usable(self):
         output = io.StringIO()
-        with patch("eventguard.agent_budget.public_status", return_value={"state": "blocked", "reason": "not_initialized"}), redirect_stdout(output):
+        with patch("eventguard.agent_budget.public_status", side_effect=AssertionError("historical budget read")), \
+                redirect_stdout(output):
             self.assertEqual(main(["advisories", "status", "--format", "json"], root=self.root), 0)
         self.assertFalse(self.db.exists())
-        self.assertIsNone(json.loads(output.getvalue())["daily_remaining"])
+        self.assertNotIn("daily_remaining", json.loads(output.getvalue()))
         self.assertFalse((self.root / "data/advisories/control.json").exists())
 
     @unittest.skipUnless(os.name == "nt", "Windows private Job lifecycle only")
@@ -217,7 +220,7 @@ class IntelligenceIntegration(unittest.TestCase):
             started = service.start(self.root, _bounded_test=True)
             self.assertEqual(started["state"], "started")
             time.sleep(.2)
-            with patch("eventguard.agent_budget.public_status", return_value={"state": "blocked", "reason": "test_no_model"}):
+            with patch("eventguard.agent_budget.public_status", side_effect=AssertionError("historical budget read")):
                 current = service.status(self.root)
             self.assertEqual(current["host_liveness"], "alive_verified")
             self.assertFalse(current["agent_enabled"])

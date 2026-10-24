@@ -33,8 +33,9 @@ class OperatorStatusTests(unittest.TestCase):
         (self.root / "config").mkdir()
         shutil.copyfile(ROOT / "config/default.json", self.root / "config/default.json")
         self.runtime, self.api = Runtime(self.root), OperatorAPI(self.root)
-        self.budget = self.enterContext(patch("eventguard.operations._budget_status", return_value={
-            "state": "blocked", "reason": "budget_fixture_only"}))
+        # Operator status has no daily quota; a historical budget read fails.
+        self.enterContext(patch("eventguard.operations._budget_status",
+                                side_effect=AssertionError("historical budget read")))
         self.enterContext(patch("eventguard.operations._now", return_value=NOW))
         self.identity = self.enterContext(patch("eventguard.operations._owner_identity", return_value={
             "pid": 4242, "created_at": CREATED, "state": "alive"}))
@@ -57,7 +58,7 @@ class OperatorStatusTests(unittest.TestCase):
         self.assertEqual(result["last_report"]["state"], "not_started")
         self.assertEqual(result["current_monitor"]["state"], "not_started")
         self.assertEqual(result["namespaces"]["test"]["state"], "not_created")
-        self.assertEqual(result["agent_budget"]["reason"], "budget_fixture_only")
+        self.assertNotIn("agent_budget", result)
         self.assertFalse((self.root / "data").exists())
         self.identity.assert_not_called()
 

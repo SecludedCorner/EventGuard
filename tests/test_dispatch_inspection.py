@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from budget_fixtures import isolated_budget
+from budget_fixtures import isolated_launch
 from eventguard import agent_dispatch as dispatch
 from eventguard.acceptance_control import read_json, write_json
 from eventguard.events.schema import validate_event
@@ -117,17 +117,19 @@ class DispatchInspectionTests(unittest.TestCase):
         for forbidden in ("run_dir", "payload_hash", '"pid"', "arguments", str(self.root)):
             self.assertNotIn(forbidden, text)
 
-    def test_readonly_inspection_changes_no_files_and_uses_no_budget_or_spawn(self):
+    def test_readonly_inspection_changes_no_files_and_uses_no_launch_or_spawn(self):
         snapshot = lambda: {str(path.relative_to(self.root)): hashlib.sha256(path.read_bytes()).hexdigest()
                             for path in self.root.rglob("*") if path.is_file()}
         before = snapshot()
-        with patch.object(dispatch, "open_authority") as authority, patch.object(dispatch, "spawn") as spawn, \
+        with patch("eventguard.acceptance_process.launch_gate") as gate, patch.object(dispatch, "spawn") as spawn, \
+                patch("eventguard.agent_budget.BudgetAuthority.open_existing") as budget, \
                 patch.object(dispatch, "write_json") as save:
             result = self.inspect()
         self.assertTrue(result["read_only"])
         self.assertEqual(result["model_calls"], 0)
         self.assertEqual(snapshot(), before)
-        authority.assert_not_called()
+        gate.assert_not_called()
+        budget.assert_not_called()
         spawn.assert_not_called()
         save.assert_not_called()
 
@@ -209,7 +211,7 @@ class DispatchInspectionTests(unittest.TestCase):
         self.assertEqual(len(result["attempts"]), 2)
         self.assertEqual(result["stages"]["agent_process_exited"]["status"], "unknown")
 
-    def test_binding_save_failure_keeps_pending_without_reservation_or_worker(self):
+    def test_binding_save_failure_keeps_pending_without_launch_or_worker(self):
         root = self.root / "write-failure"
         source, state = root / "data/test", root / "data/agent-delivery-test"
         store = EventStore(source)
@@ -219,18 +221,17 @@ class DispatchInspectionTests(unittest.TestCase):
         config = root / "config/default.json"
         config.parent.mkdir(parents=True)
         config.write_bytes((dispatch.ROOT / "config/default.json").read_bytes())
-        with isolated_budget(root) as authority, \
+        with isolated_launch(root) as launch, \
                 patch.object(dispatch.shutil, "which", return_value=sys.executable), \
                 patch.object(dispatch.importlib.util, "find_spec", return_value=True), \
                 patch.object(dispatch, "command", return_value=["fixture-never-launched.exe"]), \
                 patch.object(dispatch, "_save_binding", side_effect=OSError("fixture storage failure")), \
-                patch.object(authority, "reserve", wraps=authority.reserve) as reserve, \
                 patch.object(dispatch, "spawn") as spawn:
             code = dispatch.run(root / "run", source, state, execute=True, root=root, max_seconds=1)
         self.assertEqual(code, 1)
         self.assertEqual(store.get_event(event["event_id"])["delivery_status"], "pending")
         self.assertEqual(store.path.read_bytes(), before)
-        reserve.assert_not_called()
+        self.assertFalse(launch.gate_entered())
         spawn.assert_not_called()
         record = read_json(state / "dispatcher-attempts.json")["events"][event["event_id"]][0]
         self.assertEqual(record["state"], "not_started")

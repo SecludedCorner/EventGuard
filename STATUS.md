@@ -1,5 +1,40 @@
 # EventGuard 現況
 
+## 預算測試遷移：2026-10-25 02:30（台北時間，最新）
+
+接手後增量推進。只改測試；未改src、設定或runtime。未commit、未push。
+位置：worktree `.claude/worktrees/eventguard-handoff-increment-721d6d`，分支`claude/eventguard-quota-test-migration`，基底f5810b5。
+已帶入主checkout三份交接文件的未提交修改，位元組一致。主checkout本身未改，HEAD、diff與未追蹤附件／研究稿都照舊。
+唯讀核對與交接一致：grant仍consumed；事件仍pending、receipts0；continuation仍terminal_failed_no_retry；正式monitor desired off；交接後無新runtime或reports。未啟動採集、派送、App或模型。
+遷移前基線：受影響12模組211測試，148過、3 failures、59 errors。其中56個是patch已移除的`agent_dispatch.open_authority`。
+`tests/budget_fixtures.py`改為無額度契約。短OS-create gate移到暫存目錄。本程序及capture worker都圍住歷史預算：讀取即失敗；結束時核對sentinel未變。
+過時日額度測試改測新契約。保留耐久、併行與停止覆蓋：
+- launch intent先落盤；同目錄不重用；gate busy／unavailable可見。
+- pause／stop在各閘門前不啟動；最後pre-spawn暫停留not_started紀錄與skip證據。
+- spawn結果不明時保留started紀錄；後續run拒絕；pending不丟。
+- 有限max_tasks只等待不再啟動。它是單次run界線，不是日額度。
+- 同一watch連續6事件、跨入口6次啟動都無五次上限；每事件三次上限保留。
+另修正GUI、operator status、公告status仍斷言`agent_budget`／`daily_remaining`／「每日最多5」的舊測試。
+結果：16模組291測試，290過、0失敗、1略過（symlink不可用）。guardian自然exit0、remaining0、無強停、model_calls0、source_unchanged。
+範圍只有fixture、fake CLI及真Windows Job。不是全套回歸，也不是真模型或真收件。
+證據：worktree內`reports/verify-budget-migration-20261025-03`；基線`reports/verify-budget-baseline-20261025-01`。中途01、02兩輪不作通過證據，原紀錄保留。
+仍未完成：真receive→query→結果→ACK與自然退出（需新的人類有限授權）；Event頁自訂source綁定；全套回歸；24小時／重開機；桌面閒置喚醒。
+觀察：`operations._budget_status`已無呼叫者。跨source全域阻擋隨authority移除；本批未加測試肯定或否定。
+
+## 交接暫停：2026-10-25 00:50（台北時間）
+
+本專案已收斂至可恢復交接點，goal為paused，未宣稱完成。停止開發，等待交接。
+分支feat/local-codex-acceptance；HEAD f5810b52064fbde8f5d59928ff139277867f2165。
+核對前追蹤檔乾淨；交接後只留HANDOFF.md、STATUS.md、docs/EVIDENCE.md未提交修改，不做文件單獨commit。
+未追蹤2張附件及11份研究Markdown保留，未加入Git。未push、未新建交接資料夾或reports。
+正式monitor stopped/exited_verified、desired_enabled=false；正式agent service not_started/not_recorded。
+原合成service stopped/exited_verified，單一事件仍pending、receipts0；capture-start回條仍只有1份。
+live App與同run test App均application_not_running；主專案test observer為scope_invalid。未停止任何程序。
+本輪只有唯讀狀態核對及文件保存。沒有新模型、採集、測試、CLI執行或背景程序。
+Python3.13.3/MCP SDK1.6.0可匯入。歷史CLI路徑已消失；新候選bin/2993767bd1dfb009/codex.exe存在，未執行或驗登入。
+單次真通訊仍失敗，transport修正只有native metadata及契約證據；不得寫成真收件成功。
+已完成/未驗證/阻擋/下一步及完整接手Prompt見HANDOFF.md頂部。該段取代下方所有過時預算/跨日等待/授權描述。
+本機忽略的reports/data與設定不能靠Git clone重建；換帳號不移植Codex home或憑證。
 
 ## 單次通訊實測：2026-10-24（最新）
 

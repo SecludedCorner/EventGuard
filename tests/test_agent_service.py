@@ -1,5 +1,4 @@
 """Isolated host/control fixtures. No real Codex, model, scheduler or service."""
-from contextlib import nullcontext
 from contextlib import closing
 from pathlib import Path
 import os
@@ -15,7 +14,7 @@ from eventguard import agent_service as service
 from eventguard.events.store import EventStore
 from eventguard.runtime import atomic_json
 from eventguard.synthetic import make_synthetic
-from budget_fixtures import isolated_budget
+from budget_fixtures import isolated_launch
 
 _ADMISSION_BARRIER = service._admission_barrier
 
@@ -53,10 +52,11 @@ class AgentServiceTests(unittest.TestCase):
         self.run_id = "a" * 32
         self.job = "Global\\EventGuard-" + "b" * 32
         self.created = "2026-10-24T00:00:00.000000+00:00"
-        self.enterContext(patch("eventguard.agent_budget.public_status", return_value={
-            "state": "blocked", "reason": "fixture_budget_not_initialized"}))
+        # The service has no daily quota. Reading the historical budget fails.
+        self.enterContext(patch("eventguard.agent_budget.public_status",
+                                side_effect=AssertionError("historical budget read")))
         self.enterContext(patch.object(service, "_admission_barrier", return_value={
-            "admission_barrier": "unconfirmed", "admission_barrier_reason": "fixture_no_authority"}))
+            "admission_barrier": "unconfirmed", "admission_barrier_reason": "fixture_gate_not_exercised"}))
 
     def control(self, **changes):
         value = {"kind": service.KIND, "run_id": self.run_id, "job_name": self.job,
@@ -76,8 +76,7 @@ class AgentServiceTests(unittest.TestCase):
         return value
 
     def start(self, **kwargs):
-        with patch("eventguard.agent_budget.public_status", return_value={"state": "ready", "remaining": 5}), \
-             patch.object(service.importlib.util, "find_spec", return_value=object()):
+        with patch.object(service.importlib.util, "find_spec", return_value=object()):
             return service.start(self.root, self.executable, **kwargs)
 
     def test_absent_status_does_not_create_service_or_budget(self):
@@ -85,7 +84,7 @@ class AgentServiceTests(unittest.TestCase):
         self.assertEqual(result["state"], "not_started")
         self.assertFalse(result["desired_enabled"])
         self.assertEqual(result["model_calls"], 0)
-        self.assertEqual(result["budget"]["reason"], "fixture_budget_not_initialized")
+        self.assertNotIn("budget", result)
         self.assertFalse((self.root / "data/agent-service").exists())
         self.assertFalse((self.root / "data/agent-budget").exists())
 
@@ -116,25 +115,31 @@ class AgentServiceTests(unittest.TestCase):
         self.assertEqual(self.start(state_dir=self.source / "nested")["reason"], "agent_service_scope_invalid")
         self.assertEqual(self.start(state_dir=self.root.parent / "outside")["reason"], "agent_service_scope_invalid")
 
-    def test_missing_budget_or_sdk_blocks_execute_without_creating_host(self):
+    def test_missing_sdk_blocks_execute_without_creating_host(self):
         with patch.object(service.processes, "spawn_persistent") as spawn, \
              patch.object(service.importlib.util, "find_spec", return_value=None):
             result = service.start(self.root, self.executable, execute=True)
         self.assertEqual(result["state"], "blocked")
-        self.assertIn("missing_existing_mcp_sdk", result["capability_reasons"])
-        self.assertIn("fixture_budget_not_initialized", result["capability_reasons"])
+        self.assertEqual(result["capability_reasons"], ["missing_existing_mcp_sdk"])
+        self.assertNotIn("budget", result)
         self.assertFalse((self.root / "data/agent-service").exists())
         spawn.assert_not_called()
 
-    def test_exhausted_budget_is_explicit_wait_reason_not_missing_capability(self):
-        with patch("eventguard.agent_budget.public_status", return_value={"state": "blocked", "reason": "budget_exhausted"}), \
-             patch.object(service.importlib.util, "find_spec", return_value=object()), \
-             patch.object(service.processes, "spawn_persistent") as spawn:
-            result = service.start(self.root, self.executable)
-        self.assertEqual(result["state"], "preflight_ready")
-        self.assertEqual(result["blocked_reasons"], ["budget_exhausted"])
-        self.assertEqual(result["capability_reasons"], [])
+    def test_preflight_has_no_daily_quota_wait_and_validates_run_task_bound(self):
+        with patch.object(service.processes, "spawn_persistent") as spawn:
+            result = self.start(max_tasks=1)
+            self.assertEqual(result["state"], "preflight_ready")
+            self.assertEqual(result["blocked_reasons"], [])
+            self.assertEqual(result["capability_reasons"], [])
+            self.assertIsNone(result["reason"])
+            self.assertEqual(result["max_tasks"], 1)
+            self.assertNotIn("budget", result)
+            self.assertIsNone(self.start()["max_tasks"], "No bound means no daily cap")
+            for limit in (0, 6, True, "1"):
+                with self.subTest(limit=limit), self.assertRaisesRegex(ValueError, "agent_service_task_limit_invalid"):
+                    self.start(max_tasks=limit)
         spawn.assert_not_called()
+        self.assertFalse((self.root / "data/agent-service").exists())
 
     def test_status_pending_includes_failed_attention_without_changing_events(self):
         self.control()
@@ -213,34 +218,41 @@ class AgentServiceTests(unittest.TestCase):
         self.control()
         def busy_barrier():
             self.assertTrue(service._control(self.root)["paused"])
-            return {"admission_barrier": "unconfirmed", "admission_barrier_reason": "budget_launch_busy"}
+            return {"admission_barrier": "unconfirmed", "admission_barrier_reason": "launch_gate_busy"}
         with patch.object(service, "_admission_barrier", side_effect=busy_barrier):
             result = service.pause(self.root)
         self.assertTrue(service._control(self.root)["paused"])
         self.assertEqual(result["admission_barrier"], "unconfirmed")
-        self.assertEqual(result["admission_barrier_reason"], "budget_launch_busy")
+        self.assertEqual(result["admission_barrier_reason"], "launch_gate_busy")
         self.assertFalse(result["active_task_cancelled"])
         saved = service._read(self.root, "pause-receipt.json")
         self.assertEqual(saved["admission_barrier"], "unconfirmed")
         self.assertEqual(saved["run_id"], self.run_id)
 
-    def test_pause_barrier_serializes_without_reserving_or_refunding_budget(self):
-        authority = Mock()
-        authority.launch_lease.return_value = nullcontext()
-        with patch("eventguard.acceptance_process.open_authority", return_value=authority):
+    def test_pause_barrier_serializes_on_launch_gate_without_quota(self):
+        with isolated_launch(self.root) as launch:
             result = _ADMISSION_BARRIER(wait_seconds=0)
-        self.assertEqual(result["admission_barrier"], "confirmed")
-        authority.reserve.assert_not_called()
-        authority.record_not_started.assert_not_called()
-        authority.complete.assert_not_called()
+            self.assertTrue(launch.gate_entered())
+        self.assertEqual(result, {"admission_barrier": "confirmed",
+                                  "admission_barrier_reason": "launch_gate_serialized"})
 
-    def test_pause_barrier_keeps_missing_or_busy_authority_visible(self):
-        from eventguard.agent_budget import BudgetError
-        for code in ("budget_launch_busy", "budget_unavailable"):
-            with self.subTest(code=code), patch("eventguard.acceptance_process.open_authority", side_effect=BudgetError(code)):
-                result = _ADMISSION_BARRIER(wait_seconds=0)
-            self.assertEqual(result["admission_barrier"], "unconfirmed")
-            self.assertEqual(result["admission_barrier_reason"], code)
+    def test_pause_barrier_keeps_busy_or_unavailable_gate_visible(self):
+        from eventguard.acceptance_control import FileLease
+        from eventguard.acceptance_process import LaunchGateError
+        with isolated_launch(self.root) as launch:
+            lease = FileLease(launch.lock)
+            self.assertTrue(lease.acquire())
+            try:
+                busy = _ADMISSION_BARRIER(wait_seconds=0)
+            finally:
+                lease.release()
+            for code, expected in (("launch_gate_unavailable", "launch_gate_unavailable"),
+                                   ("fixture_unexpected", "launch_gate_unavailable")):
+                with self.subTest(code=code), patch("eventguard.acceptance_process.launch_gate",
+                                                    side_effect=LaunchGateError(code)):
+                    result = _ADMISSION_BARRIER(wait_seconds=0)
+                self.assertEqual(result, {"admission_barrier": "unconfirmed", "admission_barrier_reason": expected})
+        self.assertEqual(busy, {"admission_barrier": "unconfirmed", "admission_barrier_reason": "launch_gate_busy"})
 
     def test_active_owner_is_not_restarted(self):
         self.control()
@@ -307,19 +319,23 @@ class AgentServiceTests(unittest.TestCase):
         self.assertEqual(result["reason"], "previous_agent_host_exit_unconfirmed")
         spawn.assert_not_called()
 
-    def test_status_records_unknown_model_usage_after_dispatch(self):
+    def test_status_records_unknown_model_usage_and_drops_historical_budget(self):
         self.control()
         self.owner()
         service._write(self.root, "run.json", {"run_id": self.run_id, "state": "waiting",
-            "heartbeat_at": service._stamp(), "last_progress": "waiting_budget", "model_calls": None,
-            "dispatcher": {"tasks_started": 1, "tasks_passed": 0}, "reason": "budget_exhausted"})
+            "heartbeat_at": service._stamp(), "last_progress": "waiting_attention", "model_calls": None,
+            "dispatcher": {"tasks_started": 1, "tasks_passed": 0,
+                           "budget": {"state": "blocked", "reason": "budget_exhausted"}},
+            "reason": "delivery_evidence_failed_no_automatic_retry"})
         with patch.object(service.processes, "identity", return_value={"state": "alive", "created_at": self.created}), \
              patch.object(service.processes, "process_session", return_value=1):
             result = service.status(self.root)
         self.assertIsNone(result["model_calls"])
         self.assertFalse(result["execution_verified"])
         self.assertEqual(result["queue"]["pending"], 0)
-        self.assertEqual(result["reason"], "budget_exhausted")
+        self.assertEqual(result["reason"], "delivery_evidence_failed_no_automatic_retry")
+        self.assertEqual(result["dispatcher"], {"tasks_started": 1, "tasks_passed": 0})
+        self.assertNotIn("budget", result)
 
     def test_stale_heartbeat_does_not_claim_running(self):
         self.control()
@@ -414,9 +430,9 @@ class AgentServiceTests(unittest.TestCase):
         self.assertEqual(result["reason"], "prior_child_exit_unconfirmed")
         self.assertIsNone(result["model_calls"])
 
-    def test_corrupt_low_pending_reaches_host_status_without_launch_or_charge(self):
+    def test_corrupt_low_pending_reaches_host_status_without_launch(self):
         # Real local dispatcher/selector/SQLite integration. Only the kernel
-        # owner and budget installation are fixtures. No provider is launched.
+        # owner and launch gate are fixtures. No provider is launched.
         self.control()
         self.owner()
         event = make_synthetic("listener")
@@ -429,17 +445,15 @@ class AgentServiceTests(unittest.TestCase):
             db.execute("UPDATE events SET payload=?", ("{ invalid private-instruction",))
             db.commit()
         source_before = self.store.path.read_bytes()
-        with isolated_budget(self.root) as authority, \
+        with isolated_launch(self.root) as launch, \
              patch.object(service.processes, "adopt_current_job", return_value=self.keeper()), \
-             patch.object(service.agent_dispatch, "spawn", side_effect=AssertionError("No child permitted")) as spawn, \
-             patch.object(authority, "reserve", wraps=authority.reserve) as reserve:
+             patch.object(service.agent_dispatch, "spawn", side_effect=AssertionError("No child permitted")) as spawn:
             result = service.serve(self.root, self.run_id, self.job)
             self.assertEqual(result["state"], "blocked")
             self.assertEqual(result["reason"], "dispatch_pending_payload_malformed")
             self.assertEqual(result["model_calls"], 0)
             self.assertEqual(result["dispatcher"]["tasks_started"], 0)
-            self.assertEqual(authority.status()["used"], 0)
-            reserve.assert_not_called()
+            self.assertFalse(launch.gate_entered())
             spawn.assert_not_called()
         with patch.object(service.processes, "identity", return_value={"state": "alive", "created_at": self.created}), \
              patch.object(service.processes, "process_session", return_value=1):
@@ -616,8 +630,8 @@ class AgentServiceTests(unittest.TestCase):
     def test_real_windows_empty_host_pause_resume_stop_without_executing_provider(self):
         # Scope: real Windows host/jobs and an empty synthetic fixture source.
         # The executable is deliberately invalid. No provider can be invoked.
-        # Parent preflight budget is mocked; the child uses the real, fixed
-        # authority, never initializes it, and cannot reserve without an event.
+        # No quota is read. Without an event the child never reaches the
+        # launch gate.
         config = self.root / "config/default.json"
         config.parent.mkdir(parents=True)
         shutil.copyfile(service.ROOT / "config/default.json", config)
@@ -663,7 +677,7 @@ class AgentServiceTests(unittest.TestCase):
                             and receipt["forcibly_terminated"] is False
                             for receipt in self.evidence["retained_handle_exits"]))
         self.assertTrue(all(child.returncode == 0 for child, _ in children))
-        self.evidence.update({"scope": "real Windows application-owned private Job with empty synthetic source; parent budget preflight mocked; no provider/model",
+        self.evidence.update({"scope": "real Windows application-owned private Job with empty synthetic source; no quota read; no provider/model",
                          "launch_api": "spawn_application_host", "handoff_api": "retain_application_host",
                          "lifetime_limited": True, "provider_attempt_count": 0,
                          "started": started, "waiting": waiting, "paused": paused, "resumed": resumed,

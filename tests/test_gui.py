@@ -129,14 +129,16 @@ class GuiPresentationTests(unittest.TestCase):
         self.assertIn("尚未證明", view["agent_status"])
         self.assertFalse(view["automatic_enabled"])
 
-    def test_automatic_wait_budget_and_attention_are_honest_separate_states(self):
-        for state, message in (("waiting", "無事件不呼叫模型"), ("waiting_budget", "每日額度已滿"),
+    def test_automatic_wait_attention_and_historical_states_are_honest_without_quota(self):
+        # No daily quota. A saved historical budget wait only asks for a recheck.
+        for state, message in (("waiting", "無事件不呼叫模型"), ("waiting_budget", "舊派送狀態需重新核對"),
                                ("waiting_attention", "不自動重試"), ("armed", "按開始")):
             view = view_snapshot({"automatic_agent": {"enabled": True, "state": state}})
             self.assertTrue(view["automatic_enabled"])
             self.assertFalse(view["agent_enabled"])
             self.assertIn(message, view["automatic_status"])
-            self.assertIn("每日最多 5", view["automatic_status"])
+            self.assertNotIn("每日", view["automatic_status"])
+            self.assertIn("有效的明確授權", view["automatic_status"])
             self.assertIn("不接續本聊天", view["automatic_status"])
 
     def test_unexpected_mainloop_exit_attempts_controller_cleanup_and_reports_uncertainty(self):

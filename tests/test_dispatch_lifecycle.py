@@ -16,7 +16,7 @@ import tomllib
 import unittest
 from unittest.mock import patch
 
-from budget_fixtures import isolated_budget
+from budget_fixtures import isolated_launch
 from eventguard import agent_dispatch as dispatch
 from eventguard.acceptance_control import read_json, write_json
 from test_agent_dispatch import EVENT, RECORD, FAKE, FakeInbox, trace_fixture
@@ -27,7 +27,7 @@ class DispatchLifecycleTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.authority = self.enterContext(isolated_budget(self.root))
+        self.launch = self.enterContext(isolated_launch(self.root))
         self.source = self.root / "source"
         self.source.mkdir()
         (self.source / "eventguard.sqlite3").write_bytes(b"synthetic fixture only")
@@ -63,8 +63,10 @@ class DispatchLifecycleTests(unittest.TestCase):
         return stack
 
     def invoke(self, name, **kwargs):
+        # A watch is unbounded unless a test names a finite run bound.
+        tasks = kwargs.pop("max_tasks", None if kwargs.get("continuous") else 1)
         return dispatch.run(self.root / name, self.source, self.inbox_dir, execute=True,
-                            max_tasks=1, max_seconds=kwargs.pop("max_seconds", 5), poll_seconds=.01,
+                            max_tasks=tasks, max_seconds=kwargs.pop("max_seconds", 5), poll_seconds=.01,
                             deadline_monotonic=time.monotonic()+15, cancel=self.cancel, **kwargs)
 
     def stop_on_paused(self, target, *, resume=False):
@@ -78,13 +80,12 @@ class DispatchLifecycleTests(unittest.TestCase):
                 self.cancel.set()
         return patch.object(dispatch, "_save", side_effect=save), states
 
-    def test_paused_pending_keeps_event_and_uses_zero_budget(self):
+    def test_paused_pending_keeps_event_and_never_enters_launch_gate(self):
         observer, states = self.stop_on_paused(self.root / "paused")
-        with self.fixtures(), observer, patch.object(self.authority, "reserve", wraps=self.authority.reserve) as reserve:
+        with self.fixtures(), observer:
             self.assertEqual(self.invoke("paused", continuous=True, dispatch_enabled=lambda: False), 0)
         self.assertIn("waiting_paused", states)
-        reserve.assert_not_called()
-        self.assertEqual(self.authority.status()["used"], 0)
+        self.assertFalse(self.launch.gate_entered())
         self.assertEqual(self.inbox.pending, EVENT)
         self.assertEqual(self.children, [])
         self.assertFalse((self.root / "paused/attempts").exists())
@@ -96,57 +97,53 @@ class DispatchLifecycleTests(unittest.TestCase):
         with self.fixtures(), observer:
             self.assertEqual(self.invoke("failed-control", continuous=True, dispatch_enabled=unavailable), 0)
         self.assertEqual(self.children, [])
-        self.assertEqual(self.authority.status()["used"], 0)
+        self.assertFalse(self.launch.gate_entered())
 
-    def test_pause_during_preparation_does_not_reserve_or_consume_retry(self):
+    def test_pause_during_preparation_does_not_launch_or_consume_retry(self):
         enabled = [True]
         def prepare(*args, **kwargs):
             enabled[0] = False
             return [sys.executable, "-c", "raise SystemExit(98)"]
         observer, _ = self.stop_on_paused(self.root / "prepare")
-        with self.fixtures(), observer, patch.object(dispatch, "command", side_effect=prepare), \
-                patch.object(self.authority, "reserve", wraps=self.authority.reserve) as reserve:
+        with self.fixtures(), observer, patch.object(dispatch, "command", side_effect=prepare):
             self.assertEqual(self.invoke("prepare", continuous=True, dispatch_enabled=lambda: enabled[0]), 0)
-        reserve.assert_not_called()
         self.assertEqual(read_json(self.inbox_dir / "dispatcher-attempts.json")["events"], {})
-        self.assertEqual(self.authority.status()["used"], 0)
+        self.assertFalse(self.launch.gate_entered())
         self.assertEqual(self.children, [])
 
-    def test_pause_during_reference_read_is_rechecked_before_reserve(self):
+    def test_pause_during_reference_read_is_rechecked_before_worker_launch(self):
         enabled = [True]
         original_reference = self.inbox.delivery_reference
         def reference(identity):
             enabled[0] = False
             return original_reference(identity)
         observer, _ = self.stop_on_paused(self.root / "reference")
-        with self.fixtures(), observer, patch.object(self.inbox, "delivery_reference", side_effect=reference), \
-                patch.object(self.authority, "reserve", wraps=self.authority.reserve) as reserve:
+        with self.fixtures(), observer, patch.object(self.inbox, "delivery_reference", side_effect=reference):
             self.assertEqual(self.invoke("reference", continuous=True, dispatch_enabled=lambda: enabled[0]), 0)
-        reserve.assert_not_called()
-        self.assertEqual(self.authority.status()["used"], 0)
+        self.assertFalse(self.launch.gate_entered())
         self.assertEqual(self.children, [])
 
-    def test_pause_after_reservation_retains_charge_but_does_not_spawn(self):
-        enabled = [True]
-        original_reserve = self.authority.reserve
-        def reserve(*args, **kwargs):
-            value = original_reserve(*args, **kwargs)
-            enabled[0] = False
-            return value
-        observer, _ = self.stop_on_paused(self.root / "reserved")
-        with self.fixtures(), observer, patch.object(self.authority, "reserve", side_effect=reserve):
-            self.assertEqual(self.invoke("reserved", continuous=True, dispatch_enabled=lambda: enabled[0]), 0)
-        budget = self.authority.status()
-        self.assertEqual(budget["used"], 1)
-        self.assertIsNone(budget["active"])
+    def test_pause_at_final_prespawn_gate_records_not_started_without_spawn(self):
+        # Gate reads: loop, pre-record, post-command, post-binding, final pre-spawn.
+        checks = []
+        def enabled():
+            checks.append(True)
+            return len(checks) < 5
+        observer, _ = self.stop_on_paused(self.root / "final-gate")
+        with self.fixtures(), observer:
+            self.assertEqual(self.invoke("final-gate", continuous=True, dispatch_enabled=enabled), 0)
         record = read_json(self.inbox_dir / "dispatcher-attempts.json")["events"][EVENT][0]
         self.assertEqual(record["state"], "not_started")
         self.assertEqual(record["reason"], "paused_before_worker_launch")
         self.assertTrue(record["child_exited"])
+        attempt = self.root / "final-gate/attempts" / record["attempt_id"]
+        self.assertTrue(read_json(attempt / "capture-skipped.json")["launch_not_started"])
+        self.assertTrue((attempt / "binding.json").is_file())
+        self.assertFalse(self.launch.gate_entered())
         self.assertEqual(self.children, [])
         self.assertEqual(self.inbox.pending, EVENT)
 
-    def test_resume_same_owner_admits_once_without_resetting_budget(self):
+    def test_resume_same_owner_admits_once(self):
         enabled = [False]
         original_save = dispatch._save
         states = []
@@ -168,7 +165,7 @@ class DispatchLifecycleTests(unittest.TestCase):
         self.assertIn("waiting_paused", states)
         self.assertEqual(saved["tasks_started"], 1)
         self.assertEqual(saved["tasks_passed"], 1)
-        self.assertEqual(self.authority.status()["used"], 1)
+        self.assertEqual(len(list(target.glob("attempts/*/capture-launch-intent.json"))), 1)
         self.assertEqual(len(self.children), 1)
         for stage in ("capture_worker_started", "cli_started", "event_received", "evidence_queried",
                       "result_saved", "outbox_acknowledged", "provider_turn_completed", "owned_tree_exited"):
@@ -198,11 +195,11 @@ class DispatchLifecycleTests(unittest.TestCase):
         server_args = mcp_config["mcp_servers"]["eventguard_inbox"]["args"]
         self.assertEqual(server_args[server_args.index("--project-root")+1], str(alternate))
 
-    def test_missing_executable_retains_pending_without_budget_or_child(self):
+    def test_missing_executable_retains_pending_without_launch_or_child(self):
         with self.fixtures(), patch.object(dispatch.shutil, "which", return_value=None):
             self.assertEqual(self.invoke("offline"), 2)
         self.assertEqual(self.inbox.pending, EVENT)
-        self.assertEqual(self.authority.status()["used"], 0)
+        self.assertFalse(self.launch.gate_entered())
         self.assertEqual(self.children, [])
 
     def test_selection_failure_is_blocked_instead_of_an_empty_queue(self):
@@ -215,7 +212,7 @@ class DispatchLifecycleTests(unittest.TestCase):
         self.assertEqual(saved["state"], "blocked")
         self.assertEqual(saved["reason"], "dispatch_selection_failed_pending_preserved")
         self.assertEqual(self.inbox.pending, EVENT)
-        self.assertEqual(self.authority.status()["used"], 0)
+        self.assertFalse(self.launch.gate_entered())
         self.assertEqual(self.children, [])
 
     def test_selection_callback_does_not_use_raw_queue_head(self):
@@ -225,19 +222,26 @@ class DispatchLifecycleTests(unittest.TestCase):
             return None
         with self.fixtures(), patch.object(self.inbox, "pending_event_id", side_effect=AssertionError("No raw-head read")):
             self.assertEqual(self.invoke("select-empty", select_event=select), 0)
-        self.assertEqual(self.authority.status()["used"], 0)
+        self.assertFalse(self.launch.gate_entered())
         self.assertEqual(self.children, [])
 
-    def test_status_failure_after_reservation_does_not_erase_charged_intent(self):
-        from eventguard.agent_budget import BudgetError
-        with self.fixtures(), patch.object(self.authority, "status", side_effect=BudgetError("budget_unavailable")):
-            self.assertEqual(self.invoke("post-reserve-status"), 1)
-        budget = self.authority.status()
-        self.assertEqual(budget["used"], 1)
-        self.assertIsNone(budget["active"])
-        record = read_json(self.inbox_dir / "dispatcher-attempts.json")["events"][EVENT][0]
-        self.assertEqual(record["state"], "not_started")
-        self.assertTrue(record["child_exited"])
+    def test_ambiguous_worker_spawn_keeps_started_record_and_refuses_rerun(self):
+        # OS create outcome is unknown. The durable record stays; no retry.
+        with self.fixtures(), patch.object(dispatch, "spawn", side_effect=OSError("fixture ambiguous create")):
+            self.assertEqual(self.invoke("ambiguous-spawn"), 3)
+        saved = dispatch.status(self.root / "ambiguous-spawn", read_only=True)
+        self.assertEqual(saved["state"], "pending_child_exit")
+        self.assertEqual(saved["reason"], "inspect_owned_evidence_no_process_signal_or_automatic_retry")
+        ledger = self.inbox_dir / "dispatcher-attempts.json"
+        record = read_json(ledger)["events"][EVENT][0]
+        self.assertEqual(record["state"], "started")
+        before = ledger.read_bytes()
+        with self.fixtures():
+            self.assertEqual(self.invoke("ambiguous-rerun"), 3)
+        self.assertEqual(dispatch.status(self.root / "ambiguous-rerun", read_only=True)["reason"],
+                         "prior_child_exit_unconfirmed")
+        self.assertEqual(ledger.read_bytes(), before)
+        self.assertEqual(self.inbox.pending, EVENT)
         self.assertEqual(self.children, [])
 
     @unittest.skipUnless(os.name == "nt", "Windows owned worker identity")
@@ -502,20 +506,18 @@ class DispatchReadonlyAndWorkerGateTests(unittest.TestCase):
         ledger = state_dir / "dispatcher-attempts.json"
         write_json(ledger, {"kind": dispatch.KIND, "events": {EVENT: [record]}})
         before = ledger.read_bytes()
-        with isolated_budget(self.root) as authority, \
+        with isolated_launch(self.root) as launch, \
                 patch.object(dispatch, "_inbox", return_value=inbox), \
                 patch.object(dispatch.shutil, "which", return_value=sys.executable), \
                 patch.object(dispatch.importlib.util, "find_spec", return_value=True), \
-                patch.object(dispatch, "spawn", side_effect=AssertionError("No worker permitted")) as spawn, \
-                patch.object(authority, "reserve", wraps=authority.reserve) as reserve:
+                patch.object(dispatch, "spawn", side_effect=AssertionError("No worker permitted")) as spawn:
             for name in ("restart-one", "restart-two"):
                 target = self.root / name
                 self.assertEqual(dispatch.run(target, source, state_dir, execute=True), 3)
                 self.assertEqual(dispatch.status(target, read_only=True)["reason"], "prior_child_exit_unconfirmed")
                 self.assertEqual(ledger.read_bytes(), before)
-            reserve.assert_not_called()
             spawn.assert_not_called()
-            self.assertEqual(authority.status()["used"], 0)
+            self.assertFalse(launch.gate_entered())
 
     def test_legacy_receipt_never_gets_bound_identity_grade(self):
         record = {"run_dir": str(self.root), "run_id": self.run_id, "attempt_id": self.token}

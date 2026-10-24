@@ -13,7 +13,7 @@ import unittest
 from unittest.mock import patch
 
 from eventguard.acceptance_control import FileLease, read_json, write_json
-from budget_fixtures import isolated_budget, reserve_capture
+from budget_fixtures import isolated_launch
 from eventguard.agent_dispatch import (ROOT, KIND, PROMPT, TOOLS, assess_delivery,
                                        command, main, run, status, stop)
 
@@ -98,7 +98,7 @@ class DispatchTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.directory = Path(self.temp.name)
-        self.authority = self.enterContext(isolated_budget(self.directory))
+        self.launch = self.enterContext(isolated_launch(self.directory))
         self.source = self.directory / "source"
         self.source.mkdir()
         (self.source / "eventguard.sqlite3").write_bytes(b"explicit fake fixture")
@@ -133,7 +133,9 @@ class DispatchTests(unittest.TestCase):
         return stack
 
     def invoke(self, name, **kwargs):
-        return run(self.directory / name, self.source, self.state_dir, max_tasks=1,
+        # A watch is unbounded unless a test names a finite run bound.
+        tasks = kwargs.pop("max_tasks", None if kwargs.get("continuous") else 1)
+        return run(self.directory / name, self.source, self.state_dir, max_tasks=tasks,
                    max_seconds=kwargs.pop("max_seconds", 15), execute=kwargs.pop("execute", True), **kwargs)
 
     def test_scoped_command_and_prompt_no_preloaded_event(self):
@@ -201,7 +203,7 @@ class DispatchTests(unittest.TestCase):
         self.assertEqual(saved["tasks_started"], 0)
         self.assertIn("last_checked_at", saved)
         self.assertFalse((self.directory / "watch-idle/attempts").exists())
-        self.assertEqual(self.authority.status()["used"], 0)
+        self.assertFalse(self.launch.gate_entered())
         self.assertEqual(self.children, [])
 
     def test_watch_receives_after_idle_then_remains_waiting_until_cooperative_stop(self):
@@ -228,93 +230,81 @@ class DispatchTests(unittest.TestCase):
         self.assertEqual(len(self.children), 1)
         self.assertTrue(saved["child_exited"])
 
-    def test_watch_exhausted_budget_keeps_pending_without_creating_attempts(self):
+    def test_watch_finite_task_bound_waits_without_second_launch_until_stop(self):
+        # A finite acceptance bound belongs to one run. It is not a daily quota.
+        target = self.directory / "watch-task-bound"
         seen = []
-        cancel = threading.Event()
         original_save = __import__("eventguard.agent_dispatch", fromlist=["_save"])._save
 
         def observe(directory, value):
             seen.append((value["state"], value.get("reason")))
             original_save(directory, value)
-            if value["state"] == "waiting_budget":
+            if value["state"] == "waiting_task_limit" and not (directory / "stop.request").exists():
+                stop(directory)
+
+        with self.fixtures(), patch("eventguard.agent_dispatch._save", side_effect=observe):
+            self.assertEqual(self.invoke("watch-task-bound", continuous=True, max_tasks=1, max_seconds=5,
+                                         poll_seconds=.01), 0)
+        saved = status(target)
+        self.assertIn(("waiting_task_limit", "task_limit_reached"), seen)
+        self.assertEqual(saved["state"], "stopped")
+        self.assertEqual(saved["max_tasks"], 1)
+        self.assertEqual((saved["tasks_started"], saved["tasks_passed"]), (1, 1))
+        self.assertEqual(len(list((target / "attempts").iterdir())), 1)
+        self.assertEqual(len(self.children), 1)
+        self.assertEqual(self.backend.pending, EVENT, "The run bound never drops pending work")
+
+    def test_watch_admits_more_than_five_events_without_daily_quota(self):
+        from eventguard.events.store import EventStore
+        from eventguard.queue_inbox import QueueInbox
+        from eventguard.synthetic import make_synthetic
+        (self.source / "eventguard.sqlite3").unlink()
+        store = EventStore(self.source)
+        events = [make_synthetic("listener") for _ in range(6)]
+        for event in events:
+            store.enqueue(event)
+        self.script.write_text(FAKE_QUEUE, encoding="utf-8")
+        target = self.directory / "watch-six"
+        cancel = threading.Event()
+        states = []
+        original_save = __import__("eventguard.agent_dispatch", fromlist=["_save"])._save
+        original = subprocess.Popen
+
+        def fake_command(codex, python, source, state, event_id, evidence, **kwargs):
+            return [sys.executable, "-B", str(self.script), str(source), str(state), event_id,
+                    "success", str(ROOT / "src")]
+
+        def launch(*args, **kwargs):
+            child = original(*args, **kwargs)
+            self.children.append(child)
+            return child
+
+        def observe(directory, value):
+            states.append(value["state"])
+            original_save(directory, value)
+            if value["state"] == "waiting" and value["tasks_passed"] == len(events):
                 cancel.set()
 
-        with self.fixtures(), patch.object(self.authority, "status", return_value={
-                "state": "blocked", "reason": "budget_exhausted", "remaining": 0}), \
-             patch("eventguard.agent_dispatch._save", side_effect=observe), \
-             patch.object(self.authority, "reserve", side_effect=AssertionError("No exhausted-budget reservation")):
-            self.assertEqual(self.invoke("watch-budget", continuous=True, max_seconds=.01,
-                deadline_monotonic=time.monotonic()+30, cancel=cancel, poll_seconds=.01), 0)
-        self.assertIn(("waiting_budget", "budget_exhausted"), seen)
-        self.assertEqual(self.backend.pending, EVENT)
-        self.assertFalse((self.directory / "watch-budget/attempts").exists())
-        self.assertEqual(self.children, [])
-
-    def test_watch_budget_rechecks_in_same_owner_and_resumes_when_ready(self):
-        from eventguard import agent_dispatch
-        original_status = self.authority.status
-        checks = []
-        target = self.directory / "watch-budget-ready"
-
-        def budget_status():
-            checks.append(True)
-            if len(checks) < 3:
-                return {"state": "blocked", "reason": "budget_exhausted", "remaining": 0}
-            return original_status()
-
-        def pending():
-            if self.children:
-                stop(target)
-                return None
-            return EVENT
-
-        with self.fixtures(), patch.object(self.authority, "status", side_effect=budget_status), \
-             patch.object(self.backend, "pending_event_id", side_effect=pending), \
-             patch.object(agent_dispatch, "BUDGET_CHECK_SECONDS", .01):
-            self.assertEqual(self.invoke("watch-budget-ready", continuous=True, max_seconds=5,
-                                        poll_seconds=.01), 0)
+        with patch("eventguard.agent_dispatch.command", side_effect=fake_command), \
+             patch("eventguard.agent_dispatch.shutil.which", return_value=sys.executable), \
+             patch("eventguard.agent_dispatch.importlib.util.find_spec", return_value=True), \
+             patch("eventguard.agent_dispatch.subprocess.Popen", side_effect=launch), \
+             patch("eventguard.agent_dispatch._save", side_effect=observe):
+            self.assertEqual(self.invoke("watch-six", continuous=True, poll_seconds=.01, cancel=cancel,
+                                         deadline_monotonic=time.monotonic() + 120), 0)
         saved = status(target)
         self.assertEqual(saved["state"], "stopped")
-        self.assertEqual(saved["tasks_passed"], 1)
-        self.assertGreaterEqual(len(checks), 3)
-        self.assertEqual(len(list((target/"attempts").iterdir())), 1)
-        self.assertEqual(len(self.children), 1)
+        self.assertEqual((saved["tasks_started"], saved["tasks_passed"]), (6, 6))
+        self.assertNotIn("waiting_budget", states)
+        self.assertEqual(len(list((target / "attempts").iterdir())), 6)
+        backend = QueueInbox(self.source, self.state_dir)
+        self.assertTrue(all(backend.acknowledged(event["event_id"]) for event in events))
+        self.assertIsNone(backend.pending_event_id())
+        self.assertEqual(len(self.children), 6)
+        self.assertTrue(all(child.poll() == 0 for child in self.children), "Capture workers exited naturally")
 
-    def test_watch_refused_admission_latches_same_event_even_when_status_ready(self):
-        from eventguard.agent_budget import BudgetError
-        target = self.directory / "watch-admission-refused"
-        reads = []
-        seen = []
-        original_save = __import__("eventguard.agent_dispatch", fromlist=["_save"])._save
-
-        def pending():
-            reads.append(True)
-            if len(reads) >= 6:
-                stop(target)
-            return EVENT
-
-        def observe(directory, value):
-            seen.append((value["state"], value.get("reason")))
-            original_save(directory, value)
-
-        with self.fixtures(), patch.object(self.backend, "pending_event_id", side_effect=pending), \
-             patch.object(self.authority, "status", return_value={"state": "ready", "remaining": 5}), \
-             patch.object(self.authority, "reserve", side_effect=BudgetError("budget_per_event_exhausted")) as reserve, \
-             patch("eventguard.agent_dispatch._save", side_effect=observe), \
-             patch("eventguard.agent_dispatch.BUDGET_CHECK_SECONDS", .001):
-            self.assertEqual(self.invoke("watch-admission-refused", continuous=True, poll_seconds=.01), 0)
-        reserve.assert_called_once()
-        self.assertGreaterEqual(len(reads), 6)
-        self.assertIn(("waiting_attention", "budget_per_event_exhausted"), seen)
-        self.assertEqual(status(target)["state"], "stopped")
-        self.assertEqual(status(target)["tasks_started"], 0)
-        self.assertEqual(len(list((target/"attempts").iterdir())), 1)
-        self.assertEqual(self.backend.pending, EVENT)
-        self.assertEqual(self.children, [])
-
-    def test_watch_admission_latch_releases_only_when_pending_event_changes(self):
-        from eventguard.agent_budget import BudgetError
-        target = self.directory / "watch-admission-next"
+    def test_watch_failed_event_latch_releases_only_when_pending_event_changes(self):
+        target = self.directory / "watch-failed-next"
         reads = []
 
         def pending():
@@ -323,15 +313,14 @@ class DispatchTests(unittest.TestCase):
                 stop(target)
             return EVENT if len(reads) <= 4 else "synthetic-other"
 
-        with self.fixtures(), patch.object(self.backend, "pending_event_id", side_effect=pending), \
-             patch.object(self.authority, "status", return_value={"state": "ready", "remaining": 5}), \
-             patch.object(self.authority, "reserve", side_effect=BudgetError("budget_per_event_exhausted")) as reserve, \
-             patch("eventguard.agent_dispatch.BUDGET_CHECK_SECONDS", .001):
-            self.assertEqual(self.invoke("watch-admission-next", continuous=True, poll_seconds=.01), 0)
-        self.assertEqual(reserve.call_count, 2)
-        self.assertEqual([call.args[1] for call in reserve.call_args_list], [EVENT, "synthetic-other"])
-        self.assertEqual(len(list((target/"attempts").iterdir())), 2)
-        self.assertEqual(self.children, [])
+        with self.fixtures("fail"), patch.object(self.backend, "pending_event_id", side_effect=pending):
+            self.assertEqual(self.invoke("watch-failed-next", continuous=True, poll_seconds=.01), 0)
+        ledger = read_json(self.state_dir / "dispatcher-attempts.json")["events"]
+        self.assertEqual({event: len(records) for event, records in ledger.items()},
+                         {EVENT: 1, "synthetic-other": 1})
+        self.assertEqual(len(list((target / "attempts").iterdir())), 2)
+        self.assertEqual(len(self.children), 2, "One launch per event; no automatic retry")
+        self.assertEqual(status(target)["state"], "stopped")
 
     def test_watch_failed_delivery_waits_for_human_without_retry(self):
         target = self.directory / "watch-failed"
@@ -512,7 +501,6 @@ class DispatchTests(unittest.TestCase):
         attempt = target / "attempts" / token
         attempt.mkdir(parents=True)
         write_json(attempt / "attempt.json", {"run_id": saved["run_id"], "attempt_id": token})
-        reserve_capture(self.authority, [sys.executable, "-c", "raise SystemExit(99)"], attempt, token, PROMPT)
         with patch("eventguard.acceptance_process.subprocess.Popen", side_effect=AssertionError("Native launch forbidden")):
             self.assertEqual(main(["_capture", "--attempt-dir", str(attempt), "--attempt-id", token,
                 "--deadline-monotonic", str(time.monotonic() - 1), "--stop-run-dir", str(target),
@@ -521,6 +509,7 @@ class DispatchTests(unittest.TestCase):
                          {"attempt_id": token, "launch_not_started": True, "capture_complete": False})
         self.assertFalse((attempt / "capture-start.json").exists())
         self.assertFalse((attempt / "capture-exit.json").exists())
+        self.assertFalse((attempt / "capture-launch-intent.json").exists())
         self.assertEqual((attempt / "codex.jsonl").read_bytes(), b"")
 
     def test_stop_between_supervisor_and_native_launch_is_not_an_unknown_child(self):

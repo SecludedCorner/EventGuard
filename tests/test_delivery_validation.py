@@ -432,10 +432,10 @@ class ServiceDeliveryValidationTests(unittest.TestCase):
             self.assertEqual(queue_validation.main(["service", "--root", str(self.root), "--verify-only"]), 2)
         start.assert_not_called()
 
-    def test_budget_blocked_execution_persists_intent_without_stop_or_retry(self):
+    def test_blocked_service_start_persists_intent_without_stop_or_retry(self):
         def blocked(*args, **kwargs):
             self.assertIn("service_execution", read_json(self.root / "manifest.json"))
-            return {"state": "blocked", "reason": "budget_unavailable"}
+            return {"state": "blocked", "reason": "missing_existing_mcp_sdk"}
         with patch.object(agent_service, "start", side_effect=blocked) as start, patch.object(agent_service, "stop") as stop:
             with self.assertRaisesRegex(ValueError, "start_blocked"):
                 queue_validation.execute_service(self.root, self.manifest, "fixture-never-executed.exe")

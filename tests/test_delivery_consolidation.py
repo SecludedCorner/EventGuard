@@ -23,7 +23,7 @@ from eventguard.queue_inbox import QueueInbox
 from eventguard.processes import spawn, finish
 from eventguard.synthetic import make_synthetic
 from test_agent_dispatch import trace_fixture, RECORD
-from budget_fixtures import isolated_budget
+from budget_fixtures import isolated_launch
 
 ROOT = Path(__file__).resolve().parents[1]
 FAKE = '''import json,sys
@@ -97,7 +97,7 @@ class ConsolidationTests(unittest.TestCase):
                 # replay tests; a stage-only fake must never start its host.
                 for case in ("single", "continuous", "batch", "recovery"):
                     root = base / case; manifest = validation.prepare(root, case)
-                    with isolated_budget(base / ("budget-" + case)):
+                    with isolated_launch(base / ("launch-" + case)):
                         proof = validation.execute(root, manifest, sys.executable)
                     self.assertTrue(proof["passed"], proof)
                     self.assertEqual(proof["missing"], [])
@@ -117,7 +117,7 @@ class ConsolidationTests(unittest.TestCase):
             manifest = validation.prepare(root, "single")
             def fake_command(codex, python, source, state, identity, evidence, **kwargs):
                 return [sys.executable, "-B", str(fake), str(source), str(state), identity, str(ROOT / "src"), "fail"]
-            with isolated_budget(base / "budget"), patch.object(validation, "command", side_effect=fake_command), patch.object(validation.shutil, "which", return_value=sys.executable), patch.object(validation.importlib.util, "find_spec", return_value=True):
+            with isolated_launch(base / "launch"), patch.object(validation, "command", side_effect=fake_command), patch.object(validation.shutil, "which", return_value=sys.executable), patch.object(validation.importlib.util, "find_spec", return_value=True):
                 with self.assertRaisesRegex(ValueError, "stage_failed"):
                     validation.execute(root, manifest, sys.executable)
                 self.assertEqual(EventStore(root / "source").get_event(manifest["events"][0]["event_id"])["delivery_status"], "pending")

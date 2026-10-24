@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from budget_fixtures import launch_forbidden
 from eventguard.events.store import EventStore
 from eventguard.operations import OperatorAPI
 from eventguard.runtime import atomic_json
@@ -28,7 +29,8 @@ class OperatorWorkflowTests(unittest.TestCase):
         shutil.copyfile(ROOT / "config/default.json", self.root / "config/default.json")
         self.api = OperatorAPI(self.root)
         self.enterContext(patch("eventguard.operations._now", return_value=NOW))
-        self.enterContext(patch("eventguard.operations._budget_status", return_value={"state": "blocked", "reason": "fixture_only"}))
+        # Operator views have no daily quota; a historical budget read fails.
+        self.enterContext(patch("eventguard.operations._budget_status", side_effect=AssertionError("historical budget read")))
         self.owner = self.enterContext(patch("eventguard.operations._owner_identity", side_effect=AssertionError("unexpected OS query")))
 
     def test_overview_before_first_start_explains_no_observations_and_needs_no_agent(self):
@@ -213,7 +215,7 @@ class OperatorWorkflowTests(unittest.TestCase):
         store = EventStore(self.root / "data/test")
         event = make_synthetic()
         store.enqueue(event)
-        with patch("eventguard.agent_dispatch.open_authority", side_effect=AssertionError("model admission requested")):
+        with launch_forbidden():
             received = self.api.receive_event(event["event_id"], "test")
             self.assertFalse(received["outbox_acknowledged"])
             self.assertEqual(received["query"]["event_id"], event["event_id"])
@@ -277,7 +279,7 @@ class OperatorWorkflowTests(unittest.TestCase):
         ledger.parent.mkdir()
         ledger.write_bytes(b"fixture durable prior agent attempts; must not be reset")
         before = ledger.read_bytes()
-        with patch("eventguard.agent_dispatch.open_authority", side_effect=AssertionError("model admission requested")):
+        with launch_forbidden():
             blocked = self.api.receive_event(event["event_id"], "test")
             self.assertEqual(blocked["reason"], "failed_event_requires_explicit_retry")
             result = self.api.retry_event(event["event_id"], "test")

@@ -1,24 +1,26 @@
-"""Cross-entry admission fixtures with owned Python fake CLI, never a model."""
-from contextlib import closing, ExitStack
-from datetime import datetime, timedelta, timezone
+"""Cross-entry launch fixtures with owned Python fake CLI, never a model.
+
+The application has no daily quota. The historical budget stays fenced: no
+capture, acceptance or dispatch entry may read, initialize or change it.
+"""
+from contextlib import ExitStack
 import json
 import os
 from pathlib import Path
-import sqlite3
 import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 import uuid
 
-from budget_fixtures import isolated_budget, reserve_capture
+from budget_fixtures import isolated_launch
 from eventguard import agent_budget, agent_dispatch, delivery_validation
-from eventguard.acceptance_control import read_json
+from eventguard.acceptance_control import read_json, write_json
 from eventguard.acceptance_process import capture, launch_hash
-from eventguard.agent_budget import BudgetAuthority
 from eventguard.capture_receipt import validate_receipt
 from eventguard.events.store import EventStore
 from eventguard.processes import remaining_owned
+from eventguard.queue_inbox import QueueInbox
 from eventguard.synthetic import make_synthetic
 
 
@@ -49,7 +51,7 @@ print(json.dumps({"type":"turn.completed"}),flush=True)
 '''
 
 
-class BudgetAdmissionIntegrationTests(unittest.TestCase):
+class NoQuotaAdmissionIntegrationTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
@@ -58,7 +60,7 @@ class BudgetAdmissionIntegrationTests(unittest.TestCase):
         self.fake.write_text(FAKE, encoding="utf-8")
         self.marker = self.base / "fake-invocations.jsonl"
         self.before_owned = remaining_owned()
-        self.evidence = {"scope": "synthetic_budget_integration_python_fake_cli_not_real_agent",
+        self.evidence = {"scope": "synthetic_no_quota_integration_python_fake_cli_not_real_agent",
                          "capture_receipts": [], "model_calls": 0}
         self.enterContext(patch.dict(os.environ, {"PYTHONPATH": str(ROOT / "src")}))
 
@@ -108,76 +110,54 @@ class BudgetAdmissionIntegrationTests(unittest.TestCase):
         self.evidence["capture_receipts"].append(receipt)
         return receipt
 
-    def assert_no_start(self, directory):
-        self.assertFalse((directory / "capture-start.json").exists())
-        self.assertFalse((directory / "capture-exit.json").exists())
-
-    def test_default_missing_or_corrupt_authority_refuses_all_launch_entries(self):
+    @unittest.skipUnless(os.name == "nt", "real Windows private Jobs + synthetic Python fake CLI")
+    def test_missing_or_corrupt_historical_budget_is_never_read_by_launch_entries(self):
         for corrupt in (False, True):
             with self.subTest(corrupt=corrupt):
                 root = self.base / ("corrupt" if corrupt else "missing")
-                authority_path = root / "installation/authority.sqlite3"
+                historical = root / "installation/authority.sqlite3"
                 if corrupt:
-                    authority = BudgetAuthority(authority_path)
-                    authority.initialize(known_used=0)
-                    authority_path.write_bytes(b"corrupt synthetic authority")
-                with patch.object(agent_budget, "AUTHORITY_PATH", authority_path), self.fake_entries(), \
-                        patch("eventguard.acceptance_process.spawn") as capture_spawn, \
-                        patch.object(agent_dispatch, "spawn") as dispatcher_spawn:
-                    direct = root / "capture"; direct.mkdir(parents=True)
-                    self.assertEqual(capture(self.fake_args(), direct, uuid.uuid4().hex, "synthetic only"), 2)
-                    self.assert_no_start(direct)
+                    historical.parent.mkdir(parents=True)
+                    historical.write_bytes(b"corrupt synthetic historical budget")
+                with isolated_launch(root / "launch"), self.fake_entries(), \
+                        patch.object(agent_budget, "AUTHORITY_PATH", historical):
+                    direct = root / "capture"; direct.mkdir(parents=True, exist_ok=True)
+                    self.assertEqual(capture(self.fake_args(), direct, uuid.uuid4().hex, "synthetic only"), 0)
+                    self.assert_exit(direct)
                     acceptance = root / "acceptance"
                     manifest = delivery_validation.prepare(acceptance, "single")
-                    with self.assertRaises(agent_budget.BudgetError):
-                        delivery_validation.execute(acceptance, manifest, sys.executable)
-                    self.assertEqual(EventStore(acceptance / "source").get_event(manifest["events"][0]["event_id"])["delivery_status"], "pending")
+                    self.assertTrue(delivery_validation.execute(acceptance, manifest, sys.executable)["passed"])
+                    self.assert_exit(acceptance / "stage-1")
                     source, event = self.source(root.name + "-source")
-                    self.assertEqual(self.dispatch(root.name + "-dispatch", source, root / "state"), 1)
-                    self.assertEqual(agent_dispatch.status(self.base / (root.name + "-dispatch"))["reason"], "budget_unavailable")
-                    self.assertEqual(EventStore(source).get_event(event["event_id"])["delivery_status"], "pending")
-                    capture_spawn.assert_not_called()
-                    dispatcher_spawn.assert_not_called()
-                if not corrupt:
-                    self.assertFalse(authority_path.exists(), "a missing authority is never implicitly initialized")
-        self.assertEqual(self.invocations(), [])
-
-    def test_capture_requires_ticket_and_bound_argv_prompt_before_spawn(self):
-        for mutation in ("no-ticket", "argv", "prompt"):
-            with self.subTest(mutation=mutation), isolated_budget(self.base / mutation) as authority:
-                directory = self.base / (mutation + "-capture"); directory.mkdir()
-                token, args, prompt = uuid.uuid4().hex, self.fake_args(), "synthetic fixture prompt"
-                if mutation != "no-ticket":
-                    reserve_capture(authority, args, directory, token, prompt)
-                requested = args + ["changed"] if mutation == "argv" else args
-                incoming = prompt + " changed" if mutation == "prompt" else prompt
-                with patch("eventguard.acceptance_process.spawn") as starter:
-                    self.assertEqual(capture(requested, directory, token, incoming), 2)
-                    starter.assert_not_called()
-                self.assert_no_start(directory)
-                self.assertEqual(authority.status()["used"], 0 if mutation == "no-ticket" else 1)
-        self.assertEqual(self.invocations(), [])
+                    self.assertEqual(self.dispatch(root.name + "-dispatch", source, root / "state"), 0)
+                    self.assertEqual(EventStore(source).get_event(event["event_id"])["delivery_status"], "ack")
+                if corrupt:
+                    self.assertEqual(historical.read_bytes(), b"corrupt synthetic historical budget")
+                else:
+                    self.assertFalse(historical.exists(), "a missing historical budget is never initialized")
+        self.assertEqual(len(self.invocations()), 6)
 
     @unittest.skipUnless(os.name == "nt", "real Windows private Job + synthetic Python fake CLI")
-    def test_completed_capture_ticket_cannot_launch_twice(self):
-        with isolated_budget(self.base / "replay") as authority:
-            first, replay = self.base / "capture-first", self.base / "capture-replay"
-            first.mkdir(); replay.mkdir()
+    def test_completed_attempt_directory_never_launches_twice_even_with_changed_binding(self):
+        with isolated_launch(self.base / "replay"):
+            first = self.base / "capture-first"; first.mkdir()
             token, args, prompt = uuid.uuid4().hex, self.fake_args(), "synthetic fixture"
-            reserve_capture(authority, args, first, token, prompt)
             self.assertEqual(capture(args, first, token, prompt), 0)
             self.assert_exit(first)
-            with patch("eventguard.acceptance_process.spawn") as starter:
-                self.assertEqual(capture(args, replay, token, prompt), 2)
-                starter.assert_not_called()
-            self.assert_no_start(replay)
-            self.assertEqual(authority.status()["used"], 1)
-            self.assertEqual(authority.admission(token)["state"], "completed")
+            names = ("capture-launch-intent.json", "capture-start.json", "capture-exit.json")
+            before = {name: (first / name).read_bytes() for name in names}
+            for mutation in ("same", "argv", "prompt"):
+                requested = args + ["changed"] if mutation == "argv" else args
+                incoming = prompt + " changed" if mutation == "prompt" else prompt
+                with self.subTest(mutation=mutation), patch("eventguard.acceptance_process.spawn") as starter:
+                    self.assertNotEqual(capture(requested, first, token, incoming), 0)
+                    starter.assert_not_called()
+            self.assertEqual({name: (first / name).read_bytes() for name in names}, before)
         self.assertEqual(len(self.invocations()), 1)
 
     @unittest.skipUnless(os.name == "nt", "real Windows private Jobs + synthetic Python fake CLI")
-    def test_acceptance_dispatch_retry_share_five_admissions_across_directories(self):
-        with isolated_budget(self.base / "mixed") as authority:
+    def test_acceptance_dispatch_retry_and_direct_entries_have_no_five_task_cap(self):
+        with isolated_launch(self.base / "mixed"):
             with self.fake_entries():
                 root = self.base / "acceptance-one"
                 manifest = delivery_validation.prepare(root, "single")
@@ -198,10 +178,11 @@ class BudgetAdmissionIntegrationTests(unittest.TestCase):
             for saved in (failed, retried):
                 self.assertEqual(saved["supervisor_process"]["remaining_owned_processes"], 0)
                 self.assertFalse(saved["supervisor_process"]["forcibly_terminated"])
+            # The explicit retry still uses this event's durable attempt slots.
+            records = read_json(state / "dispatcher-attempts.json")["events"][event["event_id"]]
+            self.assertEqual([record.get("passed") for record in records], [False, True])
             direct = self.base / "direct-four"; direct.mkdir()
-            token, args, prompt = uuid.uuid4().hex, self.fake_args(), "synthetic direct capture"
-            reserve_capture(authority, args, direct, token, prompt)
-            self.assertEqual(capture(args, direct, token, prompt), 0)
+            self.assertEqual(capture(self.fake_args(), direct, uuid.uuid4().hex, "synthetic direct capture"), 0)
             self.assert_exit(direct)
             with self.fake_entries():
                 root = self.base / "acceptance-five"
@@ -209,59 +190,60 @@ class BudgetAdmissionIntegrationTests(unittest.TestCase):
                 self.assertTrue(delivery_validation.execute(root, manifest, sys.executable)["passed"])
                 self.assert_exit(root / "stage-1")
                 other_source, other_event = self.source("six-new-source")
-                with patch.object(agent_dispatch, "spawn") as starter:
-                    self.assertEqual(self.dispatch("six-new-run", other_source, self.base / "six-new-state"), 1)
-                    starter.assert_not_called()
-                self.assertEqual(agent_dispatch.status(self.base / "six-new-run")["reason"], "budget_exhausted")
-                self.assertEqual(EventStore(other_source).get_event(other_event["event_id"])["delivery_status"], "pending")
-            self.assertEqual(authority.status()["used"], 5)
-            self.assertIsNone(authority.status()["active"])
-            with closing(sqlite3.connect(authority.path.as_uri() + "?mode=ro", uri=True)) as db:
-                self.assertEqual(dict(db.execute("SELECT kind,COUNT(*) FROM admissions GROUP BY kind")),
-                                 {"acceptance": 3, "dispatch": 1, "retry": 1})
-        self.assertEqual(len(self.invocations()), 5)
+                self.assertEqual(self.dispatch("six-new-run", other_source, self.base / "six-new-state"), 0)
+            sixth = agent_dispatch.status(self.base / "six-new-run")
+            self.assertEqual(sixth["state"], "task_limit_reached")
+            self.assertNotIn("budget", sixth)
+            self.assert_exit(self.base / "six-new-run/attempts" / sixth["active_attempt_id"])
+            self.assertEqual(EventStore(other_source).get_event(other_event["event_id"])["delivery_status"], "ack")
+        self.assertEqual(len(self.invocations()), 6)
 
-    def test_unconfirmed_launch_blocks_other_source_and_next_day_without_spawn(self):
-        with isolated_budget(self.base / "unknown-exit") as authority:
-            now = datetime.now(timezone.utc)
-            authority.clock = lambda: now
-            token, args, prompt = uuid.uuid4().hex, self.fake_args(), "synthetic unstarted launch intent"
-            reserve_capture(authority, args, self.base, token, prompt)
-            authority.begin_launch(token, launch_hash=launch_hash(args, prompt))
-            for day in (0, 1):
-                with self.subTest(day=day):
-                    now = now + timedelta(days=day)
-                    source, event = self.source("unknown-source-" + str(day))
-                    with self.fake_entries(), patch.object(agent_dispatch, "spawn") as starter:
-                        self.assertEqual(self.dispatch("unknown-run-" + str(day), source, self.base / ("unknown-state-" + str(day))), 1)
-                        starter.assert_not_called()
-                    saved = agent_dispatch.status(self.base / ("unknown-run-" + str(day)))
-                    self.assertEqual(saved["reason"], "budget_child_exit_unconfirmed")
-                    self.assertEqual(authority.status()["active"]["attempt_id"], token)
+    def test_unconfirmed_capture_intent_blocks_same_ledger_without_spawn(self):
+        # Fabricated records only: the intent exists, but no start or exit
+        # receipt proves what happened to OS creation. No process is created.
+        source, event = self.source("unknown-source")
+        state = self.base / "unknown-state"
+        run_dir, token, run_id = self.base / "unknown-prior-run", uuid.uuid4().hex, uuid.uuid4().hex
+        attempt = run_dir / "attempts" / token
+        attempt.mkdir(parents=True)
+        QueueInbox(source, state)  # The dedicated inbox the prior run would have created.
+        write_json(run_dir / "dispatch.json", {"kind": agent_dispatch.KIND, "run_id": run_id})
+        write_json(run_dir / "status.json", {"kind": agent_dispatch.KIND, "run_id": run_id, "state": "running",
+                                             "active_attempt_id": token, "child_exited": False})
+        write_json(attempt / "capture-launch-intent.json", {
+            "kind": "eventguard-capture-launch-intent-v1", "attempt_id": token,
+            "launch_hash": launch_hash(self.fake_args(), agent_dispatch.PROMPT), "at": 0,
+            "application_quota": "not_used"})
+        ledger = state / "dispatcher-attempts.json"
+        write_json(ledger, {"kind": agent_dispatch.KIND, "events": {event["event_id"]: [{
+            "event_id": event["event_id"], "attempt_id": token, "run_id": run_id,
+            "run_dir": str(run_dir), "state": "started"}]}})
+        before = ledger.read_bytes()
+        with isolated_launch(self.base / "unknown") as launch, self.fake_entries(), \
+                patch.object(agent_dispatch, "spawn", side_effect=AssertionError("No worker permitted")) as starter:
+            for name in ("unknown-run-one", "unknown-run-two"):
+                with self.subTest(run=name):
+                    self.assertEqual(self.dispatch(name, source, state), 3)
+                    saved = agent_dispatch.status(self.base / name)
+                    self.assertEqual(saved["reason"], "prior_child_exit_unconfirmed")
+                    self.assertEqual(ledger.read_bytes(), before)
                     self.assertEqual(EventStore(source).get_event(event["event_id"])["delivery_status"], "pending")
-                    root = self.base / ("unknown-acceptance-" + str(day))
-                    manifest = delivery_validation.prepare(root, "single")
-                    with self.fake_entries(), patch.object(delivery_validation, "capture") as starter:
-                        with self.assertRaisesRegex(agent_budget.BudgetError, "budget_child_exit_unconfirmed"):
-                            delivery_validation.execute(root, manifest, sys.executable)
-                        starter.assert_not_called()
+            starter.assert_not_called()
+            self.assertFalse(launch.gate_entered())
         self.assertEqual(self.invocations(), [])
 
-    def test_prepare_and_idle_or_preflight_dispatch_do_not_charge_or_start_workers(self):
-        with isolated_budget(self.base / "idle") as authority:
+    def test_prepare_and_idle_or_preflight_dispatch_never_enter_launch_gate_or_start_workers(self):
+        with isolated_launch(self.base / "idle") as launch:
             with patch.object(delivery_validation, "capture") as capture_start:
                 for case in delivery_validation.COUNTS:
                     delivery_validation.prepare(self.base / ("prepared-" + case), case)
                 capture_start.assert_not_called()
             source, _ = self.source("idle-source", with_event=False)
-            with self.fake_entries(), patch.object(agent_dispatch, "spawn") as starter, \
-                    patch.object(agent_dispatch, "open_authority") as opener:
+            with self.fake_entries(), patch.object(agent_dispatch, "spawn") as starter:
                 self.assertEqual(self.dispatch("preflight-no-execute", source, self.base / "idle-state", execute=False), 0)
                 self.assertEqual(self.dispatch("idle-no-event", source, self.base / "idle-state", max_seconds=.08), 0)
-                opener.assert_not_called()
                 starter.assert_not_called()
-            self.assertEqual(authority.status()["used"], 0)
-            self.assertIsNone(authority.status()["active"])
+            self.assertFalse(launch.gate_entered())
         self.assertEqual(self.invocations(), [])
 
 
