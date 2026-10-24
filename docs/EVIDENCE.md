@@ -15,7 +15,10 @@ Event範圍綁定：改src/eventguard/events/catalog.py、application.py、web.p
 授權請求：同目錄AUTHORIZATION_REQUEST.md。未執行--execute，未建立service或模型任務。
 最終整套（worktree，本批原始碼）：verify-full-20261025-02於20:00:54Z–20:10:32Z，1468測試1465過、1 failure、2略過。失敗為test_operator_monitor_owner.test_sdk_start_status_stop_uses_application_job_without_agent，stop回busy／background_owner_changed。
 同模組單獨重跑verify-owner-rerun-20261025-01、-02皆24/24。verify-full-20261025-03於20:11:53Z–20:23:05Z，1468測試1466過、0失敗、2略過，passed_checks=true、source_unchanged=true；guardian自然exit0、remaining0、無強停、model_calls0。
-間歇失敗未修，根因未查；本批未改background或operator監看路徑。
+根因：失敗回覆含raw_error_omitted且無run_id，來自background.status的例外分支（讀檔暫時失敗）。stop的等待迴圈把它當成owner更換而立即回busy。
+修正src/eventguard/background.py：迴圈內遇到無run_id的暫時讀取失敗就繼續等待；寬限期後的檢查不變。新增test_background.test_scoped_stop_waits_through_transient_unreadable_status。
+verify-owner-fix-20261025-01：test_background、test_operator_monitor_owner、test_background_integration、test_background_jobs、test_background_persistence_recovery共101/101。
+verify-full-20261025-04於20:27:21Z–20:36:27Z：1469測試，1467過、0失敗、2略過；passed_checks=true、source_unchanged=true；guardian自然exit0、remaining0、無強停、model_calls0。
 限制：真SDK與瀏覽器只證明合成source的顯示與工具範圍，不是實機採集或agent收件。login status不證明MCP工具或模型可用。
 
 ## 2026-10-25：無額度契約的測試遷移

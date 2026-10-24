@@ -9,7 +9,8 @@ CLI `run --event-source`、`events list/detail/set-status --event-source`、Web�
 Agent status另回`event_source_matches_application`，不再讓Agent頁與事件清單默默指向不同source。綁定source的投遞查詢只在agent service指向同一source時讀它的state。
 小清理：GUI補`waiting_task_limit`標籤。`operations._budget_status`保留：已無呼叫者，但它是測試圍住歷史預算的單一接縫；刪除需大量改測試，無產品收益。
 驗證：新測試8/8；相關22模組284測試中一個CLI參數斷言隨新契約更新後17/17。最終整套（本批原始碼）：verify-full-20261025-03為1468測試，1466過、2略過、0失敗；guardian自然exit0、remaining0。
-前一輪-02有1項間歇失敗：test_operator_monitor_owner的SDK stop回background_owner_changed。該模組單獨重跑2次24/24通過，-03整套也通過。本批未改該路徑；根因未查，列為待觀察。
+前一輪-02有1項間歇失敗：test_operator_monitor_owner的SDK stop回background_owner_changed。該模組單獨重跑2次24/24通過，-03整套也通過。根因已查：status讀檔暫時失敗（raw_error_omitted、無run_id）被stop等待迴圈當成owner更換。已改為寬限期內繼續等待；迴圈內本就不送訊號，寬限期後仍保守回busy。
+新增測試覆蓋暫態後退出及整段讀不到兩種情況。背景相關5模組101/101；修正後整套verify-full-20261025-04為1469測試1467過、2略過、0失敗，guardian自然exit0、remaining0。
 真SDK：已安裝MCP SDK對綁定App呼叫十工具；list_events／inspect_event只見綁定事件，預設範圍事件查不到；start_monitor受阻。
 瀏覽器：內建瀏覽器看到綁定source提示、1件綁定事件與MCP操作受阻紀錄。App自然exit0、殘留0。兩者都是合成資料，不是實機或真收件。
 真通訊準備：新目錄`reports/service-acceptance-eventguard-single-test-20261025-01`只prepare，未執行。候選CLI SHA256符合，版本codex-cli 0.164.0-alpha.11.1，login status回報已登入；原始輸出未保存。

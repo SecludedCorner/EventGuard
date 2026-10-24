@@ -187,6 +187,37 @@ class BackgroundTests(unittest.TestCase):
                 self.assertEqual(bg._control(self.runtime)["namespace"], namespace)
                 stop.assert_not_called()
 
+    def test_scoped_stop_waits_through_transient_unreadable_status(self):
+        # A status read error during an atomic replace has no run ID. It is not
+        # evidence of a replacement owner, so the cooperative wait continues.
+        transient = {"state": "blocked", "namespace": "live", "desired_enabled": False,
+                     "host_liveness": "unknown", "raw_error_omitted": True, "model_calls": 0}
+        exited = {"state": "stopped", "namespace": "live", "run_id": "b" * 32, "desired_enabled": False,
+                  "host_liveness": "not_recorded", "model_calls": 0}
+        for recovers in (True, False):
+            with self.subTest(recovers=recovers):
+                self.enable()
+                self.owner()
+                original_status = bg.status
+                seen = []
+
+                def flaky(root):
+                    if bg._control(self.runtime)["enabled"]:
+                        return original_status(root)
+                    seen.append(True)
+                    return transient if len(seen) <= 2 or not recovers else exited
+
+                with patch.object(bg, "status", side_effect=flaky), \
+                        patch.object(bg.processes, "stop_persistent") as stop:
+                    value = bg.stop(self.root, grace_seconds=1, expected_namespace="live")
+                if recovers:
+                    self.assertEqual((value["state"], value["reason"]), ("stopped", "background_exit_verified"))
+                else:
+                    self.assertEqual((value["state"], value["reason"]), ("busy", "background_owner_changed"))
+                self.assertGreater(len(seen), 2)
+                self.assertFalse(bg._control(self.runtime)["enabled"])
+                stop.assert_not_called()
+
     def test_invalid_scoped_stop_namespace_is_rejected_without_control_write(self):
         for namespace in ("elsewhere", [], 1, True):
             with self.subTest(namespace=namespace), self.assertRaisesRegex(ValueError, "invalid_background_stop_namespace"):

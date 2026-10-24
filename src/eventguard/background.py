@@ -541,6 +541,11 @@ def stop(root, *, grace_seconds=10, expected_namespace=None, expected_run_id=Non
         until = time.monotonic() + grace_seconds
         while time.monotonic() < until:
             current = status(root)
+            if current.get("raw_error_omitted") is True and current.get("run_id") is None:
+                # A transient unreadable status is not evidence of a new owner.
+                # Keep waiting; no signal is sent inside this window.
+                time.sleep(.2)
+                continue
             if expected_namespace is not None and (current.get("namespace") != expected_namespace or current.get("run_id") != scoped_run or current.get("desired_enabled") is not False):
                 return dict(current, state="busy", reason="background_owner_changed", process_terminated=False,
                             disabled_persisted=True)
