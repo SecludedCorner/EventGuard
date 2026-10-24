@@ -49,8 +49,9 @@ ZDI 官方 Upcoming 列出 33549、33774、33367、34068、34076 的 vendor 為 
 `fetch_source(source, previous=None, now=None, opener=None)` 只做一輪 GET。回傳：
 
 ```text
-status: success | not_modified | failed
-records: 正規化公告；失敗與 304 為空
+status: success | partial | not_modified | failed
+records: 正規化公告；partial 僅含可獨立驗證的子項，失敗與 304 為空
+item_errors: 有界項目索引與固定原因碼
 etag / last_modified / content_hash / fetched_at
 error_code / retry_after_seconds
 ```
@@ -73,3 +74,29 @@ ZDI 的 stage 為 `reported`。fix 的 `released` 不等於 installed／running�
 - 上游內容可能包含指令式文字。它只能成為本機資料。不能取得命令或處置權限。
 
 離線契約測試在 `tests/test_intelligence_sources.py`。fixture 明示 synthetic。它們不證明 Windows 主機受影響、真模型已接收或長期追蹤已通過。
+
+## NVIDIA CSAF 增量（2026-10-24）
+
+`nvidia_csaf` 只接受 `raw.githubusercontent.com/NVIDIA/product-security` 的精確 JSON 路徑。
+設定範例預設 disabled。沒有新增全 repo 發現、廣域下載或本機產品掃描。
+固定查核 [commit 2c945405](https://github.com/NVIDIA/product-security/tree/2c9454053cf5d2942d4f361d455c749b725fe920)。
+[官方樣本 5903](https://raw.githubusercontent.com/NVIDIA/product-security/2c9454053cf5d2942d4f361d455c749b725fe920/2026/5903/5903.json)
+為 CSAF 2.0，CVE-2026-65142。產品 ID、版本標籤、tracking revision、發布／更新時間及修補階段保留。
+`0-0.43.0` 是廠商標籤，不當通用 SemVer；`0.44.0` 可用不代表本機已安裝或正在運行。
+未知本機產品／版本維持 unknown。
+
+好子項與壞子項隔離。partial 保留有效子項，另存固定錯誤；不得當 success。
+最近完整 cache、ETag、內容 hash 與成功時間不被 partial 覆寫。
+partial 後強制完整擷取；304 不能洗成完整成功。失敗保留 last-good，但當前適用性維持未知。
+單純標題、格式、revision 或擷取時間變化不產生風險事件。
+CSAF 2.0 無標準 withdrawn 狀態。缺項、失聯、disputed 或 known_not_affected 都不當作撤回。
+
+官方固定樣本僅在記憶體解析一次。沒有保存全文或把公告複製入 fixture。
+同來源 SHA256 相符只證明位元組一致，不是獨立真偽驗證。
+固定 tree 未見 LICENSE；公告另有 NVIDIA 著作權與使用條款。本專案只附自寫 synthetic fixture。
+本輪命令、結果與界線見 EVIDENCE。有限樣本可讀不等於長期追蹤或主機適用性已通過。
+
+Web「資安公告」、Application status 與事件詳情使用有界公開投影。
+只讀現有 DB。缺資料不建空庫，namespace 不符則 blocked。
+來源失效／partial／過期維持明確原因，不把歷史排除當成當前安全。
+十類自寫對抗文字只作資料；不引入 garak runtime、API key 或 GPU。

@@ -151,14 +151,17 @@ def _cycle(root, path=None, *, fetcher=None, inventory_reader=None, now=None, sy
             store.record_fetch(source, fetched, now)
             result["sources_checked"] += 1
         previous = store.source_state(identity, now=now) or {}
-        if previous.get("status")=="failed" or previous.get("freshness") in {"stale","unknown"}:
+        if previous.get("status") in {"failed", "partial"} or previous.get("freshness") in {"stale","unknown"}:
             result["errors"].append({"source_id":identity,"reason":previous.get("error_code") or "source_evidence_unavailable"})
         fresh = previous.get("last_success_at", previous.get("last_success"))
         for record in store.cached_records(identity):
-            record = dict(record, fetched_at=previous.get("last_success_at", previous.get("last_success")),
-                          content_hash=previous.get("content_hash"))
+            record = dict(record)
+            record.setdefault("fetched_at", previous.get("last_success_at", previous.get("last_success")))
+            record.setdefault("content_hash", previous.get("content_hash"))
             assessment = evaluate(record, inventory, now=now)
-            if not fresh:
+            if previous.get("has_partial_cache") or previous.get("status") == "partial":
+                assessment.update(status="unknown", reason_codes=sorted(set(assessment.get("reason_codes", []) + ["source_evidence_partial"])))
+            elif not fresh:
                 assessment.update(status="unknown")
             else:
                 try:

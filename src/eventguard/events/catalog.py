@@ -154,10 +154,15 @@ class EventCatalog:
             if row is None:
                 raise ValueError("event_not_found")
             event = EventStore._row(row)
-            return {**self._summary(row, event), "namespace": self.namespace, "event": event_view(event),
+            result = {**self._summary(row, event), "namespace": self.namespace, "event": event_view(event),
                     "interpretation": review(event), "guidance": event_guidance(event),
                     "latest_diagnosis": self._saved_diagnosis(db, event), "latest_diagnosis_is_saved": True,
                     "data_trust": "untrusted_data", "incident_conclusion": "not_assessed", "model_calls": 0}
+            if event["event_type"] == "advisory.changed":
+                from ..intelligence.views import public_advisories
+                result["advisory_context"] = public_advisories(self.runtime.root, self.namespace,
+                                                               limit=1, event_id=event_id)
+            return result
 
     def set_status(self, event_id, status):
         _identifier(event_id)

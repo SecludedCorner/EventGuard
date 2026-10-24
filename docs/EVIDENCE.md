@@ -2,6 +2,86 @@
 
 這是測試數、命令與時間紀錄的唯一閱讀入口；現況請看 [STATUS](../STATUS.md)，下一步看 [維護目標](MAINTENANCE_GOAL.md)。原始回傳、SQLite、CLI JSONL、runtime 與私有資料只留本機忽略的 reports，不提交。
 
+## 2026-10-24：獨立 App、共用 CLI 與公告公開投影
+
+基底 `9903ad5574e80666eb379652e7f4154d111c14b3`。分支 `feat/local-codex-acceptance`。未推送。
+本批程式、測試及文件一起提交。測試來源與實際 commit 的位元組綁定留本機 `source-commit.json`。
+核心標準庫。選配 transport 使用既有 MCP SDK。沒有產品模型或正式來源掃描。
+
+### 整合定向測試
+
+Python 3.13.3。新功能完成並 freeze 後執行：
+
+```powershell
+py -3.13 -B scripts/verify.py --run-dir reports/application-lifecycle-001/verify-001 --timeout-seconds 600 --module test_local_notifications --module test_notification_recovery --module test_agent_dispatch --module test_application_host --module test_application_lifecycle --module test_application_stdio --module test_application_stdio_transport --module test_application_mcp --module test_application_rpc --module test_application_controls --module test_application_ui_state --module test_monitor_web_controls --module test_local_product --module test_event_ingress --module test_queue_inbox --module test_storage_retention --module test_agent_budget --module test_intelligence_sources --module test_intelligence_store --module test_intelligence_integration --module test_intelligence_case_freshness --module test_intelligence_applicability --module test_nvidia_advisories --module test_adversarial_intelligence --module test_advisory_views --module test_application_advisories --module test_core_cli --module test_cli_workflow
+```
+
+實際輸出：`Ran 487 tests ... OK (skipped=1)`。486 pass，0 failures，0 errors。
+唯一 skip：`notification_icon_unavailable`。不能宣稱看見 Windows 通知。
+摘要時間 `2026-10-24T04:46:42.774689Z`。guardian 161.192 秒。
+來源不變、原生 exit 0、無強停、remaining 0；逐測試無殘留。不是全儲存庫全套重跑。
+
+覆蓋：
+
+- CLI start/pause/resume/stop/start/shutdown 真 Application，三個實際 Windows 私有 Job 自然退出。
+- 真 stdio/SSE initialize、tools/list、tools/call。十工具同實例；不是模型收件或喚醒。
+- 冷 stdio 只列工具、不建 App/runtime。無 App 時 blocked；之後 metadata 綁定。
+- MCP client EOF 不停止 App 或採集。重連相同實例；App 替換後 metadata 重綁，舊 operation ID 被拒絕。
+- 同步狀態、操作來源、busy/replay、舊回覆拒絕、處置保存及 pending 保留。
+- 通知 prepared 在 sink 前 commit。未知回條不重送；儲存失敗、容量、legacy migration可判定。
+- 一個合成故障子程序自行 exit 23；這是預期故障，不是應用成功退出。無強停、Job無殘留、pending保留。
+- NVIDIA CSAF partial/last-good/304/去重、公開投影與十類對抗文字全鏈。
+- outbox/inbox/dispatcher 容量與保留、跨重啟預算及未知退出政策。
+
+### 原收件通路補充查核
+
+為避免只證明新應用操作面，另外實跑原 operator、SDK stdio 及 ACK 中斷保留：
+
+```powershell
+py -3.13 -B scripts/verify.py --run-dir reports/application-lifecycle-001/receiver-001 --timeout-seconds 180 --module test_operator_clients --module test_local_stdio --module test_inbox_retention_recovery
+```
+
+實際輸出：`Ran 16 tests ... OK`。16 pass，0 skip/failure/error。
+摘要時間 `2026-10-24T04:50:45.421329Z`。guardian 31.086 秒。
+來源不變、原生 exit 0、無強停、remaining 0；逐測試無殘留。
+雙真 stdio client 對同事件補收同 event/query ID；重播 ACK 後來源 receipt_count 仍為1。
+真正 SDK wait/query/ACK、取消/EOF、結果保存與ACK中斷恢復分開核對。
+這是合成來源、真正協定及本機程序，不是真模型喚醒。以上兩批測試不與歷史數字加總。
+
+### 真瀏覽器與 SDK：公告頁
+
+`py -3.13 -B reports/nvidia-advisory-001/demo.py`，最後有效資料在 `demo-003/`。
+普通程式用兩份自寫 CSAF fixture 產生兩筆公告事件，第二輪不重發。外部來源 GET=0，產品模型=0。
+真已安裝 SDK initialize/list/status/list_events/inspect_event/set_event_status，共用 instance。
+瀏覽器實際開「資安公告」，可見 URL、發布/更新/擷取/最後成功與 unknown適用性。
+惡意 script/img 文字原樣顯示，但 DOM中對應script/img/iframe數為0，無外部連結；不改控制顏色或執行操作。
+SDK把一件標已讀，GUI可見MCP來源；GUI改已處理，刷新後仍保存並顯示GUI來源。
+GUI點關閉程式後，本機 final.passed=true，原生process exit0，Web/SDK/截止thread均退出。
+兩件仍pending，ACK=0。已處理不等於ACK。沒有啟動採集worker。
+
+本機保留 `demo-manifest.json`、`sdk-protocol.json`、`final.json`、DOM及：
+`advisories-visible.jpg`、`handled-after-reload.jpg`。
+先前兩次示範失敗證據保留：第一次及 `demo-002/`。
+原因是示範禁止子程序時拋 RuntimeError，uvicorn 的 platform.system 在此環境觸發 Python 的 Windows版本fallback。
+第二次只記檔名/函式/行號，確定是該fallback；未保存原始例外或命令列。
+最後改以 PermissionError 表示禁止啟動，標準庫可正常fallback；沒有放行子程序、安裝或改安全政策。
+失敗示範同樣已合作退出，事件仍pending。不把失敗寫成通過。
+
+### 官方樣本與研究界線
+
+NVIDIA固定commit `2c9454053cf5d2942d4f361d455c749b725fe920` 的5903 JSON僅RAM解析。
+`2026-10-24T04:26:56Z`：Python3.13 -B，exit0，10391 bytes，1 record，CVE-2026-65142。
+同來源SHA256一致：`72aa9d435f542a5abf248dccffd97317b1ceccb40489c9bee46f07b9ed540664`。
+這是同發布者位元組一致，不是獨立真偽驗證。本機適用性unknown，正式來源仍disabled。
+只保留 metadata/重現碼摘要在 `reports/nvidia-advisory-001/official-sample-summary.json`，不保存全文。
+fixture與對抗文字均自寫，不引入上游runtime。
+
+本次使用 OpenAI Docs 技能查官方入口，使用 Computer Use 做真瀏覽器驗收。
+公開queue可用命令不等於此桌面閒置喚醒已驗。官方依據與一次有界模型驗收範圍見 [AGENT_EVENT_DRIVEN](AGENT_EVENT_DRIVEN.md)。
+OpenOctopus可拆工協定見 [OPENOCTOPUS_EVENT_PROTOCOL](OPENOCTOPUS_EVENT_PROTOCOL.md)；外專案尚未實作。
+本批沒有重新註冊MCP、啟用正式監看、讀正式事件、初始化預算、模型、排程或自啟。
+24小時、重開機、七來源目前主機實測及真模型喚醒均未執行。
+
 ## 2026-10-24：實際瀏覽器操作、成功歷史與公告時效
 
 基底 `54d231c896a5c865e4838025ae5b2d86d872d90e`。同一 feature 分支。沒有推送。

@@ -19,14 +19,14 @@ import time
 from typing import Literal
 
 APPLICATION_TOOLS = frozenset({"capabilities", "status", "start_monitor", "pause_monitor", "resume_monitor",
-                               "stop_monitor", "list_events", "inspect_event", "set_event_status"})
+                               "stop_monitor", "shutdown_application", "list_events", "inspect_event", "set_event_status"})
 _ID = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
 _OPERATION = re.compile(r"[A-Za-z0-9_.:-]{1,128}\Z")
 _SEVERITIES = frozenset({"info", "warning", "high", "critical"})
 _SOURCES = frozenset({"defender", "listeners", "processes", "startup", "services", "tasks", "versions",
                       "monitor", "advisories", "unknown"})
 _STATUSES = frozenset({"new", "read", "handled", "ignored"})
-_CONTROLS = {"start_monitor": "start", "pause_monitor": "pause", "resume_monitor": "resume", "stop_monitor": "stop"}
+_CONTROLS = {"start_monitor": "start", "pause_monitor": "pause", "resume_monitor": "resume", "stop_monitor": "stop", "shutdown_application": "shutdown"}
 _SSE_TRANSPORT_LEASE = threading.Lock()
 _EXCEPTION_TYPES = frozenset({"RuntimeError", "ValueError", "TypeError", "OSError", "TimeoutError", "ImportError",
                               "ConnectionError", "ConnectionResetError", "BrokenResourceError", "EndOfStream"})
@@ -64,20 +64,22 @@ def _binding(application):
     return {"instance_id": identity, "namespace": namespace}
 
 
-def call_application_tool(application, name, arguments):
+def call_application_tool(application, name, arguments, *, source="mcp"):
     """Call the existing application; no SDK, new owner, ACK or model path."""
+    if type(source) is not str or source not in {"mcp", "cli"}:
+        raise ValueError("invalid_operation_source")
     validate_application_tool(name, arguments)
     binding = _binding(application)
     mutation = name in _CONTROLS or name == "set_event_status"
     try:
         if name in _CONTROLS:
-            value = application.monitor_control(_CONTROLS[name], source="mcp", operation_id=arguments.get("operation_id"))
+            value = application.monitor_control(_CONTROLS[name], source=source, operation_id=arguments.get("operation_id"))
         elif name == "list_events":
             value = application.list_events(**arguments)
         elif name == "inspect_event":
             value = application.event_detail(arguments["event_id"])
         elif name == "set_event_status":
-            value = application.set_event_status(arguments["event_id"], arguments["status"], source="mcp",
+            value = application.set_event_status(arguments["event_id"], arguments["status"], source=source,
                                                  operation_id=arguments.get("operation_id"))
         else:
             value = getattr(application, name)()
@@ -105,12 +107,24 @@ def _sdk_factory(name, validate):
 
 
 def build_application_server(application, *, server_factory=None):
-    """The same nine tools for stdio and SSE; app lifetime stays with its owner."""
+    """The same ten tools for stdio and SSE; app lifetime stays with its owner."""
     binding = _binding(application)
     server = (server_factory or _sdk_factory)("EventGuard Application", validate_application_tool)
     server._application = application
 
     def call(name, arguments):
+        nonlocal binding
+        refresh = getattr(application, "refresh_binding", None)
+        if name in {"status", "capabilities"} and callable(refresh):
+            try:
+                refresh()
+                observed = _binding(application)
+                if observed["namespace"] != binding["namespace"]:
+                    raise ValueError("application_scope_changed")
+                binding = observed
+            except (OSError, ValueError, TypeError, RuntimeError):
+                return {**binding, "state": "blocked", "reason": "application_binding_unavailable",
+                        "automatic_retry_allowed": False, "model_calls": 0}
         if _binding(application) != binding:
             return {**binding, "state": "unknown", "reason": "application_binding_changed", "model_calls": 0}
         return call_application_tool(application, name, arguments)
@@ -144,6 +158,11 @@ def build_application_server(application, *, server_factory=None):
     def stop_monitor(operation_id: str | None = None) -> dict:
         """Stop only this application's monitor. Do not close the application."""
         return call("stop_monitor", {"operation_id": operation_id})
+
+    @server.tool()
+    def shutdown_application(operation_id: str | None = None) -> dict:
+        """Explicitly close this application. A request receipt is not proof of exit."""
+        return call("shutdown_application", {"operation_id": operation_id})
 
     @server.tool()
     def list_events(severity: Literal["info", "warning", "high", "critical"] | None = None,

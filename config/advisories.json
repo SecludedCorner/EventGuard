@@ -7,6 +7,18 @@
   "failure_threshold": 3,
   "sources": [
     {
+      "id": "nvidia-csaf-5903-example",
+      "adapter": "nvidia_csaf",
+      "enabled": false,
+      "url": "https://raw.githubusercontent.com/NVIDIA/product-security/main/2026/5903/5903.json",
+      "interval_seconds": 21600,
+      "stale_after_seconds": 172800,
+      "tracking_ids": ["CVE-2026-65142"],
+      "component": "nvidia-model-optimizer",
+      "ecosystem": "NVIDIA",
+      "important": true
+    },
+    {
       "id": "zdi-upcoming",
       "adapter": "zdi",
       "url": "https://www.zerodayinitiative.com/advisories/upcoming/",

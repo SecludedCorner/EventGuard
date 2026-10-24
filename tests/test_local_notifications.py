@@ -45,6 +45,11 @@ class LocalNotificationTests(unittest.TestCase):
         with closing(sqlite3.connect(self.root / "data/test/notifications.sqlite3")) as db:
             return {row[0] for row in db.execute("SELECT event_id FROM notified")}
 
+    def notification_rows(self):
+        with closing(sqlite3.connect(self.root / "data/test/notifications.sqlite3")) as db:
+            return {row[0]: row[1:] for row in db.execute(
+                "SELECT event_id,delivery_state,notified_at,attempt_id,attempted_at FROM notified")}
+
     def test_no_events_make_no_notice_no_model_call_and_no_runtime_files(self):
         service = self.service()
         for _ in range(3):
@@ -86,6 +91,9 @@ class LocalNotificationTests(unittest.TestCase):
         catalog.set_status(second["event_id"], "ignored")
         self.assertEqual(self.service().poll()["status"], "idle")
         self.assertEqual(self.messages, [])
+        for event in (first, second):
+            self.assertEqual(catalog.detail(event["event_id"])["delivery_status"], "pending")
+        self.assertEqual(EventStore(self.root / "data/test").stats()["receipt_count"], 0)
 
     def test_read_state_is_not_automatic_handling_or_delivery_ack(self):
         event = self.event()
@@ -104,25 +112,44 @@ class LocalNotificationTests(unittest.TestCase):
         result = service.poll()
         self.assertEqual(result["reason"], "notification_sink_failed")
         self.assertEqual(result["pending_count"], 1)
+        self.assertTrue(result["automatic_retry_allowed"])
+        self.assertFalse(result["display_requested"])
         self.assertEqual(self.receipt_ids(), set())
         service.close()
         self.assertEqual(self.service().poll()["event_id"], event["event_id"])
         self.assertEqual(self.receipt_ids(), {event["event_id"]})
 
     def test_raw_sink_exception_is_not_exposed_in_status(self):
-        self.event()
+        event = self.event()
+        calls = []
         def broken(message):
+            calls.append(message)
             raise RuntimeError("private-token C:/Users/private")
-        result = self.service(sink=broken).poll()
+        service = self.service(sink=broken)
+        result = service.poll()
+        self.assertEqual(result["status"], "unknown")
         self.assertEqual(result["reason"], "notification_sink_failed")
+        self.assertEqual(result["unconfirmed_count"], 1)
+        self.assertFalse(result["automatic_retry_allowed"])
+        self.assertIsNone(result["display_requested"])
         self.assertNotIn("private", json.dumps(result))
+        self.assertEqual(self.notification_rows()[event["event_id"]][0], "prepared")
+        service.close()
+        recovered = self.service().poll()
+        self.assertEqual(recovered["status"], "unknown")
+        self.assertEqual(recovered["reason"], "notification_submission_unconfirmed")
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(self.messages, [])
 
     def test_injected_notification_error_cannot_smuggle_raw_text(self):
         self.event()
         def broken(message):
             raise NotificationError("private-token C:/Users/private")
         result = self.service(sink=broken).poll()
+        self.assertEqual(result["status"], "unknown")
         self.assertEqual(result["reason"], "notification_sink_failed")
+        self.assertEqual(result["unconfirmed_count"], 1)
+        self.assertFalse(result["automatic_retry_allowed"])
         self.assertNotIn("private", json.dumps(result))
 
     def test_store_unavailable_does_not_show_an_untracked_notice(self):
@@ -134,27 +161,41 @@ class LocalNotificationTests(unittest.TestCase):
         self.assertEqual(self.messages, [])
         self.assertNotIn("private", json.dumps(result))
 
-    def test_receipt_failure_after_display_is_explicit_and_retried(self):
+    def test_receipt_update_failure_keeps_prepared_and_does_not_display_again(self):
         event = self.event()
         service = self.service()
         original = service._open
-        class FailInsert:
+        class FailAcceptedUpdate:
             def __init__(self, db):
                 self.db = db
             def execute(self, sql, *parameters):
-                if sql.startswith("INSERT INTO notified"):
+                if sql.startswith("UPDATE notified SET delivery_state='accepted'"):
                     raise sqlite3.OperationalError("private write failure")
                 return self.db.execute(sql, *parameters)
             def close(self):
                 self.db.close()
-        with patch.object(service, "_open", side_effect=lambda: FailInsert(original())):
+        with patch.object(service, "_open", side_effect=lambda: FailAcceptedUpdate(original())):
             result = service.poll()
+        self.assertEqual(result["status"], "unknown")
         self.assertEqual(result["reason"], "notification_receipt_failed")
         self.assertTrue(result["display_requested"])
         self.assertEqual(result["pending_count"], 1)
-        self.assertEqual(self.receipt_ids(), set())
-        self.assertEqual(service.poll()["event_id"], event["event_id"])
-        self.assertEqual(len(self.messages), 2)  # An OS display cannot be rolled back.
+        self.assertEqual(result["unconfirmed_count"], 1)
+        self.assertFalse(result["automatic_retry_allowed"])
+        self.assertNotIn("private", json.dumps(result))
+        state, notified_at, attempt_id, attempted_at = self.notification_rows()[event["event_id"]]
+        self.assertEqual(state, "prepared")
+        self.assertEqual(notified_at, "")
+        self.assertRegex(attempt_id, r"^[a-f0-9]{32}$")
+        self.assertIsNotNone(datetime.fromisoformat(attempted_at).tzinfo)
+        service.close()
+        recovered = self.service().poll()
+        self.assertEqual(recovered["status"], "unknown")
+        self.assertEqual(recovered["unconfirmed_count"], 1)
+        self.assertEqual(len(self.messages), 1)
+        stats = EventStore(self.root / "data/test").stats()
+        self.assertEqual(stats["pending"], 1)
+        self.assertEqual(stats["receipt_count"], 0)
 
     def test_two_clients_cannot_display_the_same_event_concurrently(self):
         self.event()
@@ -173,6 +214,12 @@ class LocalNotificationTests(unittest.TestCase):
         self.addCleanup(lambda: worker.join(3))
         self.addCleanup(release.set)
         self.assertTrue(entered.wait(3))
+        # Another connection can read the committed intent while the sink is
+        # running. FileLease, rather than an uncommitted SQLite write, keeps
+        # the second client out of the complete prepare/submit/receipt span.
+        rows = self.notification_rows()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(next(iter(rows.values()))[0], "prepared")
         result = second.poll()
         self.assertEqual(result["status"], "busy")
         release.set()

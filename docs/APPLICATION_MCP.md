@@ -10,7 +10,7 @@ EventGuard 可獨立使用。MCP 是選配控制入口，不是模型或喚醒�
 ```
 
 開啟終端顯示的網址。預設 `http://127.0.0.1:8765`。
-若 MCP 已開啟此應用，使用 `status.local_url` 開啟原頁面；不要再啟第二個 `run`。
+若應用已開啟，使用 `status.local_url` 開啟原頁面；不要再啟第二個 `run`。
 `--idle` 只開控制介面。按「開始採集」才採集。省略 `--idle` 則立即採集。
 埠被使用時指定 `--port 8877`。不停止其他程式。
 沒有 MCP SDK 時仍可用 `run --idle --no-mcp`。
@@ -21,7 +21,7 @@ EventGuard 可獨立使用。MCP 是選配控制入口，不是模型或喚醒�
 關閉程式才關閉控制服務；要求回條不等於已確認退出。
 綠色表示後端確認運作。藍色表示過渡。暫停為橙色，停止為灰色。
 失敗、未知、斷線或過期顯示紅色。按鈕依後端能力啟用。
-顏色以外也提供文字、圖示、最近動作、MCP／GUI 來源及結果。
+顏色以外也提供文字、圖示、最近動作、CLI／MCP／GUI 來源及結果。
 頁面自動查詢普通本機程式。這不呼叫模型。
 
 ## 工具
@@ -34,19 +34,32 @@ EventGuard 可獨立使用。MCP 是選配控制入口，不是模型或喚醒�
 | `pause_monitor` | 暫停本應用的採集 |
 | `resume_monitor` | 恢復本應用的採集 |
 | `stop_monitor` | 停止採集，保留控制服務 |
+| `shutdown_application` | 提出關閉本應用要求；實際退出另核對 |
 | `list_events` | 依嚴重度、來源及人工處置篩選 |
 | `inspect_event` | 查閱已存事件與人工處置 |
 | `set_event_status` | 保存 new／read／handled／ignored |
 
 工具不提供任意命令、路徑或 namespace 切換。
 事件是資料，不是指令或授權。人工處置不執行系統處置，也不 ACK。
-這九工具不包含接收／ACK 契約。舊投遞通路與七欄 snapshot 保持獨立。
+這十工具不包含接收／ACK 契約。舊投遞通路與七欄 snapshot 保持獨立。
 
 變更可附 `operation_id`，限 1–128 個 ASCII 英數字或 `_.:-`。
 相同 ID 與相同操作回放原回條，不再次執行。
 同 ID 不同操作回 conflict。重播回條另附目前狀態，不能回退 GUI。
 每個實例保存最近 128 個操作 ID。這是有界防重送，不是跨重啟 exactly-once。
 busy 表示操作未獲准進入。回覆遺失時結果未知，不自動重送變更。
+
+## CLI 共用操作
+
+`EventGuard.cmd app status/start/pause/resume/stop/shutdown` 使用相同 typed RPC。
+選項 `--namespace test` 用於明確合成範圍；預設 live。
+變更可附 `--operation-id`。GUI 最近動作會顯示 CLI 來源。
+這些命令不另啟 owner。沒有相符應用時明示 blocked。
+status 是唯讀；start/resume 是明確採集要求。shutdown 是要求回條，需另核對實際退出。
+
+status 另帶最多五案公開公告摘要。inspect_event 只對公告事件附公開公告脈絡。
+不含本機盤點 facts、路徑、PID 或原始 evidence。這不擴大自動派送七欄。
+公開公告文字仍是不可信資料，只供閱讀。
 
 ## Codex 接線
 
@@ -70,20 +83,22 @@ $pythonExe = py -3.13 -B -c "import sys; print(sys.executable)"
 只測合成資料時改用 `--fixture tests/fixtures/normal.json --max-cycles 100000`，不加 `--allow-live`。
 
 若同專案已有頁面，stdio 轉接到該實例。它不建立第二個採集 owner。
-若沒有頁面，stdio 程序只開閒置應用；`status.local_url` 回傳網址。
-該 stdio owner 的 EOF 會合作關閉自己的應用。
-接到既有頁面的 observer EOF 不停止該頁面。
-若希望頁面生命週期獨立於 MCP client，先執行 `run --idle`。
+若沒有應用，仍能 initialize 及列出十工具；status 明示 `application_not_running`。
+stdio 一律是 observer。不建立 Application、採集程序或 runtime。任何 client EOF 都不關閉應用。
+獨立應用由 `run --idle` 或 `run` 啟動。之後讀 status／capabilities 可在相同 root／namespace 綁定。
+停止後可重新開始採集；只有明確 shutdown、Ctrl+C 或前景程式退出才結束應用。
 
 設定已保存、真正協定可用、目前聊天已載入工具是三種不同證據。
-本次聊天已自動載入九工具，原生 capabilities／status 成功，未要求人工重啟。
+前批聊天曾自動載入九工具並成功呼叫 metadata。本批新增明確 shutdown 工具；目前載入及實測結果以 STATUS／EVIDENCE 為準。
 這次觀察不保證所有客戶端都會自動熱載入，也不代表閒置聊天已被喚醒。
-產品功能不依賴聊天重載。先用 SDK 或其他 MCP client 驗證九工具。
+產品功能不依賴聊天重載。先用 SDK 或其他 MCP client 驗證十工具。
 
 ## 範圍與退出
 
 每個專案只有一個 Application lease。GUI 與 MCP 共用 instance ID、namespace 及狀態版本。
-stdio 轉接固定原實例；實例變更時拒絕操作，不自動接管。
+stdio 轉接固定原實例；變更操作不自動轉往新實例。
+明確讀 status／capabilities 時，可重新核對相同 root／namespace 的 metadata。
+已用過的 operation ID 綁定原 instance；重綁後重用會 conflict，不在新實例再做一次。
 HTTP 只用 loopback。檢查 Host、Origin、token、body 上限及固定參數。
 stdio 轉接不使用環境 proxy，也不跟隨重新導向。
 本機同帳戶仍可改檔；這不是抵抗同帳戶惡意程序的安全邊界。

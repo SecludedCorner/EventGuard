@@ -28,12 +28,22 @@ DEFAULT_BODY = 2 * 1024 * 1024
 MAX_BODY = 8 * 1024 * 1024
 MAX_RECORDS = 512
 MAX_TEXT = 2048
-ADAPTERS = {"osv", "rustsec", "feed", "zdi", "github_advisories", "html", "cve"}
+ADAPTERS = {"osv", "rustsec", "feed", "zdi", "github_advisories", "html", "cve", "nvidia_csaf"}
 ID_RE = re.compile(r"\b(?:CVE-\d{4}-\d{4,10}|RUSTSEC-\d{4}-\d{4}|ZDI-CAN-\d{4,8}|ZDI-\d{2}-\d{1,6}|GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4})\b", re.I)
 
 
 class SourceError(ValueError):
     """A stable reason code. Never includes a server body or exception text."""
+
+
+class SourceRecords(list):
+    """List-compatible parse result with bounded, non-prose item failures."""
+
+    def __init__(self, values=(), *, item_errors=()):
+        super().__init__(values)
+        self.item_errors = list(item_errors)
+        self.coverage = "partial" if self.item_errors or any(
+            evidence.get("coverage") == "partial" for record in self for evidence in record.get("evidence", [])) else "success"
 
 
 def _text(value: Any, limit: int = MAX_TEXT) -> str:
@@ -99,6 +109,12 @@ def _source(source: dict) -> dict:
     if result.get("adapter") not in ADAPTERS:
         raise SourceError("invalid_adapter")
     result["url"] = _url(result.get("url"))
+    if result["adapter"] == "nvidia_csaf":
+        # This adapter has one publisher. Never follow bulletin-supplied URLs.
+        parsed = urllib.parse.urlsplit(result["url"])
+        if (parsed.hostname != "raw.githubusercontent.com" or parsed.query
+                or not re.fullmatch(r"/NVIDIA/product-security/(?:main|[0-9a-f]{40})/20\d{2}/([0-9]{4,8})/\1\.json", parsed.path)):
+            raise SourceError("invalid_nvidia_source_url")
     for key, default, low, high in (("interval_seconds", 3600, 60, 604800),
                                     ("stale_after_seconds", 86400, 60, 2592000),
                                     ("timeout_seconds", 10, 1, 30),
@@ -341,6 +357,142 @@ def _html(text: str, source: dict) -> list[dict]:
                     for identifier in identifiers], source)
 
 
+def _csaf_products(tree: Any) -> dict[str, dict]:
+    """Resolve bounded CSAF branch IDs. Vendor version labels stay uninterpreted."""
+    if not isinstance(tree, dict):
+        raise SourceError("invalid_csaf_product_tree")
+    products, visited = {}, 0
+    stack = [(tree, (), 0)]
+    while stack:
+        node, path, depth = stack.pop()
+        visited += 1
+        if not isinstance(node, dict) or depth > 16 or visited > 2048:
+            raise SourceError("invalid_csaf_product_tree")
+        category = _text(node.get("category"), 80)
+        label = _text(node.get("name"), 160)
+        branch = path + (({"category": category, "name": label},) if category or label else ())
+        values = node.get("full_product_names", [])
+        if not isinstance(values, list) or len(values) > 512:
+            raise SourceError("invalid_csaf_products")
+        if "product" in node:
+            values = [*values, node["product"]]
+        for item in values:
+            if not isinstance(item, dict):
+                raise SourceError("invalid_csaf_products")
+            identifier = item.get("product_id")
+            if (not isinstance(identifier, str) or not 1 <= len(identifier) <= 160
+                    or _text(identifier, 160) != identifier or identifier in products):
+                raise SourceError("invalid_csaf_product_id")
+            helper = item.get("product_identification_helper", {})
+            if not isinstance(helper, dict):
+                raise SourceError("invalid_csaf_products")
+            products[identifier] = {"product_id": identifier, "name": _text(item.get("name"), 160),
+                                    "version_label": _text(item.get("name"), 160) if category == "product_version" else None,
+                                    "cpe": _text(helper.get("cpe"), 512) or None, "branch_path": list(branch)}
+        children = node.get("branches", [])
+        if not isinstance(children, list) or len(children) > 512 or len(products) > 1024:
+            raise SourceError("invalid_csaf_product_tree")
+        stack.extend((child, branch, depth + 1) for child in reversed(children))
+    return products
+
+
+def _nvidia_csaf(data: Any, source: dict, *, _isolated=False) -> list[dict]:
+    """NVIDIA's public CSAF 2.0 bulletin, not an installed-product assertion.
+
+    CSAF 2.0 has no withdrawn document status. Missing bulletins, disputed
+    involvements, free text and known_not_affected never become a withdrawal.
+    Unsupported formats fail and let the existing durable cache become stale.
+    """
+    if not isinstance(data, dict) or not isinstance(data.get("document"), dict):
+        raise SourceError("invalid_csaf")
+    document = data["document"]
+    if document.get("csaf_version") != "2.0" or document.get("category") != "csaf_security_advisory":
+        raise SourceError("unsupported_csaf_format")
+    publisher, tracking = document.get("publisher", {}), document.get("tracking", {})
+    if (not isinstance(publisher, dict) or not isinstance(tracking, dict)
+            or publisher.get("category") != "vendor"
+            or publisher.get("namespace") not in {"https://www.nvidia.com/security", "https://www.nvidia.com/security/"}):
+        raise SourceError("invalid_csaf_publisher")
+    status = tracking.get("status")
+    if status not in {"draft", "interim", "final"}:
+        raise SourceError("unsupported_csaf_status")
+    bulletin = _text(tracking.get("id"), 80)
+    expected = urllib.parse.urlsplit(source["url"]).path.rsplit("/", 1)[-1][:-5]
+    if bulletin != expected or not _text(tracking.get("version"), 80):
+        raise SourceError("invalid_csaf_tracking")
+    vulnerabilities = data.get("vulnerabilities")
+    if not isinstance(vulnerabilities, list) or not 1 <= len(vulnerabilities) <= MAX_RECORDS:
+        raise SourceError("invalid_csaf_vulnerabilities")
+    products = _csaf_products(data.get("product_tree", {}))
+    if not _isolated:
+        records, errors, seen = [], [], set()
+        # A malformed vulnerability must not erase valid siblings. The source
+        # remains explicitly partial; callers cannot promote this to success.
+        item_source = dict(source, tracking_ids=[])
+        for index, item in enumerate(vulnerabilities):
+            try:
+                if isinstance(item, dict) and isinstance(item.get("cve"), str):
+                    if item["cve"] in seen:
+                        raise SourceError("duplicate_csaf_vulnerability")
+                    seen.add(item["cve"])
+                records.extend(_nvidia_csaf(dict(data, vulnerabilities=[item]), item_source, _isolated=True))
+            except SourceError as exc:
+                errors.append({"index": index, "reason": str(exc)})
+        observed = {identifier for record in records for identifier in record["ids"]}
+        if set(source.get("tracking_ids", [])) - observed:
+            errors.append({"index": -1, "reason": "tracked_ids_missing"})
+        return SourceRecords(_select(records, source), item_errors=errors)
+    records, observed = [], set()
+    allowed = {"first_affected", "last_affected", "known_affected", "known_not_affected",
+               "first_fixed", "fixed", "recommended", "under_investigation"}
+    for item in vulnerabilities:
+        if not isinstance(item, dict):
+            raise SourceError("invalid_csaf_vulnerability")
+        identifier = item.get("cve")
+        if not isinstance(identifier, str) or not re.fullmatch(r"CVE-\d{4}-\d{4,10}", identifier) or identifier in observed:
+            raise SourceError("invalid_csaf_vulnerability_id")
+        observed.add(identifier)
+        states = item.get("product_status", {})
+        if not isinstance(states, dict) or set(states) - allowed:
+            raise SourceError("invalid_csaf_product_status")
+        affected, fixes, count = [], [], 0
+        partial = not states or not products
+        for state, identifiers in sorted(states.items()):
+            if not isinstance(identifiers, list) or not 1 <= len(identifiers) <= 128:
+                raise SourceError("invalid_csaf_product_status")
+            seen = set()
+            for product_id in identifiers:
+                count += 1
+                if (count > 256 or not isinstance(product_id, str) or not 1 <= len(product_id) <= 160
+                        or _text(product_id, 160) != product_id or product_id in seen):
+                    raise SourceError("invalid_csaf_product_status")
+                seen.add(product_id)
+                product = products.get(product_id, {"product_id": product_id, "name": "", "version_label": None, "cpe": None, "branch_path": []})
+                partial |= product_id not in products or not product["version_label"]
+                # No generic SemVer range is inferred from CPE or vendor prose.
+                affected.append({"package": {"ecosystem": source.get("ecosystem", "NVIDIA"), "name": source.get("component", "unknown")},
+                                 "ranges": [], "versions": [], "csaf_status": state, "csaf_product": product,
+                                 "version_interpretation": "unknown"})
+                if state in {"fixed", "first_fixed"}:
+                    version = product["version_label"]
+                    fixes.append({"stage": "released" if version and status != "draft" and _date(item.get("release_date")) else "unknown",
+                                  "version": version, "commit": None, "package": source.get("component", "unknown"),
+                                  "ecosystem": source.get("ecosystem", "NVIDIA"), "csaf_product_id": product_id,
+                                  "source_url": source["url"], "installed": "unknown", "running": "unknown"})
+        published, updated = tracking.get("initial_release_date"), tracking.get("current_release_date")
+        partial |= not _date(published) or not _date(updated)
+        evidence = [{"url": source["url"], "stage": "published" if status != "draft" else "reported",
+                     "claim": "advisory_present", "confidence": "high", "format": "CSAF-2.0",
+                     "bulletin_id": bulletin, "revision": _text(tracking.get("version"), 80),
+                     "document_status": status, "coverage": "partial" if partial else "success"}]
+        records.append(_record(source, ids=[identifier], title=document.get("title", identifier),
+                               ecosystem=source.get("ecosystem", "NVIDIA"), published=published, updated=updated,
+                               affected=affected, fixes=fixes, evidence=evidence,
+                               conditions={"deployment": "unknown", "affected_versions": "unknown", "version_comparison": "unknown",
+                                           "withdrawal_status": "unknown", "local_applicability": "unknown"}))
+    return _select(records, source)
+
+
 def _cve(data: Any, source: dict) -> list[dict]:
     if not isinstance(data, dict) or data.get("dataType") != "CVE_RECORD":
         raise SourceError("invalid_cve")
@@ -442,6 +594,8 @@ def parse_source(body: bytes, source: dict) -> list[dict]:
         return _github(json.loads(text), source)
     if adapter == "cve":
         return _cve(json.loads(text), source)
+    if adapter == "nvidia_csaf":
+        return _nvidia_csaf(json.loads(text), source)
     return _html(text, source)
 
 
@@ -495,13 +649,15 @@ def fetch_source(source: dict, previous: dict | None = None, now: str | None = N
     """
     timestamp = _date(now) or datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
     previous = previous or {}
+    conditional_allowed = (previous.get("conditional_cache_allowed", True) is not False
+                           and not previous.get("has_partial_cache") and previous.get("status") != "partial")
     result = {"status": "failed", "records": [], "etag": None, "last_modified": None, "error_code": None,
               "retry_after_seconds": None, "fetched_at": timestamp, "content_hash": None}
     try:
         source = _source(source)
         headers = {"User-Agent": "EventGuard/1.0 (read-only public advisory tracker)", "Accept": "application/json, application/atom+xml, application/rss+xml, text/plain, text/html", "Accept-Encoding": "identity"}
         for key, header in (("etag", "If-None-Match"), ("last_modified", "If-Modified-Since")):
-            value = previous.get(key)
+            value = previous.get(key) if conditional_allowed else None
             if isinstance(value, str) and 0 < len(value) <= 512 and not any(ord(c) < 32 or ord(c) == 127 for c in value):
                 headers[header] = value
         request = urllib.request.Request(source["url"], headers=headers, method="GET")
@@ -514,6 +670,8 @@ def fetch_source(source: dict, previous: dict | None = None, now: str | None = N
             if code != 200:
                 raise urllib.error.HTTPError(source["url"], code, "http_error", response.headers, None)
             final_url = response.geturl() if hasattr(response, "geturl") else source["url"]
+            if source["adapter"] == "nvidia_csaf":
+                _source(dict(source, url=final_url))
             if urllib.parse.urlsplit(_url(final_url)).netloc.lower() != urllib.parse.urlsplit(source["url"]).netloc.lower():
                 raise SourceError("cross_origin_redirect")
             if response.headers.get("Content-Encoding", "identity").lower() not in {"", "identity"}:
@@ -539,12 +697,19 @@ def fetch_source(source: dict, previous: dict | None = None, now: str | None = N
             body = b"".join(chunks)
             records = parse_source(body, source)
             result.update(status="success", records=records, content_hash=hashlib.sha256(body).hexdigest())
+            if isinstance(records, SourceRecords) and records.coverage == "partial":
+                result.update(status="partial" if records else "failed", coverage="partial",
+                              error_code="partial_parse" if records.item_errors else "csaf_evidence_incomplete",
+                              item_errors=records.item_errors)
+                # Preserve the evidence time/hash of these new observations.
+                # They do not refresh the older complete source cache.
+                result["records"] = [dict(record, fetched_at=timestamp, content_hash=result["content_hash"]) for record in records]
             for name, key in (("ETag", "etag"), ("Last-Modified", "last_modified")):
                 value = response.headers.get(name)
                 if isinstance(value, str) and len(value) <= 512 and not any(ord(c) < 32 or ord(c) == 127 for c in value):
                     result[key] = value
     except urllib.error.HTTPError as exc:
-        if exc.code == 304 and re.fullmatch(r"[a-f0-9]{64}", str(previous.get("content_hash", ""))):
+        if exc.code == 304 and conditional_allowed and re.fullmatch(r"[a-f0-9]{64}", str(previous.get("content_hash", ""))):
             result.update(status="not_modified", etag=previous.get("etag"), last_modified=previous.get("last_modified"), content_hash=previous["content_hash"])
         else:
             result["error_code"] = "unexpected_304" if exc.code == 304 else "http_" + str(exc.code)

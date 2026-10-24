@@ -4,7 +4,6 @@ import io
 import json
 from pathlib import Path
 import tempfile
-import threading
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
@@ -12,7 +11,7 @@ from urllib.error import HTTPError
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request
 
 from eventguard import application_host as host
-from eventguard.application_mcp import call_application_tool
+from eventguard.application_mcp import call_application_tool, build_application_server
 from eventguard.runtime import Runtime, atomic_json
 
 INSTANCE = "a" * 32
@@ -125,6 +124,46 @@ class ConnectionDescriptorTests(ApplicationHostFixture):
 
 
 class RemoteApplicationTests(ApplicationHostFixture):
+    def test_metadata_refresh_adopts_only_same_scope_and_old_operations_stay_fenced(self):
+        self.descriptor()
+        response = ResponseFixture({"instance_id": INSTANCE, "namespace": "test", "model_calls": 0})
+        with self.opener(response) as (_, opener):
+            proxy = host.RemoteApplication(self.root, "test")
+            proxy.monitor_control("start", operation_id="original-operation")
+            self.descriptor(instance_id=OTHER_INSTANCE)
+            self.assertEqual(proxy.monitor_control("start", operation_id="new-operation")["state"], "blocked")
+            before = opener.open.call_count
+            proxy.refresh_binding()
+            self.assertEqual(proxy.instance_id, OTHER_INSTANCE)
+            blocked = proxy.monitor_control("start", operation_id="original-operation")
+            self.assertEqual(blocked["reason"], "operation_instance_conflict")
+            self.assertEqual(opener.open.call_count, before)
+            opener.open.return_value = ResponseFixture({"instance_id": OTHER_INSTANCE, "namespace": "test", "model_calls": 0})
+            self.assertEqual(proxy.status()["instance_id"], OTHER_INSTANCE)
+            self.descriptor(instance_id=OTHER_INSTANCE, namespace="live")
+            with self.assertRaises(host.ApplicationHostError):
+                proxy.refresh_binding()
+            self.assertEqual(proxy.instance_id, OTHER_INSTANCE)
+
+    def test_server_metadata_read_refreshes_binding_but_mutation_does_not(self):
+        class FixtureServer:
+            def __init__(self): self.tools = {}
+            def tool(self):
+                def register(fn):
+                    self.tools[fn.__name__] = fn
+                    return fn
+                return register
+        self.descriptor()
+        response = ResponseFixture({"instance_id": OTHER_INSTANCE, "namespace": "test", "model_calls": 0})
+        with self.opener(response) as (_, opener):
+            proxy = host.RemoteApplication(self.root, "test")
+            server = build_application_server(proxy, server_factory=lambda *_: FixtureServer())
+            self.descriptor(instance_id=OTHER_INSTANCE)
+            self.assertEqual(server.tools["start_monitor"]("new-op")["state"], "blocked")
+            opener.open.assert_not_called()
+            self.assertEqual(server.tools["status"]()["instance_id"], OTHER_INSTANCE)
+            self.assertEqual(server.tools["capabilities"]()["instance_id"], OTHER_INSTANCE)
+
     def test_fixed_post_rpc_uses_pinned_instance_and_never_puts_token_in_body(self):
         self.descriptor()
         response = ResponseFixture({"instance_id": INSTANCE, "namespace": "test", "state": "running", "model_calls": 0})
@@ -136,7 +175,7 @@ class RemoteApplicationTests(ApplicationHostFixture):
         self.assertEqual(request.get_method(), "POST")
         self.assertEqual(request.get_header("Authorization"), "Bearer " + TOKEN)
         self.assertEqual(json.loads(request.data), {"instance_id": INSTANCE, "name": "start_monitor",
-                         "arguments": {"operation_id": "fixture-operation"}})
+                         "source": "mcp", "arguments": {"operation_id": "fixture-operation"}})
         self.assertNotIn(TOKEN.encode(), request.data)
         self.assertEqual(value["instance_id"], INSTANCE)
         self.assertNotIn(TOKEN, json.dumps(value))
@@ -175,6 +214,58 @@ class RemoteApplicationTests(ApplicationHostFixture):
         self.descriptor(instance_id=OTHER_INSTANCE)
         with self.assertRaises(host.ApplicationHostError):
             host.RemoteApplication(self.root, "test", expected_instance_id=INSTANCE)
+
+    def test_cold_observer_is_read_only_and_reports_blocked_without_an_app(self):
+        with self.opener(ResponseFixture({})) as (_, opener):
+            proxy = host.RemoteApplication(self.root, "test")
+            self.assertEqual(proxy.instance_id, "unbound")
+            self.assertFalse(proxy.refresh_binding())
+            for result in (proxy.status(), proxy.capabilities(),
+                           proxy.monitor_control("start", operation_id="cold-start")):
+                self.assertEqual(result["state"], "blocked")
+                self.assertEqual(result["reason"], "application_not_running")
+                self.assertFalse(result["automatic_retry_allowed"])
+                self.assertEqual(result["model_calls"], 0)
+            opener.open.assert_not_called()
+        self.assertFalse((self.root / "data").exists())
+
+    def test_cold_observer_can_bind_after_metadata_read_but_never_from_mutation(self):
+        response = ResponseFixture({"instance_id": INSTANCE, "namespace": "test", "state": "running", "model_calls": 0})
+        with self.opener(response) as (_, opener):
+            proxy = host.RemoteApplication(self.root, "test")
+            self.descriptor()
+            self.assertEqual(proxy.monitor_control("start", operation_id="before-metadata")["reason"],
+                             "application_instance_changed")
+            opener.open.assert_not_called()
+            self.assertTrue(proxy.refresh_binding())
+            self.assertEqual(proxy.status()["instance_id"], INSTANCE)
+            self.assertEqual(proxy.monitor_control("start", source="cli", operation_id="after-metadata")["state"], "running")
+            request = opener.open.call_args.args[0]
+            self.assertEqual(json.loads(request.data)["source"], "cli")
+            self.assertEqual(proxy.runtime.root, self.runtime.root)
+            self.assertEqual(proxy.namespace, "test")
+
+    def test_shutdown_is_typed_truthful_and_fenced_against_replacement(self):
+        self.descriptor()
+        response = ResponseFixture({"instance_id": INSTANCE, "namespace": "test", "state": "shutdown_requested", "model_calls": 0})
+        with self.opener(response) as (_, opener):
+            proxy = host.RemoteApplication(self.root, "test")
+            for arguments in ({"command": "anything"}, {"operation_id": "bad\n"}):
+                with self.assertRaises(ValueError):
+                    proxy._call("shutdown_application", arguments, source="cli")
+            opener.open.assert_not_called()
+            result = proxy.monitor_control("shutdown", source="cli", operation_id="shutdown-one")
+            self.assertEqual(result["state"], "shutdown_requested")
+            self.assertEqual(json.loads(opener.open.call_args.args[0].data), {
+                "instance_id": INSTANCE, "name": "shutdown_application", "source": "cli",
+                "arguments": {"operation_id": "shutdown-one"}})
+            proxy.monitor_control("shutdown", source="mcp", operation_id="shutdown-mcp")
+            self.assertEqual(json.loads(opener.open.call_args.args[0].data)["source"], "mcp")
+            self.descriptor(instance_id=OTHER_INSTANCE)
+            proxy.refresh_binding()
+            blocked = proxy.monitor_control("shutdown", source="cli", operation_id="shutdown-one")
+            self.assertEqual(blocked["reason"], "operation_instance_conflict")
+            self.assertEqual(opener.open.call_count, 2)
 
     def test_unknown_http_receipt_is_never_retried_or_reported_as_success(self):
         self.descriptor()
@@ -273,48 +364,46 @@ class ApplicationControlServicesTests(ApplicationHostFixture):
             services.lease.release()
 
 
-class StdioOwnedStartupFailureTests(ApplicationHostFixture):
-    def test_sdk_build_failure_still_closes_only_new_owned_application(self):
-        parent = self
+class StdioObserverStartupTests(ApplicationHostFixture):
+    def test_sdk_build_failure_without_an_app_creates_no_owner_or_runtime(self):
+        with patch("eventguard.application.Application", side_effect=AssertionError("stdio must not create an owner")) as create, \
+             patch("eventguard.application_mcp.build_application_server", side_effect=ImportError("synthetic SDK unavailable")):
+            with self.assertRaises(ImportError):
+                host.serve_stdio(self.root, fixture="tests/fixtures/normal.json")
+        create.assert_not_called()
+        self.assertFalse((self.root / "data").exists())
 
-        class OwnedFixture:
-            instance_id = INSTANCE
-            namespace = "test"
+    def test_cold_stdio_eof_and_transport_failure_never_create_or_shutdown_an_app(self):
+        for failure in (None, RuntimeError("synthetic transport failure")):
+            with self.subTest(failure=failure is not None):
+                server = Mock()
+                server.run.side_effect = failure
+                with patch("eventguard.application.Application", side_effect=AssertionError("stdio cannot own an app")) as create, \
+                     patch("eventguard.application_mcp.build_application_server", return_value=server) as build:
+                    if failure is None:
+                        self.assertEqual(host.serve_stdio(self.root, fixture="tests/fixtures/normal.json"), 0)
+                    else:
+                        with self.assertRaises(RuntimeError):
+                            host.serve_stdio(self.root, fixture="tests/fixtures/normal.json")
+                create.assert_not_called()
+                target = build.call_args.args[0]
+                self.assertIsInstance(target, host.RemoteApplication)
+                self.assertEqual(target.instance_id, "unbound")
+                self.assertEqual(target.namespace, "test")
+                self.assertFalse((self.root / "data").exists())
 
-            def __init__(self):
-                self.cancel = threading.Event()
-                self.thread = None
-                self.actions = []
-
-            def run(self, max_seconds=None, announce=None):
-                self.thread = threading.current_thread()
-                announce({"state": "ready"})
-                self.cancel.wait(3)
-                return {"state": "stopped", "model_calls": 0}
-
-            def monitor_control(self, action, source="mcp", operation_id=None):
-                self.actions.append((action, source))
-                self.cancel.set()
-                return {"state": "stop_requested", "model_calls": 0}
-
-        owned = OwnedFixture()
-        try:
-            with patch.object(host, "connection", return_value=None), \
-                 patch("eventguard.application.Application", return_value=owned), \
-                 patch("eventguard.application_mcp.build_application_server", side_effect=ImportError("synthetic SDK unavailable")):
-                with self.assertRaises((ImportError, host.ApplicationHostError)):
-                    host.serve_stdio(self.root, fixture="tests/fixtures/normal.json")
-            self.assertEqual(owned.actions, [("shutdown", "system")])
-            self.assertIsNotNone(owned.thread)
-            self.assertFalse(owned.thread.is_alive())
-            receipt = json.loads((self.root / "data/application/stdio-exit.json").read_text(encoding="utf-8"))
-            self.assertTrue(receipt["application_thread_exited"])
-            self.assertNotIn(TOKEN, json.dumps(receipt))
-        finally:
-            owned.cancel.set()
-            if owned.thread is not None:
-                owned.thread.join(5)
-                parent.assertFalse(owned.thread.is_alive(), "only this bounded fixture thread must exit")
+    def test_existing_app_descriptor_is_unchanged_when_stdio_transport_fails(self):
+        self.descriptor()
+        before = self.path.read_bytes()
+        server = Mock()
+        server.run.side_effect = RuntimeError("synthetic transport failure")
+        with patch("eventguard.application.Application", side_effect=AssertionError("stdio cannot own an app")) as create, \
+             patch("eventguard.application_mcp.build_application_server", return_value=server):
+            with self.assertRaises(RuntimeError):
+                host.serve_stdio(self.root, fixture="tests/fixtures/normal.json")
+        create.assert_not_called()
+        self.assertEqual(self.path.read_bytes(), before)
+        self.assertFalse((self.root / "data/application/stdio-exit.json").exists())
 
 
 if __name__ == "__main__":

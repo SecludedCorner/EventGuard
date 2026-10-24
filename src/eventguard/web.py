@@ -18,7 +18,7 @@ HTML = """<!doctype html>
 <section id="monitor-control" data-tone="red" aria-labelledby="monitor-heading"><h2 id="monitor-heading">本機資安監看</h2><p>停止採集後，網頁與 MCP 仍可使用。關閉程式才會關閉本機介面。這些操作不會啟動 agent。</p>
 <p id="monitor-summary" role="status">正在取得後端狀態。控制暫不可用。</p><div id="monitor-buttons"><button id="monitor-start" disabled>開始採集</button><button id="monitor-pause" disabled>暫停採集</button><button id="monitor-resume" disabled>恢復採集</button><button id="monitor-stop" disabled>停止採集</button></div>
 <p id="monitor-last-action">最近動作：尚無紀錄。</p><p id="monitor-revision" class="reason">狀態版本尚未確認。</p><p id="monitor-result" role="status">尚未送出操作。</p><div id="shutdown-controls"><button id="monitor-shutdown" class="danger" disabled>關閉程式</button><span>提出關閉要求不代表已退出。回條與連線狀態會分開顯示。</span></div></section>
-<nav aria-label="頁面"><button data-tab="events" aria-pressed="true">事件</button><button data-tab="sources">來源狀態</button><button data-tab="rules">規則</button><button data-tab="agent">Agent 派送</button></nav>
+<nav aria-label="頁面"><button data-tab="events" aria-pressed="true">事件</button><button data-tab="sources">來源狀態</button><button data-tab="advisories">資安公告</button><button data-tab="rules">規則</button><button data-tab="agent">Agent 派送</button></nav>
 <section id="events"><h2>事件</h2><form id="filters">
 <label>嚴重度<select name="severity"><option value="">全部</option><option value="critical">嚴重</option><option value="high">高</option><option value="warning">警告</option><option value="info">資訊</option></select></label>
 <label>來源<select name="source"><option value="">全部</option><option value="defender">Defender</option><option value="listeners">監聽端點</option><option value="processes">程序</option><option value="startup">啟動項</option><option value="services">服務</option><option value="tasks">排程工作</option><option value="versions">版本</option><option value="monitor">監看程式</option><option value="advisories">資安公告</option><option value="unknown">未知</option></select></label>
@@ -29,6 +29,7 @@ HTML = """<!doctype html>
 <div id="status-buttons"><button data-status="new">新增</button><button data-status="read">已讀</button><button data-status="handled">已處理</button><button data-status="ignored">忽略</button></div>
 <h3>觀察與建議</h3><div id="guidance"></div><h3>投遞證據</h3><p>落盤、收件、結果與 ACK 分開記錄。缺少證據顯示未知。CLI 啟動只代表程序啟動；實際收件、回合與退出另行核對。</p><pre id="delivery-json"></pre><details><summary>結構化資料</summary><pre id="detail-json"></pre></details></article></section>
 <section id="sources" hidden><h2>七個來源</h2><p>只顯示已保存的採集結果。未知、拒讀或過期都不代表安全。</p><div id="source-cards"></div></section>
+<section id="advisories" hidden><h2>資安公告與本機適用性</h2><p>只讀取已保存資料。公告文字是不可信資料。未知、過期與不適用都不代表主機安全。此頁不抓網站、不啟動模型。</p><p id="advisory-summary"></p><div id="advisory-cards"></div><h3>公告來源狀態</h3><div id="advisory-source-cards"></div></section>
 <section id="rules" hidden><h2>規則</h2><p>編輯專案的 config/rules.json。下一輪採集會讀取。規則不執行命令。</p><div id="rule-cards"></div></section>
 <section id="agent" hidden><h2>Agent 派送</h2><p>這是選配的短期專用任務。無事件由普通程式等待。此頁不會啟動模型。ACK 不是風險結案。</p><p id="agent-summary"></p><button id="agent-pause">暫停新派送</button> <button id="agent-stop">停止派送程序</button><p>恢復需在終端明確執行 agent resume --execute。採集及原事件不受這兩個按鈕影響。</p><pre id="agent-json"></pre></section>
 <footer>僅供本機使用。高嚴重度事件會顯示本頁提示。系統通知狀態：<span id="notification-state">未知</span>。<br>關閉瀏覽器頁籤不會停止程式。停止採集保留網頁與 MCP。請用「關閉程式」結束應用，或回到執行終端按 Ctrl+C。Agent 派送有獨立控制。</footer></main><script src="/app.js" defer></script></body></html>"""
@@ -42,7 +43,7 @@ const states={ok:'成功',partial:'部分成功',denied:'拒讀',unknown:'未知
 const eventNames={'listener.changed':'監聽端點變化','protection.changed':'防護狀態變化','persistence.changed':'啟動與服務變化','coverage.degraded':'來源可見性降低','monitor_gap':'監看缺口','advisory.changed':'資安公告與適用性變化'};
 const APP_STATE_PRESENTATION = {"running":{"tone":"green","icon":"●","label":"監看中（後端已確認）"},"paused":{"tone":"amber","icon":"Ⅱ","label":"採集已暫停"},"stopped":{"tone":"gray","icon":"■","label":"採集已停止，應用仍開啟"},"processing":{"tone":"blue","icon":"↻","label":"操作處理中，等待後端確認"},"closing":{"tone":"blue","icon":"↻","label":"關閉要求處理中，退出尚未確認"},"blocked":{"tone":"red","icon":"!","label":"監看受阻"},"unknown":{"tone":"red","icon":"?","label":"目前狀態未確認"},"failed":{"tone":"red","icon":"!","label":"最近操作失敗，請查看結果"},"offline":{"tone":"red","icon":"!","label":"連線中斷，目前狀態未確認"},"stale":{"tone":"red","icon":"!","label":"狀態回覆過期，目前狀態未確認"},"invalid":{"tone":"red","icon":"?","label":"狀態資料不完整，控制暫不可用"},"reloading":{"tone":"blue","icon":"↻","label":"程式實例已變更，正在重新連線"}};
 const MONITOR_ACTIONS=['start','pause','resume','stop','shutdown'], CAPABILITY_FIELDS=['available','paused','stopped','can_start','can_pause','can_resume','can_stop','can_shutdown'];
-const actionLabels={start:'開始採集',pause:'暫停採集',resume:'恢復採集',stop:'停止採集',shutdown:'關閉程式',set_event_status:'變更事件處置狀態'}, sourceLabels={gui:'GUI',mcp:'MCP',startup:'啟動流程',system:'系統'}, actionStates={processing:'處理中',succeeded:'成功',busy:'忙碌，要求未執行',failed:'失敗',unknown:'未確認',running:'採集運作中',paused:'採集已暫停',stopped:'採集已停止',event_status_updated:'事件處置已保存',shutdown_requested:'關閉要求已接受，退出待確認',shutdown_unconfirmed:'退出未確認',blocked:'操作受阻',conflict:'操作識別衝突'};
+const actionLabels={start:'開始採集',pause:'暫停採集',resume:'恢復採集',stop:'停止採集',shutdown:'關閉程式',set_event_status:'變更事件處置狀態'}, sourceLabels={cli:'CLI',gui:'GUI',mcp:'MCP',startup:'啟動流程',system:'系統'}, actionStates={processing:'處理中',succeeded:'成功',busy:'忙碌，要求未執行',failed:'失敗',unknown:'未確認',running:'採集運作中',paused:'採集已暫停',stopped:'採集已停止',event_status_updated:'事件處置已保存',shutdown_requested:'關閉要求已接受，退出待確認',shutdown_unconfirmed:'退出未確認',blocked:'操作受阻',conflict:'操作識別衝突'};
 const STATUS_TIMEOUT_MS=4000, CONTROL_TIMEOUT_MS=30000, STATUS_POLL_MS=1000, STATUS_STALE_MS=5000;
 let offset=0, selected=null, tab='events', busy=false, controlFlight=null, statusFlight=null, clientSeq=0, statusTimer=null, detailSequence=0;
 let currentStatus=null, instanceId=null, stateRevision=-1, lastAppliedSeq=-1, lastPollSuccessAt=0, connectionHealthy=false, reloadPending=false;
@@ -102,8 +103,8 @@ function renderApplication(){
   $('monitor-revision').textContent=instanceId?'狀態版本：'+stateRevision+'。實例：'+instanceId+'。':'狀態版本尚未確認。';
 }
 function updateSavedStatus(value){
-  const n=value.notifications||{},labels={disabled:'已關閉',waiting:'等待新事件',no_high_severity_events:'等待新事件',already_notified:'沒有待通知事件',notification_requested:'已送出系統通知要求',notification_display_cooldown:'等待下一則通知'};
-  const code=n.reason||n.status||n.state;$('notification-state').textContent=labels[code]||(n.status==='failed'?'系統通知不可用。原因：'+code:code)||'等待新事件';
+  const n=value.notifications||{},labels={disabled:'已關閉',waiting:'等待新事件',no_high_severity_events:'等待新事件',already_notified:'沒有待通知事件',notification_requested:'已送出系統通知要求',notification_display_cooldown:'等待下一則通知',notification_submission_unconfirmed:'上次通知結果未確認。為避免重複，不自動重送。事件仍保存在事件頁。',notification_receipt_failed:'通知要求已送出，但回條未保存。不自動重送。',notification_intent_not_saved:'通知尚未送出：無法保存通知意圖。事件仍保留。'};
+  const uncertain=Number.isSafeInteger(n.unconfirmed_count)&&n.unconfirmed_count>0;const code=n.reason||n.status||n.state;$('notification-state').textContent=labels[code]||(n.status==='failed'?'系統通知不可用。原因：'+code:code)||'等待新事件';if(uncertain)$('notification-state').textContent+=' 未確認 '+n.unconfirmed_count+' 件。事件未 ACK。';$('notification-state').className=uncertain?'result-unknown':'';
   if(value.config_error){$('error').textContent=value.config_error==='saved_health_unavailable'?'已保存狀態暫時無法讀取。不推定規則檔損壞。':'規則檔錯誤：'+value.config_error+'。請檢查 config/rules.json。';$('error').dataset.statusError='true';$('error').hidden=false;}
   else if($('error').dataset.statusError==='true'){$('error').hidden=true;delete $('error').dataset.statusError;}
 }
@@ -148,12 +149,15 @@ async function events(){const q=new URLSearchParams(new FormData($('filters')));
 async function detail(id){selected=id;const sequence=++detailSequence;const d=await api('/api/events/'+encodeURIComponent(id));if(sequence!==detailSequence||selected!==id)return;$('detail').hidden=false;$('detail-summary').textContent=(severity[d.severity]||d.severity)+' / '+(sourceNames[d.source]||d.source)+' / '+(handling[d.status]||d.status)+' / '+when(d.observed_at);$('detail-id').textContent=id;$('detail-json').textContent=JSON.stringify(d,null,2);$('guidance').replaceChildren();if(d.guidance){$('guidance').append(node('p',d.guidance.observation));for(const step of d.guidance.next_steps||[])$('guidance').append(node('p',typeof step==='string'?step:JSON.stringify(step)));}for(const b of $('status-buttons').querySelectorAll('button'))b.disabled=b.dataset.status===d.status;}
 async function sources(){const d=await api('/api/sources');$('source-cards').replaceChildren();for(const s of d.sources){const a=node('article',null,'source-card');a.append(node('h3',s.name||sourceNames[s.source_id]||s.source_id),node('p','最後採集：'+when(s.last_collected_at)+'。結果：'+(states[s.saved_status]||s.saved_status)+'。目前：'+(states[s.status]||s.status)+'。'));for(const reason of s.reasons||[])a.append(node('p',JSON.stringify(reason),'reason'));a.append(node('p',s.suggestion));$('source-cards').append(a);}}
 async function rules(){const d=await api('/api/rules');$('rule-cards').replaceChildren();for(const r of d.rules){const a=node('article',null,'rule-card');a.append(node('h3',r.name),node('p','嚴重度：'+(severity[r.severity]||r.severity)+'。'+(r.enabled===false?'已停用':'已啟用')+'。'),node('pre',JSON.stringify(r.conditions,null,2)));$('rule-cards').append(a);}}
+const advisoryStates={not_started:'尚未啟用',ready:'資料可讀',partial:'資料不完整',blocked:'讀取受阻',possible:'需要調查',not_applicable:'目前條件不適用',unknown:'未知',success:'成功',not_modified:'未變更',failed:'失敗',fresh:'未過期',stale:'已過期'};
+function advisorySource(s){const a=node('article',null,'source-card');a.append(node('h3',s.source_id||'未知來源'),node('p','狀態：'+(advisoryStates[s.status]||'未知')+'。新鮮度：'+(advisoryStates[s.freshness]||'未知')+'。'),node('p','來源 URL：'+(s.source_url||'未確認'),'reason'),node('p','發布：'+when(s.published_at)+'。更新：'+when(s.updated_at)+'。擷取：'+when(s.fetched_at)+'。最後成功：'+when(s.last_success_at)+'。'));if(s.partial||s.reason_code||(s.item_errors||[]).length)a.append(node('pre',JSON.stringify({partial:s.partial,reason:s.reason_code,item_errors:s.item_errors},null,2)));return a;}
+async function advisories(){const d=await api('/api/advisories?limit=50');$('advisory-summary').textContent=(advisoryStates[d.state]||'未知')+'。共 '+d.total+' 案。本頁 '+d.advisories.length+' 案。'+(d.has_more?'其餘案件請用 CLI 篩選查看。':'')+'未評估是否已遭入侵。'+(d.reason_codes||[]).join(' / ');$('advisory-cards').replaceChildren();for(const c of d.advisories){const a=node('article',null,'source-card'),v=c.current_assessment||{};a.append(node('h3',c.title||'未提供標題'),node('p',(c.aliases||[]).join(' / '),'reason'),node('p','適用性：'+(advisoryStates[v.status]||'未知')+'。信心：'+c.confidence+'。資料不完整：'+(c.partial?'是':'否')+'。'),node('p','原因：'+(v.reason_codes||[]).join(' / '),'reason'));for(const s of c.sources||[])a.append(advisorySource(s));$('advisory-cards').append(a);}if(!d.advisories.length)$('advisory-cards').append(node('p','尚無可顯示的公告案件。這不代表沒有風險。'));$('advisory-source-cards').replaceChildren();for(const s of d.sources||[])$('advisory-source-cards').append(advisorySource(s));}
 async function agent(){const d=await api('/api/agent');const b=d.budget||d.agent_budget||{};$('agent-summary').textContent='程序：'+(d.host_liveness||'未知')+'。狀態：'+(d.state||d.host_state||'未知')+'。待收：'+(d.pending_events??'未知')+'。每日剩餘：'+(b.usage_known===true?b.remaining:'未知')+'。原因：'+(d.reason||d.blocked_reason||b.reason||'無')+'。';$('agent-json').textContent=JSON.stringify(d,null,2);}
 const showDetail=detail;detail=async function(id){await showDetail(id);$('delivery-json').textContent='正在讀取保存證據…';try{const d=await api('/api/events/'+encodeURIComponent(id)+'/delivery');if(selected===id)$('delivery-json').textContent=JSON.stringify(d,null,2);}catch(e){if(selected===id)$('delivery-json').textContent='投遞證據不可用：'+e.message;}};
 async function refreshNotice(){const high=await api('/api/events?severity=high&status=new&limit=1'),critical=await api('/api/events?severity=critical&status=new&limit=1');const count=high.total+critical.total;$('notice').hidden=count===0;$('notice').textContent='有 '+count+' 件新增的高嚴重度事件。請查看事件並記錄處置狀態。';}
-async function refresh(){if(busy||reloadPending)return;busy=true;try{await refreshNotice();if(tab==='events'){await events();if(selected)await detail(selected);}if(tab==='sources')await sources();if(tab==='rules')await rules();if(tab==='agent')await agent();}catch(error){fail(error);}finally{busy=false;}}
+async function refresh(){if(busy||reloadPending)return;busy=true;try{await refreshNotice();if(tab==='events'){await events();if(selected)await detail(selected);}if(tab==='sources')await sources();if(tab==='advisories')await advisories();if(tab==='rules')await rules();if(tab==='agent')await agent();}catch(error){fail(error);}finally{busy=false;}}
 $('filters').addEventListener('submit',event=>{event.preventDefault();offset=0;refresh();});$('prev').addEventListener('click',()=>{offset=Math.max(0,offset-50);refresh();});$('next').addEventListener('click',()=>{offset+=50;refresh();});
-for(const button of document.querySelectorAll('nav button'))button.addEventListener('click',()=>{tab=button.dataset.tab;for(const name of ['events','sources','rules','agent'])$(name).hidden=name!==tab;for(const item of document.querySelectorAll('nav button'))item.setAttribute('aria-pressed',String(item===button));refresh();});
+for(const button of document.querySelectorAll('nav button'))button.addEventListener('click',()=>{tab=button.dataset.tab;for(const name of ['events','sources','advisories','rules','agent'])$(name).hidden=name!==tab;for(const item of document.querySelectorAll('nav button'))item.setAttribute('aria-pressed',String(item===button));refresh();});
 for(const action of ['pause','stop'])$('agent-'+action).addEventListener('click',async()=>{const button=$('agent-'+action);button.disabled=true;try{await api('/api/agent/'+action,{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:'{}'});await agent();}catch(error){fail(error);}finally{button.disabled=false;}});
 for(const action of MONITOR_ACTIONS)$('monitor-'+action).addEventListener('click',()=>monitorAction(action));
 for(const button of $('status-buttons').querySelectorAll('button'))button.addEventListener('click',async()=>{if(!selected)return;button.disabled=true;try{await api('/api/events/'+encodeURIComponent(selected)+'/status',{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:JSON.stringify({status:button.dataset.status})});await detail(selected);await refresh();}catch(error){fail(error);button.disabled=false;}});
@@ -276,6 +280,12 @@ class LocalWeb:
                     if route.path == "/api/sources" and not query:
                         from .source_status import source_status
                         return self.reply(200, source_status(app.root, app.namespace))
+                    if route.path == "/api/advisories":
+                        if set(query) - {"limit"}:
+                            raise ValueError("unknown_advisory_filter")
+                        from .intelligence.views import public_advisories
+                        return self.reply(200, public_advisories(app.root, app.namespace,
+                            limit=int(query.get("limit", ["50"])[0])))
                     if route.path == "/api/rules" and not query:
                         from .rules.configured import load_rules
                         return self.reply(200, {"rules": load_rules(app.root), "model_calls": 0})
@@ -375,14 +385,17 @@ class LocalWeb:
                     if not 1 <= size <= 8192:
                         raise ValueError("invalid_body_size")
                     body = self.json_body(size)
-                    if type(body) is not dict or set(body) != {"instance_id", "name", "arguments"}:
+                    if (type(body) is not dict or set(body) - {"instance_id", "name", "arguments", "source"}
+                            or not {"instance_id", "name", "arguments"}.issubset(body)
+                            or type(body.get("source", "mcp")) is not str or body.get("source", "mcp") not in {"mcp", "cli"}):
                         raise ValueError("invalid_operator_request")
                     current = app.status_provider()
                     if body["instance_id"] != current.get("instance_id"):
                         return self.error(409, "application_instance_changed")
                     if app.operator_call is None:
                         return self.error(503, "application_operator_unavailable")
-                    return self.reply(200, app.operator_call(body["name"], body["arguments"]))
+                    return self.reply(200, app.operator_call(body["name"], body["arguments"], source=body["source"])
+                                      if "source" in body else app.operator_call(body["name"], body["arguments"]))
                 except (ValueError, TypeError, UnicodeError):
                     self.error(400, "invalid_operator_request")
                 except (OSError, RuntimeError):

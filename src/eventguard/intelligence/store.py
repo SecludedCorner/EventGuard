@@ -31,7 +31,7 @@ class IntelligenceCapacityError(IntelligenceError):
 StoreError = IntelligenceError
 CapacityError = IntelligenceCapacityError
 _ID = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
-_STATUSES = {"success", "not_modified", "failed"}
+_STATUSES = {"success", "not_modified", "partial", "failed"}
 CHANGE_REASONS = frozenset({"possible_relevance", "fix_available", "exploitation_confirmed", "exposure_changed", "withdrawn", "source_stale", "recovered"})
 
 
@@ -130,6 +130,29 @@ def _assertion_id(record):
     return _hash({"component": record.get("component"), "ecosystem": record.get("ecosystem")})
 
 
+def _merge_source_records(previous, incoming):
+    """Overlay valid partial assertions, preserving every absent cached CVE."""
+    result = list(previous)
+    for record in incoming:
+        if not isinstance(record, dict):
+            raise IntelligenceError("invalid_partial_record")
+        identifiers = record.get("ids", []) + record.get("aliases", [])
+        if not identifiers or any(not isinstance(value, str) for value in identifiers):
+            raise IntelligenceError("invalid_partial_record")
+        identifiers = {value.upper() for value in identifiers}
+        assertion = _assertion_id(record)
+        matches = [index for index, old in enumerate(result) if isinstance(old, dict)
+                   and _assertion_id(old) == assertion
+                   and identifiers.intersection(value.upper() for value in old.get("ids", []) + old.get("aliases", []) if isinstance(value, str))]
+        if matches:
+            result[matches[0]] = record
+            for index in reversed(matches[1:]):
+                del result[index]
+        else:
+            result.append(record)
+    return result
+
+
 def source_identity(source):
     """Cache identity excludes wait/retry/display policy, not adapter settings."""
     policy = {"interval_seconds", "stale_after_seconds", "timeout_seconds", "max_bytes", "failure_threshold", "important", "enabled"}
@@ -148,6 +171,8 @@ def _current_assertion(item, source, now):
     if source is None:
         reasons.add("source_state_missing")
     else:
+        if source.get("has_partial_cache") or source.get("status") == "partial":
+            reasons.add("source_evidence_partial")
         if source["config"].get("enabled", True) is False:
             reasons.add("source_tracking_disabled")
         if source["last_success"] is None:
@@ -262,7 +287,8 @@ class IntelligenceStore:
                   failures INTEGER NOT NULL, status TEXT NOT NULL,
                   error_code TEXT, etag TEXT, last_modified TEXT, content_hash TEXT,
                   cached_records TEXT NOT NULL DEFAULT '[]', alert_state TEXT NOT NULL DEFAULT 'fresh',
-                  cache_config TEXT NOT NULL DEFAULT '{}');
+                  cache_config TEXT NOT NULL DEFAULT '{}', partial_records TEXT NOT NULL DEFAULT '[]',
+                  item_errors TEXT NOT NULL DEFAULT '[]');
                 CREATE TABLE IF NOT EXISTS cases(
                   case_id TEXT PRIMARY KEY, record TEXT NOT NULL, assessment TEXT NOT NULL,
                   semantic_hash TEXT NOT NULL, created REAL NOT NULL, updated REAL NOT NULL);
@@ -281,6 +307,9 @@ class IntelligenceStore:
             if "cache_config" not in {row[1] for row in db.execute("PRAGMA table_info(sources)")}:
                 db.execute("ALTER TABLE sources ADD COLUMN cache_config TEXT NOT NULL DEFAULT '{}'")
                 db.execute("UPDATE sources SET cache_config=config WHERE last_success IS NOT NULL")
+            for column in ("partial_records", "item_errors"):
+                if column not in {row[1] for row in db.execute("PRAGMA table_info(sources)")}:
+                    db.execute("ALTER TABLE sources ADD COLUMN " + column + " TEXT NOT NULL DEFAULT '[]'")
             if "assertion_id" not in {row[1] for row in db.execute("PRAGMA table_info(case_sources)")}:
                 db.execute("ALTER TABLE case_sources RENAME TO case_sources_legacy")
                 db.execute("CREATE TABLE case_sources(case_id TEXT NOT NULL,source_id TEXT NOT NULL,assertion_id TEXT NOT NULL,record TEXT NOT NULL,assessment TEXT NOT NULL,last_seen REAL NOT NULL,PRIMARY KEY(case_id,source_id,assertion_id))")
@@ -349,22 +378,35 @@ class IntelligenceStore:
             return None
         config = json.loads(row["config"])
         cache_config = json.loads(row["cache_config"])
-        cache_matches = row["last_success"] is not None and source_identity(config) == source_identity(cache_config)
+        # Read-only access to pre-migration databases remains supported.
+        partial = json.loads(row["partial_records"]) if "partial_records" in row.keys() else []
+        errors = json.loads(row["item_errors"]) if "item_errors" in row.keys() else []
+        complete_matches = row["last_success"] is not None and source_identity(config) == source_identity(cache_config)
+        cache_matches = complete_matches or bool(partial)
         last_success = row["last_success"]
         stale_after = _number(config, "stale_after_seconds", 86400)
-        freshness = "unknown" if not cache_matches or last_success is None or now < last_success else ("stale" if now - last_success >= stale_after else "fresh")
+        freshness = "unknown" if not complete_matches or last_success is None or now < last_success else ("stale" if now - last_success >= stale_after else "fresh")
+        if partial or row["status"] == "partial":
+            freshness = "stale" if freshness == "stale" else "unknown"
+        conditional = complete_matches and not partial and row["status"] != "partial"
+        # Preserve the old evidence projection on configuration failure. The
+        # cached_records() accessor still refuses a mismatched binding.
+        complete = json.loads(row["cached_records"]) if complete_matches or not partial else []
         return {
             "source_id": row["source_id"], "status": row["status"],
             "last_attempt": _iso(row["last_attempt"]) if row["last_attempt"] is not None else None,
             "last_success": _iso(last_success) if last_success is not None else None,
             "last_success_at": _iso(last_success) if last_success is not None else None,
             "next_fetch_at": _iso(row["next_fetch"]), "consecutive_failures": row["failures"],
-            "error_code": row["error_code"], "etag": row["etag"] if cache_matches else None, "last_modified": row["last_modified"] if cache_matches else None,
+            "error_code": row["error_code"], "etag": row["etag"] if conditional else None, "last_modified": row["last_modified"] if conditional else None,
             "content_hash": row["content_hash"], "freshness": freshness,
-            "cached_records": json.loads(row["cached_records"]), "alert_state": row["alert_state"],
+            "cached_records": _merge_source_records(complete, partial), "alert_state": row["alert_state"],
             "config": config, "cache_config": cache_config, "cache_matches_config": cache_matches,
+            "has_partial_cache": bool(partial), "partial_record_count": len(partial), "item_errors": errors,
+            "coverage": "partial" if partial or row["status"] == "partial" else "failed" if row["status"] == "failed" else "success",
+            "conditional_cache_allowed": conditional,
             "configuration_fingerprint": source_identity(config),
-            "cache_status": "available" if cache_matches else "disabled_old_cache" if row["last_success"] is not None else "empty",
+            "cache_status": "partial" if partial else "available" if cache_matches else "disabled_old_cache" if row["last_success"] is not None else "empty",
         }
 
     def source_state(self, source_id, now=None):
@@ -422,8 +464,16 @@ class IntelligenceStore:
         threshold = _number(source, "failure_threshold", 3, 1, 1000)
         config = _json(source, 65536)
         error = result.get("error_code")
+        if status == "partial" and error is None:
+            error = "partial_parse"
         if error is not None:
             _identifier(error)
+        item_errors = result.get("item_errors", [])
+        if (not isinstance(item_errors, list) or len(item_errors) > 513
+                or any(not isinstance(item, dict) or set(item) != {"index", "reason"}
+                       or type(item["index"]) is not int or not -1 <= item["index"] < 512
+                       or not isinstance(item["reason"], str) or not _ID.fullmatch(item["reason"]) for item in item_errors)):
+            raise IntelligenceError("invalid_source_item_errors")
         for key in ("etag", "last_modified", "content_hash"):
             value = result.get(key)
             if value is not None and (not isinstance(value, str) or len(value) > 2048 or any(ord(ch) < 32 for ch in value)):
@@ -433,35 +483,52 @@ class IntelligenceStore:
             cache_config = json.loads(old["cache_config"]) if old else {}
             cache_matches = old is not None and old["last_success"] is not None and source_identity(source) == source_identity(cache_config)
             same_config = old is not None and source_identity(source) == source_identity(json.loads(old["config"]))
-            failures = (old["failures"] if same_config else 0) + 1 if status == "failed" else 0
-            if status == "not_modified" and not cache_matches:
+            incomplete = status in {"failed", "partial"}
+            prior_partial = json.loads(old["partial_records"]) if old and same_config else []
+            failures = (old["failures"] if same_config else 0) + 1 if incomplete else 0
+            if status == "not_modified" and (not cache_matches or prior_partial):
                 raise IntelligenceError("not_modified_without_cached_success")
-            last_success = (old["last_success"] if old else None) if status == "failed" else stamp
+            last_success = (old["last_success"] if old else None) if incomplete else stamp
             cached = old["cached_records"] if old else "[]"
+            partial = prior_partial
             if status == "success":
                 records = result.get("records", [])
                 if not isinstance(records, list) or len(records) > self.max_records:
                     raise IntelligenceCapacityError("source_cache_capacity")
                 cached = _json(records, min(4 * 1024 * 1024, self.max_bytes // 2))
                 cache_config = source
+                partial = []
+            elif status == "partial":
+                records = result.get("records", [])
+                if not isinstance(records, list) or not records:
+                    raise IntelligenceError("invalid_partial_records")
+                partial = _merge_source_records(prior_partial, records)
+                baseline = json.loads(cached) if cache_matches else []
+                if len(_merge_source_records(baseline, partial)) > self.max_records:
+                    raise IntelligenceCapacityError("source_cache_capacity")
+            if status in {"success", "not_modified"}:
+                item_errors = []
+            elif not item_errors and old and same_config:
+                item_errors = json.loads(old["item_errors"])
+            partial_json = _json(partial, min(4 * 1024 * 1024, self.max_bytes // 2))
             retry = _number(result, "retry_after_seconds", 0, 0)
-            delay = max(interval, retry) if status != "failed" else max(interval, retry, min(interval * 2 ** min(failures - 1, 10), 86400))
+            delay = max(interval, retry) if not incomplete else max(interval, retry, min(interval * 2 ** min(failures - 1, 10), 86400))
             alert = old["alert_state"] if same_config else "fresh"
-            stale = source.get("important", True) is not False and status == "failed" and (failures >= threshold or (cache_matches and last_success is not None and stamp - last_success >= stale_after))
+            stale = source.get("important", True) is not False and incomplete and (failures >= threshold or (cache_matches and last_success is not None and stamp - last_success >= stale_after))
             if stale and alert != "stale":
                 self._change(db, "intel-source-" + hashlib.sha256(source_id.encode("ascii")).hexdigest()[:32],
                              "source_stale", _hash({"state": "stale", "cycle": stamp}), stamp)
                 alert = "stale"
-            elif status != "failed" and alert == "stale":
+            elif not incomplete and alert == "stale":
                 if source.get("important", True) is not False:
                     self._change(db, "intel-source-" + hashlib.sha256(source_id.encode("ascii")).hexdigest()[:32],
                                  "recovered", _hash({"state": "fresh", "cycle": stamp}), stamp, "info", "ok")
                 alert = "fresh"
-            values = [result.get(key) if result.get(key) is not None else (old[key] if old and (cache_matches or status == "failed") else None)
+            values = [(old[key] if old else None) if incomplete else result.get(key) if result.get(key) is not None else (old[key] if old and cache_matches else None)
                       for key in ("etag", "last_modified", "content_hash")]
-            db.execute("INSERT OR REPLACE INTO sources VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            db.execute("INSERT OR REPLACE INTO sources VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                        (source_id, config, stamp, last_success, stamp + delay, failures, status, error,
-                        *values, cached, alert, _json(cache_config, 65536)))
+                        *values, cached, alert, _json(cache_config, 65536), partial_json, _json(item_errors, 65536)))
 
     def _resolve(self, db, case_id):
         seen = set()

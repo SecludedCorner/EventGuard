@@ -6,6 +6,7 @@ account state, native collection, installation or formal monitor is touched.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 import hashlib
 import http.client
 import importlib.util
@@ -145,10 +146,45 @@ class ApplicationStdioTests(unittest.TestCase):
         self.assertFalse(receipt["forcibly_terminated"], receipt)
         self.assertFalse(any(reader.is_alive() for reader in client.readers))
 
+    @contextmanager
+    def running_application(self):
+        """The fixture owner is independent from every MCP adapter process."""
+        app = Application(self.root, port=0, fixture=FIXTURE, max_cycles=100000,
+                          notifications=False, auto_start=False, mcp_enabled=False)
+        ready = threading.Event()
+        outcomes, failures = [], []
+        def run():
+            try:
+                outcomes.append(app.run(max_seconds=75, announce=lambda _value: ready.set()))
+            except BaseException as error:
+                failures.append(type(error).__name__)
+                ready.set()
+        worker = threading.Thread(target=run, name="fixture-independent-application", daemon=True)
+        try:
+            worker.start()
+            self.assertTrue(ready.wait(20))
+            self.assertEqual(failures, [])
+            self.assertTrue(worker.is_alive())
+            yield app, worker, outcomes
+        finally:
+            try:
+                if worker.is_alive() and not app.cancel.is_set():
+                    app.monitor_control("shutdown", source="system", operation_id="independent-test-cleanup")
+            finally:
+                app.cancel.set()
+                if worker.ident is not None:
+                    worker.join(timeout=25)
+                else:
+                    app.web.close()
+                self.assertFalse(worker.is_alive())
+                self.assertEqual(failures, [])
+                self.assertEqual(len(outcomes), 1)
+                self.assertEqual(outcomes[0]["state"], "stopped", outcomes)
+
     def initialize_idle(self, client):
         tools = client.initialize()
         self.assertEqual({tool["name"] for tool in tools}, APPLICATION_TOOLS)
-        self.assertEqual(len(tools), 9)
+        self.assertEqual(len(tools), 10)
         self.assertNotIn("ack_event", {tool["name"] for tool in tools})
         value = client.call("status")
         self.assertEqual(value["namespace"], "test")
@@ -175,37 +211,52 @@ class ApplicationStdioTests(unittest.TestCase):
         finally:
             connection.close()
 
-    def test_owned_idle_stdio_start_stop_read_and_eof_preserve_pending(self):
+    def test_cold_observer_late_binding_start_stop_and_eof_preserve_pending(self):
         client = ApplicationClient(self.root)
         initial = None
+        monitor_stop = None
         try:
-            initial = self.initialize_idle(client)
-            self.assertEqual(client.call("list_events")["events"][0]["event_id"], self.event["event_id"])
-            started = client.call("start_monitor", operation_id="stdio-start")
-            self.assertEqual(started["state"], "running", started)
-            stopped = client.call("stop_monitor", operation_id="stdio-stop")
-            self.assertEqual(stopped["state"], "stopped", stopped)
-            self.assertFalse(stopped.get("forcibly_terminated"), stopped)
-            current = client.call("status")
-            self.assertEqual(current["instance_id"], initial["instance_id"])
-            self.assertEqual(current["monitor_state"], "stopped")
-            self.assertTrue(current["monitor_controls"]["can_start"])
-            detail = client.call("inspect_event", event_id=self.event["event_id"])
-            self.assertEqual(detail["event_id"], self.event["event_id"])
-            self.assertEqual(detail["delivery_status"], "pending")
+            self.assertEqual({tool["name"] for tool in client.initialize()}, APPLICATION_TOOLS)
+            cold = client.call("status")
+            self.assertEqual(cold["state"], "blocked")
+            self.assertEqual(cold["reason"], "application_not_running")
+            self.assertEqual(cold["instance_id"], "unbound")
+            self.assertEqual(cold["namespace"], "test")
+            self.assertEqual(client.call("start_monitor", operation_id="no-app")["state"], "blocked")
+            self.assertFalse((self.root / "data/application").exists())
+            self.assertFalse((self.root / "data/background").exists())
+            with self.running_application() as (app, worker, outcomes):
+                initial = client.call("status")  # Explicit metadata binds the later App.
+                self.assertEqual(initial["instance_id"], app.instance_id)
+                self.assertEqual(initial["namespace"], app.namespace)
+                self.assertEqual(initial["monitor_state"], "stopped")
+                self.assertEqual(client.call("list_events")["events"][0]["event_id"], self.event["event_id"])
+                started = client.call("start_monitor", operation_id="stdio-start")
+                self.assertEqual(started["state"], "running", started)
+                stopped = client.call("stop_monitor", operation_id="stdio-stop")
+                self.assertEqual(stopped["state"], "stopped", stopped)
+                self.assertFalse(stopped.get("forcibly_terminated"), stopped)
+                current = client.call("status")
+                self.assertEqual(current["instance_id"], initial["instance_id"])
+                self.assertEqual(current["monitor_state"], "stopped")
+                self.assertTrue(current["monitor_controls"]["can_start"])
+                detail = client.call("inspect_event", event_id=self.event["event_id"])
+                self.assertEqual(detail["event_id"], self.event["event_id"])
+                self.assertEqual(detail["delivery_status"], "pending")
+                client.close()
+                self.assert_natural(client)
+                self.assertTrue(worker.is_alive(), "EOF closes the adapter, not the App")
+                self.assertFalse(app.cancel.is_set())
+                self.assertEqual(self.http(app.web.url, "GET", "/api/status")[0], 200)
+                monitor_stop = read_json(self.root / "data/background/operator-stop-receipt.json")
         finally:
             client.close()
-            self.evidence = {"scope": "real Windows owned stdio SDK/CLI and synthetic fixture; no agent/model/native sources",
-                "case": "new_idle_owned_application", "instance_id": initial.get("instance_id") if initial else None,
+            self.evidence = {"scope": "real Windows observer stdio and independent fixture App; no agent/model/native sources",
+                "case": "cold_observer_late_binding", "instance_id": initial.get("instance_id") if initial else None,
                 "event_id": self.event["event_id"], "stdio_process": client.receipt,
                 "protocol": client.transcript, "model_calls": 0, "native_provider_queries": 0}
         self.assert_natural(client)
-        exit_receipt = read_json(self.root / "data/application/stdio-exit.json")
-        self.assertEqual(exit_receipt["instance_id"], initial["instance_id"])
-        self.assertTrue(exit_receipt["owned_application"])
-        self.assertTrue(exit_receipt["application_thread_exited"])
-        self.assertEqual(exit_receipt["state"], "closed")
-        monitor_stop = read_json(self.root / "data/background/operator-stop-receipt.json")
+        self.assertFalse((self.root / "data/application/stdio-exit.json").exists())
         self.assertFalse(monitor_stop["forcibly_terminated"], monitor_stop)
         self.assertTrue(monitor_stop["child_exited"], monitor_stop)
         self.assertEqual(len(monitor_stop["results"]), 1)
@@ -215,7 +266,7 @@ class ApplicationStdioTests(unittest.TestCase):
         self.assertFalse(process["forcibly_terminated"], monitor_stop)
         self.assertEqual(self.store.get_event(self.event["event_id"])["delivery_status"], "pending")
         self.assertEqual(self.store.stats()["receipt_count"], 0)
-        self.evidence.update(owned_application_exit=exit_receipt, monitor_stop=monitor_stop,
+        self.evidence.update(application_exit=outcomes, monitor_stop=monitor_stop,
                              pending_retained=True, ack_count=0)
 
     def test_observer_stdio_attaches_same_gui_instance_and_eof_does_not_stop_it(self):
@@ -230,7 +281,7 @@ class ApplicationStdioTests(unittest.TestCase):
                 failures.append(type(error).__name__)
                 ready.set()
         worker = threading.Thread(target=run, name="fixture-existing-gui", daemon=True)
-        client = None
+        client, reconnected = None, None
         try:
             worker.start()
             self.assertTrue(ready.wait(20))
@@ -245,6 +296,8 @@ class ApplicationStdioTests(unittest.TestCase):
             self.assertFalse(changed["ack_performed"])
             self.assertEqual(app.event_detail(self.event["event_id"])["status"], "read")
             self.assertGreater(app.status()["state_revision"], before["state_revision"])
+            started = client.call("start_monitor", operation_id="observer-independent-start")
+            self.assertEqual(started["state"], "running", started)
             client.close()
             self.assert_natural(client)
             self.assertTrue(worker.is_alive(), "Observer EOF must not close the GUI")
@@ -252,12 +305,25 @@ class ApplicationStdioTests(unittest.TestCase):
             code, after = self.http(app.web.url, "GET", "/api/status")
             self.assertEqual(code, 200, after)
             self.assertEqual(after["instance_id"], app.instance_id)
-            self.assertEqual(after["monitor_state"], "stopped")
+            self.assertEqual(after["monitor_state"], "running", "EOF must also preserve the application's collector")
             self.assertFalse((self.root / "data/application/stdio-exit.json").exists(), "Observer must not claim owned application exit")
+            reconnected = ApplicationClient(self.root)
+            self.assertEqual({tool["name"] for tool in reconnected.initialize()}, APPLICATION_TOOLS)
+            reopened = reconnected.call("status")
+            self.assertEqual(reopened["instance_id"], initial["instance_id"])
+            self.assertEqual(reopened["namespace"], initial["namespace"])
+            self.assertEqual(reopened["monitor_state"], "running")
+            self.assertEqual(reconnected.call("inspect_event", event_id=self.event["event_id"])["status"], "read")
+            reconnected.close()
+            self.assert_natural(reconnected)
+            self.assertTrue(worker.is_alive(), "All observer EOFs must leave the App alive")
+            self.assertEqual(app.status()["monitor_state"], "running")
         finally:
             try:
                 if client is not None:
                     client.close()
+                if reconnected is not None:
+                    reconnected.close()
             finally:
                 try:
                     app.monitor_control("shutdown", source="system", operation_id="observer-test-cleanup")
@@ -268,6 +334,8 @@ class ApplicationStdioTests(unittest.TestCase):
                     self.evidence = {"scope": "real Windows observer stdio forwards to existing fixture GUI; no model/native sources",
                         "case": "observer_eof_keeps_gui", "instance_id": app.instance_id, "event_id": self.event["event_id"],
                         "stdio_process": client.receipt if client else None, "protocol": client.transcript if client else [],
+                        "reconnected_process": reconnected.receipt if reconnected else None,
+                        "reconnected_protocol": reconnected.transcript if reconnected else [],
                         "application": outcomes, "application_thread_exited": not worker.is_alive(),
                         "failures": failures, "model_calls": 0, "native_provider_queries": 0}
                     if worker.ident is None:
@@ -276,6 +344,8 @@ class ApplicationStdioTests(unittest.TestCase):
         self.assertEqual(failures, [])
         self.assertEqual(len(outcomes), 1)
         self.assertEqual(outcomes[0]["state"], "stopped", outcomes)
+        self.assertTrue(outcomes[0]["monitor"]["child_exited"], outcomes)
+        self.assertFalse(outcomes[0]["monitor"]["forcibly_terminated"], outcomes)
         self.assertEqual(self.store.get_event(self.event["event_id"])["delivery_status"], "pending")
         self.assertEqual(self.store.stats()["receipt_count"], 0)
 
@@ -440,39 +510,48 @@ class ApplicationStdioTests(unittest.TestCase):
         self.assertEqual(self.store.stats()["receipt_count"], 0)
         self.evidence.update(pending_retained=True, ack_count=0)
 
-    def test_owned_gui_shutdown_exits_stdio_while_stdin_remains_open(self):
-        client = ApplicationClient(self.root)
+    def test_application_shutdown_keeps_observer_open_for_later_metadata_rebind(self):
+        client = None
         initial = None
-        stdin_open_exit_verified = False
+        replacement = None
+        first_outcomes, next_outcomes = [], []
         try:
-            initial = self.initialize_idle(client)
-            # This capability belongs only to the newly created synthetic app.
-            # Never retain it in transcripts/evidence or read an account secret.
-            descriptor = read_json(self.root / "data/application/connection.json")
-            self.assertEqual(descriptor["instance_id"], initial["instance_id"])
-            self.assertEqual(descriptor["namespace"], "test")
-            code, result = self.http(descriptor["url"], "POST", "/api/monitor/shutdown", {},
-                                     token=descriptor["control_token"])
-            self.assertEqual(code, 200, result)
-            self.assertEqual(result["state"], "shutdown_requested")
-            self.assertFalse(client.child.stdin.closed)
-            self.assertEqual(client.child.wait(timeout=20), 0, "Owner-exit watchdog must not wait for stdin EOF")
-            self.assertFalse(client.child.stdin.closed)
-            stdin_open_exit_verified = True
+            with self.running_application() as (app, worker, first_outcomes):
+                client = ApplicationClient(self.root)
+                initial = self.initialize_idle(client)
+                result = client.call("shutdown_application", operation_id="observer-shutdown")
+                self.assertEqual(result["state"], "shutdown_requested")
+                self.assertEqual(result["last_action"]["source"], "mcp")
+                worker.join(timeout=25)
+                self.assertFalse(worker.is_alive())
+                self.assertFalse(client.child.stdin.closed)
+                self.assertIsNone(client.child.poll(), "Independent observer waits for requests, not App lifetime")
+                absent = client.call("status")
+                self.assertEqual(absent["state"], "blocked")
+                self.assertFalse(absent["automatic_retry_allowed"])
+                with self.running_application() as (new_app, new_worker, next_outcomes):
+                    replacement = client.call("status")
+                    self.assertEqual(replacement["instance_id"], new_app.instance_id)
+                    self.assertNotEqual(replacement["instance_id"], initial["instance_id"])
+                    self.assertEqual(replacement["namespace"], initial["namespace"])
+                    blocked = client.call("shutdown_application", operation_id="observer-shutdown")
+                    self.assertEqual(blocked["reason"], "operation_instance_conflict")
+                    self.assertTrue(new_worker.is_alive())
+                    self.assertFalse(new_app.cancel.is_set())
+                    self.assertEqual(client.call("inspect_event", event_id=self.event["event_id"])["delivery_status"], "pending")
         finally:
-            client.close()
-            self.evidence = {"scope": "real Windows owned stdio and GUI shutdown with stdin held open; synthetic only",
-                "case": "owner_shutdown_stdin_open", "instance_id": initial.get("instance_id") if initial else None,
-                "stdin_open_exit_verified": stdin_open_exit_verified, "stdio_process": client.receipt,
-                "protocol": client.transcript, "model_calls": 0, "native_provider_queries": 0}
+            if client is not None:
+                client.close()
+            self.evidence = {"scope": "real Windows observer stdio survives independent fixture App shutdown; no model/native sources",
+                "case": "observer_rebind_after_app_shutdown", "instance_id": initial.get("instance_id") if initial else None,
+                "replacement_instance": replacement.get("instance_id") if replacement else None,
+                "stdio_process": client.receipt if client else None,
+                "protocol": client.transcript if client else [], "application_exits": [first_outcomes, next_outcomes],
+                "model_calls": 0, "native_provider_queries": 0}
         self.assert_natural(client)
-        self.assertTrue(stdin_open_exit_verified)
-        exit_receipt = read_json(self.root / "data/application/stdio-exit.json")
-        self.assertEqual(exit_receipt["state"], "closed")
-        self.assertTrue(exit_receipt["application_thread_exited"])
+        self.assertFalse((self.root / "data/application/stdio-exit.json").exists())
         self.assertFalse((self.root / "data/background/control.json").exists())
         self.assertEqual(EventCatalog(self.root, "test").detail(self.event["event_id"])["delivery_status"], "pending")
-        self.evidence["owned_application_exit"] = exit_receipt
 
 
 if __name__ == "__main__":

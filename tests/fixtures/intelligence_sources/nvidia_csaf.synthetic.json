@@ -1,0 +1,50 @@
+{
+  "_eventguard_fixture": "Self-authored synthetic CSAF contract. No NVIDIA bulletin text is copied.",
+  "document": {
+    "category": "csaf_security_advisory",
+    "csaf_version": "2.0",
+    "publisher": {
+      "category": "vendor",
+      "name": "Synthetic publisher label",
+      "namespace": "https://www.nvidia.com/security"
+    },
+    "title": "Synthetic widget advisory",
+    "tracking": {
+      "id": "5903",
+      "status": "final",
+      "version": "1.0.0",
+      "initial_release_date": "2026-10-01T00:00:00Z",
+      "current_release_date": "2026-10-02T00:00:00Z",
+      "revision_history": [
+        {"date": "2026-10-01T00:00:00Z", "number": "1.0.0", "summary": "Synthetic initial revision"}
+      ]
+    }
+  },
+  "product_tree": {
+    "branches": [
+      {
+        "category": "vendor",
+        "name": "Synthetic vendor",
+        "branches": [
+          {
+            "category": "product_name",
+            "name": "Synthetic widget",
+            "branches": [
+              {"category": "product_version", "name": "Synthetic widget", "product": {"product_id": "widget-old", "name": "0-1.0.0"}},
+              {"category": "product_version", "name": "Synthetic widget", "product": {"product_id": "widget-fixed", "name": "2.0.0"}},
+              {"category": "product_name", "name": "Synthetic widget", "product": {"product_id": "widget-unspecified", "name": "Synthetic widget"}}
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "vulnerabilities": [
+    {
+      "cve": "CVE-2099-90001",
+      "release_date": "2026-10-02T00:00:00Z",
+      "product_status": {"known_affected": ["widget-old"], "fixed": ["widget-fixed"]},
+      "remediations": [{"category": "vendor_fix", "details": "Synthetic prose must never run."}]
+    }
+  ]
+}

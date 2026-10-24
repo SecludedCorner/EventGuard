@@ -112,10 +112,11 @@ def command(codex, python, source, state, event_id, evidence, *, allow_live=Fals
             "-c", "features.unbounded_connection_retries=false",
             "-c", "sqlite_home=" + json.dumps(str(evidence / "codex-state")),
             "-c", "log_dir=" + json.dumps(str(evidence / "codex-log")), "-c", config,
-            # Both project human/chat servers are unrelated to this event-bound
+            # Project human/chat/application servers are unrelated to this event-bound
             # CLI task. --ignore-user-config does not omit project configuration.
             "-c", "mcp_servers.eventguard_test.enabled=false",
-            "-c", "mcp_servers.eventguard.enabled=false", "-"]
+            "-c", "mcp_servers.eventguard.enabled=false",
+            "-c", "mcp_servers.eventguard-app.enabled=false", "-"]
 
 
 def _assess_delivery(trace, evidence, event_id, exit_code, acknowledged, require_ack=True):

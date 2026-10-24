@@ -2,18 +2,24 @@
 
 先讀 AGENTS、README、STATUS。目前優先交付可獨立使用的無模型產品閉環，再銜接模型。一般使用者。核心只用標準庫。
 
-本輪接續無模型 MCP／GUI 同一 Application 操作閉環。本批基底 `d23c7d3`。
-Goal 已由統合者更新為 active。本 session 的 get_goal 已核對，不重建另一個目標。
-新增入口與同實例契約見 [APPLICATION_MCP](docs/APPLICATION_MCP.md)。
-`run --idle` 不採集；`mcp --allow-live` 先接已有 GUI，否則只開閒置應用。
-本輪操作閉環已驗。失敗與成功證據均在 `reports/application-mcp-001`；命令與測試數只見 EVIDENCE。
-最終來源已驗真 SSE／stdio、雙 client busy／replay、同實例 GUI、重啟保存及自然退出。
-`eventguard-app` 已註冊；已用完整命令做 live 操作 metadata 探測，未讀正式事件或採集。
-本聊天隨後自動載入九工具，原生 capabilities／status 已成功。不要求使用者重啟。
-原生正式 instance `a3b57a57573849249ec9c7196ae3c1ad` 保持 stopped，網址 `http://127.0.0.1:53573`。
-這是閒置控制應用，不是 agent host 或正式監看。其餘測試程序均已退出。
-Application lease 保留到 Web／SDK／自有採集均確認退出；回條失敗不宣稱成功。
-SSE 只清理自身 Event；stdio 只輪詢自身 stdin。不得改 site-packages 或接管外來 transport。
+目前 active goal 已擴為獨立產品、耐久事件與公開事件入口研究。本批基底 `9903ad5574e80666eb379652e7f4154d111c14b3`。
+不要因舊 MCP 階段完成而把整個目標標 complete。
+
+- Application 是唯一 owner。`run --idle` 開閒置應用；`run` 明確開始採集。
+- stdio 一律 Remote observer。冷啟動只列工具，沒有 App 時 blocked。不再讓 EOF 關閉 App。
+- CLI `app status/start/pause/resume/stop/shutdown`、GUI 與十個 MCP 工具共用同一實例。
+- status/capabilities 可重新核對同 root/namespace 的新 instance；mutation 不自動轉往新 instance。舊 operation ID 仍 fenced。
+- 通知先保存 prepared，再呼叫 sink，再保存 accepted。回條不明保留 prepared，顯示 unknown，不自動重送。這不 ACK 事件。
+- NVIDIA CSAF 範例預設 disabled。partial 不覆蓋完整快取，後續304不能提升成功。版本標籤不當通用SemVer。
+- 公開公告投影接入 status、GUI及公告事件詳情。原始 inventory/facts/path/PID/evidence 不進投影。七欄自動模型profile不變。
+- 十類自寫對抗文字只作資料。來源與模型文字不能變成操作授權。
+- 公開 Codex 入口研究見 [AGENT_EVENT_DRIVEN](docs/AGENT_EVENT_DRIVEN.md)。桌面閒置喚醒仍未驗證。
+- OpenOctopus 協定見 [OPENOCTOPUS_EVENT_PROTOCOL](docs/OPENOCTOPUS_EVENT_PROTOCOL.md)。是可拆工提案，不是外專案已實作。
+
+本批整合測試結果與命令只見 EVIDENCE。不得把 AST檢查或未執行測試算通過。
+舊 `reports/application-mcp-001` 是前版九工具/owner語義的歷史證據；本批生命週期以新程式與新測試為準。
+本批沒有啟用正式監看、模型、預算bootstrap、排程、proxy或新登入。不要求使用者重開Codex。
+保留 .codex-remote-attachments/ 與 docs/research/；不提交執行資料、不推送。
 
 ## 前版資料保存與來源修正
 

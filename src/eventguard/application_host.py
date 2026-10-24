@@ -9,9 +9,8 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import sys
 import threading
-import time
+from collections import OrderedDict
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, build_opener, ProxyHandler, HTTPRedirectHandler
 
@@ -131,24 +130,72 @@ class _NoRedirect(HTTPRedirectHandler):
 
 
 class RemoteApplication:
-    """Stdio compatibility forwards to the exact live GUI instance, no owner."""
+    """Observer of one root/namespace; it never creates or owns an app.
+
+    An absent application uses the explicit ``unbound`` marker. Tool discovery
+    remains available. Only a metadata read may bind to a later application.
+    """
 
     def __init__(self, root, namespace, *, expected_instance_id=None):
         self.runtime = Runtime(root)
+        if namespace not in {"live", "test"}:
+            raise ValueError("invalid_application_namespace")
         self.namespace = namespace
-        record = connection(self.runtime, self.namespace)
-        if record is None or (expected_instance_id is not None and expected_instance_id != record["instance_id"]):
-            raise ApplicationHostError("application_connection_changed")
-        self._instance_id = record["instance_id"]
+        self._instance_id = "unbound"
+        self._binding_lock = threading.Lock()
+        self._operation_instances = OrderedDict()
         self.opener = build_opener(ProxyHandler({}), _NoRedirect())
+        try:
+            record = connection(self.runtime, self.namespace)
+        except ApplicationHostError:
+            if expected_instance_id is not None:
+                raise
+            # A missing, stale or invalid descriptor must not prevent MCP tool
+            # discovery. Reads report its fixed reason without writing runtime.
+            record = None
+        if expected_instance_id is not None and (record is None or expected_instance_id != record["instance_id"]):
+            raise ApplicationHostError("application_connection_changed")
+        if record is not None:
+            self._instance_id = record["instance_id"]
 
-    def _call(self, name, arguments):
+    def refresh_binding(self):
+        """Explicit metadata read may observe a replacement in this same root.
+
+        Mutation never refreshes. It still checks this exact identity before
+        issuing HTTP and never retries an uncertain result on a new instance.
+        """
         record = connection(self.runtime, self.namespace)
-        if record is None or record["instance_id"] != self._instance_id:
-            return {"state": "blocked", "reason": "application_instance_changed", "namespace": self.namespace,
-                    "instance_id": self._instance_id,
+        if record is None:
+            return False  # _call reports blocked; never create a new owner.
+        with self._binding_lock:
+            self._instance_id = record["instance_id"]
+        return True
+
+    def _call(self, name, arguments, source="mcp"):
+        from .application_mcp import validate_application_tool
+        if type(source) is not str or source not in {"mcp", "cli"}:
+            raise ValueError("invalid_application_proxy_source")
+        validate_application_tool(name, arguments)
+        try:
+            record = connection(self.runtime, self.namespace)
+        except ApplicationHostError as error:
+            return {"state": "blocked", "reason": str(error), "namespace": self.namespace,
+                    "instance_id": self.instance_id, "automatic_retry_allowed": False, "model_calls": 0}
+        if record is None or record["instance_id"] != self.instance_id:
+            return {"state": "blocked", "reason": "application_not_running" if record is None else "application_instance_changed", "namespace": self.namespace,
+                    "instance_id": self.instance_id,
                     "automatic_retry_allowed": False, "model_calls": 0}
-        body = json.dumps({"instance_id": record["instance_id"], "name": name,
+        operation = arguments.get("operation_id")
+        if name in {"start_monitor", "pause_monitor", "resume_monitor", "stop_monitor", "shutdown_application", "set_event_status"} and operation is not None:
+            with self._binding_lock:
+                old = self._operation_instances.get(operation)
+                if old is not None and old != record["instance_id"]:
+                    return {"state": "conflict", "reason": "operation_instance_conflict", "namespace": self.namespace,
+                            "instance_id": record["instance_id"], "automatic_retry_allowed": False, "model_calls": 0}
+                self._operation_instances[operation] = record["instance_id"]
+                while len(self._operation_instances) > 128:
+                    self._operation_instances.popitem(last=False)
+        body = json.dumps({"instance_id": record["instance_id"], "name": name, "source": source,
                            "arguments": arguments}, allow_nan=False).encode("utf-8")
         request = Request(record["url"] + "/api/operator", data=body, method="POST",
             headers={"Content-Type": "application/json", "Authorization": "Bearer " + record["control_token"]})
@@ -168,12 +215,14 @@ class RemoteApplication:
             # replacement instance behind the caller's back.
             return {"state": "unknown", "reason": "application_response_unconfirmed",
                     "instance_id": record["instance_id"], "namespace": self.namespace,
+                    "operation_id": operation,
                     "operation_may_have_completed": name not in {"capabilities", "status", "list_events", "inspect_event"},
                     "automatic_retry_allowed": False, "model_calls": 0}
 
     @property
     def instance_id(self):
-        return self._instance_id
+        with self._binding_lock:
+            return self._instance_id
 
     def capabilities(self):
         return self._call("capabilities", {})
@@ -182,10 +231,11 @@ class RemoteApplication:
         return self._call("status", {})
 
     def monitor_control(self, action, source="mcp", operation_id=None):
-        mapping = {"start": "start_monitor", "pause": "pause_monitor", "resume": "resume_monitor", "stop": "stop_monitor"}
-        if action not in mapping or source != "mcp":
+        mapping = {"start": "start_monitor", "pause": "pause_monitor", "resume": "resume_monitor", "stop": "stop_monitor",
+                   "shutdown": "shutdown_application"}
+        if action not in mapping or source not in {"mcp", "cli"}:
             raise ValueError("invalid_application_proxy_action")
-        return self._call(mapping[action], {} if operation_id is None else {"operation_id": operation_id})
+        return self._call(mapping[action], {} if operation_id is None else {"operation_id": operation_id}, source=source)
 
     def list_events(self, **filters):
         return self._call("list_events", filters)
@@ -194,69 +244,28 @@ class RemoteApplication:
         return self._call("inspect_event", {"event_id": event_id})
 
     def set_event_status(self, event_id, status, source="mcp", operation_id=None):
-        if source != "mcp":
+        if source not in {"mcp", "cli"}:
             raise ValueError("invalid_application_proxy_source")
         arguments = {"event_id": event_id, "status": status}
         if operation_id is not None:
             arguments["operation_id"] = operation_id
-        return self._call("set_event_status", arguments)
+        return self._call("set_event_status", arguments, source=source)
 
 
 def serve_stdio(root, *, allow_live=False, fixture=None, max_cycles=None, port=0, max_seconds=None):
-    """Attach to the existing GUI or host one idle GUI in this SDK process.
+    """Serve fixed observer tools. EOF ends only this stdio adapter.
 
-    The host owns a newly created application's lifetime. An observer's EOF
-    never closes someone else's application. No collection starts at initialize.
+    Start the independent foreground app with ``eventguard run``. A cold MCP
+    adapter still lists its tools and reports blocked until metadata can bind.
+    Legacy startup options remain accepted but never create an application.
     """
-    from .application import Application
     from .application_mcp import build_application_server
     namespace = "test" if fixture else "live"
     if namespace == "live" and allow_live is not True:
         raise ApplicationHostError("application_live_scope_not_authorized")
-    runtime = Runtime(root)
-    existing = connection(runtime, namespace)
-    application, thread = None, None
-    results, failures = [], []
-    done = threading.Event()
-    try:
-        if existing is None:
-            application = Application(root, port=port, fixture=fixture, max_cycles=max_cycles,
-                                      notifications=False, auto_start=False, mcp_enabled=True)
-            ready = threading.Event()
-
-            def run():
-                try:
-                    results.append(application.run(max_seconds=max_seconds, announce=lambda _value: ready.set()))
-                except BaseException:
-                    failures.append("application_start_failed")
-                    ready.set()
-                finally:
-                    done.set()
-
-            thread = threading.Thread(target=run, name="eventguard-stdio-application")
-            thread.start()
-            if not ready.wait(30) or failures or done.is_set():
-                raise ApplicationHostError("application_start_unconfirmed")
-            target = application
-        else:
-            target = RemoteApplication(root, namespace, expected_instance_id=existing["instance_id"])
-        server = build_application_server(target)
-        from .application_stdio import application_stdio_server
-        server.stdio_streams_factory = lambda: application_stdio_server(done if application is not None else None)
-        if application is not None:
-            server.stdio_stop_event = done
-        server.run(transport="stdio")
-    finally:
-        if application is not None:
-            application.monitor_control("shutdown", source="system")
-            application.cancel.set()
-            thread.join(35)
-            clean = not thread.is_alive() and not failures and bool(results) and results[-1].get("state") == "stopped"
-            # Only bounded receipts. No token, request contents or private event.
-            atomic_json(runtime.path("data/application/stdio-exit.json"), {
-                "kind": "eventguard-application-stdio-exit-v1", "instance_id": application.instance_id,
-                "application_thread_exited": not thread.is_alive(), "owned_application": True,
-                "state": "closed" if clean else "shutdown_unconfirmed", "model_calls": 0})
-            if not clean:
-                raise ApplicationHostError("application_stdio_shutdown_unconfirmed")
+    target = RemoteApplication(root, namespace)
+    server = build_application_server(target)
+    from .application_stdio import application_stdio_server
+    server.stdio_streams_factory = application_stdio_server
+    server.run(transport="stdio")
     return 0

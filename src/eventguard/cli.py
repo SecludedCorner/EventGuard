@@ -54,12 +54,19 @@ def parser():
     run.add_argument("--no-notifications",action="store_true",help="關閉系統通知。本機頁面仍顯示高嚴重度事件。")
     run.add_argument("--idle",action="store_true",help="只開控制介面。等待明確開始採集。")
     run.add_argument("--no-mcp",action="store_true",help="不開選配MCP listener。Web仍可使用。")
-    mcp=sub.add_parser("mcp",help="本機應用MCP stdio。接已有頁面，否則只開閒置控制介面。不呼叫模型。")
+    application=sub.add_parser("app",help="操作已啟動的同一個 App。未啟動時回報 blocked，不建立新程序。")
+    appsub=application.add_subparsers(dest="app_command",required=True)
+    for action in ("status","start","pause","resume","stop","shutdown"):
+        command=appsub.add_parser(action,help="關閉 App" if action=="shutdown" else "只操作 App 的採集狀態")
+        command.add_argument("--namespace",choices=("live","test"),default="live")
+        if action!="status":
+            command.add_argument("--operation-id",help="選填。重送相同操作時沿用此識別。")
+    mcp=sub.add_parser("mcp",help="本機應用MCP observer。只連既有 App。斷線不關 App。不呼叫模型。")
     mcp.add_argument("--allow-live",action="store_true",help="明確允許正式資料範圍。不會自動採集。")
     mcp.add_argument("--fixture",help="只用tests/fixtures合成資料。")
-    mcp.add_argument("--max-cycles",type=int)
-    mcp.add_argument("--port",type=int,default=0)
-    mcp.add_argument("--max-seconds",type=float)
+    mcp.add_argument("--max-cycles",type=int,help=argparse.SUPPRESS)
+    mcp.add_argument("--port",type=int,default=0,help=argparse.SUPPRESS)
+    mcp.add_argument("--max-seconds",type=float,help=argparse.SUPPRESS)
     sub.add_parser("capabilities")
     sub.add_parser("status")
     activity=sub.add_parser("activity",help="查看EventGuard操作進度與歷史；不啟動採集或模型")
@@ -162,6 +169,14 @@ def parser():
 
 
 def execute(args,runtime,progress=None):
+    if args.command=="app":
+        from .application_host import RemoteApplication
+        application=RemoteApplication(runtime.root,args.namespace)
+        if args.app_command=="status":
+            return application.status()
+        import uuid
+        return application.monitor_control(args.app_command,source="cli",
+            operation_id=args.operation_id if args.operation_id is not None else uuid.uuid4().hex)
     if args.command=="agent":
         from . import agent_service, event_ingress
         action=args.agent_command
@@ -373,7 +388,7 @@ def main(argv=None,root=None):
             return  # Structured status/exit receipts are persisted by its owner.
         if human:
             from .presentation import render
-            operation=getattr(args,"agent_command",getattr(args,"background_command",getattr(args,"event_command",getattr(args,"source_command",""))))
+            operation=getattr(args,"app_command",getattr(args,"agent_command",getattr(args,"background_command",getattr(args,"event_command",getattr(args,"source_command","")))))
             print(render(value,args.command,operation))
         else:
             print(json.dumps(value,ensure_ascii=True,allow_nan=False))
@@ -382,11 +397,11 @@ def main(argv=None,root=None):
         result=execute(args,Runtime(root),ProgressPrinter(sys.stderr) if human and args.command=="monitor" else None)
         show(result)
         if isinstance(result,dict):
-            if args.command in {"background","run","advisories","agent"} or args.command=="stop" and "desired_enabled" in result:
+            if args.command in {"app","background","run","advisories","agent"} or args.command=="stop" and "desired_enabled" in result:
                 state=result.get("state")
                 if state=="busy":
                     return 3
-                if state in {"blocked","startup_failed","stop_not_persisted"}:
+                if state in {"blocked","startup_failed","stop_not_persisted","conflict"}:
                     return 2
                 if state in {"unknown","shutdown_unconfirmed"}:
                     return 5

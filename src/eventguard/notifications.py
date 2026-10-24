@@ -8,14 +8,18 @@ import re
 import sqlite3
 import threading
 import time
+import uuid
 
 from .runtime import Runtime, utc_now
 from .source_status import SOURCE_NAMES
 from .events.store import StoreError
+from .acceptance_control import FileLease
 
 MAX_RECEIPTS = 10000
 MAX_SCAN = 100000
 _ID = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
+_REJECTED = frozenset({"local_notifications_unavailable", "notification_window_unavailable",
+    "notification_icon_unavailable", "notification_thread_mismatch", "notification_display_failed"})
 _EVENT_NAMES = {
     "protection.changed": "防護狀態變更", "listener.changed": "監聽狀態變更",
     "persistence.changed": "持久設定變更", "coverage.degraded": "來源可見性降低",
@@ -187,8 +191,8 @@ class NotificationService:
     """One notice per poll. Existing event IDs survive process restarts.
 
     The sink accepts a fixed message mapping and must return exactly True.
-    Receipts are written only after success. A receipt write failure is visible
-    and can cause a repeat on retry; it never changes or discards the event.
+    A durable intent precedes the OS call. A crash or uncertain outcome never
+    automatically repeats it. This is not proof that a person saw a notice.
     """
 
     def __init__(self, root, namespace="live", sink=None):
@@ -238,6 +242,13 @@ class NotificationService:
             db.execute("PRAGMA synchronous=FULL")
             db.execute("PRAGMA max_page_count=512")
             db.execute("CREATE TABLE IF NOT EXISTS notified(event_id TEXT PRIMARY KEY,notified_at TEXT NOT NULL)")
+            columns = {row[1] for row in db.execute("PRAGMA table_info(notified)")}
+            # Existing successful receipts remain accepted. New intent rows
+            # have no notified_at until the OS acceptance receipt is committed.
+            for name, declaration in (("delivery_state", "TEXT NOT NULL DEFAULT 'accepted'"),
+                                      ("attempt_id", "TEXT"), ("attempted_at", "TEXT")):
+                if name not in columns:
+                    db.execute("ALTER TABLE notified ADD COLUMN " + name + " " + declaration)
         except Exception:
             db.close()
             raise
@@ -258,6 +269,83 @@ class NotificationService:
         old = [row[0] for row in db.execute("SELECT event_id FROM notified") if row[0] not in existing]
         db.executemany("DELETE FROM notified WHERE event_id=?", ((event_id,) for event_id in old))
 
+    def _discard_rejected(self, db, event_id, attempt_id):
+        db.execute("BEGIN IMMEDIATE")
+        db.execute("DELETE FROM notified WHERE event_id=? AND attempt_id=? AND delivery_state='prepared'",
+                   (event_id, attempt_id))
+        db.execute("COMMIT")
+
+    def _poll_owned(self, candidates):
+        with closing(self._open()) as db:
+            db.execute("BEGIN IMMEDIATE")
+            rows = list(db.execute("SELECT event_id,delivery_state FROM notified"))
+            if any(not isinstance(row[0], str) or not _ID.fullmatch(row[0])
+                   or row[1] not in {"prepared", "accepted"} for row in rows):
+                raise NotificationError("notification_ledger_invalid")
+            known = dict(rows)
+            unconfirmed = sum(known.get(item["event_id"]) == "prepared" for item in candidates)
+            pending = [item for item in candidates if item["event_id"] not in known]
+            if not pending:
+                db.execute("COMMIT")
+                return self._result("unknown" if unconfirmed else "idle",
+                    "notification_submission_unconfirmed" if unconfirmed else "already_notified",
+                    pending_count=unconfirmed, unconfirmed_count=unconfirmed,
+                    automatic_retry_allowed=False, display_requested=None if unconfirmed else False)
+            if time.monotonic() < self._next_display:
+                db.execute("COMMIT")
+                return self._result("pending", "notification_display_cooldown", pending_count=len(pending)+unconfirmed,
+                                    unconfirmed_count=unconfirmed)
+            if len(known) >= MAX_RECEIPTS:
+                self._prune_deleted_events(db)
+                if db.execute("SELECT COUNT(*) FROM notified").fetchone()[0] >= MAX_RECEIPTS:
+                    raise NotificationError("notification_capacity_full")
+            item, attempt = pending[0], uuid.uuid4().hex
+            try:
+                db.execute("INSERT INTO notified(event_id,notified_at,delivery_state,attempt_id,attempted_at) VALUES(?,'','prepared',?,?)",
+                           (item["event_id"], attempt, utc_now()))
+                db.execute("COMMIT")
+            except (OSError, sqlite3.Error):
+                return self._result("failed", "notification_intent_not_saved", pending_count=len(pending)+unconfirmed,
+                                    display_requested=False, unconfirmed_count=unconfirmed)
+            try:
+                shown = self.sink(_message(item))
+            except NotificationError as error:
+                reason = str(error)
+                if reason in _REJECTED:
+                    self._discard_rejected(db, item["event_id"], attempt)
+                    return self._result("failed", reason, pending_count=len(pending)+unconfirmed,
+                                        display_requested=False, unconfirmed_count=unconfirmed, automatic_retry_allowed=True)
+                return self._result("unknown", "notification_sink_failed", pending_count=len(pending)+unconfirmed,
+                                    display_requested=None, unconfirmed_count=unconfirmed+1, automatic_retry_allowed=False)
+            except Exception:
+                return self._result("unknown", "notification_sink_failed", pending_count=len(pending)+unconfirmed,
+                                    display_requested=None, unconfirmed_count=unconfirmed+1, automatic_retry_allowed=False)
+            if shown is False:
+                # The explicit False contract means rejection. Unknown return
+                # values and exceptions cannot make this assurance.
+                self._discard_rejected(db, item["event_id"], attempt)
+                return self._result("failed", "notification_sink_failed", pending_count=len(pending)+unconfirmed,
+                                    display_requested=False, unconfirmed_count=unconfirmed, automatic_retry_allowed=True)
+            if shown is not True:
+                return self._result("unknown", "notification_sink_failed", pending_count=len(pending)+unconfirmed,
+                                    display_requested=None, unconfirmed_count=unconfirmed+1, automatic_retry_allowed=False)
+            cooldown = getattr(self.sink, "cooldown_seconds", 0)
+            self._next_display = time.monotonic() + (cooldown if type(cooldown) in (int, float) and 0 <= cooldown <= 60 else 0)
+            stamp = utc_now()
+            try:
+                db.execute("BEGIN IMMEDIATE")
+                changed = db.execute("UPDATE notified SET delivery_state='accepted',notified_at=? WHERE event_id=? AND attempt_id=? AND delivery_state='prepared'",
+                                     (stamp, item["event_id"], attempt)).rowcount
+                if changed != 1:
+                    raise sqlite3.OperationalError("notification_intent_changed")
+                db.execute("COMMIT")
+            except (OSError, sqlite3.Error):
+                return self._result("unknown", "notification_receipt_failed", pending_count=len(pending)+unconfirmed,
+                                    display_requested=True, unconfirmed_count=unconfirmed+1, automatic_retry_allowed=False)
+            return self._result("notified", "notification_requested", pending_count=len(pending)-1+unconfirmed,
+                                event_id=item["event_id"], notified_at=stamp, display_requested=True,
+                                unconfirmed_count=unconfirmed)
+
     def poll(self):
         with self._lock:
             if self.closed:
@@ -272,52 +360,22 @@ class NotificationService:
                 if not candidates:
                     self.last = self._result("idle", "no_high_severity_events")
                     return self.last
-                with closing(self._open()) as db:
-                    db.execute("BEGIN IMMEDIATE")
-                    known = {row[0] for row in db.execute("SELECT event_id FROM notified")}
-                    pending = [item for item in candidates if item["event_id"] not in known]
-                    pending_count = len(pending)
-                    if not pending:
-                        db.execute("COMMIT")
-                        self.last = self._result("idle", "already_notified")
-                        return self.last
-                    if time.monotonic() < self._next_display:
-                        db.execute("COMMIT")
-                        self.last = self._result("pending", "notification_display_cooldown", pending_count=pending_count)
-                        return self.last
-                    if len(known) >= MAX_RECEIPTS:
-                        self._prune_deleted_events(db)
-                        count = db.execute("SELECT COUNT(*) FROM notified").fetchone()[0]
-                        if count >= MAX_RECEIPTS:
-                            raise NotificationError("notification_capacity_full")
-                    item = pending[0]
-                    try:
-                        shown = self.sink(_message(item))
-                    except NotificationError:
-                        raise
-                    except Exception:
-                        raise NotificationError("notification_sink_failed") from None
-                    if shown is not True:
-                        raise NotificationError("notification_sink_failed")
-                    cooldown = getattr(self.sink, "cooldown_seconds", 0)
-                    self._next_display = time.monotonic() + (cooldown if type(cooldown) in (int, float) and 0 <= cooldown <= 60 else 0)
-                    stamp = utc_now()
-                    try:
-                        db.execute("INSERT INTO notified(event_id,notified_at) VALUES(?,?)", (item["event_id"], stamp))
-                        db.execute("COMMIT")
-                    except (OSError, sqlite3.Error):
-                        self.last = self._result("failed", "notification_receipt_failed",
-                            pending_count=len(pending), display_requested=True)
-                        return self.last
-                    self.last = self._result("notified", "notification_requested", pending_count=len(pending)-1,
-                        event_id=item["event_id"], notified_at=stamp, display_requested=True)
+                self.directory.mkdir(parents=True, exist_ok=True)
+                lease = FileLease(self.runtime.path(self.directory.relative_to(self.runtime.root) / "notifications.lock"))
+                if not lease.acquire():
+                    self.last = self._result("busy", "notification_storage_busy", pending_count=pending_count)
                     return self.last
+                try:
+                    self.last = self._poll_owned(candidates)
+                finally:
+                    lease.release()
+                return self.last
             except NotificationError as error:
                 reason = str(error)
                 if reason not in {"local_notifications_unavailable", "notification_window_unavailable",
                                   "notification_icon_unavailable", "notification_thread_mismatch",
                                   "notification_display_failed", "notification_sink_failed",
-                                  "notification_capacity_full", "notification_scan_limit"}:
+                                  "notification_capacity_full", "notification_scan_limit", "notification_ledger_invalid"}:
                     reason = "notification_sink_failed"
                 self.last = self._result("failed", reason, pending_count=pending_count)
             except sqlite3.OperationalError as error:

@@ -11,7 +11,7 @@ import threading
 import time
 import uuid
 
-_SOURCES = frozenset({"gui", "mcp", "startup", "system"})
+_SOURCES = frozenset({"gui", "mcp", "cli", "startup", "system"})
 _ACTIONS = frozenset({"start", "pause", "resume", "stop", "shutdown"})
 _OPERATION = re.compile(r"[A-Za-z0-9_.:-]{1,128}\Z")
 
@@ -59,9 +59,9 @@ class Application:
                             monitor_control=self.monitor_control, operator_call=self._operator_call,
                             event_status_control=lambda event_id, status, **kw: self.set_event_status(event_id, status, source="gui", **kw))
 
-    def _operator_call(self, name, arguments):
+    def _operator_call(self, name, arguments, source="mcp"):
         from .application_mcp import call_application_tool
-        return call_application_tool(self, name, arguments)
+        return call_application_tool(self, name, arguments, source=source)
 
     def _own_monitor_child(self, child):
         self.owner._own_monitor_child(child)
@@ -298,6 +298,8 @@ class Application:
                 error = None
         except (OSError, ValueError, TypeError):
             error = "saved_health_unavailable"
+        from .intelligence.views import public_advisories
+        advisories = public_advisories(self.runtime.root, self.namespace, limit=5)
         with self._state_lock:
             available = self._started and not self._closing and not self.cancel.is_set()
             closed = self._closing and not self._started
@@ -324,6 +326,7 @@ class Application:
                     "last_action": copy.deepcopy(self._last_action), "monitor_controls": controls,
                     "last_monitor_control": copy.deepcopy(self._last_control),
                     "notifications": dict(self.notification_state),
+                    "advisories": advisories,
                     "mcp": dict(self.mcp_state),
                     "model_calls": 0, "local_url": self.web.url}
 

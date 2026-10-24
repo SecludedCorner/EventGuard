@@ -37,7 +37,7 @@ class FixtureApplication:
 
     def monitor_control(self, action, source="mcp", operation_id=None):
         self.calls.append((action, source, operation_id))
-        self.state = {"start": "running", "pause": "paused", "resume": "running", "stop": "stopped"}[action]
+        self.state = {"start": "running", "pause": "paused", "resume": "running", "stop": "stopped", "shutdown": "stopped"}[action]
         return {"state": self.state, "operation_id": operation_id, "model_calls": 0}
 
     def list_events(self, **filters):
@@ -168,7 +168,7 @@ class ApplicationSDKProtocolTests(unittest.IsolatedAsyncioTestCase):
             raise AssertionError("unexpected fixture SDK tool error")
         return json.loads(next(item.text for item in result.content if item.type == "text"))
 
-    async def test_real_sdk_initialize_list_and_nine_calls_share_one_app(self):
+    async def test_real_sdk_initialize_list_and_ten_calls_share_one_app(self):
         from mcp.client.sse import sse_client
         from mcp import ClientSession
         self.assertEqual(self.server.start()["url"], self.ready["url"])
@@ -186,6 +186,7 @@ class ApplicationSDKProtocolTests(unittest.IsolatedAsyncioTestCase):
                     ("list_events", {"severity": "high", "limit": 1}),
                     ("inspect_event", {"event_id": "evt-fixture"}),
                     ("set_event_status", {"event_id": "evt-fixture", "status": "handled", "operation_id": "sdk-handling"}),
+                    ("shutdown_application", {"operation_id": "sdk-shutdown"}),
                 ):
                     value = self.value(await session.call_tool(name, args))
                     self.assertEqual((value["instance_id"], value["namespace"], value["model_calls"]), (self.app.instance_id, "test", 0))
@@ -196,7 +197,7 @@ class ApplicationSDKProtocolTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.server._thread.is_alive())
         self.assertEqual(len([row for row in self.app.calls if row[0] in {"start", "pause", "resume", "stop"}]), 5)
         self.evidence = {"scope": "real SDK initialize/tools/list/tools/call over loopback SSE; fixture app only",
-                         "tool_count": 9, "same_application": True, "model_calls": 0, "system_queries": 0}
+                         "tool_count": 10, "same_application": True, "model_calls": 0, "system_queries": 0}
 
     async def test_unknown_tool_arguments_reject_before_fixture_mutation(self):
         from mcp.client.sse import sse_client

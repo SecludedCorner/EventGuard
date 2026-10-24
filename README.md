@@ -18,11 +18,24 @@ Windows 本機資安監看程式。使用一般權限及 Python 3.13 標準庫�
 
 頁面可開始、暫停、恢復及停止採集。「停止採集」保留網頁與 MCP，可再次開始。「關閉程式」才關閉應用。事件與人工處置會保存；不 ACK、不啟動 agent。外部監看或退出不明時，控制會顯示受阻。
 
-只開控制介面可用 `.\EventGuard.cmd run --idle`。GUI 與選配 MCP 共用同一實例。頁面自動同步真實結果、操作來源與按鈕。接線與九工具見 [應用 MCP](docs/APPLICATION_MCP.md)。
+只開控制介面可用 `.\EventGuard.cmd run --idle`。CLI、GUI 與選配 MCP 共用同一實例。頁面自動同步真實結果、操作來源與按鈕。接線與十工具見 [應用 MCP](docs/APPLICATION_MCP.md)。
 
 實際操作與驗收界線見 [本機頁面指南](docs/LOCAL_UI_ACCEPTANCE.md)。合成頁面會明示測試資料。停止要求與實際程序退出分開確認。
 
 若連接埠被使用，可加 `--port 8877`。也可直接執行 `py -3.13 -B scripts/eventguard.py run`。
+
+控制已開啟的應用，不另起採集程序：
+
+```powershell
+.\EventGuard.cmd app status
+.\EventGuard.cmd app start
+.\EventGuard.cmd app pause
+.\EventGuard.cmd app resume
+.\EventGuard.cmd app stop
+.\EventGuard.cmd app shutdown
+```
+
+`app stop` 只停採集。`app shutdown` 關閉應用。MCP 斷線只結束該連線；沒有應用時明示受阻，不自行冷啟動。
 
 ## 操作流程
 
@@ -63,7 +76,7 @@ CLI 終端預設顯示文字。管線預設輸出 JSON。可用 `--format text` 
 
 最後成功時間會保存。後續失敗及重開程式不會清空它。最後成功不代表目前仍可讀；來源仍分別顯示拒讀、未知或過期。
 
-新的 high／critical 事件會請求 Windows 本機通知。本頁也顯示醒目提示。已處理或忽略的事件不通知。成功回條用於重開後去重。
+新的 high／critical 事件會請求 Windows 本機通知。本頁也顯示醒目提示。已處理或忽略的事件不通知。通知意圖先落盤，再送出。成功回條用於重開後去重。回條不明時顯示未知，不盲目重送。事件仍可查看。
 
 Windows 可能抑制通知。程式接受通知要求，不代表使用者已看見。可用 `run --no-notifications` 關閉系統通知。本頁提示仍保留。
 
@@ -80,7 +93,7 @@ Windows 可能抑制通知。程式接受通知要求，不代表使用者已看
 
 以上是正式操作命令。本批未自行啟用。預設盤點路徑為空，表示未知。只讀明確允許的 manifest、lockfile 或人工 facts。不執行工具鏈、套件或 build.rs。
 
-事件沿用既有佇列及七欄 snapshot。agent 預設不啟用。完整證據留本機。操作、處理表與批准範圍見 [公告追蹤](docs/ADVISORY_TRACKER.md)。官方案例與未確認內容見 [來源契約](docs/ADVISORY_SOURCES.md)。
+事件沿用既有佇列及七欄 snapshot。agent 預設不啟用。完整證據留本機。Web「資安公告」顯示來源、時間、新鮮度與適用性；未知不代表安全。新增停用的 NVIDIA CSAF 範例，僅讀明確配置的官方公告，不掃整個 repo。操作、處理表與批准範圍見 [公告追蹤](docs/ADVISORY_TRACKER.md)。官方案例與未確認內容見 [來源契約](docs/ADVISORY_SOURCES.md)。
 
 ## 限制
 
@@ -95,6 +108,6 @@ Windows 可能抑制通知。程式接受通知要求，不代表使用者已看
 
 專用 agent 派送提供 `agent start / status / pause / resume / stop`。start 預設只預檢；加 `--execute` 才允許模型。操作、篩選與七欄封裝見 [AGENT_SERVICE](docs/AGENT_SERVICE.md)。本批未啟用。
 
-Codex 接線、桌面閒置喚醒及開機自啟均為選配。MCP 操作不代表閒置喚醒。成本與收益見 [維護目標](docs/MAINTENANCE_GOAL.md)。
+Codex 接線、桌面閒置喚醒及開機自啟均為選配。MCP 操作不代表閒置喚醒。官方入口研究見 [事件驅動](docs/AGENT_EVENT_DRIVEN.md)，OpenOctopus 的提案見 [協定](docs/OPENOCTOPUS_EVENT_PROTOCOL.md)。成本與收益見 [維護目標](docs/MAINTENANCE_GOAL.md)。
 
 舊 Tk GUI 仍可雙擊 `EventGuard.cmd` 開啟。歷史驗收見 [EVIDENCE](docs/EVIDENCE.md)。產品範圍見 [維護目標](docs/MAINTENANCE_GOAL.md)。本專案使用 [MIT](LICENSE)。
