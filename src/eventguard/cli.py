@@ -54,6 +54,7 @@ def parser():
     run.add_argument("--no-notifications",action="store_true",help="關閉系統通知。本機頁面仍顯示高嚴重度事件。")
     run.add_argument("--idle",action="store_true",help="只開控制介面。等待明確開始採集。")
     run.add_argument("--no-mcp",action="store_true",help="不開選配MCP listener。Web仍可使用。")
+    run.add_argument("--event-source",type=Path,help="選填。綁定專案內既有的合成事件source；需--fixture與--idle，不採集、不通知。")
     application=sub.add_parser("app",help="操作已啟動的同一個 App。未啟動時回報 blocked，不建立新程序。")
     appsub=application.add_subparsers(dest="app_command",required=True)
     for action in ("status","start","pause","resume","stop","shutdown"):
@@ -125,13 +126,16 @@ def parser():
     listing.add_argument("--severity",choices=("info","warning","high","critical"))
     listing.add_argument("--source",choices=("defender","listeners","processes","startup","services","tasks","versions","monitor","advisories","unknown"))
     listing.add_argument("--status",choices=("new","read","handled","ignored"))
+    listing.add_argument("--event-source",type=Path,help="選填。test範圍內既有的合成事件source。")
     detail=eventsub.add_parser("detail",help="查看事件詳情與處置狀態。不採集、不ACK。")
     detail.add_argument("--namespace",choices=("live","test"),default="live")
     detail.add_argument("--event-id",required=True)
+    detail.add_argument("--event-source",type=Path,help="選填。test範圍內既有的合成事件source。")
     handling=eventsub.add_parser("set-status",help="保存處置狀態。不ACK、不修改系統。")
     handling.add_argument("--namespace",choices=("live","test"),default="live")
     handling.add_argument("--event-id",required=True)
     handling.add_argument("--status",choices=("new","read","handled","ignored"),required=True)
+    handling.add_argument("--event-source",type=Path,help="選填。test範圍內既有的合成事件source。")
     rules=sub.add_parser("rules",help="查看或檢查config/rules.json。不採集。")
     rules.add_argument("action",choices=("list","validate"),default="list",nargs="?")
     for name in ("inspect", "diagnose", "receive", "retry"):
@@ -221,8 +225,8 @@ def execute(args,runtime,progress=None):
             raise ValueError("max_cycles_requires_fixture")
         from .application import run
         return run(runtime.root,port=args.port,fixture=args.fixture,max_cycles=args.max_cycles,
-                   notifications=not args.no_notifications,max_seconds=args.max_seconds,
-                   auto_start=not args.idle,mcp_enabled=not args.no_mcp)
+                   notifications=not args.no_notifications and args.event_source is None,max_seconds=args.max_seconds,
+                   auto_start=not args.idle,mcp_enabled=not args.no_mcp,event_source=args.event_source)
     if args.command=="rules":
         from .rules.configured import load_rules
         values=load_rules(runtime.root)
@@ -286,7 +290,7 @@ def execute(args,runtime,progress=None):
     if args.command=="events":
         if args.event_command in {"list","detail","set-status"}:
             from .events.catalog import EventCatalog
-            catalog=EventCatalog(runtime.root,args.namespace)
+            catalog=EventCatalog(runtime.root,args.namespace,directory=args.event_source)
             if args.event_command=="list":
                 return catalog.list(severity=args.severity,source=args.source,status=args.status,
                                     limit=args.limit,offset=args.offset)

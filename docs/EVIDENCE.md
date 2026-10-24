@@ -1,5 +1,23 @@
 # 證據與時間日誌
 
+## 2026-10-25：完整回歸、Event範圍綁定與真通訊準備
+
+時間：台北03:40–04:10；UTC 2026-10-24 19:40–20:10。Python3.13.3。無模型任務。
+唯讀核對：主checkout HEAD 3fe8148；只剩兩個未追蹤目錄；舊驗收passed=false、continuation terminal_failed_no_retry、事件pending、receipts0；monitor control enabled=false。
+完整回歸：`py -3.13 -B scripts/verify.py --run-dir reports/verify-full-20261025-01 --timeout-seconds 1800`（主checkout）。19:41:47Z–19:48:59Z。1460測試，1458過，0 failures／errors，2略過（symlink creation unavailable）。passed_checks=true、source_unchanged=true；guardian自然exit0、remaining0、無強停、model_calls0。
+Event範圍綁定：改src/eventguard/events/catalog.py、application.py、web.py、cli.py；新增tests/test_event_source_binding.py。
+修改先以腳本寫入主checkout，後因工作區規則移到worktree；diff位元組一致後，主checkout那四檔還原為3fe8148。
+驗證：reports/verify-event-source-20261025-01（新模組8/8）；-02（22模組284測試，283過；test_local_product一項因CLI多傳event_source=None而失敗，更新斷言）；-03（test_local_product 17/17）。皆guardian自然exit、remaining0、model_calls0。
+真SDK／瀏覽器：reports/event-source-binding-001。私有Job啟動idle test App，綁定合成source。MCP SDK 1.6.0經App自身loopback listener呼叫10工具：list_events只含綁定事件，inspect預設範圍事件回application_read_unavailable，start_monitor回monitor_outside_bound_event_source。
+內建瀏覽器get_page_text：綁定source提示、符合條件1件、最近動作受阻原因。stop.request後App回stopped、執行緒退出；程序exit0、remaining0、無強停（probe-exit.json）。
+真通訊準備：主checkout以`scripts/validate_delivery.py service --root reports/service-acceptance-eventguard-single-test-20261025-01`只prepare（19:59:02Z）。一件high合成事件evt-c29ff48b381d42799d0dc4e3be5c4a15；manifest無service_execution。
+候選CLI：SHA256符合1103e9e0…a098。`--version`與`login status`在私有Job執行，exit0、remaining0、無強停；版本codex-cli 0.164.0-alpha.11.1；login只存「已登入」布林值，原始輸出未保存。結果在native-cli-metadata.json。
+授權請求：同目錄AUTHORIZATION_REQUEST.md。未執行--execute，未建立service或模型任務。
+最終整套（worktree，本批原始碼）：verify-full-20261025-02於20:00:54Z–20:10:32Z，1468測試1465過、1 failure、2略過。失敗為test_operator_monitor_owner.test_sdk_start_status_stop_uses_application_job_without_agent，stop回busy／background_owner_changed。
+同模組單獨重跑verify-owner-rerun-20261025-01、-02皆24/24。verify-full-20261025-03於20:11:53Z–20:23:05Z，1468測試1466過、0失敗、2略過，passed_checks=true、source_unchanged=true；guardian自然exit0、remaining0、無強停、model_calls0。
+間歇失敗未修，根因未查；本批未改background或operator監看路徑。
+限制：真SDK與瀏覽器只證明合成source的顯示與工具範圍，不是實機採集或agent收件。login status不證明MCP工具或模型可用。
+
 ## 2026-10-25：無額度契約的測試遷移
 
 時間：台北02:00–02:28；UTC 2026-10-24 18:00–18:28。Python3.13.3，C:\Python313\python.exe。

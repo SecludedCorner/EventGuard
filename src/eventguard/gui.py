@@ -77,6 +77,7 @@ def view_snapshot(document, *, severity="all", delivery="all"):
         "starting": "正在啟動事件待命。", "waiting": "等待事件；無事件不呼叫模型。",
         "running": "專用 agent 正在處理事件。", "waiting_budget": "舊派送狀態需重新核對；事件保留，不自動啟動模型。",
         "waiting_attention": "需要人類處理；事件保留，不自動重試失敗任務。",
+        "waiting_task_limit": "本次執行已達任務上限；事件保留，不再啟動新任務。上限只屬於本次執行。",
         "waiting_disabled": "接收權限已關閉；事件仍保留。", "stopped": "事件待命已停止。",
         "blocked": "自動處理受阻。", "shutdown_unconfirmed": "自動處理退出尚未確認。"}
     auto_message = auto_labels.get(auto_state, "自動處理狀態：" + safe_text(auto_state, 80))

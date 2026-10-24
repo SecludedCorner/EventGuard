@@ -214,7 +214,7 @@ class ProductCliTests(ProductFixture):
             code, raw = self.command("run", "--port", "8877", "--no-notifications")
         self.assertEqual(code, 0, raw)
         run.assert_called_once_with(self.root, port=8877, fixture=None, max_cycles=None, notifications=False,
-                                    max_seconds=None, auto_start=True, mcp_enabled=True)
+                                    max_seconds=None, auto_start=True, mcp_enabled=True, event_source=None)
 
 
 class ApplicationTests(ProductFixture):

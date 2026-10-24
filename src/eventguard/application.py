@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import math
+import os
+from pathlib import Path
 import re
 import copy
 from collections import OrderedDict
@@ -18,7 +20,7 @@ _OPERATION = re.compile(r"[A-Za-z0-9_.:-]{1,128}\Z")
 
 class Application:
     def __init__(self, root, *, port=8765, fixture=None, max_cycles=None, notifications=True,
-                 notification_sink=None, auto_start=True, mcp_enabled=False):
+                 notification_sink=None, auto_start=True, mcp_enabled=False, event_source=None):
         from .runtime import Runtime
         from .operations import OperatorAPI
         from .web import LocalWeb
@@ -30,6 +32,17 @@ class Application:
         self.instance_id = uuid.uuid4().hex
         self.namespace = "test" if fixture else "live"
         self.fixture, self.max_cycles = fixture, max_cycles
+        self.event_source = None
+        if event_source is not None:
+            # A bound synthetic source is read and handled only. Collection and
+            # notifications keep their default scope, so both stay disabled.
+            from .events.catalog import EventCatalog
+            if self.namespace != "test" or auto_start or notifications:
+                raise ValueError("event_source_requires_idle_test_without_notifications")
+            directory = EventCatalog(self.runtime.root, self.namespace, directory=event_source).directory
+            if not (directory / "eventguard.sqlite3").is_file():
+                raise ValueError("existing_event_source_required")
+            self.event_source = directory
         self.owner = OperatorAPI(root, background_lifetime_owner="application")
         self.cancel = threading.Event()
         self.notification_service = NotificationService(root, self.namespace, sink=notification_sink) if notifications else None
@@ -57,6 +70,7 @@ class Application:
         # Bind the port before starting a collector. A port conflict starts no monitor.
         self.web = LocalWeb(root, self.namespace, port=port, status_provider=self.status,
                             monitor_control=self.monitor_control, operator_call=self._operator_call,
+                            event_source=self.event_source,
                             event_status_control=lambda event_id, status, **kw: self.set_event_status(event_id, status, source="gui", **kw))
 
     def _operator_call(self, name, arguments, source="mcp"):
@@ -171,6 +185,8 @@ class Application:
             self._closing = True
             self.cancel.set()
             return {"state": "shutdown_requested", "reason": "monitor_application_shutdown_requested"}
+        if action in {"start", "resume"} and self.event_source is not None:
+            return {"state": "blocked", "reason": "monitor_outside_bound_event_source"}
         if not self._started:
             return {"state": "blocked", "reason": "monitor_application_not_running"}
         from .background import status
@@ -262,27 +278,36 @@ class Application:
                 "event_statuses": sorted(STATUSES), "event_filters": {"severity": sorted(SEVERITIES),
                     "source": sorted(SOURCE_FILTERS), "status": sorted(STATUSES), "limit": [1, 1000]},
                 "event_operations": ["list_events", "event_detail", "set_event_status"],
+                "event_scope": self.event_scope(),
                 "operation_cache_limit": 128, "ack_available": False, "model_calls": 0}
 
-    def list_events(self, **filters):
+    def _catalog(self):
         from .events.catalog import EventCatalog
+        return EventCatalog(self.runtime.root, self.namespace, directory=self.event_source)
+
+    def event_scope(self):
+        directory = self.event_source or self.runtime.data_dir(self.namespace, create=False)
+        return {"namespace": self.namespace, "binding": "default" if self.event_source is None else "custom",
+                "path": directory.relative_to(self.runtime.root).as_posix(),
+                "collection": "same_scope" if self.event_source is None else "disabled_for_bound_source"}
+
+    def list_events(self, **filters):
         if set(filters) - {"severity", "source", "status", "limit", "offset"}:
             raise ValueError("invalid_event_filters")
-        return EventCatalog(self.runtime.root, self.namespace).list(**filters)
+        return self._catalog().list(**filters)
 
     def event_detail(self, event_id):
-        from .events.catalog import EventCatalog
-        return EventCatalog(self.runtime.root, self.namespace).detail(event_id)
+        return self._catalog().detail(event_id)
 
     def set_event_status(self, event_id, status, source="mcp", operation_id=None):
-        from .events.catalog import EventCatalog, STATUSES, _identifier
+        from .events.catalog import STATUSES, _identifier
         _identifier(event_id)
         if type(status) is not str or status not in STATUSES:
             raise ValueError("invalid_event_status")
         def update():
             if self._closing or self.cancel.is_set():
                 return {"state": "blocked", "reason": "monitor_application_closing"}
-            return {**EventCatalog(self.runtime.root, self.namespace).set_status(event_id, status),
+            return {**self._catalog().set_status(event_id, status),
                     "state": "event_status_updated", "reason": "event_status_saved"}
         return self._operate("set_event_status", source, operation_id, ("event_status", event_id, status), update)
 
@@ -305,6 +330,11 @@ class Application:
             agent = agent_service_status(self.runtime.root)
             if agent.get("namespace") not in (None, self.namespace):
                 agent = {"state": "not_applicable", "reason": "agent_service_outside_application_namespace", "model_calls": 0}
+            elif isinstance(agent.get("source_dir"), str):
+                # Agent queue status and the event list may name different sources.
+                event_dir = self.event_source or self.runtime.data_dir(self.namespace, create=False)
+                agent = {**agent, "event_source_matches_application":
+                         os.path.normcase(str(Path(agent["source_dir"]).absolute())) == os.path.normcase(str(event_dir))}
         except (OSError, ValueError, RuntimeError, TypeError):
             agent = {"state": "unknown", "reason": "agent_service_status_unavailable", "model_calls": 0}
         with self._state_lock:
@@ -322,7 +352,7 @@ class Application:
                 else "blocked")
             transition = self._transition or ("shutdown" if self._closing and self._started else None)
             idle = available and transition is None
-            can_start = idle and stopped and not self._shutdown_unconfirmed
+            can_start = idle and stopped and not self._shutdown_unconfirmed and self.event_source is None
             controls = {"available": available, "paused": bool(paused), "stopped": bool(stopped),
                         "transition": transition, "can_start": bool(can_start),
                         "can_pause": bool(idle and running), "can_resume": bool(idle and paused),
@@ -334,7 +364,7 @@ class Application:
                     "last_monitor_control": copy.deepcopy(self._last_control),
                     "notifications": dict(self.notification_state),
                     "advisories": advisories,
-                    "agent_service": agent,
+                    "agent_service": agent, "event_scope": self.event_scope(),
                     "mcp": dict(self.mcp_state),
                     "model_calls": 0, "local_url": self.web.url}
 

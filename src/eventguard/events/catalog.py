@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager, closing
 import json
+from pathlib import Path
 import sqlite3
 import stat
 
@@ -45,10 +46,22 @@ class EventCatalog:
     state ``new``. Delivery state and handling state are separate properties.
     """
 
-    def __init__(self, root, namespace="live"):
+    def __init__(self, root, namespace="live", directory=None):
         self.runtime = Runtime(root)
         self.namespace = namespace
-        self.directory = self.runtime.data_dir(namespace, create=False)
+        if directory is None:
+            self.directory = self.runtime.data_dir(namespace, create=False)
+        else:
+            # An explicit synthetic source inside this root. Never the live scope.
+            if namespace != "test":
+                raise ValueError("event_source_requires_test_namespace")
+            try:
+                relative = Path(directory).absolute().relative_to(self.runtime.root)
+            except ValueError:
+                raise ValueError("event_source_outside_root") from None
+            self.directory = self.runtime.path(relative)
+            if self.directory in (self.runtime.root, self.runtime.data_dir("live", create=False)):
+                raise ValueError("event_source_scope_refused")
         self.path = self.runtime.path(self.directory.relative_to(self.runtime.root) / "eventguard.sqlite3")
 
     @contextmanager

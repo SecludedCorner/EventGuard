@@ -93,6 +93,19 @@ stdio 一律是 observer。不建立 Application、採集程序或 runtime。任
 這次觀察不保證所有客戶端都會自動熱載入，也不代表閒置聊天已被喚醒。
 產品功能不依賴聊天重載。先用 SDK 或其他 MCP client 驗證十工具。
 
+## 綁定合成 source
+
+驗收目錄的 source 不在 `data/test` 時，可明確綁定：
+
+```powershell
+.\EventGuard.cmd run --idle --fixture tests/fixtures/normal.json --event-source reports/<驗收目錄>/source
+.\EventGuard.cmd events list --namespace test --event-source reports/<驗收目錄>/source
+```
+
+只限 test 範圍與專案內既有 source。綁定時不採集、不通知。
+Web 事件頁、十工具、CLI 與處置保存都讀同一 source。status 的 `event_scope` 顯示範圍。
+Agent status 另顯示 `event_source_matches_application`。不相符時兩頁看的是不同 source。
+
 ## 範圍與退出
 
 每個專案只有一個 Application lease。GUI 與 MCP 共用 instance ID、namespace 及狀態版本。

@@ -1,6 +1,23 @@
 # EventGuard 現況
 
-## 預算測試遷移：2026-10-25 02:30（台北時間，最新）
+## 無模型工程收尾與真通訊準備：2026-10-25 04:10（台北時間，最新）
+
+依新目標推進。唯讀核對與checkpoint一致：HEAD 3fe8148；舊事件仍pending、receipts0；continuation仍terminal_failed_no_retry；monitor desired off。
+完整回歸（3fe8148，主checkout）：1460測試，1458過、0失敗、2略過（symlink不可用）。guardian自然exit0、remaining0、無強停、model_calls0。無失敗需修。
+Event範圍一致：App新增明確`event_source`綁定。只限test範圍、`--idle`、不通知；綁定時不採集，開始／恢復回`monitor_outside_bound_event_source`。
+CLI `run --event-source`、`events list/detail/set-status --event-source`、Web事件頁、十工具MCP及處置保存都讀同一source。status與capabilities回報`event_scope`。
+Agent status另回`event_source_matches_application`，不再讓Agent頁與事件清單默默指向不同source。綁定source的投遞查詢只在agent service指向同一source時讀它的state。
+小清理：GUI補`waiting_task_limit`標籤。`operations._budget_status`保留：已無呼叫者，但它是測試圍住歷史預算的單一接縫；刪除需大量改測試，無產品收益。
+驗證：新測試8/8；相關22模組284測試中一個CLI參數斷言隨新契約更新後17/17。最終整套（本批原始碼）：verify-full-20261025-03為1468測試，1466過、2略過、0失敗；guardian自然exit0、remaining0。
+前一輪-02有1項間歇失敗：test_operator_monitor_owner的SDK stop回background_owner_changed。該模組單獨重跑2次24/24通過，-03整套也通過。本批未改該路徑；根因未查，列為待觀察。
+真SDK：已安裝MCP SDK對綁定App呼叫十工具；list_events／inspect_event只見綁定事件，預設範圍事件查不到；start_monitor受阻。
+瀏覽器：內建瀏覽器看到綁定source提示、1件綁定事件與MCP操作受阻紀錄。App自然exit0、殘留0。兩者都是合成資料，不是實機或真收件。
+真通訊準備：新目錄`reports/service-acceptance-eventguard-single-test-20261025-01`只prepare，未執行。候選CLI SHA256符合，版本codex-cli 0.164.0-alpha.11.1，login status回報已登入；原始輸出未保存。
+授權請求在該目錄`AUTHORIZATION_REQUEST.md`。目標停在等待人類授權；不得自行`--execute`。
+前批證據也已複製到主checkout `reports/`（verify-budget-baseline-20261025-01、verify-budget-migration-20261025-01〜03），位元組一致。
+仍需人類決定：真通訊授權、推送、研究稿與附件、跨source全域阻擋、選配長期驗證、worktree清理。
+
+## 預算測試遷移：2026-10-25 02:30（台北時間）
 
 接手後增量推進。只改測試；未改src、設定或runtime。未commit、未push。
 位置：worktree `.claude/worktrees/eventguard-handoff-increment-721d6d`，分支`claude/eventguard-quota-test-migration`，基底f5810b5。

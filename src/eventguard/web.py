@@ -167,7 +167,7 @@ renderApplication();pollStatus();scheduleStatusPoll();refresh();setInterval(refr
 
 class LocalWeb:
     def __init__(self, root, namespace="live", *, port=8765, status_provider=None, monitor_control=None,
-                 operator_call=None, event_status_control=None):
+                 operator_call=None, event_status_control=None, event_source=None):
         if type(port) is not int or not 0 <= port <= 65535:
             raise ValueError("invalid_local_port")
         if monitor_control is not None and not callable(monitor_control):
@@ -176,7 +176,8 @@ class LocalWeb:
             raise ValueError("invalid_application_callback")
         from .events.catalog import EventCatalog
         self.root, self.namespace = root, namespace
-        self.catalog = EventCatalog(root, namespace)
+        self.catalog = EventCatalog(root, namespace, directory=event_source)
+        self.event_source = None if event_source is None else self.catalog.directory
         self.token = secrets.token_hex(32)
         self.status_provider = status_provider or (lambda: {"monitor_state": "unknown", "model_calls": 0})
         self.monitor_control = monitor_control
@@ -254,7 +255,7 @@ class LocalWeb:
                     if any(len(v) != 1 for v in query.values()):
                         raise ValueError("duplicate_filter")
                     if route.path == "/" and not query:
-                        return self.reply(200, HTML.replace("__TOKEN__", app.token).replace("__SCOPE_NOTICE__", "合成驗收資料。此頁未查詢主機資安來源。" if app.namespace == "test" else "本機保存資料。未知、拒讀與過期都不代表安全。"), "text/html; charset=utf-8")
+                        return self.reply(200, HTML.replace("__TOKEN__", app.token).replace("__SCOPE_NOTICE__", app.scope_notice()), "text/html; charset=utf-8")
                     if route.path in {"/app.js", "/app.css"} and not query:
                         return self.reply(200, JS if route.path.endswith(".js") else CSS,
                                           "text/javascript; charset=utf-8" if route.path.endswith(".js") else "text/css; charset=utf-8")
@@ -271,6 +272,13 @@ class LocalWeb:
                         from .runtime import Runtime
                         runtime = Runtime(app.root)
                         event_id = unquote(route.path[len("/api/events/"):-len("/delivery")], errors="strict")
+                        if app.event_source is not None:
+                            state = app.bound_delivery_state()
+                            if state is None:
+                                return self.reply(200, {"state": "unknown", "reason": "delivery_state_not_bound_to_event_source",
+                                                        "event_id": event_id, "model_calls": 0})
+                            return self.reply(200, inspect_delivery(app.event_source, state, event_id,
+                                                                    allow_live=False, root=runtime.root))
                         state = "data/agent-delivery" if app.namespace == "live" else "data/agent-delivery-test"
                         return self.reply(200, inspect_delivery(runtime.path("data/"+app.namespace),
                             runtime.path(state), event_id, allow_live=app.namespace == "live", root=runtime.root))
@@ -423,6 +431,29 @@ class LocalWeb:
                 if key.startswith("can_"):
                     controls[key] = controls[key] and controls["available"]
         return {**saved, "monitor_controls": controls}
+
+    def scope_notice(self):
+        if self.event_source is not None:
+            from html import escape
+            from .runtime import Runtime
+            relative = self.event_source.relative_to(Runtime(self.root).root).as_posix()
+            return "合成驗收資料。事件來自綁定的自訂 source：" + escape(relative) + "。此頁不採集，也未查詢主機資安來源。"
+        return "合成驗收資料。此頁未查詢主機資安來源。" if self.namespace == "test" else "本機保存資料。未知、拒讀與過期都不代表安全。"
+
+    def bound_delivery_state(self):
+        """Delivery state of the agent service only when it names this source."""
+        import os
+        from pathlib import Path
+        from .agent_service import status
+        try:
+            agent = status(self.root)
+        except (OSError, ValueError, RuntimeError, TypeError):
+            return None
+        source, state = agent.get("source_dir"), agent.get("state_dir")
+        if not isinstance(source, str) or not isinstance(state, str):
+            return None
+        same = os.path.normcase(str(Path(source).absolute())) == os.path.normcase(str(self.event_source))
+        return Path(state) if same else None
 
     def start(self):
         if self.thread is not None:

@@ -312,6 +312,10 @@ def _namespace_status(runtime, namespace):
 
 
 def _budget_status(runtime):
+    # Historical budget reader. Operator status no longer calls it; App has no
+    # daily quota. Kept as the one named seam that tests fence, so any future
+    # call from status, overview or reports fails loudly instead of silently
+    # reading the historical ledger.
     # The installation-wide authority chooses its path. Status must never create
     # or reset a ledger, including when the operator uses a fixture root.
     try:

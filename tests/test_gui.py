@@ -132,7 +132,8 @@ class GuiPresentationTests(unittest.TestCase):
     def test_automatic_wait_attention_and_historical_states_are_honest_without_quota(self):
         # No daily quota. A saved historical budget wait only asks for a recheck.
         for state, message in (("waiting", "無事件不呼叫模型"), ("waiting_budget", "舊派送狀態需重新核對"),
-                               ("waiting_attention", "不自動重試"), ("armed", "按開始")):
+                               ("waiting_attention", "不自動重試"), ("waiting_task_limit", "本次執行已達任務上限"),
+                               ("armed", "按開始")):
             view = view_snapshot({"automatic_agent": {"enabled": True, "state": state}})
             self.assertTrue(view["automatic_enabled"])
             self.assertFalse(view["agent_enabled"])
