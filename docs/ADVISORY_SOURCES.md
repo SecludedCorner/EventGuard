@@ -46,7 +46,7 @@ ZDI 官方 Upcoming 列出 33549、33774、33367、34068、34076 的 vendor 為 
 
 `namespace` 僅接受 live／test。每個來源可設定 `enabled`、頻率、資料過期秒數、`failure_threshold` 與 `important`。容量及冷卻位於 `storage`。事件觸發開關及嚴重度位於 `rules.enabled_reasons`、`rules.severity`。原因與嚴重度均為白名單，不是任意運算式。預設最高為 high。不附處置授權。
 
-`fetch_source(source, previous=None, now=None, opener=None)` 只做一輪 GET。回傳：
+`fetch_source(source, previous=None, now=None, opener=None)` 做一輪有界抓取；GitHub 可含分頁及一次固定 repository ID 查核，其餘 adapter 維持單次 GET。回傳：
 
 ```text
 status: success | partial | not_modified | failed
@@ -69,7 +69,10 @@ ZDI 的 stage 為 `reported`。fix 的 `released` 不等於 installed／running�
 - HTTPS。無 credential URL。拒絕 localhost、非公開 IP literal、非標準 port、控制字元與跨來源 redirect。
 - 不送 token。不新增憑證。沒有 shell、子程序、模型、套件安裝或 toolchain 更新。
 - 單次 timeout 1–30 秒。讀取檢查總時限。預設 body 上限 2 MiB。單一來源可明確配置至 8 MiB；ZDI 為 4 MiB。每輪最多 512 筆、64 個來源。有限內文不當成程式。
-- GitHub 下一頁存在時明示 `pagination_required`。不把截斷的清單當完整。需縮小來源範圍，或另實作有界分頁後再宣稱完整。
+- GitHub `max_pages` 預設5、範圍1–8，所有頁及一次固定 repo metadata GET共用總bytes/期限；最多max_pages+1 GET。必須從named首頁開始，根據[官方分頁Link契約](https://docs.github.com/en/rest/security-advisories/repository-advisories#list-repository-security-advisories)處理forward `after`或連續page，不自行構造cursor。canonical numeric路徑須metadata的id/full_name/public一致；固定origin/path/filters/page-size，拒redirect、循環、before／page+after混用與任意path。
+- 有好子項但後頁、mapping、頁數或bytes失敗為partial；無好子項為failed，均不宣稱完整。相同GHSA相同內容穩定去重，衝突撤下本輪該斷言並標partial。成功清單的hash包含有序頁長度與bytes；部分cache不覆寫last-good／success時間。
+- GitHub不送單頁ETag／Last-Modified conditional，304為unexpected_304；完整success顯式清舊validators。max_pages屬資源政策，預設值遷移不使legacy binding失效。同步urllib有deadline檢查，不等於已證明OS blocking syscall可硬即時中斷。
+- 真環境兩頁smoke通過仍因頁數上限維持partial，未保存正式cache；有限實抓與完整來源、主機適用性、持續健康分開，詳見最新EVIDENCE。
 - HTML 有格式變更風險。LKML／kernel git 的 anti-bot 或拒讀不繞過。保留失敗與資料新鮮度。
 - 上游內容可能包含指令式文字。它只能成為本機資料。不能取得命令或處置權限。
 

@@ -1,21 +1,21 @@
 # EventGuard 目前目標
 
-## 持續工程工作佇列：2026-10-25 23:26 接續（優先閱讀）
+## 持續工程佇列：2026-10-26（優先閱讀）
 
-目前專案 EventGuard；主 checkout 分支 feat/local-codex-acceptance，基底 a34e466。既有真 CLI 收件鏈、1477 項回歸及政策更新沿用，不重做。最新人類要求持續實作整個專案；先前單次收件目標達成是基準，不代表以下可執行可靠性工作已完成。只使用本專案、一般權限與既有 Python/SDK；推送／系統變更／實機來源採集仍守既有授權。
+分支feat/local-codex-acceptance；基底9a34a5b。既定真CLI receive→query→result→ACK及五層自然退出已通過；後續可靠性工作不把commit當停止條件。只在EventGuard、既有一般權限及已安裝runtime工作，未push。
 
-| ID／優先級 | 預期成果與驗收 | 依賴／環境／權限 | 目前證據與未驗範圍 | 下一個可執行動作 |
+| ID／優先級 | 預期成果／驗收條件 | 依賴／權限 | 現在證據與未驗範圍 | 下一個動作 |
 | --- | --- | --- | --- | --- |
-| P2-MCP-EXIT-001（DONE） | 成功 ACK 回應真正 flush 後 MCP 自然退出；活體綁定 query HANDLE，PID＋creation＋本次 CLI Job 相符，OS exit 0；未知不得升格 | Windows、已安裝 SDK、既有單事件 CLI 授權；不新增 transport 或 PID 終止 | 真04五層exit0／三工具各1、pending0，strict原始證據重驗及活體query HANDLE通過；43.44秒 | 後續變更受影響才複驗；保留舊缺證據不升格 |
-| P1-SOAK-001（DONE：有限範圍） | synthetic 滿載拒絕保留 ID/hash、同 ID 恢復、completion 故障 pin 保護、重建 consumer 同 query、唯一 ACK 與集合守恆；原 Job 回條 | 新 reports、標準庫、私有 Job；模型／原生掃描／網路 0 | SQLite close修復後3/3；真跑有限harness 64唯一ACK/pending0，81.88秒；60秒到期失敗另留 | 接續guard異常收尾與wall-time/資源採樣，不冒充24h/OS重啟 |
-| P2-GH-PAGES-001（待實作） | GitHub 公開來源有界分頁；固定頁數/bytes/deadline，同 origin/path，拒循環／惡意 Link，partial/304 不洗完整 | 現有公告來源程式；先 fixture，外部抓取仍依來源與既有授權 | 現遇 rel=next 回 pagination_required，尚未整合分頁 | 上述切片驗收後，直接實作 source paginator 與對抗 fixtures |
-| P2-SOAK-MEASURE-001（待實作） | 有界 wall-time profile 與本工具程序資源採樣；記實際耗時、容量、query/ACK 守恆 | 依賴有限 harness；只觀測自有 HANDLE/Job，不盤點全機 | 新 harness 的 duration 是工作上限、可提早結束；未量測 CPU/RAM/handle | 初版有限流程通過後加 pacing/採樣，不改舊證據時長 |
-| P2-OS-001（BLOCKED） | 固定單來源／上下文的真 Windows coverage 與必要互動驗證 | 需具體來源、時限、回復範圍授權；不提權／不改防護或網路 | 現有 denied/unknown 不能視安全；不自動全機重掃 | 保存現有 WINDOWS_VALIDATION_PLAN/COVERAGE_PLAN，待範圍確定再執行 |
-| P3-24H／DESKTOP／PUBLISH（暫緩或受外部條件限制） | 真跨午夜 24h、既有桌面喚醒、正式發布分別驗收 | 長時環境、受支援入口、發布明確批准；不可用短測代替 | 都未因本輪單測或 CLI ACK 自動完成 | 不阻擋上述可執行工程；只在必要條件具備時納入 |
+| P2-MCP-EXIT-001 DONE | ACK flush→同Job活體HANDLE自然0 | 單事件真CLI既有授權、Windows/SDK | 真04五層exit0/三工具各1/pending0 | 來源變更受影響才複驗 |
+| P2-MCP-STATUS-001 DONE | CLI/Web/Tk有界摘要；缺原證據為unknown | 同instance/read-only status，不新啟模型 | 定向、真閒置App/API/CLI/瀏覽器及原64檔不變；GUI合作退出 | 保留新舊證據界線 |
+| P1-SOAK-001／GUARD-002 DONE | 拒絕保留同ID/hash、pin恢復、唯一ACK、異常先合作收尾 | synthetic新reports/privateJob | 64件有限基準＋兩輪16件/60秒守恆/自然0；故障fixture通過 | 不是OS重啟或24h |
+| P2-SOAK-MEASURE-001 DONE有限範圍 | min-wall/pacing/worker自己資源有界採樣 | 無模型/網路/原生掃描 | 59有效樣本/handles111，unknown不填0；不是整Job | 接續下列CPU缺口 |
+| P2-GH-PAGES-001 DONE有界契約 | 頁數/bytes/deadline共享、repo mapping、after/page安全、partial/304保護 | 公開既有來源；無token/設定改動 | 22 fixtures、201項整合、真兩頁smoke＋mapping；05完整要求未達但partial正確 | 不為洗綠再加cap；完整來源freshness另依實抓 |
+| P2-IDLE-CPU-003 CURRENT | 查明本harness idle CPU成本；證據支持最小修正後比較 | stdlib profiling、自有Job、bounded synthetic | 兩短窗4.393%/4.069%，未達<1%；降低poll假說無法消除 | profiling後只改已確認成本；不得當真monitor性能 |
+| P2-OS-001 BLOCKED | 單來源真Windows coverage/必要互動/恢復 | WINDOWS_VALIDATION_PLAN要求具體案例、時限及當次批准 | denied/unknown不變安全；未全機重掃/注入 | 待人類固定範圍；不改Defender/網路/Run值 |
+| P3-24H／DESKTOP／PUBLISH 暫緩/外部條件 | 分別真24h、既有聊天喚醒、正式發布 | 固定長時窗/受支援入口/明確push部署批准 | 尚未驗，不能由短測或新App顯示升格 | 條件具備才執行，不自行排程或承諾會話外喚醒 |
 
-P1-SOAK-GUARD-002（下一項）：驗證guardian在spawn後任一異常先寫合作stop，再有限grace/自有Job收尾；保留原資料/退出狀態。現main的異常finally尚未單獨證明此順序，下一步故障注入後修正。
-
-每個切片實作→必要驗證→保存/提交後自動選下一項。局部失敗只阻擋相應項目，不以 checkpoint、文件或 commit 作停止條件。原117項首輪116過1error保留，soak close修復後3/3；真04與soak-finite-02的原始回條/守恆證據已完成。詳見最新STATUS/EVIDENCE。
+最新命令、時間、失敗恢復、證據、限制見STATUS/EVIDENCE頂部；所有reports/SQLite/native輸出留本機，保留其他Agent與既有未追蹤目錄。
 
 ## 2026-10-25：既定真收件目標已達成（最新狀態）
 

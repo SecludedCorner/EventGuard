@@ -93,6 +93,20 @@ def _background_lines(value):
     return lines
 
 
+def mcp_lifecycle_text(value):
+    """Inert human wording for the bounded status projection, including legacy."""
+    value = value if isinstance(value, dict) else {}
+    code = value.get("exit_code")
+    verified = (value.get("status") == "verified" and type(code) is int and code == 0
+                and value.get("ack_flushed") is True and value.get("reason") == "mcp_natural_exit_verified")
+    label = "MCP退出已驗證" if verified else "MCP退出未驗證"
+    reason = value.get("reason")
+    if type(reason) is not str or reason not in {"mcp_attempt_not_retained", "mcp_lifecycle_evidence_unverified", "mcp_natural_exit_verified"}:
+        reason = "mcp_lifecycle_evidence_unverified"
+    shown_code = str(code) if type(code) is int and -(2**31) <= code <= 0xFFFFFFFF else "未知"
+    return label+"。退出碼："+shown_code+"。ACK回應已flush："+("是" if verified else "未知")+"。原因："+reason
+
+
 def render(result, command="", operation=""):
     if not isinstance(result,dict):
         return "EventGuard：回傳格式未知。"
@@ -142,6 +156,7 @@ def render(result, command="", operation=""):
             "暫停："+text(result.get("paused"))+"。待收事件："+text(result.get("pending_events")),
             "阻塞原因："+text(result.get("reason",result.get("blocked_reason"))),
             "最後進度："+text(result.get("last_progress",result.get("heartbeat_at"))),
+            mcp_lifecycle_text(result.get("mcp_lifecycle")),
             "無事件由普通程式等待。ACK 只代表收到。模型用量未知時不視為零。",
             "查看：agent status；暫停新派送：agent pause；停止：agent stop。"])
     if command=="run":

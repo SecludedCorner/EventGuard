@@ -28,6 +28,8 @@ DEFAULT_BODY = 2 * 1024 * 1024
 MAX_BODY = 8 * 1024 * 1024
 MAX_RECORDS = 512
 MAX_TEXT = 2048
+MAX_GITHUB_PAGES = 8
+MAX_LINK_BYTES = 16384
 ADAPTERS = {"osv", "rustsec", "feed", "zdi", "github_advisories", "html", "cve", "nvidia_csaf"}
 ID_RE = re.compile(r"\b(?:CVE-\d{4}-\d{4,10}|RUSTSEC-\d{4}-\d{4}|ZDI-CAN-\d{4,8}|ZDI-\d{2}-\d{1,6}|GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4})\b", re.I)
 
@@ -125,6 +127,11 @@ def _source(source: dict) -> dict:
         result[key] = value
     if result["stale_after_seconds"] < result["interval_seconds"]:
         raise SourceError("stale_before_interval")
+    if result["adapter"] == "github_advisories":
+        pages = result.get("max_pages", 5)
+        if type(pages) is not int or not 1 <= pages <= MAX_GITHUB_PAGES:
+            raise SourceError("invalid_max_pages")
+        result["max_pages"] = pages
     tracked = result.get("tracking_ids", [])
     if not isinstance(tracked, list) or len(tracked) > 64 or any(not isinstance(x, str) or _ids([x]) != [x] for x in tracked):
         raise SourceError("invalid_tracking_ids")
@@ -607,6 +614,262 @@ class _Redirect(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
+class _GitHubRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise SourceError("github_redirect_rejected")
+
+
+def _link_parts(value, separator):
+    """Split only outside quoted parameters and URI brackets; malformed is not EOF."""
+    pieces, start, angle, quoted, escaped = [], 0, False, False, False
+    for index, char in enumerate(value):
+        if quoted:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                quoted = False
+        elif char == '"':
+            quoted = True
+        elif char == "<":
+            if angle:
+                raise SourceError("github_pagination_invalid_link")
+            angle = True
+        elif char == ">":
+            if not angle:
+                raise SourceError("github_pagination_invalid_link")
+            angle = False
+        elif char == separator and not angle:
+            pieces.append(value[start:index].strip())
+            start = index + 1
+    if quoted or escaped or angle:
+        raise SourceError("github_pagination_invalid_link")
+    pieces.append(value[start:].strip())
+    return pieces
+
+
+def _github_next(headers):
+    get_all = getattr(headers, "get_all", None)
+    values = get_all("Link") if callable(get_all) else [headers.get("Link", "")]
+    values = values or []
+    if (not isinstance(values, list) or len(values) > 16
+            or any(type(value) is not str or len(value) > MAX_LINK_BYTES for value in values)
+            or sum(map(len, values)) + max(0, len(values)-1) > MAX_LINK_BYTES):
+        raise SourceError("github_pagination_invalid_link")
+    value = ",".join(values)
+    if len(value.encode("utf-8")) > MAX_LINK_BYTES or any(ord(char) < 32 or ord(char) == 127 for char in value):
+        raise SourceError("github_pagination_invalid_link")
+    if not value:
+        return None
+    parts = _link_parts(value, ",")
+    if not 1 <= len(parts) <= 16:
+        raise SourceError("github_pagination_invalid_link")
+    following = []
+    for part in parts:
+        matched = re.fullmatch(r"<([^<>]+)>\s*((?:;.*)?)", part)
+        if matched is None:
+            raise SourceError("github_pagination_invalid_link")
+        target, parameters = matched.groups()
+        relations = None
+        parameters = _link_parts(parameters, ";")
+        if parameters[0] or any(not parameter for parameter in parameters[1:]):
+            raise SourceError("github_pagination_invalid_link")
+        for parameter in parameters[1:]:
+            name, equals, raw = parameter.partition("=")
+            if not equals or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", name.strip()):
+                raise SourceError("github_pagination_invalid_link")
+            raw = raw.strip()
+            if raw.startswith('"'):
+                if len(raw) < 2 or not raw.endswith('"') or "\\" in raw:
+                    raise SourceError("github_pagination_invalid_link")
+                raw = raw[1:-1]
+            elif not re.fullmatch(r"[A-Za-z0-9_.:-]+", raw):
+                raise SourceError("github_pagination_invalid_link")
+            if name.strip().lower() == "rel":
+                if relations is not None or not re.fullmatch(r"[A-Za-z0-9_.:-]+(?: +[A-Za-z0-9_.:-]+)*", raw):
+                    raise SourceError("github_pagination_invalid_link")
+                relations = raw.lower().split()
+        if relations is None:
+            raise SourceError("github_pagination_invalid_link")
+        if "next" in relations:
+            following.append(target)
+    if len(following) > 1:
+        raise SourceError("github_pagination_ambiguous_next")
+    return following[0] if following else None
+
+
+def _github_page(url):
+    """Parse named or canonical listings; the caller must verify numeric scope."""
+    parsed = urllib.parse.urlsplit(_url(url))
+    if (parsed.hostname.lower() != "api.github.com" or parsed.username is not None
+            or parsed.password is not None or "\\" in url or "#" in url or "%" in parsed.path
+            or not re.fullmatch(r"(?:/repos/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+|/repositories/[1-9][0-9]{0,18})/security-advisories", parsed.path)
+            or any(part in {".", ".."} for part in parsed.path.split("/"))):
+        raise SourceError("invalid_github_source_url")
+    try:
+        values = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True, strict_parsing=True, max_num_fields=16)
+    except ValueError:
+        raise SourceError("github_pagination_invalid_query") from None
+    if any(not key or len(value) > 256 or any(ord(char) < 32 or ord(char) == 127 for char in key + value)
+           for key, value in values):
+        raise SourceError("github_pagination_invalid_query")
+    paging = {}
+    for key, value in values:
+        if key in {"before", "cursor"}:
+            raise SourceError("github_pagination_cursor_unsupported")
+        if key in {"page", "per_page", "after"}:
+            if key in paging:
+                raise SourceError("github_pagination_invalid_query")
+            if key == "after":
+                if not re.fullmatch(r"[!-~]{1,256}", value):
+                    raise SourceError("github_pagination_invalid_query")
+                paging[key] = value
+            else:
+                if not re.fullmatch(r"[0-9]{1,6}", value):
+                    raise SourceError("github_pagination_invalid_query")
+                paging[key] = int(value)
+    if "after" in paging and "page" in paging:
+        raise SourceError("github_pagination_invalid_query")
+    page, size = paging.get("page", 1), paging.get("per_page", 30)
+    if not 1 <= page <= 999999 or not 1 <= size <= 100:
+        raise SourceError("github_pagination_invalid_query")
+    filters = tuple(sorted((key, value) for key, value in values if key not in {"page", "per_page", "after"}))
+    return parsed.path, filters, size, "after" if "after" in paging else "page", paging.get("after", page)
+
+
+def _fetch_github(source, timestamp, opener):
+    """One bounded listing transaction, never a per-page cache validation."""
+    result = {"status": "failed", "records": [], "etag": None, "last_modified": None,
+              "error_code": None, "retry_after_seconds": None, "fetched_at": timestamp,
+              "content_hash": None, "clear_validators": True, "pages_fetched": 0, "bytes_received": 0,
+              "repository_metadata_requests": 0, "repository_id_verified": False}
+    records, conflicts, errors, bodies, seen = {}, set(), [], [], set()
+    deadline = time.monotonic() + source["timeout_seconds"]
+    next_url, scanned = source["url"], 0
+    try:
+        original = _github_page(next_url)
+        if not original[0].startswith("/repos/") or original[3:] != ("page", 1):
+            raise SourceError("github_pagination_initial_page_required")
+        do_open = opener or urllib.request.build_opener(_GitHubRedirect()).open
+        def read_body(url):
+            # The optional identity lookup spends the same byte/time budget as pages.
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise SourceError("deadline_exceeded")
+            request = urllib.request.Request(url, headers={
+                "User-Agent": "EventGuard/1.0 (read-only public advisory tracker)",
+                "Accept": "application/json", "Accept-Encoding": "identity"}, method="GET")
+            with do_open(request, timeout=remaining) as response:
+                status = getattr(response, "status", 200)
+                if status != 200:
+                    raise urllib.error.HTTPError(url, status, "http_error", response.headers, None)
+                if (response.geturl() if hasattr(response, "geturl") else url) != url:
+                    raise SourceError("github_redirect_rejected")
+                if response.headers.get("Content-Encoding", "identity").lower() not in {"", "identity"}:
+                    raise SourceError("unsupported_encoding")
+                length = response.headers.get("Content-Length")
+                if length is not None and (not length.isdecimal() or int(length) > source["max_bytes"] - result["bytes_received"]):
+                    raise SourceError("body_too_large")
+                read, chunks = getattr(response, "read1", response.read), []
+                while True:
+                    if time.monotonic() >= deadline:
+                        raise SourceError("deadline_exceeded")
+                    chunk = read(min(16384, source["max_bytes"] - result["bytes_received"] + 1))
+                    if time.monotonic() >= deadline:
+                        raise SourceError("deadline_exceeded")
+                    if not chunk:
+                        break
+                    result["bytes_received"] += len(chunk)
+                    if result["bytes_received"] > source["max_bytes"]:
+                        raise SourceError("body_too_large")
+                    chunks.append(chunk)
+                return b"".join(chunks), response.headers
+
+        continuation_path, continuation_mode = None, None
+        while next_url is not None:
+            current = _github_page(next_url)
+            if current in seen:
+                raise SourceError("github_pagination_cycle")
+            if current[1:3] != original[1:3]:
+                raise SourceError("github_pagination_scope_changed")
+            if result["pages_fetched"] >= source["max_pages"]:
+                raise SourceError("github_pagination_page_limit")
+            if seen:
+                if continuation_mode is not None and current[3] != continuation_mode:
+                    raise SourceError("github_pagination_scope_changed")
+                if current[3] == "page" and current[4] != result["pages_fetched"] + 1:
+                    raise SourceError("github_pagination_scope_changed")
+                if continuation_path is None:
+                    if current[0] != original[0]:
+                        if not current[0].startswith("/repositories/"):
+                            raise SourceError("github_pagination_scope_changed")
+                        metadata_url = "https://api.github.com" + original[0].removesuffix("/security-advisories")
+                        result["repository_metadata_requests"] += 1
+                        metadata_body, _headers = read_body(metadata_url)
+                        try:
+                            metadata = json.loads(metadata_body.decode("utf-8-sig", "strict"))
+                        except (ValueError, UnicodeError, RecursionError):
+                            raise SourceError("github_repository_identity_unverified") from None
+                        full_name = original[0].removeprefix("/repos/").removesuffix("/security-advisories")
+                        if (not isinstance(metadata, dict) or type(metadata.get("id")) is not int
+                                or not 1 <= metadata["id"] <= 2**63 - 1 or metadata.get("private") is not False
+                                or not isinstance(metadata.get("full_name"), str)
+                                or metadata["full_name"].casefold() != full_name.casefold()
+                                or current[0] != f'/repositories/{metadata["id"]}/security-advisories'):
+                            raise SourceError("github_repository_identity_unverified")
+                        if time.monotonic() >= deadline:
+                            raise SourceError("deadline_exceeded")
+                        result["repository_id_verified"] = True
+                    continuation_path, continuation_mode = current[0], current[3]
+                elif current[0] != continuation_path:
+                    raise SourceError("github_pagination_scope_changed")
+            body, headers = read_body(next_url)
+            parsed = parse_source(body, source)
+            if time.monotonic() >= deadline:
+                raise SourceError("deadline_exceeded")
+            scanned += len(parsed)
+            if scanned > MAX_RECORDS:
+                raise SourceError("too_many_records")
+            for index, record in enumerate(parsed, start=scanned-len(parsed)):
+                key = next(identifier for identifier in record["ids"] if identifier.startswith("GHSA-"))
+                if key in conflicts:
+                    continue
+                if key in records and records[key] != record:
+                    del records[key]
+                    conflicts.add(key)
+                    errors.append({"index": index, "reason": "github_record_conflict"})
+                else:
+                    records.setdefault(key, record)
+            bodies.append(body)
+            result["pages_fetched"] += 1
+            seen.add(current)
+            next_url = _github_next(headers)
+        if errors:
+            result["error_code"] = "github_record_conflict"
+    except urllib.error.HTTPError as error:
+        result["error_code"] = "unexpected_304" if error.code == 304 else "http_" + str(error.code)
+        result["retry_after_seconds"] = _retry(error.headers.get("Retry-After") if error.headers else None, timestamp)
+        error.close()
+    except SourceError as error:
+        result["error_code"] = str(error)
+    except (urllib.error.URLError, OSError, TimeoutError, socket.timeout) as error:
+        result["error_code"] = _network_error(error)
+    except (ValueError, TypeError, KeyError, AttributeError, ET.ParseError, RecursionError, StopIteration):
+        result["error_code"] = "parse_failed"
+    if bodies:
+        encoded = bodies[0] if len(bodies) == 1 else b"EventGuardGitHubPages/v1\0" + b"".join(
+            len(body).to_bytes(8, "big") + body for body in bodies)
+        result["content_hash"] = hashlib.sha256(encoded).hexdigest()
+    if result["error_code"] is None:
+        result.update(status="success", records=list(records.values()))
+    else:
+        errors.append({"index": -1, "reason": result["error_code"]})
+        result.update(status="partial" if records else "failed", coverage="partial", item_errors=errors,
+            records=[dict(record, fetched_at=timestamp, content_hash=result["content_hash"]) for record in records.values()])
+    return result
+
+
 def _retry(value: Any, now: str) -> int | None:
     try:
         seconds = int(value)
@@ -655,6 +918,8 @@ def fetch_source(source: dict, previous: dict | None = None, now: str | None = N
               "retry_after_seconds": None, "fetched_at": timestamp, "content_hash": None}
     try:
         source = _source(source)
+        if source["adapter"] == "github_advisories":
+            return _fetch_github(source, timestamp, opener)
         headers = {"User-Agent": "EventGuard/1.0 (read-only public advisory tracker)", "Accept": "application/json, application/atom+xml, application/rss+xml, text/plain, text/html", "Accept-Encoding": "identity"}
         for key, header in (("etag", "If-None-Match"), ("last_modified", "If-Modified-Since")):
             value = previous.get(key) if conditional_allowed else None
@@ -676,9 +941,6 @@ def fetch_source(source: dict, previous: dict | None = None, now: str | None = N
                 raise SourceError("cross_origin_redirect")
             if response.headers.get("Content-Encoding", "identity").lower() not in {"", "identity"}:
                 raise SourceError("unsupported_encoding")
-            if source["adapter"] == "github_advisories" and 'rel="next"' in response.headers.get("Link", ""):
-                # Do not silently treat a truncated advisory listing as complete.
-                raise SourceError("pagination_required")
             length = response.headers.get("Content-Length")
             if length is not None and (not length.isdecimal() or int(length) > source["max_bytes"]):
                 raise SourceError("body_too_large")

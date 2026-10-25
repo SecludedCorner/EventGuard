@@ -1,5 +1,22 @@
 # EventGuard 現況
 
+## 2026-10-26 持續工程：產品狀態、分頁與有界量測（最新）
+
+基底 9a34a5b，分支 feat/local-codex-acceptance；依既有授權繼續，未 push、未改系統／帳戶設定。AGENTS 的 Continuous Execution Policy 已在 a34e466 逐字加入，繼續有效。
+
+- P2-MCP-STATUS-001：CLI／Web／Tk 加入有界 MCP 退出摘要，從當次 attempt 原始 marker／HANDLE 證據重讀；舊資料、缺檔、外來 run 或非零皆維持 unknown，不信任快取的 verified。實際閒置 test App 的 API／CLI／瀏覽器一致顯示「MCP退出已驗證、退出碼0、ACK flush」。GUI 關閉後原 HANDLE 自然0／Job0／無強停，collection/model/新增CLI 均0。真04原64檔hash全不變；只新增App descriptor/lock。
+- P1-SOAK-GUARD-002：spawn後任何有界異常先嘗試耐久 stop.request，再 grace／原自有Job收尾；保存失敗維持 unconfirmed。P2-SOAK-MEASURE-001：獨立 minimum wall、pacing、僅本worker pseudo-HANDLE的 CPU/private bytes/working set/handle 採樣，未知=null，JSONL有界。兩輪真有限harness各16 accepted/16唯一ACK/pending0，wall 60.037116／60.045564秒，皆自然0／Job0，非模型、OS重啟或24h。
+- P2-GH-PAGES-001：GitHub有界分頁，預設5／最多8頁；一次固定metadata驗證 canonical repository ID，最多max_pages+1 GET，共用bytes/deadline；僅forward after或連續page，固定origin/path/filters/page-size，拒redirect／循環／混用／錯誤mapping。partial保留last-good、304不得洗完整；完整success才清舊單頁validators；max_pages屬resource policy，不使legacy cache換binding。
+
+定向14模組253項252過／1通知圖示略過；首輪完整1534項1530過／3略過／1舊dict斷言失敗，已補新增unknown欄位後77/77。真canonical/after與soak增量定向201/201。最新完整回歸 1543 項：1540 通過、3 略過、0 failure/error，source_unchanged=true，guardian自然0／remaining0／無強停，model_calls0、machine_scan=false。原失敗不覆寫。
+
+真公開分頁04：兩公告頁＋一次metadata GET，uv repo id699532645，17369/65536 bytes，1.305084秒；正確partial/github_pagination_page_limit，兩頁smoke及27項獨立核對通過。追加05按預設5頁上限仍partial，完整來源要求未達；只寫隔離test cache，未改正式cache，不再加大cap洗綠。早期01 transport_denied及wrapper無效finish reason缺退出回條、02/03 canonical不相容均保留。
+
+資源實測：降低harness輪詢20Hz→4Hz後，短窗idle CPU 4.392866%→4.069045%單核心，仍未達<1%目標；兩次不是受控主機負載實驗，不能認定因果，更不代表產品monitor性能。下一項 P2-IDLE-CPU-003 只診斷自身harness observer成本，根因有證據才修。30分鐘idle／24h／全Job資源與實機來源仍未驗。
+
+證據目錄：reports/verify-product-pagination-metrics-20261026-01、verify-agent-status-compat-20261026-01、verify-github-cursor-soak-20261026-01、verify-full-20261026-01/-02、soak-measured-20261026-01/-02、mcp-status-product-20261026-01、public-fetch-github-pages-20261026-01…05。原先 receive→query→result→ACK 及五層退出真證據仍是 reports/service-acceptance-eventguard-mcp-exit-20261025-04；本切片沒有重跑模型。執行資料不提交。
+
+
 ## 持續工程 checkpoint：MCP 自身退出與有限恢復流程通過（最新）
 
 基底 a34e466，分支 feat/local-codex-acceptance。本輪依持續工程授權繼續實作，沒有將前次 commit 或單事件通過當停止條件。

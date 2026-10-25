@@ -228,12 +228,12 @@ class IntelligenceSourcesTests(unittest.TestCase):
             self.assertEqual(config["sources"][0]["failure_threshold"], 5)
             self.assertIn("source_stale", config["rules"]["enabled_reasons"])
 
-    def test_repository_patch_field_and_pagination_limit_are_explicit(self):
+    def test_repository_patch_field_and_invalid_pagination_source_are_explicit(self):
         data = [{"ghsa_id": "GHSA-hq85-5cpj-mr62", "vulnerabilities": [{"package": {"ecosystem": "pip", "name": "uv"}, "vulnerable_version_range": "< 0.13.4", "patched_versions": "0.13.4"}]}]
         record = parse_source(json.dumps(data).encode(), source("github_advisories"))[0]
         self.assertEqual(record["fixes"][0]["version"], "0.13.4")
         result = fetch_source(source("github_advisories"), now=NOW, opener=lambda *a, **kw: Response(b"[]", headers={"Link": '<https://example.org/advisory?page=2>; rel="next"'}))
-        self.assertEqual(result["error_code"], "pagination_required")
+        self.assertEqual(result["error_code"], "invalid_github_source_url")
 
 
 if __name__ == "__main__":

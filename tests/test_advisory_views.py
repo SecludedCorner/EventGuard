@@ -172,6 +172,24 @@ class AdvisoryViewsTests(unittest.TestCase):
                 self.assertEqual(result["advisories"][0]["sources"][0]["reason_code"], code)
                 self.assertEqual(result["incident_conclusion"], "not_assessed")
 
+    def test_github_pagination_reasons_are_visible_without_source_text(self):
+        self.seed()
+        codes = ("invalid_github_source_url", "github_redirect_rejected",
+                 "github_pagination_invalid_link", "github_pagination_ambiguous_next",
+                 "github_pagination_invalid_query", "github_pagination_cursor_unsupported",
+                 "github_pagination_initial_page_required", "github_pagination_cycle",
+                 "github_pagination_scope_changed", "github_pagination_page_limit",
+                 "github_record_conflict", "invalid_max_pages", "github_repository_identity_unverified")
+        for code in codes:
+            with self.subTest(code=code):
+                self.store.record_fetch(self.source, {"status": "failed", "error_code": code}, 1001)
+                self.assertEqual(self.view()["sources"][0]["reason_code"], code)
+                private = code + "_private_canary"
+                self.store.record_fetch(self.source, {"status": "failed", "error_code": private}, 1001)
+                result = self.view()
+                self.assertEqual(result["sources"][0]["reason_code"], "source_error_unrecognized")
+                self.assertNotIn(private, json.dumps(result))
+
     def test_unknown_or_extended_transport_reason_never_exposes_source_text(self):
         self.seed()
         for code in ("proxy_connect_099", "proxy_connect_600", "proxy_connect_403_secret_canary",

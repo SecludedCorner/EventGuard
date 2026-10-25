@@ -334,7 +334,10 @@ class AgentServiceTests(unittest.TestCase):
         self.assertFalse(result["execution_verified"])
         self.assertEqual(result["queue"]["pending"], 0)
         self.assertEqual(result["reason"], "delivery_evidence_failed_no_automatic_retry")
-        self.assertEqual(result["dispatcher"], {"tasks_started": 1, "tasks_passed": 0})
+        self.assertEqual(result["dispatcher"], {
+            "tasks_started": 1, "tasks_passed": 0,
+            "mcp_lifecycle": {"status": "unknown", "exit_code": None, "ack_flushed": None,
+                              "reason": "mcp_attempt_not_retained"}})
         self.assertNotIn("budget", result)
 
     def test_stale_heartbeat_does_not_claim_running(self):

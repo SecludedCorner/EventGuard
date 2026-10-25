@@ -40,6 +40,12 @@ _SOURCE_ERRORS = frozenset({
     "unsafe_xml", "invalid_feed", "invalid_github_advisories", "invalid_github_advisory",
     "tls_verification_failed", "tls_error", "dns_error", "transport_denied",
     "connection_refused", "transport_error", "unexpected_304",
+    "invalid_github_source_url", "github_redirect_rejected",
+    "github_pagination_invalid_link", "github_pagination_ambiguous_next",
+    "github_pagination_invalid_query", "github_pagination_cursor_unsupported",
+    "github_pagination_initial_page_required", "github_pagination_cycle",
+    "github_pagination_scope_changed", "github_pagination_page_limit",
+    "github_record_conflict", "invalid_max_pages", "github_repository_identity_unverified",
 })
 # Only these finite protocol status codes are public. A source-provided suffix
 # or exception message can never become an accepted reason.

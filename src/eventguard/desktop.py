@@ -209,14 +209,18 @@ class DesktopController:
         policy = settings(self.root)
         with self._agent_lock:
             result = dict(self._agent_result)
+        from .agent_dispatch import unknown_mcp_lifecycle
+        result["mcp_lifecycle"] = unknown_mcp_lifecycle()
         worker = self._agent_thread
-        if worker is not None and worker.is_alive() and self._agent_run_dir is not None:
+        if self._agent_run_dir is not None:
             try:
                 from .agent_dispatch import status
-                value = status(self._agent_run_dir)
+                value = status(self._agent_run_dir, read_only=True)
                 # Only bounded operational values reach the GUI. No CLI trace,
                 # prompt, command line or event content is read here.
-                for name in ("state", "reason", "child_exited", "tasks_started", "tasks_passed", "queue_checks"):
+                fields = (("state", "reason", "child_exited", "tasks_started", "tasks_passed", "queue_checks")
+                          if worker is not None and worker.is_alive() else ())
+                for name in (*fields, "mcp_lifecycle"):
                     if name in value:
                         result[name] = value[name]
             except (OSError, ValueError, RuntimeError):

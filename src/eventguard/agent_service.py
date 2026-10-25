@@ -187,7 +187,8 @@ def status(root):
               "host_liveness": "not_recorded", "execution_verified": False,
               "real_agent_wake_verified": False, "model_calls": 0,
               "pending_disposition": "retained", "pending_events": None,
-              "ready_count": None, "attention_count": None}
+              "ready_count": None, "attention_count": None,
+              "mcp_lifecycle": agent_dispatch.unknown_mcp_lifecycle()}
     try:
         result["selection_policy"] = _selection_policy(root)
     except (OSError, ValueError, TypeError, RuntimeError):
@@ -232,6 +233,20 @@ def status(root):
                           dispatch_run_dir=saved.get("dispatch_run_dir"), model_calls=saved.get("model_calls"))
             if isinstance(result["dispatcher"], dict):
                 result["dispatcher"] = {key: value for key, value in result["dispatcher"].items() if key != "budget"}
+                # A cached passed flag is not current raw MCP exit proof.
+                result["dispatcher"]["mcp_lifecycle"] = agent_dispatch.unknown_mcp_lifecycle()
+                expected_run = _guard(root) / "data/agent-service/runs" / owner["run_id"]
+                candidate = result.get("dispatch_run_dir")
+                try:
+                    if (desired and desired["run_id"] == owner["run_id"] and type(candidate) is str
+                            and len(candidate) <= 4096 and Path(candidate).absolute() == expected_run):
+                        current = agent_dispatch.status(expected_run, read_only=True)
+                        if (current.get("run_id") == result["dispatcher"].get("run_id")
+                                and current.get("active_attempt_id") == result["dispatcher"].get("active_attempt_id")):
+                            result["mcp_lifecycle"] = current["mcp_lifecycle"]
+                except (OSError, ValueError, RuntimeError, TypeError, KeyError, AttributeError):
+                    pass
+                result["dispatcher"]["mcp_lifecycle"] = result["mcp_lifecycle"]
         else:
             result["model_calls"] = None
         if matches:

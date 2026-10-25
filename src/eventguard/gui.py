@@ -83,6 +83,8 @@ def view_snapshot(document, *, severity="all", delivery="all"):
     auto_message = auto_labels.get(auto_state, "自動處理狀態：" + safe_text(auto_state, 80))
     if automatic.get("reason"):
         auto_message += " 原因：" + safe_text(automatic["reason"], 120)
+    from .presentation import mcp_lifecycle_text
+    auto_message += " " + mcp_lifecycle_text(automatic.get("mcp_lifecycle"))
     auto_message += " 模型任務須有有效的明確授權；使用專用 agent，不接續本聊天。"
     activity = value.get("activity") if isinstance(value.get("activity"), dict) else {}
     activity_rows = []

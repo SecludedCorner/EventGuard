@@ -155,7 +155,7 @@ def _merge_source_records(previous, incoming):
 
 def source_identity(source):
     """Cache identity excludes wait/retry/display policy, not adapter settings."""
-    policy = {"interval_seconds", "stale_after_seconds", "timeout_seconds", "max_bytes", "failure_threshold", "important", "enabled"}
+    policy = {"interval_seconds", "stale_after_seconds", "timeout_seconds", "max_bytes", "max_pages", "failure_threshold", "important", "enabled"}
     return _hash({key: value for key, value in source.items() if key not in policy})
 
 
@@ -459,6 +459,9 @@ class IntelligenceStore:
         status = result.get("status")
         if status not in _STATUSES:
             raise IntelligenceError("invalid_fetch_status")
+        clear_validators = result.get("clear_validators", False)
+        if type(clear_validators) is not bool:
+            raise IntelligenceError("invalid_cache_validator_policy")
         interval = _number(source, "interval_seconds", 3600, 1)
         stale_after = _number(source, "stale_after_seconds", 86400, 1)
         threshold = _number(source, "failure_threshold", 3, 1, 1000)
@@ -526,6 +529,8 @@ class IntelligenceStore:
                 alert = "fresh"
             values = [(old[key] if old else None) if incomplete else result.get(key) if result.get(key) is not None else (old[key] if old and cache_matches else None)
                       for key in ("etag", "last_modified", "content_hash")]
+            if status == "success" and clear_validators:
+                values[0:2] = [None, None]
             db.execute("INSERT OR REPLACE INTO sources VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                        (source_id, config, stamp, last_success, stamp + delay, failures, status, error,
                         *values, cached, alert, _json(cache_config, 65536), partial_json, _json(item_errors, 65536)))

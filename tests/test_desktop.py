@@ -254,7 +254,8 @@ class DesktopAutomaticAgentTests(unittest.TestCase):
         self.final = {"state": "waiting", "child_exited": True, "tasks_started": 0}
         self.enterContext(patch("eventguard.agent_access.guard", return_value=None))
         self.enterContext(patch("eventguard.agent_dispatch.run", side_effect=self.dispatch))
-        self.enterContext(patch("eventguard.agent_dispatch.status", side_effect=lambda _: dict(self.final)))
+        self.status_mock = self.enterContext(patch("eventguard.agent_dispatch.status",
+            side_effect=lambda _, **kwargs: dict(self.final)))
         self.addCleanup(self.cleanup_worker)
 
     def dispatch(self, directory, **kwargs):
@@ -278,6 +279,18 @@ class DesktopAutomaticAgentTests(unittest.TestCase):
         view = self.controller._automatic_snapshot()
         self.assertTrue(view["enabled"])
         self.assertEqual(view["state"], "armed")
+        self.assertEqual(self.invocations, [])
+
+    def test_finished_worker_mcp_summary_is_refreshed_readonly_instead_of_using_cache(self):
+        self.controller._agent_run_dir = self.root / "reports" / "fixture-agent"
+        self.controller._agent_result = {"state": "stopped", "mcp_lifecycle": {
+            "status": "verified", "exit_code": 0, "ack_flushed": True, "reason": "mcp_natural_exit_verified"}}
+        self.final = {"state": "stopped", "mcp_lifecycle": {
+            "status": "unknown", "exit_code": None, "ack_flushed": None, "reason": "mcp_lifecycle_evidence_unverified"}}
+        value = self.controller._automatic_snapshot()
+        self.assertEqual(value["mcp_lifecycle"]["status"], "unknown")
+        self.assertFalse(value["worker_alive"])
+        self.status_mock.assert_called_once_with(self.controller._agent_run_dir, read_only=True)
         self.assertEqual(self.invocations, [])
 
     def test_opt_in_while_paused_only_saves_until_explicit_start(self):

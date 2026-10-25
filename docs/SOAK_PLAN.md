@@ -1,5 +1,14 @@
 # 24 小時 soak 計畫（尚未執行）
 
+## 2026-10-26 已執行的有限增量（不等於本頁24h計畫通過）
+
+scripts/soak.py 已能以專用reports執行有界synthetic恢復流程。--duration-seconds是上限，--min-wall-seconds是獨立最小總wall，--pacing-seconds是ACK間合作等待；總wall包含工作時間，不能當成同長idle。啟動後異常先耐久stop.request再grace/自有Job，未知或保存失敗維持未確認。
+
+只從本worker GetCurrentProcess pseudo-HANDLE取 CPU／private bytes／working set／handles，未知=null，JSONL有byte/sample cap。兩輪60秒總wall／16ACK／pending0皆自然退出；獨立集合/SQL/hash/原HANDLE核對及有效59樣本保存於reports/soak-measured-20261026-01/-02。未量整Job、OS重啟或24h。
+
+短窗idle CPU 4.393%／4.069%單核心，尚未達<1%目標；輪詢20Hz→4Hz未消除此成本，不能繼續盲調參洗綠。下一步profiling只診斷本harness的observer overhead。30分鐘idle、工作窗趨勢、完整24h及下方背景host流程仍未執行；保存的harness proof不能當成真agent或正式主機驗收。
+
+
 Phase 4 先提交計畫；尚未執行完整24小時。使用者後續已授權一般權限背景監看實作與驗證，見 [背景契約](BACKGROUND.md)；這不等於24小時、實際登入排程、模型、提權、狀態注入或登出／重開機已通過。完整 soak 仍須先固定開始時間、隔離目錄與範圍，使用既有 Python 3.13 標準庫及本工具 Job。
 
 ## 範圍與隔離

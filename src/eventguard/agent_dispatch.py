@@ -1195,15 +1195,40 @@ def run(directory, source_dir=ROOT / "data/live", state_dir=ROOT / "data/agent-d
             source_lease.release()
 
 
+def unknown_mcp_lifecycle():
+    return {"status": "unknown", "exit_code": None, "ack_flushed": None,
+            "reason": "mcp_attempt_not_retained"}
+
+
+def _mcp_lifecycle_summary(attempt, token):
+    """Project only bounded operational fields from one raw-evidence assessment."""
+    summary = dict(unknown_mcp_lifecycle(), reason="mcp_lifecycle_evidence_unverified")
+    try:
+        from .mcp_lifecycle import assess_mcp_exit
+        proof = assess_mcp_exit(attempt, token)
+        code = proof.get("mcp_exit_code")
+        if type(code) is int and -(2**31) <= code <= 0xFFFFFFFF:
+            summary["exit_code"] = code
+        if (proof.get("passed") is True and proof.get("mcp_natural_exit_verified") is True
+                and type(code) is int and code == 0 and proof.get("ack_response_flushed") is True
+                and proof.get("evidence_errors") == []):
+            summary.update(status="verified", ack_flushed=True, reason="mcp_natural_exit_verified")
+    except (OSError, ValueError, RuntimeError, TypeError, AttributeError, KeyError, RecursionError):
+        pass
+    return summary
+
+
 def status(directory, *, read_only=False):
     if type(read_only) is not bool:
         raise LocalWaitError("invalid_dispatch_read_only_profile")
     directory = _guard(directory)
     state = _state(directory)
     state.pop("budget", None)  # Historical quota data is not current authority.
+    state["mcp_lifecycle"] = unknown_mcp_lifecycle()  # Never trust a saved summary.
     token = state.get("active_attempt_id")
     if isinstance(token, str) and _TOKEN.fullmatch(token):
         attempt = _guard(directory / "attempts" / token)
+        state["mcp_lifecycle"] = _mcp_lifecycle_summary(attempt, token)
         start_path = attempt / "capture-start.json"
         if start_path.exists():
             started = read_json(start_path)
