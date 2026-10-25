@@ -1,5 +1,23 @@
 # EventGuard 現況
 
+## 2026-10-25：真 CLI 單事件驗收失敗，已修正失敗早停（最新）
+
+本節取代下方「真通訊未執行／仍須重新確認」的現況。基底 `ea00c70`，分支 `feat/local-codex-acceptance`。本輪使用者已明確授權最多兩次、每次一件合成事件／一個 CLI 任務／180 秒；授權與時間已在執行前寫入該次 `human-approval.json`。本輪實際啟動真 CLI 任務 **1 次**，第二次未執行，未 push。
+
+真通訊 **失敗，尚未收件**。執行既有 `reports/service-acceptance-eventguard-single-test-20261025-01`，台北 14:55:19–14:57:01（UTC 06:55:19–06:57:01），102.62 秒內收尾。CLI 自然 exit 1：WebSocket 連線遭 WSA 10013 存取拒絕，轉 HTTPS 後仍連線失敗；沒有舊的 `invalid transport` 錯誤。這只能確認連線受拒，未確認是主機政策、sandbox 或其他來源；未修改網路／系統／帳戶設定，也未提權。
+
+- 同一事件生成／入列各 1；receive／query／結果保存／ACK 各 0；source pending 1、receipts 0、無重複。JSONL 有 thread.started／turn.started，沒有 MCP 工具呼叫或完成回合。模型請求數未量測。
+- CLI 自然 exit 1、capture worker／supervisor 自然 exit 0、host 自然 exit 0；各層 Job remaining 0、無強停。host 為 stopped／exited_verified。不是喚醒既有桌面聊天或 dot 的證據。
+- 外層包裝器先因相對 `py` 路徑而在啟動驗收前失敗（CLI 0 次），改用同一 launcher 的絕對路徑後才執行上面唯一一次真通訊。包裝器收尾又使用不支援的 finish reason，缺少外層 launcher 的原 HANDLE 退出回條；退出碼記 unknown，未補造。之後對已記錄 launcher／驗收 interpreter PID 的唯讀核對均為 missing。這不替代原 HANDLE 證據；CLI／worker／host 的原回條完整。
+
+發現並修正 `src/eventguard/delivery_validation.py`：唯一任務已失敗且自有程序樹確認退出、dispatcher 為 waiting_task_limit 時，立即走原有 finally 合作停止 host，不再空等 160 秒工作期限。本次實測使用修正前程式，由操作者在失敗後合作停止；修正後只做無模型驗證。新增 `tests/test_delivery_validation.py` 三項 fixture，覆蓋立即失敗、未確認退出繼續等待、成功正常返回。
+
+驗證命令：`py -3.13 -B scripts/verify.py --run-dir reports/verify-service-failfast-20261025-01 --timeout-seconds 300 --module test_delivery_validation --module test_launch_receipts`。台北 14:59:00–14:59:19，Python 3.13.3，33/33 通過、0 failure/error/skip；source_unchanged=true、guardian 自然 exit 0、remaining 0、無強停、model_calls 0。沒有重跑完整回歸；1467/1469 是上一版既有結果。
+
+證據：[真通訊結果](reports/service-acceptance-eventguard-single-test-20261025-01/communication-result.json)、[定向測試](reports/verify-service-failfast-20261025-01/verification-summary.json)。原 JSONL、stderr、SQLite、授權及程序回條均只留本機 reports，不提交執行資料。詳細 event／attempt 與檔案清單見 EVIDENCE。
+
+目前未建立在授權內可解決 WSA 10013 的修正，因此保留第二次額度，避免在相同條件重跑。不得重用本次已消耗目錄。真 receive→query→保存結果→ACK 仍受阻；若後續在本輪授權仍有效時重試，須先有具體改善證據，使用全新 prepare 目錄並另記授權。超過兩次、push 或更改系統／帳戶設定都需再詢問使用者。
+
 ## 2026-10-25：合併worktree分支（最新）
 
 本合併提交把feat/local-codex-acceptance（8176095）與claude/eventguard-quota-test-migration（6456759）合在一起，含c8d42e1、3155297。

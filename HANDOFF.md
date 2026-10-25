@@ -1,5 +1,15 @@
 # EventGuard 接手
 
+## 2026-10-25：真通訊已執行一次且失敗（最新接手點）
+
+本節優先於下方「未執行／等待重新授權／仍未整合」的歷史文字。基底 `ea00c70`、分支 `feat/local-codex-acceptance`，整合已完成。本輪使用者明確授權最多兩次真通訊，每次一件合成事件、一個 CLI 任務、180 秒；實際執行 1 次，第二次未用，未 push。
+
+`reports/service-acceptance-eventguard-single-test-20261025-01` 已消耗，不得再 execute。CLI 自然 exit 1，WSA 10013 連線拒絕，HTTPS fallback 亦失敗；receive/query/result/ACK 都是 0，事件仍 pending、receipts 0。CLI／worker／host 原 Job 回條皆自然退出、remaining 0、無強停。外層包裝器因錯誤 finish reason 缺原 HANDLE 退出回條，明示 unknown；後續記錄 PID 查為 missing，不冒充自然退出回條。
+
+修正 `delivery_validation._wait_service` 在唯一任務失敗且 child_exited 確認後立即失敗、合作停止 host；新增三項 fixture。guardian `test_delivery_validation`＋`test_launch_receipts` 33/33 通過，證據 `reports/verify-service-failfast-20261025-01`。修正未再做真 CLI 重驗，完整回歸 1467/1469 只屬既有版本。
+
+完整結果與限制見 STATUS 頂部、EVIDENCE 最新段，以及本次 `communication-result.json`／`execution-exit-unconfirmed.json`。沒有改網路／系統／帳戶設定、提權、掃描或常駐背景程序。未確認 WSA 10013 的政策／環境根因，尚無可在授權內改變連線結果的方案，因此未花第二次額度。接續者先讀最新人類指示；不可把這份歷史交接當新授權。
+
 ## 2026-10-25：合併worktree分支（最新）
 
 本合併提交把feat/local-codex-acceptance（8176095）與claude/eventguard-quota-test-migration（6456759）合在一起，含c8d42e1、3155297。

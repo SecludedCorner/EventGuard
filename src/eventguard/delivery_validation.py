@@ -209,6 +209,11 @@ def _wait_service(root, deadline, predicate):
             raise ValueError("service_acceptance_one_attempt_exceeded")
         if predicate(view, dispatch):
             return sample
+        # The finite task cannot recover after its owned tree has exited.
+        # Stop cooperatively now instead of waiting out the remaining deadline.
+        if (dispatch.get("state") == "waiting_task_limit" and dispatch.get("tasks_started") == 1
+                and dispatch.get("tasks_passed") == 0 and dispatch.get("child_exited") is True):
+            raise ValueError("service_acceptance_task_failed_pending_preserved")
         if view.get("state") in {"blocked", "failed", "interrupted", "stopped", "shutdown_unconfirmed"}:
             raise ValueError("service_acceptance_host_blocked_pending_preserved")
         time.sleep(SERVICE_POLL_SECONDS)

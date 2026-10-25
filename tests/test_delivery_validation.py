@@ -446,6 +446,44 @@ class ServiceDeliveryValidationTests(unittest.TestCase):
         stop.assert_not_called()
         self.assertFalse((self.root / "data/agent-service").exists())
 
+    def test_service_wait_fails_immediately_after_only_task_exits_unsuccessfully(self):
+        sample = {"service": {"state": "running", "dispatcher": {
+            "state": "waiting_task_limit", "tasks_started": 1, "tasks_passed": 0, "child_exited": True}}}
+        predicate = Mock(return_value=False)
+        with patch.object(queue_validation, "_service_view", return_value=sample) as view, \
+                patch.object(queue_validation.time, "monotonic", return_value=0), \
+                patch.object(queue_validation.time, "sleep") as sleep:
+            with self.assertRaisesRegex(ValueError, "service_acceptance_task_failed_pending_preserved"):
+                queue_validation._wait_service(self.root, 100, predicate)
+        view.assert_called_once_with(self.root)
+        predicate.assert_called_once_with(sample["service"], sample["service"]["dispatcher"])
+        sleep.assert_not_called()
+
+    def test_service_wait_keeps_waiting_until_owned_child_exit_is_confirmed(self):
+        unfinished = {"service": {"state": "running", "dispatcher": {
+            "state": "waiting_task_limit", "tasks_started": 1, "tasks_passed": 0, "child_exited": False}}}
+        completed = {"service": {"state": "running", "dispatcher": {
+            "state": "waiting_task_limit", "tasks_started": 1, "tasks_passed": 1, "child_exited": True}}}
+        predicate = lambda view, dispatch: dispatch.get("tasks_passed") == 1 and dispatch.get("child_exited") is True
+        with patch.object(queue_validation, "_service_view", side_effect=[unfinished, completed]) as view, \
+                patch.object(queue_validation.time, "monotonic", return_value=0), \
+                patch.object(queue_validation.time, "sleep") as sleep:
+            self.assertIs(queue_validation._wait_service(self.root, 100, predicate), completed)
+        self.assertEqual(view.call_count, 2)
+        sleep.assert_called_once_with(queue_validation.SERVICE_POLL_SECONDS)
+
+    def test_service_wait_returns_successful_predicate_at_task_limit(self):
+        sample = {"service": {"state": "running", "dispatcher": {
+            "state": "waiting_task_limit", "tasks_started": 1, "tasks_passed": 1, "child_exited": True}}}
+        predicate = Mock(return_value=True)
+        with patch.object(queue_validation, "_service_view", return_value=sample) as view, \
+                patch.object(queue_validation.time, "monotonic", return_value=0), \
+                patch.object(queue_validation.time, "sleep") as sleep:
+            self.assertIs(queue_validation._wait_service(self.root, 100, predicate), sample)
+        view.assert_called_once_with(self.root)
+        predicate.assert_called_once_with(sample["service"], sample["service"]["dispatcher"])
+        sleep.assert_not_called()
+
     def test_driver_waits_empty_before_enqueue_and_stops_after_failure(self):
         calls = []
         def start(*args, **kwargs):

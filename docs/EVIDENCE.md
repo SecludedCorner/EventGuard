@@ -1,5 +1,35 @@
 # 證據與時間日誌
 
+## 2026-10-25：一次真 CLI 通訊失敗與失敗早停修正（最新）
+
+基底 `ea00c7023ac532e08d1a2c3eff4d5e7d611b5b67`，分支 `feat/local-codex-acceptance`。接手唯讀核對 HEAD／分支符合；追蹤檔乾淨，既有未追蹤 `.codex-remote-attachments/`、`docs/research/` 保留且不提交。先讀 AGENTS、README、STATUS／HANDOFF 頂部、EVIDENCE 最新段、DEVELOPMENT／COVERAGE_PLAN／INGRESS_PLAN／LOCAL_MCP_EXPERIMENT。最新直接人類授權覆蓋歷史「未執行／不可重試」描述：本輪最多兩次、每次一件合成事件、一個 native CLI 任務、180 秒；失敗可分析修正後新目錄 prepare。未授權 push 或系統／帳戶變更。
+
+### 本次真通訊：失敗
+
+根目錄 `reports/service-acceptance-eventguard-single-test-20261025-01`。事前核對 manifest 無 service_execution、未入列、capture-start 0，原生 CLI SHA256 仍為 `1103e9e09c71fa2cd0afd6d8f3b9a2d63174fe8efd7cb5bd09f1cb14ef58a098`。未重跑 login／version，沿用既有 metadata，不讀認證或原始 sessions。授權原文範圍、記錄時間與前次已撤回紀錄保存在 `human-approval.json`，於執行前寫入；執行後標 consumed。
+
+執行原授權命令：`py -3.13 -B scripts/validate_delivery.py service --root reports/service-acceptance-eventguard-single-test-20261025-01 --codex-executable C:\Users\yulin\AppData\Local\OpenAI\Codex\bin\2993767bd1dfb009\codex.exe --execute`。由本機 reports 中的單次 `run-authorized.py` 以私有 Job 啟動同一 Python launcher；不修改全域或專案 MCP 設定。
+
+驗收程式 UTC 06:55:19.248895–06:57:01.864288（台北 14:55:19–14:57:01），102.615 秒，180 秒內。唯一事件 `evt-c29ff48b381d42799d0dc4e3be5c4a15`，host run `f63a975acba84efcba9adaa15d179e81`，attempt `c98110977757441c9c0a8962d5a9236a`。CLI JSONL thread `01a171d7-be28-7200-8795-6f2e34338ca5`；只屬本次新產生輸出。
+
+CLI 自然 exit 1。JSONL 與 stderr 顯示 WebSocket 存取通訊端遭拒，WSA 10013；改用 HTTPS transport 後仍連線失敗。未見舊 `invalid transport`。只有 thread.started／turn.started，沒有 MCP tool call 或完成回合。不把 turn.started 當已完成模型請求；模型請求數未量測。網路拒絕的政策／環境根因 unknown，未查或修改防火牆、網路、帳戶、全域設定，未換權限或加繞過旗標。
+
+SQLite 以 `mode=ro` 核對：生成／入列各 1，source events 1、pending 1，receipts 0，無重複；inbox 無該事件 evidence。receive/query/result/ACK 全 0。`communication-result.json` 的 passed=false，不生成假的通過 validation。
+
+CLI PID 59760，建立時間 06:55:25.796606Z，capture_complete=true、自然 exit 1、remaining 0、forcibly_terminated=false。supervisor PID 6904 自然 exit 0、remaining 0。host PID 34792，建立時間 06:55:19.359944Z，操作者在 CLI 失敗後依本次 scope 合作停止；`service-owner-stop.json` 原 HANDLE 確認自然 exit 0、remaining 0、無強停。最終 service stopped／exited_verified、desired off。未停止其他程序。
+
+外層證據限制另記：包裝器第一次用相對 `py`，CreateProcessW 在驗收前失敗，service_execution 仍空、capture-start 0；將這段失敗保存為 `prelaunch-failed-01*`，改為同 launcher 絕對路徑後才發生上述一次真 CLI 任務。包裝器收尾使用不支援的 finish reason `completed`，因此沒有外層 launcher 原 HANDLE 退出回條，外層 OS exit code unknown。`execution-exit-unconfirmed.json` 如實保存，沒有補造 `execution-exit.json`。後續僅查已記錄 launcher PID 37704／驗收 interpreter PID 51676，均為 missing；這只支持當時已不存活，不替代自然退出回條。各層 CLI／worker／host 原回條不受此缺口影響。
+
+主要證據：根目錄下 `human-approval.json`、`execution-intent.json`、`execution-source-manifest.json`、`execution-start.json`、`execution-exit-unconfirmed.json`、`communication-result.json`、`communication-final-status.json`、`manifest.json`、`service-owner-stop.json`；`data/agent-service/runs/f63a975acba84efcba9adaa15d179e81/attempts/c98110977757441c9c0a8962d5a9236a/` 下 `codex.jsonl`、`codex.stderr.txt`、`capture-start.json`、`capture-exit.json`、`supervisor-start.json`、`supervisor-exit.json`、`summary.json`。執行資料只留本機 reports，不加入 Git。
+
+### 無模型修正與驗證
+
+實測發現：CLI 已失敗退出，dispatcher waiting_task_limit／tasks_started=1／tasks_passed=0／child_exited=true，`_wait_service` 卻仍等工作期限。修改 `src/eventguard/delivery_validation.py`：這種已終止的唯一失敗任務立即 raise 固定類別 `service_acceptance_task_failed_pending_preserved`，沿既有 finally 合作停止 host；不增加重試或任務數。修改 `tests/test_delivery_validation.py`，新增立即失敗、尚未確認退出繼續等待、成功 predicate 正常返回三項 fixture。本次真通訊使用修正前原始碼；修正後只有以下無模型測試。
+
+命令：`py -3.13 -B scripts/verify.py --run-dir reports/verify-service-failfast-20261025-01 --timeout-seconds 300 --module test_delivery_validation --module test_launch_receipts`。Python 3.13.3；UTC 06:59:00.036731–06:59:19.330415（台北 14:59:00–14:59:19）。33 run/pass，0 failure/error/skip，passed_checks=true、source_unchanged=true，guardian 自然 exit 0、remaining 0、無強停、model_calls 0、machine_scan_executed=false。`git diff --check` 通過。證據為該目錄 `source-manifest.json`、`unit-tests.txt`、`worker-summary.json`、`lifecycle-evidence.json`、`guardian-start.json`、`guardian-exit.json`、`verification-summary.json`。提交後以 `source-commit.json` 綁定實際 commit 與受測來源；未重跑完整回歸，1467/1469 是既有版本結果，不能當本修正完整回歸。
+
+本輪真 CLI 任務共 1，第二次未執行：尚無已建立、在授權內能解除網路拒絕的修正，不在相同條件盲目重跑。既有目錄永久單次使用；若有後續有效授權及具體改善條件，剩餘一次也必須全新 prepare／記錄授權。未 push，未建立常駐監看、服務或排程，未實機掃描。專用 CLI 真收件仍失敗；既有桌面聊天／dot 閒置喚醒亦未驗證。
+
 ## 2026-10-25：合併worktree分支（最新）
 
 本合併提交把feat/local-codex-acceptance（8176095）與claude/eventguard-quota-test-migration（6456759）合在一起，含c8d42e1、3155297。
