@@ -92,7 +92,7 @@ def command(codex, python, source, state, event_id, evidence, *, allow_live=Fals
     root = ROOT if root is None else _guard(root)
     server_args = ["-B", str(ROOT / "scripts/eventguard_inbox_mcp.py"),
                    "--source-dir", str(source), "--state-dir", str(state),
-                   "--event-id", event_id]
+                   "--event-id", event_id, "--startup-evidence-dir", str(evidence)]
     if root != ROOT:
         server_args.extend(("--project-root", str(root)))
     if allow_live:
@@ -103,13 +103,15 @@ def command(codex, python, source, state, event_id, evidence, *, allow_live=Fals
     approvals = ",".join(name + '={approval_mode="approve"}' for name in tools)
     config = ('mcp_servers.eventguard_inbox={command=' + json.dumps(str(python))
               + ',args=' + json.dumps(server_args, separators=(",", ":"))
-              + ',required=true,startup_timeout_sec=20,tool_timeout_sec=60,enabled_tools='
+              + ',enabled=true,required=true,startup_timeout_sec=20,tool_timeout_sec=60,enabled_tools='
               + json.dumps(tools, separators=(",", ":"))
               + ',tools={' + approvals + '}}')
     return [str(codex), "exec", "--ignore-user-config", "--ephemeral", "-C", str(root),
             "-s", "read-only", "--json", "-c", "features.shell_tool=false",
             "-c", "features.unbounded_connection_retries=false",
-            "-c", "sqlite_home=" + json.dumps(str(evidence / "codex-state")),
+            # A fresh SQLite home can make the native client backfill legacy
+            # rollouts. Reuse its initialized state; this task stays ephemeral.
+            "-c", 'history.persistence="none"',
             "-c", "log_dir=" + json.dumps(str(evidence / "codex-log")), "-c", config,
             # Project human/chat/application servers are unrelated to this event-bound
             # CLI task. --ignore-user-config does not omit project configuration.

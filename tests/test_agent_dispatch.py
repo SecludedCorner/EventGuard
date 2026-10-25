@@ -142,14 +142,19 @@ class DispatchTests(unittest.TestCase):
         args = command("codex.exe", Path("C:/Python313/python.exe"), self.source, self.state_dir,
                        EVENT, self.directory, allow_live=True)
         server = tomllib.loads(next(arg for arg in args if arg.startswith("mcp_servers.")))["mcp_servers"]["eventguard_inbox"]
+        self.assertIs(server["enabled"], True)
         self.assertIs(server["required"], True)
         self.assertEqual(server["startup_timeout_sec"], 20)
         self.assertEqual(server["tool_timeout_sec"], 60)
         self.assertEqual(server["enabled_tools"], list(TOOLS))
         self.assertEqual(server["tools"], {tool: {"approval_mode": "approve"} for tool in TOOLS})
         self.assertIn("--allow-live", server["args"])
+        self.assertEqual(server["args"][server["args"].index("--startup-evidence-dir")+1], str(self.directory))
         self.assertIn("features.shell_tool=false", args)
         self.assertIn("features.unbounded_connection_retries=false", args)
+        self.assertIn("--ephemeral", args)
+        self.assertIn('history.persistence="none"', args)
+        self.assertFalse(any(arg.startswith("sqlite_home=") for arg in args))
         for name in ("eventguard_test", "eventguard", "eventguard-app"):
             self.assertIn('mcp_servers.' + name + '={enabled=false,command='
                           + json.dumps(str(Path("C:/Python313/python.exe"))) + ',args=[]}', args)
@@ -164,6 +169,8 @@ class DispatchTests(unittest.TestCase):
                                    EVENT, self.directory, allow_live=allow_live, allow_ack=allow_ack)
                     overrides = [args[index + 1] for index, value in enumerate(args[:-1]) if value == "-c"]
                     config = tomllib.loads("\n".join(overrides))
+                    self.assertNotIn("sqlite_home", config)
+                    self.assertEqual(config["history"]["persistence"], "none")
                     servers = config["mcp_servers"]
                     self.assertEqual(set(servers), {"eventguard_inbox", "eventguard_test", "eventguard", "eventguard-app"})
                     disabled = {"enabled": False, "command": "python.exe", "args": []}
@@ -173,6 +180,7 @@ class DispatchTests(unittest.TestCase):
                     # underscores, but that is not a configuration alias.
                     self.assertEqual(servers["eventguard-app"], disabled)
                     inbox = servers["eventguard_inbox"]
+                    self.assertIs(inbox["enabled"], True)
                     self.assertIs(inbox["required"], True)
                     self.assertEqual(inbox["startup_timeout_sec"], 20)
                     self.assertEqual(inbox["tool_timeout_sec"], 60)

@@ -1,5 +1,17 @@
 # EventGuard 目前目標
 
+## 2026-10-25：既定真收件目標已達成（最新狀態）
+
+本段優先於下方歷史基準、未整合、等待授權與額度限制。最新直接人類指示已解除前輪兩次上限及暫停接線；本輪基底 `836d0df`、主 checkout 分支 `feat/local-codex-acceptance`。不以舊 App goal 或交接暫停文字重設最新授權；本輪未操作 App goal 控制。
+
+`reports/service-acceptance-eventguard-development-20261025-03` 已取得一件真原生 Codex CLI 的 receive→query→保存結果→ACK：各 ID 一致、計數各 1、結果先存再 ACK、pending 0／receipts 1、無重複。CLI／worker／host／外層均有自然 exit 0／remaining 0／無強停原 HANDLE 回條。原始證據重驗與獨立核對通過，耗時 49.314 秒。本輪新授權後只啟動 1 個真 CLI 任務。
+
+定向 guardian 54/54。完整回歸：`py -3.13 -B scripts/verify.py --run-dir reports/verify-full-20261025-05 --timeout-seconds 1800`，台北 22:48:26–22:55:41。1477 項：1474 通過、3 略過、0 failure/error；兩項 symlink 不可用、一項 notification_icon_unavailable。passed_checks=true、source_unchanged=true；guardian 自然 exit 0／remaining 0／無強停、無逐測試殘留，model_calls 0、machine_scan_executed=false。證據 `reports/verify-full-20261025-05/verification-summary.json`；提交後 source-commit.json 綁定本版受測來源。
+
+具體修改、命令、時間及限制見 STATUS／EVIDENCE 最新段。MCP 子程序自身缺獨立退出證據、完整 IO 隔離、桌面／dot 喚醒與長期運行屬額外驗證；不能升格為已通過，也不回退既定明列的收件完成條件。兩個舊失敗與 pending 原樣保留；未 push，安全／秘密／資料保護界線繼續有效。
+
+## 歷史目標與交接基準
+
 更新：2026-10-25。依使用者提供的新交接與本輪唯讀增量核對修訂。
 只處理EventGuard。本輪更新目標，不整合分支、不執行模型或啟用背景。
 

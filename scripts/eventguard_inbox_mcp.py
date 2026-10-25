@@ -2,16 +2,63 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 from pathlib import Path
 import re
 import sys
 from typing import Literal
+import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 _ID = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
 _OPERATOR_MUTATIONS = frozenset({"background_start", "monitor", "diagnose_event", "receive_event",
                                  "ack_event", "retry_event", "report"})
+
+
+class _StartupEvidence:
+    """Optional bounded phase markers; these never prove an OS process exit."""
+    PHASES = ("server-started", "tools-listed", "stdio-exit")
+
+    def __init__(self, root, directory):
+        from eventguard.acceptance_control import FileLease
+        from eventguard.local_paths import _guard
+        from eventguard.processes import identity
+        self.root, self.directory = _guard(root), _guard(directory)
+        relative = self.directory.relative_to(self.root)
+        if not relative.parts or relative.parts[0] not in {"data", "logs", "reports"}:
+            raise ValueError("startup_evidence_outside_runtime_scope")
+        self.directory.mkdir(parents=True, exist_ok=True)
+        self.lease = FileLease(self.directory / "mcp-startup-evidence.lock")
+        if not self.lease.acquire():
+            raise ValueError("startup_evidence_already_running")
+        self.phases, self.stdio_entered = set(), False
+        observed = identity()
+        self.binding = {"kind": "eventguard-inbox-startup-evidence-v1", "instance_id": uuid.uuid4().hex,
+                        "pid": observed.get("pid"), "created_at": observed.get("created_at")}
+        try:
+            if any((self.directory / ("mcp-"+phase+".json")).exists() for phase in self.PHASES):
+                raise ValueError("startup_evidence_already_used")
+            self.record("server-started")
+        except (OSError, ValueError, RuntimeError, TypeError):
+            self.lease.release()
+            raise
+
+    def record(self, phase, **fields):
+        from eventguard.acceptance_control import write_json
+        if phase not in self.PHASES:
+            raise ValueError("invalid_startup_evidence_phase")
+        if phase in self.phases:
+            return
+        write_json(self.directory / ("mcp-"+phase+".json"), {
+            **self.binding, "phase": phase, "recorded_at": datetime.now(timezone.utc).isoformat(), **fields})
+        self.phases.add(phase)
+
+    def finish(self, code):
+        try:
+            self.record("stdio-exit", return_code=code, stdio_entered=self.stdio_entered, os_exit_verified=False)
+        finally:
+            self.lease.release()
 
 
 def _operator_call(root, operation, function):
@@ -49,6 +96,16 @@ def _sdk_server(name, validate):
     from mcp.server.fastmcp import FastMCP
     from mcp.server.stdio import stdio_server
     class InboxMCP(FastMCP):
+        async def list_tools(self):
+            tools = await super().list_tools()
+            evidence = getattr(self, "startup_evidence", None)
+            if evidence is not None:
+                names = sorted(tool.name for tool in tools)
+                if not set(names) <= {"receive_event", "query_evidence", "ack_event"} or len(names) > 3:
+                    raise ValueError("startup_evidence_unexpected_tool_names")
+                evidence.record("tools-listed", tool_names=names, tool_count=len(names), response_prepared=True)
+            return tools
+
         async def call_tool(self, name, arguments):
             validate(name, arguments)
             return await super().call_tool(name, arguments)
@@ -291,10 +348,35 @@ def main(argv=None):
     parser.add_argument("--project-root", type=Path, default=ROOT,
                         help="Synthetic isolation only; live access remains installation-bound.")
     parser.add_argument("--event-id")
+    parser.add_argument("--startup-evidence-dir", type=Path,
+                        help="Optional phase markers under this project root's data/logs/reports; no event payloads.")
     parser.add_argument("--read-only", action="store_true", help="Bound recovery read stage: do not expose an ACK tool.")
     parser.add_argument("--namespace", choices=("test", "live"), default="test")
     parser.add_argument("--allow-live", action="store_true", help="Explicitly allow the configured live event's fixed minimal metadata.")
     args = parser.parse_args(argv)
+    evidence = None
+    try:
+        if args.startup_evidence_dir is not None:
+            if args.operator_root is not None:
+                raise ValueError("startup_evidence_requires_event_bound_mode")
+            evidence = _StartupEvidence(args.project_root, args.startup_evidence_dir)
+    except (OSError, ValueError, RuntimeError, TypeError):
+        print("EventGuard: startup evidence scope unavailable.", file=sys.stderr)
+        return 2
+    code = 2
+    try:
+        code = _run(args, evidence)
+        return code
+    finally:
+        if evidence is not None:
+            try:
+                evidence.finish(code)
+            except (OSError, ValueError, RuntimeError, TypeError):
+                print("EventGuard: startup exit evidence remains unconfirmed.", file=sys.stderr)
+                return 2
+
+
+def _run(args, evidence=None):
     try:
         if args.operator_root is not None:
             if args.state_dir is not None or args.event_id is not None or args.read_only:
@@ -319,6 +401,8 @@ def main(argv=None):
     except Exception:
         print("EventGuard: bound inbox initialization failed.", file=sys.stderr)
         return 2
+    if evidence is not None:
+        server.startup_evidence = evidence
     try:
         from eventguard.acceptance_control import FileLease
         owner = FileLease(owner_path) if owner_path is not None else None
@@ -328,6 +412,8 @@ def main(argv=None):
         try:
             # EOF stops new requests. Owned monitors cooperate first, with
             # bounded private-Job-only cleanup and explicit exit evidence.
+            if evidence is not None:
+                evidence.stdio_entered = True
             server.run(transport="stdio")
             shutdown = getattr(server, "_owned_monitor_shutdown", None)
             if shutdown is not None and (shutdown.get("child_exited") is not True

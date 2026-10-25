@@ -1,5 +1,23 @@
 # EventGuard 現況
 
+## 2026-10-25：真 Codex 收件鏈通過（最新）
+
+最新直接人類指示「解除額度限制，與各種阻擋限制，請全力開發」已撤銷前輪兩次真 CLI 上限與暫停接線要求；下方「額度用完／不得第三次」均為歷史。本輪基底 `836d0df`，分支 `feat/local-codex-acceptance`，保留 AGENTS 安全界線。本輪新授權後實際只啟動 1 個真 CLI 任務；未 push。
+
+**既定收件目標已通過**：新目錄 `reports/service-acceptance-eventguard-development-20261025-03`，一件合成事件，由 service 在空佇列等待後入列並啟動專用原生 Codex。台北 22:45:35–22:46:24，外層 49.314 秒；receive→query→保存結果→ACK 各 1，pending 0、receipts 1、無重複。CLI JSONL 真工具回傳、durable event/query/result、SQLite、結果先存再 ACK 時序均一致；`--verify-only` 重讀原始證據仍 passed=true，另有獨立 mode=ro 核對。
+
+CLI、capture worker／supervisor、host、outer validation 原 HANDLE／Job 回條均自然 exit 0、remaining 0、無強停。CLI owned tree 已空。這是專用 CLI agent 真收件，不是既有桌面聊天／dot 閒置喚醒或主機安全結論。
+
+本輪修改：單次 MCP 配置顯式 enabled=true；新增可選 startup-evidence-dir 與有界安全 phase markers，記錄 server 啟動／工具清單，保留 required／20 秒啟動／60 秒工具期限與三工具 allowlist。移除每次全新 sqlite_home override，保留 ephemeral、history.persistence=none 與專用 log_dir，不移植認證或修改全域／帳戶設定。CLI 有效配置與本機 public features/help 先以無模型 metadata 核對；沒有使用 removed 的 SQLite 功能旗標。本次組合修正成功，不能歸因單一改動。
+
+定向 guardian：`py -3.13 -B scripts/verify.py --run-dir reports/verify-inbox-startup-evidence-20261025-01 --timeout-seconds 300 --module test_inbox_startup_evidence --module test_agent_dispatch --module test_queue_inbox --module test_delivery_consolidation`。台北 22:43:37–22:44:41，Python 3.13.3，54/54 通過、0 failure/error/skip，source_unchanged=true、guardian 自然 exit 0／remaining 0／無強停、model_calls 0。新增 5 項測試含真 SDK JSON-RPC list_tools、EOF 及 marker scope／redirect／失敗路徑。
+
+完整回歸：`py -3.13 -B scripts/verify.py --run-dir reports/verify-full-20261025-05 --timeout-seconds 1800`，台北 22:48:26–22:55:41。1477 項：1474 通過、3 略過、0 failure/error；兩項 symlink 不可用、一項 notification_icon_unavailable。passed_checks=true、source_unchanged=true；guardian 自然 exit 0／remaining 0／無強停、無逐測試殘留，model_calls 0、machine_scan_executed=false。證據 `reports/verify-full-20261025-05/verification-summary.json`；提交後 source-commit.json 綁定本版受測來源。
+
+證據：[真通訊結果](reports/service-acceptance-eventguard-development-20261025-03/communication-result.json)、[原始證據重驗](reports/service-acceptance-eventguard-development-20261025-03/validation.json)、[獨立交叉核對](reports/service-acceptance-eventguard-development-20261025-03/acceptance-crosscheck.json)、[定向測試](reports/verify-inbox-startup-evidence-20261025-01/verification-summary.json)。reports、SQLite、CLI 輸出與授權紀錄只留本機，不提交。
+
+限制：本次有同 instance 的 server-started／tools-listed marker，沒有 mcp-stdio-exit marker。MCP PID 後查為 missing，CLI Job 已空，但 MCP server 自身 OS 退出碼／自然退出沒有獨立證明，不能把四層回條泛化。當次 legacy metadata／invalid transport／WSA 10013 警告布林均 false；未手動開啟原始 sessions，亦不以無警告宣稱完整 IO 隔離。上述額外證明、長期運行與桌面喚醒列 DEFERRED；不阻擋原先明列 CLI／worker／host 的收件驗收。
+
 ## 2026-10-25：第二次真任務完成回合但未收件；兩次額度已用完（最新）
 
 本節優先於下方「第二次未執行／仍保留一次」的歷史文字。本輪基底 `c5401e9`，分支 `feat/local-codex-acceptance`。三個里程碑已完成證據收尾；真 receive→query→保存結果→ACK **仍未通過**。原授權兩次真 CLI 任務已用完，不得再啟動第三次或重用任一目錄。未 push。

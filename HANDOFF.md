@@ -1,5 +1,17 @@
 # EventGuard 接手
 
+## 2026-10-25：真收件與完整回歸通過（最新）
+
+最新人類指示已解除舊兩次上限與接線暫停；不要再以後文歷史「額度耗盡」阻擋。基底 `836d0df`、分支 `feat/local-codex-acceptance`。本輪 1 個真 CLI 任務；未 push，未啟正式長期監看。
+
+`reports/service-acceptance-eventguard-development-20261025-03` 已通過：同一合成 event/query/result 的 receive→query→保存結果→ACK 各 1；pending 0、receipts 1、無重複，結果先保存再 ACK。原生 CLI、worker／supervisor、host、外層均有自然 exit 0／remaining 0／無強停原 HANDLE 回條；49.314 秒。`--verify-only` 及獨立 mode=ro 交叉核對通過。這是專用 Codex CLI 收件，不是桌面任務喚醒。
+
+修改範圍：agent_dispatch 單次 MCP enabled=true／startup-evidence-dir／不再建立 fresh sqlite_home，保留 ephemeral＋history none；stdio adapter 可選記安全 phase markers；命令契約與新 5 項 marker 測試。定向 guardian 54/54。完整回歸：`py -3.13 -B scripts/verify.py --run-dir reports/verify-full-20261025-05 --timeout-seconds 1800`，台北 22:48:26–22:55:41。1477 項：1474 通過、3 略過、0 failure/error；兩項 symlink 不可用、一項 notification_icon_unavailable。passed_checks=true、source_unchanged=true；guardian 自然 exit 0／remaining 0／無強停、無逐測試殘留，model_calls 0、machine_scan_executed=false。證據 `reports/verify-full-20261025-05/verification-summary.json`；提交後 source-commit.json 綁定本版受測來源。
+
+限制必須保留：MCP 自身 stdio-exit marker 缺失，雖 PID missing／owned CLI Job 已空，不能宣稱其獨立自然退出；四層原 HANDLE 自然退出證據有效。當次無 legacy metadata warning，不代表全檔案 IO 隔離，沒有手讀原始 sessions。組合修正通過不證明單一根因。這些額外生命週期／隔離證明、長期運行、桌面喚醒列 DEFERRED。
+
+接續先讀 STATUS／EVIDENCE 最新段與 maintenance goal。不要重做真驗或把舊失敗改成功；舊兩件 pending／ACK 0 原樣保留。未追蹤附件／研究稿不加入 Git，執行資料不提交；發布仍需明確範圍。
+
 ## 2026-10-25：里程碑收尾；真收件仍失敗，兩次額度已耗盡（最新）
 
 本節優先於下方「第二次未用／保留一次」等歷史描述。本輪基底 `c5401e9`，分支 `feat/local-codex-acceptance`。兩次真 CLI 任務各一件合成事件、各 180 秒界線；都已執行，不得第三次或重用既有目錄。未 push。

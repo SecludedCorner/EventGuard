@@ -1,5 +1,43 @@
 # 證據與時間日誌
 
+## 2026-10-25：新開發授權下真 receive→query→結果→ACK 通過（最新）
+
+基底 `836d0df8baccebb5d84b0cd7c5a1c4679f45bcaf`，分支 `feat/local-codex-acceptance`。人類最新原文「解除額度限制，與各種阻擋限制，請全力開發」撤銷前輪兩次真 CLI 上限與暫停接線。新授權與 UTC 時間先記入當次 human-approval.json；本輪只用了 1 個真 CLI 任務，每次仍採一件合成事件／單任務／180 秒有限驗收，不更改系統、帳戶或全域／專案 MCP 設定，不移植憑證、手讀原始 sessions 或 push。兩個舊失敗與 pending／ACK 0 原樣保留。
+
+### 里程碑①：配置與能力先以無模型證據定位
+
+`reports/native-mcp-metadata-20261025-01/run.py` 在自有 Job 執行現有原生 CLI 的同組生成配置＋mcp get eventguard_inbox --json。UTC 14:34:42，自然 exit 0／remaining 0／無強停，stderr 0；enabled=true、stdio、固定 Python/args、三工具 allowlist、startup 20／tool 60 秒。只保存已知 inbox 欄位；不讀全域設定原文、認證或 session，環境只記 CODEX 變數名稱、不存值。required 欄位未由該 metadata 輸出提供，不以 null 斷言不生效。結果在同目錄 result.json。
+
+`reports/native-cli-capabilities-20261025-01/run.py` 於 14:37:58 執行 features list／exec --help／debug --help；`reports/native-prompt-help-20261025-01/run.py` 於 14:40:41 只取 debug prompt-input --help。均自然 exit 0、remaining 0、stderr 0、模型 0。已安裝 build 將 sqlite 列 removed true，因此沒有猜測關閉旗標。prompt-input 文件只承諾 input list，不作工具曝光證明；沒有執行 prompt/context dump。[官方 MCP](https://learn.chatgpt.com/docs/extend/mcp)、[非互動模式](https://learn.chatgpt.com/docs/non-interactive-mode) 與本機 metadata 分開採證。
+
+### 里程碑②：最小程式與定向驗證
+
+`scripts/eventguard_inbox_mcp.py` 新增可選 --startup-evidence-dir，只准傳入 project root 的 data/logs/reports 子樹、拒 redirect／重用；安全 marker 只含程序／instance、時間、固定 phase／工具名，無 env／完整命令／事件 payload。未指定的既有 observer 不產生 marker。SDK list_tools 只記 response_prepared，不冒稱 agent 已收件；stdio-exit 明示 os_exit_verified=false。
+
+`src/eventguard/agent_dispatch.py` 顯式 enabled=true，保留 required=true、20 秒 startup、60 秒工具期限與三工具 allowlist；加入 attempt marker 目錄。移除每次 fresh sqlite_home，使用原生 CLI 已初始化的狀態，保留 --ephemeral、單次 history.persistence=none、專用 log_dir。減少主動重建索引是待實測假說，不是完整 IO 隔離保證。未混入父程序環境清理或工具搜尋等未證候選。
+
+`tests/test_agent_dispatch.py` 補命令契約；新 `tests/test_inbox_startup_evidence.py` 5 項測試涵蓋 runtime 子樹／redirect／observer 無 marker／初始化失敗固定 exit marker，以及真 SDK JSON-RPC initialize→tools/list→EOF，事件不 receive、不 ACK。命令 `py -3.13 -B scripts/verify.py --run-dir reports/verify-inbox-startup-evidence-20261025-01 --timeout-seconds 300 --module test_inbox_startup_evidence --module test_agent_dispatch --module test_queue_inbox --module test_delivery_consolidation`。Python 3.13.3，UTC 14:43:37.99–14:44:41.979206（台北 22:43:37–22:44:41）；54 run/pass、0 failure/error/skip、source_unchanged=true、passed_checks=true，guardian 自然 exit 0／remaining 0／無強停、model_calls 0。該目錄保留 source-manifest、unit-tests、lifecycle 與 guardian 回條。
+
+### 里程碑③：真收件與原始證據重驗通過
+
+新目錄 `reports/service-acceptance-eventguard-development-20261025-03`，prepare 命令 `py -3.13 -B scripts/validate_delivery.py service --root reports/service-acceptance-eventguard-development-20261025-03`。human-approval.json 先記最新授權，使用已驗 runtime wrapper、既有 Python 3.13 與同一 native CLI（SHA256 `1103e9e09c71fa2cd0afd6d8f3b9a2d63174fe8efd7cb5bd09f1cb14ef58a098`）。經自動批准審查許可單次工具沙箱例外，執行 `py -3.13 -B reports/service-acceptance-eventguard-development-20261025-03/run-authorized.py`，其固定內層為 validate_delivery.py service --root <當次root> --codex-executable <同native CLI> --execute；仍為一般 Windows 使用者、CLI read-only、Job 執行前綁定。
+
+外層原 HANDLE 建立 14:45:35.160074Z，完成 14:46:24.460919Z，49.314202 秒（台北 22:45:35–22:46:24）。service 先空佇列閒置、14:45:40.746686Z 入列後才啟動唯一 CLI，完成後再次閒置再合作停止。
+
+唯一 event `evt-c8062b5b20af4d5ba2da37a7b64afbd9`，query `query-85018bad257d934db1abe6b32f067cef897baa73`，result `result-2ca68cd2b51688866fe9bf20fc8059b3eca3d29f`；host run `50769a4ff7004ad5b490e98bf4faf517`，attempt `d77738f895154561bc04c7a5577b8050`，CLI JSONL thread `01a17386-45bc-71e3-ada2-0d9ba99971c0`。
+
+CLI JSONL 真工具完成順序 receive_event→query_evidence→ack_event，計數各 1。UTC receive 14:46:00.113→query 14:46:04.985→結果保存 14:46:09.326→SQLite ACK 14:46:09.354601。mode=ro 獨立核對 payload hash、各 ID 及回傳一致；events 1／receipts 1／pending 0、無缺漏／重複。模型請求數未量測，不以一個 CLI 任務或完成回合數當模型請求數。
+
+CLI、capture worker／supervisor、host、outer validation 都有原 HANDLE／Job 自然 exit 0、remaining 0、forcibly_terminated=false；outer capture_complete=true、無輸出截斷。validation 與 communication-result passed=true，chronology／monotonic／lifecycle／idle-before-after／one-attempt 全驗證。`py -3.13 -B scripts/validate_delivery.py service --root reports/service-acceptance-eventguard-development-20261025-03 --verify-only` 於 14:47:21.957069Z 重讀原始證據仍 passed=true，未新啟模型。執行來源 210 檔／runtime 3 檔與快照一致；同一 run 後續不重用。
+
+本次有同 instance／PID 的 mcp-server-started 與 mcp-tools-listed marker，精確三工具；沒有 mcp-stdio-exit.json。後查已記錄 MCP PID 為 missing，CLI owned tree 已空，但沒有 MCP 自身原 HANDLE／OS 退出碼，不可推為其獨立自然退出。這是額外證據限制，不取代或否定原契約明列 CLI／worker／host 的自然退出回條。當次只檢查固定字串布林：legacy metadata／invalid transport／WSA 10013 均 false；未手讀原始 sessions，不以無警告宣稱完整 IO 隔離。組合修正已成功，不宣稱哪一項改動是唯一根因。
+
+主要證據：當次根目錄 `communication-result.json`、`validation.json`、`acceptance-crosscheck.json`、`communication-final-status.json`、`human-approval.json`、`execution-source-manifest.json`、`runtime-source-manifest.json`、`execution-intent/start/exit.json`、`service-owner-stop.json`；上述 run/attempt 下 CLI JSONL、capture-start/exit、supervisor-start/exit、summary 與兩份 MCP marker。資料、授權、原始 CLI 輸出與 SQLite 只留本機 reports，不提交。
+
+完整回歸：`py -3.13 -B scripts/verify.py --run-dir reports/verify-full-20261025-05 --timeout-seconds 1800`，台北 22:48:26–22:55:41。1477 項：1474 通過、3 略過、0 failure/error；兩項 symlink 不可用、一項 notification_icon_unavailable。passed_checks=true、source_unchanged=true；guardian 自然 exit 0／remaining 0／無強停、無逐測試殘留，model_calls 0、machine_scan_executed=false。證據 `reports/verify-full-20261025-05/verification-summary.json`；提交後 source-commit.json 綁定本版受測來源。
+
+本輪沒有正式長期監看、實機掃描、服務／排程／UAC／帳戶設定或推送。既定專用 CLI 真收件目標已通過；MCP 自身退出擴證、完整 IO 隔離、長期運行與既有桌面聊天／dot 喚醒列 DEFERRED，不把合成 ACK 當主機安全／風險處置。舊兩次失敗證據與 pending 原樣保留。
+
 ## 2026-10-25：里程碑診斷、第二次真任務未收件、必要 MCP 契約修正（最新）
 
 本輪基底 `c5401e910b4939af9de4d0afe060f7026ec540fa`，分支 `feat/local-codex-acceptance`。接手追蹤檔乾淨；既有 `.codex-remote-attachments/`、`docs/research/` 保留不提交。使用者要求最小可驗證增量、里程碑回報；沿用先前明確授權的第二次（最後一次）真通訊額度，沒有新建持續模型權限或改動系統／帳戶設定。
