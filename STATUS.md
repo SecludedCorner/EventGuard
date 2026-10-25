@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-25：加入 Continuous Execution Policy（最新文字變更）
+
+依使用者提供原文，將持續工程推進政策加入 AGENTS.md；原有專案與安全界線保留。台北 23:18，以 Python 文字比對驗證整段逐字一致、只出現一次、既有內容位元組不變，並執行 git diff --check。證據 reports/continuous-execution-policy-20261025-01/validation.json。純文件變更，未重跑程式回歸或真 CLI，不新增產品驗收結論。
+
 ## 2026-10-25：真 Codex 收件鏈通過（最新）
 
 最新直接人類指示「解除額度限制，與各種阻擋限制，請全力開發」已撤銷前輪兩次真 CLI 上限與暫停接線要求；下方「額度用完／不得第三次」均為歷史。本輪基底 `836d0df`，分支 `feat/local-codex-acceptance`，保留 AGENTS 安全界線。本輪新授權後實際只啟動 1 個真 CLI 任務；未 push。
