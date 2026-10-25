@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import builtins
-from contextlib import ExitStack
+from contextlib import ExitStack, asynccontextmanager
 import ctypes as C
 import importlib.util
 import io
@@ -33,6 +33,32 @@ class OptionalTransportImportTests(unittest.TestCase):
         with patch("builtins.__import__", side_effect=no_sdk):
             spec.loader.exec_module(module)
         self.assertTrue(callable(module.application_stdio_server))
+
+
+class OptionalResponseCallbackTests(unittest.IsolatedAsyncioTestCase):
+    async def test_non_windows_callback_is_unsupported_without_loading_sdk(self):
+        original_import = builtins.__import__
+        def no_sdk(name, *args, **kwargs):
+            if name == "mcp" or name.startswith("mcp."):
+                raise AssertionError("Unsupported callback loaded SDK")
+            return original_import(name, *args, **kwargs)
+        with patch.object(transport.os, "name", "posix"), patch("builtins.__import__", side_effect=no_sdk):
+            with self.assertRaisesRegex(transport.ApplicationStdioError, "^application_stdio_response_flushed_unsupported$"):
+                async with transport.application_stdio_server(response_flushed=lambda message: None):
+                    self.fail("Unsupported callback entered transport")
+
+    @unittest.skipUnless(SDK_AVAILABLE, "optional installed SDK fallback")
+    async def test_non_windows_default_preserves_sdk_fallback(self):
+        streams = (object(), object())
+        entered = []
+        @asynccontextmanager
+        async def fallback():
+            entered.append(True)
+            yield streams
+        with patch("mcp.server.stdio.stdio_server", fallback), patch.object(transport.os, "name", "posix"):
+            async with transport.application_stdio_server() as actual:
+                self.assertIs(actual, streams)
+        self.assertEqual(entered, [True])
 
 
 @unittest.skipUnless(os.name == "nt", "Mock Win32 pipe contracts; no Linux runtime claim")
@@ -117,6 +143,116 @@ class AsyncTransportContracts(unittest.IsolatedAsyncioTestCase):
                 await anyio.sleep(10)  # The transport must cancel this owner scope promptly.
         self.assertLess(time.monotonic()-began, 2)
         self.assertLess(pipe.read_available.call_count, 10)
+
+    async def test_response_callback_waits_for_write_and_flush_completion(self):
+        import anyio
+        import mcp.types as types
+        order = []
+        flush_entered, release_flush, callback_done = anyio.Event(), anyio.Event(), anyio.Event()
+        class Output:
+            async def write(self, encoded):
+                order.append("write_completed")
+                return len(encoded)
+            async def flush(self):
+                order.append("flush_started")
+                flush_entered.set()
+                await release_flush.wait()
+                order.append("flush_completed")
+        pipe = Mock()
+        pipe.read_available.return_value = b""
+        stack, _output = self.mocked_streams(pipe)
+        reply = types.JSONRPCMessage.model_validate_json('{"jsonrpc":"2.0","id":7,"result":{"ok":true}}')
+        received = []
+        def flushed(message):
+            received.append(message)
+            order.append("callback")
+            callback_done.set()
+        with stack, patch.object(anyio, "wrap_file", return_value=Output()):
+            async with transport.application_stdio_server(response_flushed=flushed) as (_incoming, outgoing):
+                await outgoing.send(reply)
+                with anyio.fail_after(2):
+                    await flush_entered.wait()
+                self.assertEqual(received, [])
+                self.assertEqual(order, ["write_completed", "flush_started"])
+                release_flush.set()
+                with anyio.fail_after(2):
+                    await callback_done.wait()
+        self.assertEqual(received, [reply])
+        self.assertEqual(order, ["write_completed", "flush_started", "flush_completed", "callback"])
+
+    async def test_write_or_flush_failure_never_calls_response_callback(self):
+        import anyio
+        import mcp.types as types
+        reply = types.JSONRPCMessage.model_validate_json('{"jsonrpc":"2.0","id":8,"result":{}}')
+        for failed_phase in ("write", "flush"):
+            with self.subTest(failed_phase=failed_phase):
+                class Output:
+                    async def write(self, encoded):
+                        if failed_phase == "write":
+                            raise OSError("synthetic_write_failure")
+                        return len(encoded)
+                    async def flush(self):
+                        if failed_phase == "flush":
+                            raise OSError("synthetic_flush_failure")
+                pipe = Mock()
+                pipe.read_available.return_value = b""
+                callback = Mock()
+                stack, _output = self.mocked_streams(pipe)
+                with stack, patch.object(anyio, "wrap_file", return_value=Output()):
+                    with self.assertRaises(BaseExceptionGroup):
+                        with anyio.fail_after(2):
+                            async with transport.application_stdio_server(response_flushed=callback) as (_incoming, outgoing):
+                                await outgoing.send(reply)
+                                await anyio.sleep_forever()
+                callback.assert_not_called()
+
+    async def test_callback_failure_exposes_only_fixed_reason(self):
+        import anyio
+        import mcp.types as types
+        reply = types.JSONRPCMessage.model_validate_json('{"jsonrpc":"2.0","id":9,"result":{}}')
+        pipe = Mock()
+        pipe.read_available.return_value = b""
+        callback = Mock(side_effect=RuntimeError("PRIVATE_CALLBACK_FAILURE"))
+        stack, _output = self.mocked_streams(pipe)
+        with stack:
+            with self.assertRaises(BaseExceptionGroup) as raised:
+                with anyio.fail_after(2):
+                    async with transport.application_stdio_server(response_flushed=callback) as (_incoming, outgoing):
+                        await outgoing.send(reply)
+                        await anyio.sleep_forever()
+        pending, leaves = [raised.exception], []
+        while pending:
+            value = pending.pop()
+            if isinstance(value, BaseExceptionGroup):
+                pending.extend(value.exceptions)
+            else:
+                leaves.append(value)
+        self.assertEqual(len(leaves), 1)
+        self.assertIsInstance(leaves[0], transport.ApplicationStdioError)
+        self.assertEqual(str(leaves[0]), "application_stdio_response_flushed_callback_failed")
+        self.assertTrue(leaves[0].__suppress_context__)
+        callback.assert_called_once_with(reply)
+
+    async def test_partial_write_never_calls_response_callback(self):
+        import anyio
+        import mcp.types as types
+        class Output:
+            async def write(self, encoded):
+                return len(encoded)-1
+            async def flush(self):
+                pass
+        pipe = Mock()
+        pipe.read_available.return_value = b""
+        callback = Mock()
+        stack, _output = self.mocked_streams(pipe)
+        reply = types.JSONRPCMessage.model_validate_json('{"jsonrpc":"2.0","id":10,"result":{}}')
+        with stack, patch.object(anyio, "wrap_file", return_value=Output()):
+            with self.assertRaises(BaseExceptionGroup):
+                with anyio.fail_after(2):
+                    async with transport.application_stdio_server(response_flushed=callback) as (_incoming, outgoing):
+                        await outgoing.send(reply)
+                        await anyio.sleep_forever()
+        callback.assert_not_called()
 
     async def test_invalid_and_oversized_input_have_fixed_errors_without_original_values(self):
         import anyio

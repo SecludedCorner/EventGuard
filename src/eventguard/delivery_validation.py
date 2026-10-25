@@ -646,9 +646,13 @@ def main(argv=None):
     mode.add_argument("--execute", action="store_true")
     mode.add_argument("--verify-only", action="store_true")
     parser.add_argument("--codex-executable", default="codex")
+    parser.add_argument("--require-mcp-exit", action="store_true",
+                        help="Additionally verify the bound MCP process's flushed ACK and held-HANDLE exit.")
     args = parser.parse_args(argv)
     try:
         root = _guard(args.root)
+        if args.require_mcp_exit and (args.case != "service" or not (args.execute or args.verify_only)):
+            raise ValueError("mcp_exit_requires_service_execution_or_inspection")
         if args.verify_only and not (root / "manifest.json").is_file():
             raise ValueError("existing_acceptance_evidence_required")
         manifest = prepare(root, args.case)
@@ -663,6 +667,18 @@ def main(argv=None):
             # Reload under lease so concurrent launchers cannot reuse an empty manifest.
             manifest = prepare(root, args.case)
             proof = execute(root, manifest, args.codex_executable) if args.execute else verify(root, manifest)
+            if args.require_mcp_exit:
+                from .mcp_lifecycle import assess_mcp_exit
+                run = (manifest.get("service_execution") or {}).get("host_run_id")
+                if type(run) is not str or not re.fullmatch(r"[a-f0-9]{32}", run):
+                    raise ValueError("mcp_exit_bound_service_run_required")
+                attempts = list((_service_path(root, "runs") / run / "attempts").iterdir())
+                if len(attempts) != 1 or not re.fullmatch(r"[a-f0-9]{32}", attempts[0].name):
+                    raise ValueError("mcp_exit_one_attempt_required")
+                checked = assess_mcp_exit(attempts[0], attempts[0].name)
+                write_json(root / "mcp-exit-validation.json", checked)
+                proof = dict(proof, base_delivery_passed=proof["passed"], mcp_exit_required=True,
+                             mcp_server_exit=checked, passed=proof["passed"] and checked["passed"])
         finally:
             lease.release()
         print(json.dumps(proof))

@@ -1,5 +1,22 @@
 # EventGuard 目前目標
 
+## 持續工程工作佇列：2026-10-25 23:26 接續（優先閱讀）
+
+目前專案 EventGuard；主 checkout 分支 feat/local-codex-acceptance，基底 a34e466。既有真 CLI 收件鏈、1477 項回歸及政策更新沿用，不重做。最新人類要求持續實作整個專案；先前單次收件目標達成是基準，不代表以下可執行可靠性工作已完成。只使用本專案、一般權限與既有 Python/SDK；推送／系統變更／實機來源採集仍守既有授權。
+
+| ID／優先級 | 預期成果與驗收 | 依賴／環境／權限 | 目前證據與未驗範圍 | 下一個可執行動作 |
+| --- | --- | --- | --- | --- |
+| P2-MCP-EXIT-001（DONE） | 成功 ACK 回應真正 flush 後 MCP 自然退出；活體綁定 query HANDLE，PID＋creation＋本次 CLI Job 相符，OS exit 0；未知不得升格 | Windows、已安裝 SDK、既有單事件 CLI 授權；不新增 transport 或 PID 終止 | 真04五層exit0／三工具各1、pending0，strict原始證據重驗及活體query HANDLE通過；43.44秒 | 後續變更受影響才複驗；保留舊缺證據不升格 |
+| P1-SOAK-001（DONE：有限範圍） | synthetic 滿載拒絕保留 ID/hash、同 ID 恢復、completion 故障 pin 保護、重建 consumer 同 query、唯一 ACK 與集合守恆；原 Job 回條 | 新 reports、標準庫、私有 Job；模型／原生掃描／網路 0 | SQLite close修復後3/3；真跑有限harness 64唯一ACK/pending0，81.88秒；60秒到期失敗另留 | 接續guard異常收尾與wall-time/資源採樣，不冒充24h/OS重啟 |
+| P2-GH-PAGES-001（待實作） | GitHub 公開來源有界分頁；固定頁數/bytes/deadline，同 origin/path，拒循環／惡意 Link，partial/304 不洗完整 | 現有公告來源程式；先 fixture，外部抓取仍依來源與既有授權 | 現遇 rel=next 回 pagination_required，尚未整合分頁 | 上述切片驗收後，直接實作 source paginator 與對抗 fixtures |
+| P2-SOAK-MEASURE-001（待實作） | 有界 wall-time profile 與本工具程序資源採樣；記實際耗時、容量、query/ACK 守恆 | 依賴有限 harness；只觀測自有 HANDLE/Job，不盤點全機 | 新 harness 的 duration 是工作上限、可提早結束；未量測 CPU/RAM/handle | 初版有限流程通過後加 pacing/採樣，不改舊證據時長 |
+| P2-OS-001（BLOCKED） | 固定單來源／上下文的真 Windows coverage 與必要互動驗證 | 需具體來源、時限、回復範圍授權；不提權／不改防護或網路 | 現有 denied/unknown 不能視安全；不自動全機重掃 | 保存現有 WINDOWS_VALIDATION_PLAN/COVERAGE_PLAN，待範圍確定再執行 |
+| P3-24H／DESKTOP／PUBLISH（暫緩或受外部條件限制） | 真跨午夜 24h、既有桌面喚醒、正式發布分別驗收 | 長時環境、受支援入口、發布明確批准；不可用短測代替 | 都未因本輪單測或 CLI ACK 自動完成 | 不阻擋上述可執行工程；只在必要條件具備時納入 |
+
+P1-SOAK-GUARD-002（下一項）：驗證guardian在spawn後任一異常先寫合作stop，再有限grace/自有Job收尾；保留原資料/退出狀態。現main的異常finally尚未單獨證明此順序，下一步故障注入後修正。
+
+每個切片實作→必要驗證→保存/提交後自動選下一項。局部失敗只阻擋相應項目，不以 checkpoint、文件或 commit 作停止條件。原117項首輪116過1error保留，soak close修復後3/3；真04與soak-finite-02的原始回條/守恆證據已完成。詳見最新STATUS/EVIDENCE。
+
 ## 2026-10-25：既定真收件目標已達成（最新狀態）
 
 本段優先於下方歷史基準、未整合、等待授權與額度限制。最新直接人類指示已解除前輪兩次上限及暫停接線；本輪基底 `836d0df`、主 checkout 分支 `feat/local-codex-acceptance`。不以舊 App goal 或交接暫停文字重設最新授權；本輪未操作 App goal 控制。

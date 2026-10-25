@@ -74,6 +74,7 @@ def capture(argv, directory, token, prompt, limit=CAPTURE_LIMIT, start_allowed=N
     if not lease.acquire():
         return 3
     child = None
+    mcp_member, mcp_binding, mcp_observation_failed = None, None, False
     launch_scope = ExitStack()
     result = {"attempt_id": token, "capture_complete": False, "codex_exit_code": None,
               "stdout_truncated": False, "stderr_truncated": False}
@@ -147,6 +148,12 @@ def capture(argv, directory, token, prompt, limit=CAPTURE_LIMIT, start_allowed=N
                 writer.start()
                 reason = "descendants_remaining"
                 while child.poll() is None:
+                    if mcp_member is None and not mcp_observation_failed and isinstance(child, JobPopen):
+                        from .mcp_lifecycle import bind_mcp_member
+                        try:
+                            mcp_member, mcp_binding = bind_mcp_member(child, directory, token)
+                        except (OSError, ValueError, RuntimeError, TypeError, KeyError):
+                            mcp_observation_failed = True
                     if time.monotonic() >= deadline:
                         reason = "timeout"
                         break
@@ -160,6 +167,13 @@ def capture(argv, directory, token, prompt, limit=CAPTURE_LIMIT, start_allowed=N
                 lifecycle = finish(child, reason, request_stop=False)
                 result.update(process=lifecycle, stop_reason=reason, forcibly_terminated=lifecycle.get("forcibly_terminated", False),
                               child_exited=lifecycle.get("child_exited", False), codex_exit_code=child.poll())
+                if mcp_member is not None:
+                    from .mcp_lifecycle import finish_mcp_observation
+                    try:
+                        result["mcp_process"] = finish_mcp_observation(mcp_member, mcp_binding, directory)
+                    except (OSError, ValueError, RuntimeError, TypeError, KeyError):
+                        mcp_observation_failed = True
+                result["mcp_observation_failed"] = mcp_observation_failed
                 if writer:
                     writer.join(timeout=3)
                 for thread in readers:
@@ -182,10 +196,14 @@ def capture(argv, directory, token, prompt, limit=CAPTURE_LIMIT, start_allowed=N
         return 2
     finally:
         try:
-            if child is not None and isinstance(child, JobPopen):
-                finish(child, "owner_exception", request_stop=False)
-            if child is not None and child.stdin is not None and not child.stdin.closed and not (writer and writer.is_alive()):
-                child.stdin.close()
+            try:
+                if mcp_member is not None:
+                    mcp_member.close()
+            finally:
+                if child is not None and isinstance(child, JobPopen):
+                    finish(child, "owner_exception", request_stop=False)
+                if child is not None and child.stdin is not None and not child.stdin.closed and not (writer and writer.is_alive()):
+                    child.stdin.close()
         finally:
             launch_scope.close()
             lease.release()

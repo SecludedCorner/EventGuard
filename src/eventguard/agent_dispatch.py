@@ -99,6 +99,8 @@ def command(codex, python, source, state, event_id, evidence, *, allow_live=Fals
         server_args.append("--allow-live")
     if not allow_ack:
         server_args.append("--read-only")
+    else:
+        server_args.append("--exit-after-ack")
     tools = TOOLS if allow_ack else TOOLS[:2]
     approvals = ",".join(name + '={approval_mode="approve"}' for name in tools)
     config = ('mcp_servers.eventguard_inbox={command=' + json.dumps(str(python))

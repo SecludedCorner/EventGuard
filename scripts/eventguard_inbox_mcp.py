@@ -3,9 +3,12 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
+import json
+import os
 from pathlib import Path
 import re
 import sys
+import threading
 from typing import Literal
 import uuid
 
@@ -33,6 +36,7 @@ class _StartupEvidence:
         if not self.lease.acquire():
             raise ValueError("startup_evidence_already_running")
         self.phases, self.stdio_entered = set(), False
+        self.one_shot, self.ack_response_flushed = False, False
         observed = identity()
         self.binding = {"kind": "eventguard-inbox-startup-evidence-v1", "instance_id": uuid.uuid4().hex,
                         "pid": observed.get("pid"), "created_at": observed.get("created_at")}
@@ -56,9 +60,54 @@ class _StartupEvidence:
 
     def finish(self, code):
         try:
-            self.record("stdio-exit", return_code=code, stdio_entered=self.stdio_entered, os_exit_verified=False)
+            self.record("stdio-exit", return_code=code, stdio_entered=self.stdio_entered, os_exit_verified=False,
+                        one_shot=self.one_shot, ack_response_flushed=self.ack_response_flushed)
         finally:
             self.lease.release()
+
+
+class _OneShotAckExit:
+    """End only after the exact durable ACK reply has been flushed to stdout."""
+    def __init__(self):
+        self.stop_event = threading.Event()
+        self._lock = threading.Lock()
+        self._pending = None
+        self.evidence = None
+
+    def arm(self, request_id, result):
+        if (type(request_id) not in (int, str) or type(result) is not dict
+                or result.get("status") != "review_recorded" or result.get("outbox_acknowledged") is not True):
+            raise ValueError("one_shot_durable_ack_required")
+        with self._lock:
+            if self._pending is not None:
+                raise ValueError("one_shot_ack_already_pending")
+            self._pending = (type(request_id), request_id, dict(result))
+
+    def response_flushed(self, message):
+        raw = message if type(message) is dict else message.model_dump(by_alias=True, exclude_none=True)
+        if type(raw) is not dict or "error" in raw or type(raw.get("result")) is not dict:
+            return
+        reply = raw["result"]
+        if reply.get("isError", False) is not False:
+            return
+        content = reply.get("content")
+        if (type(content) is not list or len(content) != 1 or type(content[0]) is not dict
+                or content[0].get("type") != "text" or type(content[0].get("text")) is not str
+                or len(content[0]["text"]) > 8192):
+            return
+        try:
+            result = json.loads(content[0]["text"])
+        except (ValueError, TypeError):
+            return
+        with self._lock:
+            if self._pending is None:
+                return
+            request_type, request_id, expected = self._pending
+            if type(raw.get("id")) is not request_type or raw.get("id") != request_id or result != expected:
+                return
+            if self.evidence is not None:
+                self.evidence.ack_response_flushed = True
+            self.stop_event.set()
 
 
 def _operator_call(root, operation, function):
@@ -147,7 +196,7 @@ def _sdk_server(name, validate):
     return InboxMCP(name)
 
 
-def build_server(source_dir, state_dir, event_id, allow_live=False, allow_ack=True, *, root=None):
+def build_server(source_dir, state_dir, event_id, allow_live=False, allow_ack=True, *, root=None, exit_after_ack=False):
     """Legacy three-tool contract stays compatible with acceptance evidence."""
     from eventguard.local_paths import _guard
     project = _guard(ROOT if root is None else root)
@@ -155,6 +204,8 @@ def build_server(source_dir, state_dir, event_id, allow_live=False, allow_ack=Tr
     # permission file or grant access by moving the installation directory.
     if allow_live and project != _guard(ROOT):
         raise ValueError("live_project_root_not_authorized")
+    if type(exit_after_ack) is not bool or exit_after_ack and (not allow_ack or os.name != "nt"):
+        raise ValueError("one_shot_event_bound_windows_ack_required")
     from eventguard.queue_inbox import QueueInbox
     backend = QueueInbox(source_dir, state_dir, event_id=event_id, allow_live=allow_live)
     def call(method, *args):
@@ -178,6 +229,12 @@ def build_server(source_dir, state_dir, event_id, allow_live=False, allow_ack=Tr
             raise ValueError("invalid_inbox_tool_arguments")
     server = _sdk_server("EventGuard Bound Minimal Inbox", validate)
     server._inbox_backend = backend
+    if exit_after_ack:
+        from eventguard.application_stdio import application_stdio_server
+        server._one_shot_exit = _OneShotAckExit()
+        server.stdio_stop_event = server._one_shot_exit.stop_event
+        server.stdio_streams_factory = lambda: application_stdio_server(
+            server.stdio_stop_event, response_flushed=server._one_shot_exit.response_flushed)
 
     @server.tool()
     def receive_event() -> dict:
@@ -191,7 +248,12 @@ def build_server(source_dir, state_dir, event_id, allow_live=False, allow_ack=Tr
 
     def ack_event(event_id: str, query_id: str, decision: Literal["reviewed_metadata", "needs_more_evidence"]) -> dict:
         """Persist a metadata review then ACK the same event/query. Never asserts host safety or performs remediation."""
-        return call("ack_event", event_id, query_id, decision)
+        one_shot = getattr(server, "_one_shot_exit", None)
+        request_id = server._mcp_server.request_context.request_id if one_shot is not None else None
+        result = call("ack_event", event_id, query_id, decision)
+        if one_shot is not None:
+            one_shot.arm(request_id, result)
+        return result
 
     if allow_ack:
         server.tool()(ack_event)
@@ -350,6 +412,8 @@ def main(argv=None):
     parser.add_argument("--event-id")
     parser.add_argument("--startup-evidence-dir", type=Path,
                         help="Optional phase markers under this project root's data/logs/reports; no event payloads.")
+    parser.add_argument("--exit-after-ack", action="store_true",
+                        help="Bound Windows task only: exit after its successful ACK response is flushed.")
     parser.add_argument("--read-only", action="store_true", help="Bound recovery read stage: do not expose an ACK tool.")
     parser.add_argument("--namespace", choices=("test", "live"), default="test")
     parser.add_argument("--allow-live", action="store_true", help="Explicitly allow the configured live event's fixed minimal metadata.")
@@ -379,7 +443,7 @@ def main(argv=None):
 def _run(args, evidence=None):
     try:
         if args.operator_root is not None:
-            if args.state_dir is not None or args.event_id is not None or args.read_only:
+            if args.state_dir is not None or args.event_id is not None or args.read_only or args.exit_after_ack:
                 raise ValueError("incompatible_operator_scope")
             server = build_operator_server(args.operator_root, args.namespace, args.allow_live)
             from eventguard.runtime import Runtime
@@ -392,8 +456,11 @@ def _run(args, evidence=None):
         else:
             if args.state_dir is None or args.event_id is None:
                 raise ValueError("bound_event_scope_required")
+            options = {"root": args.project_root}
+            if args.exit_after_ack:
+                options["exit_after_ack"] = True
             server = build_server(args.source_dir, args.state_dir, args.event_id, args.allow_live, not args.read_only,
-                                  root=args.project_root)
+                                  **options)
             owner_path = args.state_dir / "inbox-owner.lock"
     except ImportError:
         print("EventGuard: installed MCP SDK unavailable; nothing was installed.", file=sys.stderr)
@@ -403,6 +470,10 @@ def _run(args, evidence=None):
         return 2
     if evidence is not None:
         server.startup_evidence = evidence
+        evidence.one_shot = args.exit_after_ack
+        one_shot = getattr(server, "_one_shot_exit", None)
+        if one_shot is not None:
+            one_shot.evidence = evidence
     try:
         from eventguard.acceptance_control import FileLease
         owner = FileLease(owner_path) if owner_path is not None else None

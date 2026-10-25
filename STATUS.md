@@ -1,5 +1,21 @@
 # EventGuard 現況
 
+## 持續工程 checkpoint：MCP 自身退出與有限恢復流程通過（最新）
+
+基底 a34e466，分支 feat/local-codex-acceptance。本輪依持續工程授權繼續實作，沒有將前次 commit 或單事件通過當停止條件。
+
+P2-MCP-EXIT-001 已完成：event-bound 專用入口新增 ACK 成功回應真正 write＋flush 後合作退出；既有 observer／readonly 不自動關閉。新增 query-only 所屬 Job member HANDLE 觀測，先核對 PID／creation／本次 CLI 私有 Job，再在活體時保留同 HANDLE，未授予 terminate 權限；缺失／unknown 不升格成功。capture 保存 start/exit，額外 --require-mcp-exit 重讀原始證據，舊驗收契約仍可讀。
+
+新真驗收 reports/service-acceptance-eventguard-mcp-exit-20261025-04：一件合成事件、三工具各 1、pending 0／receipts 1；MCP、CLI、supervisor、host、outer 五層 exit 0。四個原有 Job remaining 0／無強停，MCP 有 ACK flush、正常 stdio-exit 與活體綁定 HANDLE 的 OS exit 0 證據。外層 43.442485 秒；獨立 SQL／hash／時序核對及 --verify-only --require-mcp-exit 重驗通過，已補上前輪 MCP 自身退出缺口。仍不是桌面喚醒或完整 IO 隔離證明。
+
+P1-SOAK-001 已完成有限整合：新增 scripts/soak.py／eventguard.soak，以純 synthetic producer／EventStore／QueueInbox 演練滿載拒絕保留、原 ID/hash 恢復、completion 保存故障 pin 保護、重建 consumer 同 query、冪等 ACK 與排空守恆。reports/soak-finite-20261025-02 接受 64／唯一 ACK 64／pending 0，實際 81.881672 秒，guard 自然 exit 0／remaining 0／無強停。這是 harness，不是真 agent、OS 重啟或 24h。
+
+失敗與修復：首輪 10 模組 117 測試，116 過／1 error（soak 的 SQLite read-only 連線僅交易 context 未 close，Windows temp 收尾鎖檔）；改用 closing 後 test_soak guardian 3/3 通過。其餘 114 項 MCP／transport／Job 測試來源未變，沿用逐測試通過證據，未冒充同輪全綠。真流程首輪 64 件／60 秒工作上限在 52 件 ACK 後到期，保留原失敗與 12 件未入列 producer；集合守恆重驗無丟失。第二輪同 64 件改採 180 秒有界 profile，未宣稱 60 秒通過。
+
+證據：reports/verify-mcp-exit-soak-20261025-01、reports/verify-soak-close-20261025-01；真04的 communication-result.json／mcp-exit-validation.json／五份 mcp marker/process 回條；兩個 soak 目錄的 validation.json／conservation-recheck.json。執行資料不提交。
+
+CURRENT/NEXT：保存本切片後直接處理 P1-SOAK-GUARD-002 的異常收尾、P2-SOAK-MEASURE-001 的真 wall-time／自有資源採樣，以及 P2-GH-PAGES-001 的公告來源有界分頁。完整工作佇列在 docs/MAINTENANCE_GOAL.md。實機來源與 24h 的未驗範圍不變，未 push。
+
 ## 2026-10-25：加入 Continuous Execution Policy（最新文字變更）
 
 依使用者提供原文，將持續工程推進政策加入 AGENTS.md；原有專案與安全界線保留。台北 23:18，以 Python 文字比對驗證整段逐字一致、只出現一次、既有內容位元組不變，並執行 git diff --check。證據 reports/continuous-execution-policy-20261025-01/validation.json。純文件變更，未重跑程式回歸或真 CLI，不新增產品驗收結論。

@@ -1,5 +1,17 @@
 # EventGuard 接手
 
+## 持續工程 checkpoint：兩項可靠性切片已驗證，後續工作繼續（最新）
+
+基底 a34e466，當前 branch feat/local-codex-acceptance。最新使用者要求持續推進整個專案，不能在 commit／checkpoint 停止。既有真鏈與1477回歸只作基準。
+
+P2-MCP-EXIT-001：新的 reports/service-acceptance-eventguard-mcp-exit-20261025-04 已證明五層 exit 0，MCP 有成功 ACK flush→正常 stdio-exit→活體取得的 query-only 同 HANDLE exit 0，CLI Job membership／PID／creation 全匹配。event/query/result 與三工具各1、pending0/receipts1、原資料時序均重驗通過。43.442485秒，未強停，補上舊 MCP 自身退出限制。
+
+P1-SOAK-001：有限 synthetic harness 真跑64件，81.881672秒、64唯一ACK、pending0、完整ID/hash守恆；guardian自然0/remaining0。首輪60秒到期52件與SQLite close失敗測試都保留，不改寫為通過。只代表程式/儲存恢復，不是agent/24h/OS重啟。
+
+測試：117項首輪116過1error；soak connection.close修正後相關3/3，MCP其餘114項未受影響。來源/原始回條/路徑詳見STATUS/EVIDENCE；不要無差別重跑已過成果。
+
+下一個自動接續：P1-SOAK-GUARD-002 異常收尾先合作停止；P2-SOAK-MEASURE-001 wall-time與自有HANDLE資源；P2-GH-PAGES-001有界分頁。工作ID/驗收/依賴/權限在既有MAINTENANCE_GOAL佇列。不要啟動未授權實機掃描或push，不變更其他worktree/附件/研究稿。
+
 ## 2026-10-25：真收件與完整回歸通過（最新）
 
 最新人類指示已解除舊兩次上限與接線暫停；不要再以後文歷史「額度耗盡」阻擋。基底 `836d0df`、分支 `feat/local-codex-acceptance`。本輪 1 個真 CLI 任務；未 push，未啟正式長期監看。

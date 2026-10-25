@@ -283,6 +283,88 @@ def spawn(argv, *, popen_factory=None, **kwargs):
     return JobPopen(argv, **kwargs)
 
 
+class _OwnedMemberObservation:
+    """A retained query/wait HANDLE; it has no process-control operations."""
+
+    def __init__(self, api, handle, *, pid, created_at, owner_pid, owner_created_at):
+        self._api, self._handle = api, handle
+        self._lock = threading.RLock()
+        self._binding = {"pid": pid, "created_at": created_at, "owner_pid": owner_pid,
+                         "owner_created_at": owner_created_at, "identity_verified": True,
+                         "owner_job_membership_verified": True,
+                         "observation_only": True, "handle_access": 0x101000}
+
+    def snapshot(self):
+        """Observe the same object, never reopen a PID or infer natural exit."""
+        with self._lock:
+            result = dict(self._binding, handle_retained=bool(self._handle),
+                          child_exited=None, exit_code=None)
+            if not self._handle:
+                return dict(result, reason="owned_member_handle_closed")
+            wait = self._api.WaitForSingleObject(self._handle, 0)
+            if wait == 258:  # WAIT_TIMEOUT: known not signalled.
+                return dict(result, child_exited=False, reason="owned_member_running")
+            if wait != 0:
+                return dict(result, reason="owned_member_wait_unconfirmed")
+            result["child_exited"] = True
+            code = DWORD()
+            if not self._api.GetExitCodeProcess(self._handle, C.byref(code)):
+                return dict(result, reason="owned_member_exit_code_unconfirmed")
+            return dict(result, exit_code=int(code.value), reason="owned_member_exit_observed")
+
+    def close(self):
+        """Release only this query HANDLE; never signal the observed process."""
+        with self._lock:
+            if self._handle:
+                checked(self._api.CloseHandle(self._handle), "owned_member_handle_close_failed")
+                self._handle = None
+
+
+def observe_owned_member(owner, pid, created_at):
+    """Bind an already recorded descendant to this process's retained private Job.
+
+    The query HANDLE is opened only after validating our original owner object.
+    Identity and membership must both match before it is returned. The HANDLE
+    grants QUERY_LIMITED_INFORMATION and SYNCHRONIZE, never TERMINATE. A later
+    zero exit code alone is deliberately not called a natural exit.
+    """
+    try:
+        valid_time = (type(created_at) is str and 20 <= len(created_at) <= 64
+            and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(?:Z|[+-][0-9]{2}:[0-9]{2})", created_at)
+            and datetime.fromisoformat(created_at.replace("Z", "+00:00")).utcoffset() is not None)
+    except (ValueError, OverflowError):
+        valid_time = False
+    if (os.name != "nt" or not isinstance(owner, JobPopen) or type(pid) is not int
+            or not 1 <= pid <= 0xFFFFFFFF or not valid_time):
+        raise JobError("owned_member_scope_invalid")
+    lock = getattr(owner, "cleanup_lock", None)
+    if lock is None:
+        raise JobError("owned_member_owner_unavailable")
+    with lock:
+        with _LOCK:
+            retained = owner in _OWNED
+        job = getattr(owner, "job", None)
+        if (not retained or owner.detached or not isinstance(job, Job) or not job.handle
+                or type(owner.pid) is not int or pid == owner.pid
+                or type(owner.created_at) is not str):
+            raise JobError("owned_member_owner_unavailable")
+        api = kernel()
+        handle = api.OpenProcess(0x101000, False, pid)
+        checked(handle, "owned_member_open_unavailable")
+        try:
+            if creation_time(handle) != created_at:
+                raise JobError("owned_member_creation_mismatch")
+            if not _membership(handle, job.handle):
+                raise JobError("owned_member_job_mismatch")
+            observed = _OwnedMemberObservation(api, handle, pid=pid, created_at=created_at,
+                owner_pid=owner.pid, owner_created_at=owner.created_at)
+            handle = None  # The observer now owns this exact query HANDLE.
+            return observed
+        finally:
+            if handle:
+                api.CloseHandle(handle)
+
+
 def _private_job_name(name):
     if not isinstance(name, str) or not re.fullmatch(r"(?:Local|Global)\\EventGuard-[a-f0-9]{32}", name):
         raise ValueError("invalid_private_job_name")

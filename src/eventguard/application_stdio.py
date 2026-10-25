@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 import ctypes as C
+import inspect
 import os
 import sys
 
@@ -71,11 +72,15 @@ def _output_buffer():
 
 
 @asynccontextmanager
-async def application_stdio_server(stop_event=None):
-    """SDK 1.6 JSONRPCMessage streams; optional Event ends an owned GUI scope."""
+async def application_stdio_server(stop_event=None, response_flushed=None):
+    """SDK streams; optional sync callback observes a complete flushed response."""
     if stop_event is not None and not callable(getattr(stop_event, "is_set", None)):
         raise ValueError("invalid_application_stdio_stop_event")
+    if response_flushed is not None and not callable(response_flushed):
+        raise ValueError("invalid_application_stdio_response_flushed")
     if os.name != "nt":
+        if response_flushed is not None:
+            raise ApplicationStdioError("application_stdio_response_flushed_unsupported")
         from mcp.server.stdio import stdio_server
         async with stdio_server() as streams:
             yield streams
@@ -142,8 +147,20 @@ async def application_stdio_server(stop_event=None):
                     encoded = message.model_dump_json(by_alias=True, exclude_none=True).encode("utf-8") + b"\n"
                     if len(encoded) > MAX_OUTPUT_BYTES:
                         raise ApplicationStdioError("application_stdio_output_capacity")
-                    await stdout.write(encoded)
+                    written = await stdout.write(encoded)
                     await stdout.flush()
+                    if response_flushed is not None:
+                        if written != len(encoded):
+                            raise ApplicationStdioError("application_stdio_output_incomplete")
+                        try:
+                            callback_result = response_flushed(message)
+                            if inspect.isawaitable(callback_result):
+                                close = getattr(callback_result, "close", None)
+                                if callable(close):
+                                    close()
+                                raise TypeError()
+                        except Exception:
+                            raise ApplicationStdioError("application_stdio_response_flushed_callback_failed") from None
         except (anyio.ClosedResourceError, anyio.BrokenResourceError, BrokenPipeError):
             await anyio.lowlevel.checkpoint()
 

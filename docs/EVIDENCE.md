@@ -1,5 +1,37 @@
 # 證據與時間日誌
 
+## 持續工程：P2-MCP-EXIT-001 與 P1-SOAK-001 實作、失敗恢復及驗收
+
+基底 a34e466be965b7d3b1a634081cce367d28d91918，branch feat/local-codex-acceptance。增量核對主checkout/remote/worktree，只在本專案工作；其他worktree、附件與研究稿保留。既有真03與完整1477回歸不重跑、不替代新切片驗證。維護目標已加入有ID、驗收、依賴、權限與下一步的持續佇列。
+
+### P2-MCP-EXIT-001：ACK flush 後自然退出與所屬 Job HANDLE 證據
+
+變更 application_stdio.py 的可選 response_flushed 同步callback：完整 write 且 flush 成功後才呼叫，short write／flush失敗不回呼，callback異常固定原因碼；非Windows帶callback明示不支援，預設observer與SDK lazy import保留。
+
+eventguard_inbox_mcp.py 新增專用 --exit-after-ack：handler僅綁定真正request_context ID與durable ACK完整dict，transport flush該精確成功response後才set Event；沿用既有Windows PeekNamedPipe合作輸入，沒有timer假保證或關閉其他程序。readonly/operator observer不套用。stdio-exit marker記 ack_response_flushed／one_shot，仍不單靠marker聲稱OS退出。
+
+processes.observe_owned_member只對原JobPopen仍持有的私有Job，OpenProcess(0x101000)核對PID/creation/Job membership並保留query/synchronize HANDLE，不授予terminate權限。mcp_lifecycle綁活體start與同HANDLE exit，純讀assessor再對照CLI capture及三phase marker；missing/denied/identity mismatch/unknown均false。capture只讀固定marker，從不根據外部PID強停。validate_delivery新增可選 --require-mcp-exit，結果另存mcp-exit-validation，不把舊缺證據升格。
+
+定向命令：py -3.13 -B scripts/verify.py --run-dir reports/verify-mcp-exit-soak-20261025-01 --timeout-seconds 600 --module test_application_stdio_transport --module test_application_stdio --module test_mcp_one_shot --module test_owned_member_observation --module test_mcp_lifecycle --module test_inbox_startup_evidence --module test_agent_dispatch --module test_delivery_validation --module test_process_governance --module test_soak。UTC15:45:39–15:48:15.992638，Python3.13.3；117測試116過1error，失敗只在soak temp SQLite鎖檔收尾。其餘114項MCP/transport/Job測試通過（含SDK保持client stdin開啟而ACK後server自然0、query HANDLE同Job防偽），2項其他soak測試也過。source_unchanged=true，guardian自然exit1/remaining0/無強停，model_calls0，無逐測試殘留。此輪整體passed_checks=false，保留原錯誤。
+
+修復soak.py::_receipt使用contextlib.closing，避免SQLite transaction context被誤當close。py -3.13 -B scripts/verify.py --run-dir reports/verify-soak-close-20261025-01 --timeout-seconds 120 --module test_soak，UTC15:50:16–15:50:32.493694；3/3、0failure/error/skip、source_unchanged=true、guardian自然0/remaining0/無強停、model_calls0。未為此修復重跑未受影響114項。
+
+真04：全新 reports/service-acceptance-eventguard-mcp-exit-20261025-04，human-approval先記最新持續工程/先前解除次數上限授權；單一synthetic event、一個nativeCLI任務、180秒有界，無系統/帳戶/全域MCP變更、無UAC。固定CLI SHA256仍1103e9e09c71fa2cd0afd6d8f3b9a2d63174fe8efd7cb5bd09f1cb14ef58a098。經批准的單次工具沙箱例外執行 run-authorized.py，內層 validate_delivery.py service --root <當次root> --codex-executable <既有nativeCLI> --execute --require-mcp-exit。
+
+唯一event evt-a6e83a0f0b754013952fca894cd615b8；query query-e85382e01908af81ab062291cd2a317c4e5dd406；result result-f74e17df447ef06d4161e92ff6f13f39767ce234；attempt c80429f00b0f4da28342c84f81ca29dd；thread 01a173c2-ca5c-7462-8950-7506d82c9e71。三工具各1、events1/receipts1/pending0/hash一致。活體query HANDLE於15:51:48.709791Z取得；receive15:52:03.738→query07.428→結果10.620→ACK10.671993→stdio-exit10.842307→同HANDLE exit snapshot17.877339，順序及owner/member匹配。outer15:51:40.490903–15:52:23.919237，43.442485秒；MCP/CLI/supervisor/host/outer皆exit0，其他四層Job remaining0/forcibly=false，MCP正常退出marker與held HANDLE共同證明自然退出。無模型請求數量測，勿以1任務當1請求。
+
+communication-result與mcp-exit-validation均passed=true；獨立mode=ro/trace/217來源+3runtime hash核對一致。py -3.13 -B scripts/validate_delivery.py service --root reports/service-acceptance-eventguard-mcp-exit-20261025-04 --verify-only --require-mcp-exit 於15:54:53.166982Z重讀仍通過、未啟新模型。主要證據為該root validation.json、mcp-exit-validation.json、communication-result.json，attempt下5份mcp-start/list/stdio-exit/process-start/process-exit與capture/supervisor回條。history warning布林false不推全IO隔離，也不代表桌面喚醒。
+
+### P1-SOAK-001：有限 synthetic 整合與有界失敗恢復
+
+新增src/eventguard/soak.py、scripts/soak.py、tests/test_soak.py。producer原事件/hash先耐久保存；consumer暫停填滿、拒絕ID/hash保留、pending不變；注入一次completed保存失敗，驗pin保護、維護不刪未完成proof；重建QueueInbox同query收尾與冪等ACK，再重新接受原被拒ID/hash並排空。accepted=uniqueACK+pending、交集空、hash一致；完整歷史由本輪manifest保留，產品可按政策輪替已ACK資料。controller在Job before run，有限deadline/事件/bytes、原HANDLE退出；只synthetic API，模型/網路/原生採集0。
+
+第一輪命令 py -3.13 -B scripts/soak.py --root reports/soak-finite-20261025-01 --duration-seconds 60 --max-events 64：實際60.499713秒，soak_work_deadline_reached，52接受/52唯一ACK/0pending，另12原producer未入列仍在manifest；guardian自然exit2/remaining0/無強停，validation=false。純讀producer/progress/SQLite守恆重驗通過，只證明無丟失，不將未跑完改成功。
+
+第二輪同64件，另新目錄 py -3.13 -B scripts/soak.py --root reports/soak-finite-20261025-02 --duration-seconds 180 --max-events 64；實際81.881672秒，64接受/64唯一ACK/0pending/0unaccepted，滿載恢復、一次completion故障與同query恢復均成立。guardian自然exit0/remaining0/無強停，source_unchanged=true、validation=true；conservation-recheck重算無errors。duration是工作上限，可提早結束，未宣稱60秒profile通過、24h、OS重啟、agent收件或資源效能驗證。資源採樣與最小wall-time待下一切片。
+
+本checkpoint未跑完整回歸；既有1477只作前版基準。所有新reports/原失敗/SQLite/回條留本機不提交；程式、測試與四份現有工程文件集中提交並綁source-commit。保存後自動接續P1-SOAK-GUARD-002、P2-SOAK-MEASURE-001與P2-GH-PAGES-001，不以commit停止。實機來源/正式發布仍需各自明確範圍，未push。
+
 ## 2026-10-25：新開發授權下真 receive→query→結果→ACK 通過（最新）
 
 基底 `836d0df8baccebb5d84b0cd7c5a1c4679f45bcaf`，分支 `feat/local-codex-acceptance`。人類最新原文「解除額度限制，與各種阻擋限制，請全力開發」撤銷前輪兩次真 CLI 上限與暫停接線。新授權與 UTC 時間先記入當次 human-approval.json；本輪只用了 1 個真 CLI 任務，每次仍採一件合成事件／單任務／180 秒有限驗收，不更改系統、帳戶或全域／專案 MCP 設定，不移植憑證、手讀原始 sessions 或 push。兩個舊失敗與 pending／ACK 0 原樣保留。
