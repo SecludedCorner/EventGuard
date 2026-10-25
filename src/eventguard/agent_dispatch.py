@@ -103,7 +103,8 @@ def command(codex, python, source, state, event_id, evidence, *, allow_live=Fals
     approvals = ",".join(name + '={approval_mode="approve"}' for name in tools)
     config = ('mcp_servers.eventguard_inbox={command=' + json.dumps(str(python))
               + ',args=' + json.dumps(server_args, separators=(",", ":"))
-              + ',tool_timeout_sec=60,enabled_tools=' + json.dumps(tools, separators=(",", ":"))
+              + ',required=true,startup_timeout_sec=20,tool_timeout_sec=60,enabled_tools='
+              + json.dumps(tools, separators=(",", ":"))
               + ',tools={' + approvals + '}}')
     return [str(codex), "exec", "--ignore-user-config", "--ephemeral", "-C", str(root),
             "-s", "read-only", "--json", "-c", "features.shell_tool=false",

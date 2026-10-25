@@ -1,5 +1,24 @@
 # EventGuard 現況
 
+## 2026-10-25：第二次真任務完成回合但未收件；兩次額度已用完（最新）
+
+本節優先於下方「第二次未執行／仍保留一次」的歷史文字。本輪基底 `c5401e9`，分支 `feat/local-codex-acceptance`。三個里程碑已完成證據收尾；真 receive→query→保存結果→ACK **仍未通過**。原授權兩次真 CLI 任務已用完，不得再啟動第三次或重用任一目錄。未 push。
+
+1. **連線診斷完成**：同一個無認證 HEAD 探針在工具沙箱內重現 WSA 10013；經自動批准審查允許單次工具沙箱例外後，一般 Windows 使用者環境回 HTTP 403，支持連線可達。探針模型任務 0、兩個 Job 自然 exit 0／remaining 0；未改系統／帳戶／網路設定、未觸發 UAC。403 不證明帳戶或模型存取。
+2. **退出回條補驗完成**：只在本機 reports 保存專用 wrapper，直接使用既有 Python 3.13、合法 finish reason、原 HANDLE 與有界輸出。無模型自測 4/4：自然 exit 0、自然 exit 2、輸出截斷、合成逾時隔離。逾時案例明示 expected forced，僅終止自己的 Job；另一 Job sentinel 自然退出。外層 guardian 自然 exit 0、remaining 0。
+3. **第二次真驗收已完成但失敗**：新目錄 `reports/service-acceptance-eventguard-single-test-20261025-02`，執行前另記 `human-approval.json`。台北 16:31:27–16:33:33，外層 125.921 秒。此次 provider turn 完成、CLI 自然 exit 0，但 agent 回報未提供 eventguard_inbox 工具，JSONL 沒有任何 MCP tool call。固定失敗類別 `required_mcp_tools_unavailable`；生成／入列各 1，receive/query/result/ACK 各 0，pending 1、receipts 0、無重複。CLI／worker／host 自然 exit 0，外層驗收自然 exit 2；均有原 HANDLE／Job 回條、remaining 0、無強停。此次沒有 WSA 10013 或 invalid transport，不沿用前次失敗原因。
+
+最小修正：`src/eventguard/agent_dispatch.py` 的單次 inbox MCP 配置新增 `required=true`、`startup_timeout_sec=20`，保留原工具 allowlist／60 秒工具期限；`tests/test_agent_dispatch.py` 增補 TOML／transport／live-test 與 ACK-readonly 契約斷言。此修正意圖是在必要 server 初始化失敗時停止，**沒有證據證明工具缺失根因已修復**，也尚未真 CLI 重驗。
+
+驗證：`py -3.13 -B scripts/verify.py --run-dir reports/verify-required-inbox-20261025-01 --timeout-seconds 300 --module test_agent_dispatch --module test_delivery_consolidation --module test_delivery_validation`。台北 16:37:47–16:38:51，Python 3.13.3，60/60 通過、0 failure/error/skip；source_unchanged=true、guardian 自然 exit 0／remaining 0／無強停、model_calls 0。未重跑完整回歸。
+
+證據：[連線比較](reports/connection-diagnostic-20261025-01/comparison.json)、[wrapper 自測](reports/invocation-proof-20261025-01/selftest-summary.json)、[第二次真通訊](reports/service-acceptance-eventguard-single-test-20261025-02/communication-result.json)、[定向測試](reports/verify-required-inbox-20261025-01/verification-summary.json)。第二次實測執行來源是 `c5401e9`；其後才改 required 契約，`source-state-note.json` 區分執行來源快照與收集時工作樹差異。reports 不提交。
+
+補充無模型交叉檢查：以相同第二次 root／source／inbox／event，透過標準庫 JSON-RPC 呼叫已安裝 SDK server 的 initialize／tools/list，成功列出 receive_event、query_evidence、ack_event；不呼叫事件工具，前後 events 1／pending 1／receipts 0 不變，server 自然 exit 0、remaining 0、無強停。證據：[同範圍 SDK discovery](reports/sdk-inbox-discovery-20261025-01/result.json)。這把剩餘問題縮小到原生 CLI 的 MCP 載入／工具曝光，仍不能判定根因。
+
+**BLOCKERS**：兩次真通訊額度已耗盡；MCP 工具缺失根因未知；原生 CLI 當次 stderr 自帶歷史 rollout metadata 索引警告，操作者未另行開啟那些檔案，但 CLI 內部歷史隔離尚未證明，因此不再新增任何 CLI 命令。後續真驗收需先釐清此界線，並取得新授權。
+**DEFERRED**：通用 wrapper 產品化、完整回歸、長期運行及既有桌面聊天／dot 喚醒。舊、新兩件未 ACK 的合成事件原樣保留，不改成已收件或安全結論。
+
 ## 2026-10-25：真 CLI 單事件驗收失敗，已修正失敗早停（最新）
 
 本節取代下方「真通訊未執行／仍須重新確認」的現況。基底 `ea00c70`，分支 `feat/local-codex-acceptance`。本輪使用者已明確授權最多兩次、每次一件合成事件／一個 CLI 任務／180 秒；授權與時間已在執行前寫入該次 `human-approval.json`。本輪實際啟動真 CLI 任務 **1 次**，第二次未執行，未 push。

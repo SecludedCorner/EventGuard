@@ -1,5 +1,19 @@
 # EventGuard 接手
 
+## 2026-10-25：里程碑收尾；真收件仍失敗，兩次額度已耗盡（最新）
+
+本節優先於下方「第二次未用／保留一次」等歷史描述。本輪基底 `c5401e9`，分支 `feat/local-codex-acceptance`。兩次真 CLI 任務各一件合成事件、各 180 秒界線；都已執行，不得第三次或重用既有目錄。未 push。
+
+- 里程碑①：同一無模型 HEAD 探針，工具沙箱 WSA 10013；經批准的單次工具沙箱例外下，一般 Windows 權限收到 HTTP 403。只證明 HTTPS 可達，不證明帳戶／模型可用。沒有系統／帳戶／網路設定或 UAC 變更。
+- 里程碑②：reports 中專用 wrapper 修正合法 finish reason、直接 Python、原 HANDLE／Job 回條與有界輸出。自測 4/4；合成不合作逾時明示僅自有 Job expected forced，其他案例與 guardian 自然退出。
+- 里程碑③：`reports/service-acceptance-eventguard-single-test-20261025-02` 真任務 125.921 秒內結束。provider turn 完成、CLI exit 0，卻沒有 eventguard_inbox 工具呼叫；receive/query/result/ACK 均 0，pending 1、receipts 0。CLI／worker／host 自然 exit 0、outer 自然 exit 2，原 HANDLE 回條完整、remaining 0、無強停。真收件失敗，不能以模型回話當成功。
+
+已改 `agent_dispatch.command` 的單次 inbox 配置：required=true、startup_timeout_sec=20；只證明 fail-closed 配置契約，根因仍未知。`test_agent_dispatch`／`test_delivery_consolidation`／`test_delivery_validation` guardian 60/60、model_calls 0、自然退出；證據 `reports/verify-required-inbox-20261025-01`。修正發生在實測之後，未再真驗。詳見 STATUS／EVIDENCE 最新段與該次 `source-state-note.json`。
+
+另已完成同範圍 SDK server initialize／tools/list：三工具可見，沒有事件工具呼叫，前後 pending 1／receipts 0 不變；server 自然退出。證據 reports/sdk-inbox-discovery-20261025-01/result.json。server 可探索，但原生 CLI 的載入／工具曝光仍未釐清，不能升格真收件。
+
+BLOCKERS：原兩次真任務授權用完；MCP 缺失根因未定；CLI 當次 stderr 有歷史 metadata 索引警告（未另開歷史檔），內部歷史隔離未證明。先做無模型離線分析；任何新 CLI 執行與真模型重驗前須解決界線，真任務另取新授權。DEFERRED：完整回歸、wrapper 產品化、長期／桌面喚醒。兩目錄原 pending 事件與第一輪失敗證據全部保留；附件／研究稿不加入 Git。
+
 ## 2026-10-25：真通訊已執行一次且失敗（最新接手點）
 
 本節優先於下方「未執行／等待重新授權／仍未整合」的歷史文字。基底 `ea00c70`、分支 `feat/local-codex-acceptance`，整合已完成。本輪使用者明確授權最多兩次真通訊，每次一件合成事件、一個 CLI 任務、180 秒；實際執行 1 次，第二次未用，未 push。

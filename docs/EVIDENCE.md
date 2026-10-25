@@ -1,5 +1,45 @@
 # 證據與時間日誌
 
+## 2026-10-25：里程碑診斷、第二次真任務未收件、必要 MCP 契約修正（最新）
+
+本輪基底 `c5401e910b4939af9de4d0afe060f7026ec540fa`，分支 `feat/local-codex-acceptance`。接手追蹤檔乾淨；既有 `.codex-remote-attachments/`、`docs/research/` 保留不提交。使用者要求最小可驗證增量、里程碑回報；沿用先前明確授權的第二次（最後一次）真通訊額度，沒有新建持續模型權限或改動系統／帳戶設定。
+
+### 里程碑①：無模型連線對照完成
+
+`reports/connection-diagnostic-20261025-01/probe.py` 使用既有 Python 標準庫，僅對 chatgpt.com 發 unauthenticated HEAD、不附憑證、不送事件。`run-probe.py` 在私有 Job 內啟動同一 probe，保留原 HANDLE。
+
+命令 `py -3.13 -B reports/connection-diagnostic-20261025-01/run-probe.py sandbox`：UTC 08:25:19.487640，transport_reachable=false、os_error_code=10013；自然 exit 0、remaining 0、無強停。其後經自動批准審查允許單次工具沙箱例外，以同一 Windows 一般使用者執行 `.../run-probe.py approved-user`：08:25:49.983805，HTTP 403、transport_reachable=true，程序亦自然 exit 0／remaining 0。沒有 UAC、Windows 權限提升或設定變更。這支持執行環境差異解除通訊端拒絕症狀；不能以 HTTP 403 推定模型／帳戶授權。證據 `sandbox.json`、`approved-user.json`、各自 start/exit 回條與 `comparison.json`；模型任務 0。
+
+### 里程碑②：外層收尾補驗完成
+
+只在 `reports/invocation-proof-20261025-01` 保存單次 runtime `invocation.py`／`selftest.py`，未新增核心抽象。沿用 processes.spawn/finish；argv[0] 是絕對 sys.executable，執行前私有 Job；spawn 後 finally 保留原 HANDLE，合法 reason 為 descendants_remaining／timeout／owner_exception，stdout/stderr 各有界，intent 單次、沒有重試。合作 stop 先核對 manifest／owner／control 的 application_owner 與原 child identity 及 source/state 範圍，總期限預留 15 秒清理。
+
+命令 `py -3.13 -B reports/invocation-proof-20261025-01/selftest.py`，UTC 08:30:08–08:30:14：4/4 通過。自然 exit 0、自然 exit 2 均有原回條；超量 stdout/stderr 各留 1024 bytes、明示 truncated；合成不合作逾時案例 expected_forced=true，只終止其自有 Job、exit 1460、remaining 0、約 4.232 秒，另一 Job sentinel 仍 alive 後自然 exit 0。外層 selftest guardian 自然 exit 0、remaining 0、無強停。自測 scope 明示模型／網路均 0，不能把「所有測試無強停」寫成通過條件。主要證據 `selftest-summary.json`、`case-*/execution-exit.json`。
+
+### 里程碑③：第二次真任務完成回合，通訊驗收仍失敗
+
+新目錄 `reports/service-acceptance-eventguard-single-test-20261025-02` 以 `py -3.13 -B scripts/validate_delivery.py service --root reports/service-acceptance-eventguard-single-test-20261025-02` prepare，沒有模型。事前核對前目錄 capture-start 僅 1、新目錄 0；manifest 一件 synthetic、無 service_execution。固定 native CLI SHA256 仍為 `1103e9e09c71fa2cd0afd6d8f3b9a2d63174fe8efd7cb5bd09f1cb14ef58a098`。`human-approval.json` 執行前記錄原人類「失敗可新目錄，最多兩次」授權與時間；execution-source-manifest 與 runtime-source-manifest 保存來源快照。
+
+經自動批准審查允許本命令的工具沙箱例外，執行 `py -3.13 -B reports/service-acceptance-eventguard-single-test-20261025-02/run-authorized.py`；它使用經自測的 wrapper 與相同 Python 3.13 直接執行 `scripts/validate_delivery.py service --root <第二次root> --codex-executable <相同native CLI> --execute`。仍為一般 Windows 使用者、read-only CLI sandbox、同三工具與最小資料配置；不改全域／專案 MCP、系統或帳戶設定，不提權、不加繞過旗標。外層原 HANDLE 建立 08:31:27.664743Z，結束 08:33:33.574558Z，elapsed 125.921415 秒（台北 16:31:27–16:33:33），在 180 秒界線內。
+
+唯一 event `evt-21ad65fcd92b42fda49755a57d27ee4b`，host run `e69dbd4a9b4b406eae41e76782482de2`，attempt `255b34adfb2640f8ad5e8e9e93791a2a`，本次 JSONL thread `01a17231-2d7e-7861-9a8f-15f4be37c430`。trace 有 thread.started、turn.started、兩則 agent_message、turn.completed；agent 回報工具未提供，停止未重試。provider_turn_completed=true、CLI 自然 exit 0；沒有 MCP tool call。固定結果類別 `required_mcp_tools_unavailable` 只描述可證表現，MCP 載入根因仍 unknown。沒有 WSA 10013、invalid transport 或 HTTP 401 證據。
+
+`collect-evidence.py` 只讀當次資料；SQLite 以 mode=ro：events 1、pending 1、receipts 0、無重複。QueueInbox.open_readonly 無此 event evidence，query/result ID 皆 null；生成／入列各 1，receive/query/result/ACK 皆 0，summary passed=false。失敗發生在 verify_service 之前，因此 validation.json 不存在，沒有補造。CLI／supervisor／host 自然 exit 0；outer validation 自然 exit 2。各層 managed／child_exited=true、remaining 0、forcibly_terminated=false，outer capture_complete=true、無截斷、original_handle_retained=true。自然退出與業務成功分開記錄。
+
+主要證據：根目錄 `communication-result.json`、`communication-final-status.json`、`execution-intent/start/exit.json`、`human-approval.json`、`service-owner-stop.json`、`manifest.json`；上述 run/attempt 下 `codex.jsonl`、`codex.stderr.txt`、`summary.json`、capture-start/exit 與 supervisor-start/exit 回條。`source-state-note.json` 明示實測基底 c5401e9；下述 source/tests 修改在實測結束後，收集時 source hash 比較已不同，不能說新版已真驗。執行資料只留本機忽略的 reports，不提交。
+
+隱私邊界另記：CLI 當次 stderr 自帶歷史 rollout metadata 索引警告。操作者沒有另行開啟那些原始歷史檔案，也未把路徑／內容複製到公開文件；但不能保證 CLI 內部未讀歷史，此隔離行為仍需釐清。後續不新增任何 CLI 命令，不以調整未核實 feature 旗標或複製 Codex home／憑證來避開限制。
+
+### 最小無模型修正與驗證
+
+`src/eventguard/agent_dispatch.py` 單次 eventguard_inbox MCP 配置增加 required=true、startup_timeout_sec=20，保留 tool_timeout_sec=60、原 stdio command/args 與 allowlist。目的是避免必要 server 初始化失敗後繼續空工具回合；[官方非互動模式](https://learn.chatgpt.com/docs/non-interactive-mode) 說明 required=true 的初始化失敗即退出契約，[MCP 文件](https://learn.chatgpt.com/docs/extend/mcp) 說明 startup/工具期限。此為保守配置修正，不宣稱實測工具缺失根因已修復。
+
+`tests/test_agent_dispatch.py` 增補既有 TOML／disabled transport 契約，涵蓋 live/test、ACK／readonly 工具清單與期限。命令 `py -3.13 -B scripts/verify.py --run-dir reports/verify-required-inbox-20261025-01 --timeout-seconds 300 --module test_agent_dispatch --module test_delivery_consolidation --module test_delivery_validation`。Python 3.13.3，UTC 08:37:47–08:38:51.643418（台北 16:37:47–16:38:51）；60 run/pass、0 failure/error/skip，source_unchanged=true、passed_checks=true，guardian 自然 exit 0／remaining 0／無強停、model_calls 0、machine_scan_executed=false。`git diff --check` 通過。證據 `verification-summary.json`、source-manifest、unit-tests、lifecycle 與 guardian 回條；提交後 source-commit.json 綁定本版受測來源。沒有重跑完整回歸，也沒有新版真 CLI 重驗。
+
+補充最低成本交叉檢查：`py -3.13 -B reports/sdk-inbox-discovery-20261025-01/probe.py`，UTC 08:45:48（台北 16:45:48），標準庫 JSON-RPC client 以現有單次 command 的 server command/args，對同一第二次 root／source／inbox／event 啟動已安裝 MCP SDK 1.6.0 server；只發 initialize、notifications/initialized、tools/list。三工具 receive_event/query_evidence/ack_event 都可探索；沒有 tools/call、模型任務或 native CLI。mode=ro 前後核對 events 1／pending 1／receipts 0 不變。私有 Job 原 HANDLE 證明 server 自然 exit 0、remaining 0、無強停。證據該目錄 result.json。這支持同範圍 server 本身能啟動與列工具，剩餘阻擋在原生 CLI 載入／工具曝光的未明差異，不能當真模型已呼叫工具或 required 修正已真驗。
+
+本輪兩次真 CLI 額度已用完（兩目錄各 capture-start 1），第三次必須新授權；不得重用已執行目錄。BLOCKERS：額度耗盡、MCP 工具缺失根因 unknown、CLI 內部歷史隔離待釐清。DEFERRED：wrapper 產品化、完整回歸、長期與桌面喚醒驗證。保留兩件 pending／ACK 0 與第一輪原失敗，無當前測試背景程序留存。只提交程式、測試與文件，未 push。
+
 ## 2026-10-25：一次真 CLI 通訊失敗與失敗早停修正（最新）
 
 基底 `ea00c7023ac532e08d1a2c3eff4d5e7d611b5b67`，分支 `feat/local-codex-acceptance`。接手唯讀核對 HEAD／分支符合；追蹤檔乾淨，既有未追蹤 `.codex-remote-attachments/`、`docs/research/` 保留且不提交。先讀 AGENTS、README、STATUS／HANDOFF 頂部、EVIDENCE 最新段、DEVELOPMENT／COVERAGE_PLAN／INGRESS_PLAN／LOCAL_MCP_EXPERIMENT。最新直接人類授權覆蓋歷史「未執行／不可重試」描述：本輪最多兩次、每次一件合成事件、一個 native CLI 任務、180 秒；失敗可分析修正後新目錄 prepare。未授權 push 或系統／帳戶變更。

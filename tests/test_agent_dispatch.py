@@ -142,6 +142,9 @@ class DispatchTests(unittest.TestCase):
         args = command("codex.exe", Path("C:/Python313/python.exe"), self.source, self.state_dir,
                        EVENT, self.directory, allow_live=True)
         server = tomllib.loads(next(arg for arg in args if arg.startswith("mcp_servers.")))["mcp_servers"]["eventguard_inbox"]
+        self.assertIs(server["required"], True)
+        self.assertEqual(server["startup_timeout_sec"], 20)
+        self.assertEqual(server["tool_timeout_sec"], 60)
         self.assertEqual(server["enabled_tools"], list(TOOLS))
         self.assertEqual(server["tools"], {tool: {"approval_mode": "approve"} for tool in TOOLS})
         self.assertIn("--allow-live", server["args"])
@@ -169,8 +172,17 @@ class DispatchTests(unittest.TestCase):
                     # Use the actual registered server ID. Tool namespaces use
                     # underscores, but that is not a configuration alias.
                     self.assertEqual(servers["eventguard-app"], disabled)
-                    self.assertEqual(servers["eventguard_inbox"]["enabled_tools"],
+                    inbox = servers["eventguard_inbox"]
+                    self.assertIs(inbox["required"], True)
+                    self.assertEqual(inbox["startup_timeout_sec"], 20)
+                    self.assertEqual(inbox["tool_timeout_sec"], 60)
+                    self.assertEqual(inbox["command"], "python.exe")
+                    self.assertIsInstance(inbox["args"], list)
+                    self.assertNotIn("url", inbox)
+                    self.assertEqual(inbox["enabled_tools"],
                                      list(TOOLS if allow_ack else TOOLS[:2]))
+                    self.assertEqual(inbox["tools"], {tool: {"approval_mode": "approve"}
+                        for tool in (TOOLS if allow_ack else TOOLS[:2])})
                     self.assertEqual(args[-1], "-")
 
     def test_no_execute_and_no_event_make_zero_cli_calls(self):
