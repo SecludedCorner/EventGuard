@@ -1,6 +1,24 @@
 # EventGuard 現況
 
-## 無模型工程收尾與真通訊準備：2026-10-25 04:10（台北時間，最新）
+## 2026-10-25：目標增量更新（接續04:50交接）
+
+主checkout3fe8148、worktree3155297已增量核對，未整合。新驗收仍prepare-only：manifest無execution、未入列、無capture-start。
+預算測試遷移、event_source綁定、stop暫態修正及完整無模型回歸已完成，從剩餘目標移除。
+最新目標見[MAINTENANCE_GOAL](docs/MAINTENANCE_GOAL.md)。本輪只更新文件，未重跑測試、未啟動模型、未新建reports、未commit或push。
+原App goal仍paused；不新建或假標complete。整合與真驗維持04:50交接的確認關卡，不把使用者貼回交接內容當新模型授權。
+
+
+## 交接暫停：2026-10-25 04:50（台北時間，最新）
+
+使用者要求交接，停止開發。目標停在blocked，未標complete。
+最新程式在worktree分支`claude/eventguard-quota-test-migration`，HEAD 3155297（含c8d42e1）。未push。worktree路徑`.claude/worktrees/eventguard-handoff-increment-721d6d`。
+主checkout分支feat/local-codex-acceptance仍在3fe8148，追蹤檔乾淨；未追蹤`.codex-remote-attachments/`、`docs/research/`保留。整合c8d42e1與3155297需人類確認（主checkout乾淨，可fast-forward）。
+本交接段在worktree內未提交（HANDOFF、STATUS、EVIDENCE），刻意不做文件單獨commit。
+真通訊：使用者曾授權eventguard-single-test-20261025-01，但在啟動前改為要求交接。未執行。manifest無service_execution、未入列、無模型任務。
+授權紀錄`human-approval.json`已標execution_started=false；下一位執行前必須請人類重新確認。
+沒有本工具程序在執行。正式monitor desired off；正式agent service未啟動；App未執行。
+
+## 無模型工程收尾與真通訊準備：2026-10-25 04:10（台北時間）
 
 依新目標推進。唯讀核對與checkpoint一致：HEAD 3fe8148；舊事件仍pending、receipts0；continuation仍terminal_failed_no_retry；monitor desired off。
 完整回歸（3fe8148，主checkout）：1460測試，1458過、0失敗、2略過（symlink不可用）。guardian自然exit0、remaining0、無強停、model_calls0。無失敗需修。
