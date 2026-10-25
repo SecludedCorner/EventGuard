@@ -1,5 +1,14 @@
 # EventGuard 接手
 
+## 2026-10-25：目標增量更新（最新閱讀入口）
+
+最新程式在`.claude/worktrees/eventguard-handoff-increment-721d6d`，HEAD3155297；主checkout仍是3fe8148，未整合。
+本輪已核對兩處Git與既有驗收證據。預算測試遷移、event_source綁定、背景stop修正均已完成，不重列為待辦。
+最新落地目標見[MAINTENANCE_GOAL](docs/MAINTENANCE_GOAL.md)。最新完整交接讀worktree的HANDOFF/STATUS/EVIDENCE；下方較早checkpoint屬歷史。
+剩餘順序：確認整合兩提交；重新確認eventguard-single-test-20261025-01；確認後才跑一次真通訊。這次只更新目標，不構成執行授權。
+本輪未合併、未啟動模型/測試/背景、未push。交接修改保留未提交，不做文件單獨commit。原App goal仍paused。
+
+
 ## 增量：2026-10-25 02:30 預算測試遷移（最新）
 
 下方Prompt的第1步核對一致，第2步已完成。結果與限制見STATUS頂部及EVIDENCE同日段。
