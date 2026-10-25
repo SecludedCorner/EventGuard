@@ -1,5 +1,20 @@
 # EventGuard 現況
 
+## 2026-10-25：合併worktree分支（最新）
+
+本合併提交把feat/local-codex-acceptance（8176095）與claude/eventguard-quota-test-migration（6456759）合在一起，含c8d42e1、3155297。
+主checkout fast-forward到本提交後，下方「主checkout仍在3fe8148」「未整合」「最新程式在worktree」等描述即屬過時。
+衝突只在HANDOFF、STATUS、EVIDENCE頂部：兩邊段落全保留，較新段落在上，重複的舊標題行只留一份。程式與測試無衝突。
+真通訊仍未執行。eventguard-single-test-20261025-01仍須人類重新確認才可--execute。未push。
+
+## 2026-10-25：目標增量更新（最新閱讀入口）
+
+最新程式在`.claude/worktrees/eventguard-handoff-increment-721d6d`，HEAD3155297；主checkout仍是3fe8148，未整合。
+本輪已核對兩處Git與既有驗收證據。預算測試遷移、event_source綁定、背景stop修正均已完成，不重列為待辦。
+最新落地目標見[MAINTENANCE_GOAL](docs/MAINTENANCE_GOAL.md)。最新完整交接讀worktree的HANDOFF/STATUS/EVIDENCE；下方較早checkpoint屬歷史。
+剩餘順序：確認整合兩提交；重新確認eventguard-single-test-20261025-01；確認後才跑一次真通訊。這次只更新目標，不構成執行授權。
+本輪未合併、未啟動模型/測試/背景、未push。交接修改保留未提交，不做文件單獨commit。原App goal仍paused。
+
 ## 2026-10-25：目標增量更新（接續04:50交接）
 
 主checkout3fe8148、worktree3155297已增量核對，未整合。新驗收仍prepare-only：manifest無execution、未入列、無capture-start。

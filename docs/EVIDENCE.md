@@ -1,5 +1,21 @@
 # 證據與時間日誌
 
+## 2026-10-25：合併worktree分支（最新）
+
+本合併提交把feat/local-codex-acceptance（8176095）與claude/eventguard-quota-test-migration（6456759）合在一起，含c8d42e1、3155297。
+主checkout fast-forward到本提交後，下方「主checkout仍在3fe8148」「未整合」「最新程式在worktree」等描述即屬過時。
+衝突只在HANDOFF、STATUS、EVIDENCE頂部：兩邊段落全保留，較新段落在上，重複的舊標題行只留一份。程式與測試無衝突。
+真通訊仍未執行。eventguard-single-test-20261025-01仍須人類重新確認才可--execute。未push。
+
+## 2026-10-25：接回其他AI成果並更新剩餘目標
+
+本輪只讀核對兩checkout的git status/branch/HEAD/worktree list/log與merge-base。主3fe8148、worktree3155297；主是後者祖先，僅相差c8d42e1、3155297。未整合、未fetch或push。
+讀回verify-full-20261025-04/verification-summary：1469項/1467通過/2略過/0失敗、model_calls0、source_unchanged=true、guardian自然exit0/remaining0。與worktree同檔逐位元組相同；未重跑測試。
+讀回新service驗收manifest與source SQLite(mode=ro)：evt-c29ff48b381d42799d0dc4e3be5c4a15，service_execution=null、enqueued/stages空、capture-start0、source事件0。
+human-approval.json明示execution_started=false及下一次重新確認。未執行CLI、模型、server或採集。
+更新兩處docs/MAINTENANCE_GOAL及HANDOFF/STATUS入口，保留04:50與舊交接內容。原App goal查回paused；工具沒有修改既有objective的介面，未另建goal或假結案。
+本輪不新增reports。文件修改留未提交，遵守不做文件單獨commit。主未追蹤附件/研究與worktree既有交接修改全部保留。
+
 ## 2026-10-25：交接暫停，真通訊未啟動
 
 時間：台北04:40–04:50；UTC 2026-10-24 20:40–20:50。
