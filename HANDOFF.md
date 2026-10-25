@@ -1,5 +1,17 @@
 # EventGuard 接手
 
+## 2026-10-26 接續：長窗完成、所有權修復（最新）
+
+分支feat/local-codex-acceptance，基底4a1a95b。只EventGuard；保留未追蹤.codex-remote-attachments/與docs/research/。真04 receive→query→result→ACK及五層自然0沿用，沒有新模型任務。
+
+observer修改12/12；真03短窗0.945115%；長窗已自然結束，不要再依worker1432舊PID操作。長窗measurement-crosscheck.json獨立32/32，末段真1802.489810秒CPU0.343275%、private峰增72KiB、handle增0；16ACK/pending0、475有效樣本、7source hash未變，非整Job/production/24h。
+
+P0兩競態已通過對應回歸：background scope綁鎖內owner，App固定unknown快照僅一次完整同owner重觀測。原full03的2fail保存，最新完整回歸 1566 項／1563 通過／3 略過、0 failure/error；source_unchanged=true，原Job自然0／remaining0／無強停。 不把舊版本全綠替代當前驗證。首項動作：下一個必需關卡是已準備的一次native listeners基線；非同步批准尚未回覆，沒有human-approval.json，不可執行。
+
+原生入口與15fixtures完成；windows-listener-baseline-20261026-01僅prepare，需直接人類回答已提出的單次範圍，不能用template或agent訊息自行批准。收到有效授權才記時間/原文入human-approval.json，依同root/hash/30分鐘有效窗執行一次reviewed run-owned.py；不自動換目錄重跑。loopback按設計無陽性候選，不改規則/全介面過測。
+
+提交本切片時連同STATUS/EVIDENCE及既有queue更新，runtime不入Git，未push；source-commit.json需如實分清完整基準與增量來源。會話外沒有已建立自動喚醒／排程。
+
 ## 2026-10-26 持續工程接續（最新）
 
 基底 9a34a5b，分支 feat/local-codex-acceptance；依既有授權繼續，未 push、未改系統／帳戶設定。AGENTS 的 Continuous Execution Policy 已在 a34e466 逐字加入，繼續有效。

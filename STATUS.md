@@ -1,5 +1,19 @@
 # EventGuard 現況
 
+## 2026-10-26 持續工程：長窗與所有權修復（最新）
+
+基底4a1a95b，分支feat/local-codex-acceptance；只本機提交、不push。既定真CLI鏈仍通過：真04的一件合成事件 receive→query→result保存→ACK各1、pending0；MCP/CLI/supervisor/host/outer五層自然0。UI/API/CLI真頁面顯示亦已驗證。本增量沒有新模型任務。
+
+P2-IDLE-CPU-003／30M：profile定位本harness每秒全樹usage成本，改為排空後單writer的已驗總量＋自身append delta。每筆仍_guard/實際大小/sample與report cap；mutation／phase／final仍全樹檢查，外部其他檔突變不是即時防篡改。12/12定向通過；恢復語意fixture明示虛擬deadline，不冒充真wall。真03 wall60.012212秒、idle31.411523秒CPU0.945115%，16ACK/pending0、自然0。
+
+長窗 reports/soak-idle-30m-20261026-01：UTC17:12:21–17:44:01，wall1900.017392秒、16ACK/pending0、475有效樣本；原HANDLE自然0/Job0/無強停，7檔source hash不變。獨立32/32核對：最後實際1802.489810秒窗CPU0.343275%單核心、private峰增73728B（72KiB）、handle增0（111不變），三目標通過。這是自身harness idle，非整Job／production／24h／重啟或主機安全證據。
+
+P0-OWNER-SNAPSHOT-005：已通過對應回歸。背景stop改綁control.lock內已驗selected_owner，避免診斷status瞬斷/舊run_id誤綁scope；App僅對固定unverifiable、無明確foreign identity的快照重觀測一次，第二份必須完整同namespace/run/PID/creation/Job/generation才控制，持續unknown仍阻擋。新增2背景＋3App確定性fixture；不推斷原失敗特定Win32錯碼。最新完整回歸 1566 項／1563 通過／3 略過、0 failure/error；source_unchanged=true，原Job自然0／remaining0／無強停。
+
+P2-OS-001前置已完成：新增scripts/validate_windows_listener.py與15個fixture（guardian15/15），缺批准/過期/hash/scope不符/預存stop/intent fsync失敗不查詢；合作stop即使complete也不得pass。實際reports/windows-listener-baseline-20261026-01僅prepare，query_started=false。範圍一次native listeners／query5秒／30秒工作預算，無socket/registry/模型、只保存狀態計數與自有Job回條。原loopback陽性案例按產品語義不成立，已修正WINDOWS_VALIDATION_PLAN；不改規則或改綁全介面過測。
+
+CURRENT/NEXT：下一個必需關卡是已準備的一次native listeners基線；非同步批准尚未回覆，沒有human-approval.json，不可執行。 其他實機來源/負向socket案例、既有桌面喚醒、24h及發布仍未驗或缺範圍，不自行排程、擴權、推送或承諾會話外喚醒。證據與完整命令見EVIDENCE；runtime／授權／SQLite不提交。
+
 ## 2026-10-26 持續工程：產品狀態、分頁與有界量測（最新）
 
 基底 9a34a5b，分支 feat/local-codex-acceptance；依既有授權繼續，未 push、未改系統／帳戶設定。AGENTS 的 Continuous Execution Policy 已在 a34e466 逐字加入，繼續有效。

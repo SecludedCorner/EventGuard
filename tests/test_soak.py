@@ -1,5 +1,6 @@
 """Finite synthetic harness contracts; no model, network or native collection."""
 import json
+from itertools import count
 import tempfile
 from pathlib import Path
 import unittest
@@ -25,7 +26,12 @@ class SoakTests(unittest.TestCase):
     def test_finite_exercise_recovers_same_producer_and_query_without_losing_events(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)/"new-exercise"
-            result = exercise(root, options(duration_seconds=20, max_events=12))
+            # This fixture proves durable recovery, independently of host I/O speed.
+            # Real wall time and CPU are checked by the separate bounded profiles.
+            ticks = count()
+            with patch.object(soak.time, "monotonic", side_effect=lambda: next(ticks)/1000), \
+                    patch.object(soak.time, "sleep", return_value=None):
+                result = exercise(root, options(duration_seconds=20, max_events=12))
             self.assertTrue(result["passed"], result)
             self.assertEqual((result["accepted_count"], result["unique_ack_count"]), (12, 12))
             self.assertEqual(result["outbox"]["pending"], 0)
@@ -199,3 +205,58 @@ class SoakTests(unittest.TestCase):
                          {"duration_seconds": 2, "max_events": 4, "pacing_seconds": 1}):
             with self.subTest(supplied=supplied), self.assertRaises(SoakError):
                 options(**supplied)
+
+    def test_drained_idle_samples_reuse_accounting_but_mutation_and_work_recheck_tree(self):
+        unknown = {**{field: None for field in soak.RESOURCE_FIELDS}, "status": "unknown", "error_codes": []}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            other = root/"synthetic-other.json"
+            other.write_text("{}", encoding="utf-8")
+            with patch.object(soak, "_self_resources", return_value=unknown), \
+                    patch.object(soak, "usage", wraps=soak.usage) as measured, \
+                    patch.object(soak, "_guard", wraps=soak._guard) as guarded:
+                samples = soak._ResourceLog(root, 0, options())
+                samples.record("idle_after", force=True)
+                self.assertEqual(measured.call_count, 1)
+                guards_before = guarded.call_count
+                samples.record("idle_after", force=True)
+                samples.record("idle_after", force=True)
+                self.assertEqual(measured.call_count, 1, "steady idle must not rescan every fixture file")
+                self.assertEqual(guarded.call_count-guards_before, 2, "each append still guards its path")
+                other.write_text('{"synthetic":"larger"}', encoding="utf-8")
+                samples.record("idle_after", force=True, mutation=True)
+                self.assertEqual(measured.call_count, 2)
+                samples.record("work", force=True)
+                self.assertEqual(measured.call_count, 3)
+            self.assertTrue(samples.status()["idle_after_budget_cache_used"])
+            self.assertEqual(samples.count, 5)
+
+    def test_cached_idle_accounting_counts_appended_bytes_and_stops_at_report_budget(self):
+        unknown = {**{field: None for field in soak.RESOURCE_FIELDS}, "status": "unknown", "error_codes": []}
+        config = options(max_report_bytes=524288)
+        occupied = config["max_report_bytes"]-soak.RESERVE_BYTES-1024
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(soak, "_self_resources", return_value=unknown), \
+                patch.object(soak, "usage", return_value=occupied) as measured:
+            samples = soak._ResourceLog(Path(directory), 0, config)
+            for _ in range(10):
+                samples.record("idle_after", force=True)
+            self.assertTrue(samples.truncated)
+            self.assertGreater(samples.count, 0)
+            self.assertEqual(measured.call_count, 1)
+            self.assertEqual(samples.path.stat().st_size, samples.sample_bytes)
+            self.assertLessEqual(occupied+samples.sample_bytes+soak.RESERVE_BYTES, config["max_report_bytes"])
+
+    def test_external_sample_size_change_is_reported_and_never_overwritten(self):
+        unknown = {**{field: None for field in soak.RESOURCE_FIELDS}, "status": "unknown", "error_codes": []}
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(soak, "_self_resources", return_value=unknown):
+            samples = soak._ResourceLog(Path(directory), 0, options())
+            samples.record("idle_after", force=True)
+            with samples.path.open("ab") as stream:
+                stream.write(b"external-size-change")
+            before = samples.path.read_bytes()
+            samples.record("idle_after", force=True)
+            self.assertEqual(samples.error_code, "self_resource_sample_size_changed")
+            self.assertEqual(samples.count, 1)
+            self.assertEqual(samples.path.read_bytes(), before)

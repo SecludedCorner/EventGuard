@@ -120,10 +120,15 @@ class _ResourceLog:
         self.max_bytes = min(RESOURCE_MAX_BYTES, config["max_report_bytes"]//4)
         self.count, self.truncated, self.error_code = 0, False, None
         self.previous, self.windows, self.unknown = None, [], 0
+        self.sample_bytes, self.idle_other_bytes = 0, None
+        self.idle_cache_used = False
 
-    def record(self, phase, *, force=False):
+    def record(self, phase, *, force=False, mutation=False):
         now = time.monotonic()
+        if mutation:
+            self.idle_other_bytes = None
         if not self.windows or self.windows[-1]["phase"] != phase:
+            self.idle_other_bytes = None
             if self.windows:
                 self.windows[-1]["ended_elapsed_seconds"] = now-self.start
             self.windows.append({"phase": phase, "started_elapsed_seconds": now-self.start,
@@ -144,15 +149,29 @@ class _ResourceLog:
             row["interval_cpu_percent_single_core"] = 100*(row["cpu_seconds"]-old["cpu_seconds"])/(now-old["monotonic"])
         encoded = (json.dumps(row, ensure_ascii=True, allow_nan=False)+"\n").encode("ascii")
         try:
+            sample_path = _guard(self.path)
+            actual_sample_bytes = sample_path.stat().st_size
+            if actual_sample_bytes != self.sample_bytes:
+                self.error_code = "self_resource_sample_size_changed"
+                return
+            if phase == "idle_after":
+                if self.idle_other_bytes is None:
+                    self.idle_other_bytes = usage(self.root)-actual_sample_bytes
+                else:
+                    self.idle_cache_used = True
+                report_bytes = self.idle_other_bytes+actual_sample_bytes
+            else:
+                report_bytes = usage(self.root)
             if (self.count >= RESOURCE_MAX_SAMPLES or len(encoded) > 4096
-                    or self.path.stat().st_size+len(encoded) > self.max_bytes
-                    or usage(self.root)+len(encoded)+RESERVE_BYTES > self.config["max_report_bytes"]):
+                    or actual_sample_bytes+len(encoded) > self.max_bytes
+                    or report_bytes+len(encoded)+RESERVE_BYTES > self.config["max_report_bytes"]):
                 self.truncated = True
                 return
-            with self.path.open("ab") as stream:
+            with sample_path.open("ab") as stream:
                 stream.write(encoded)
                 stream.flush()
                 os.fsync(stream.fileno())
+            self.sample_bytes += len(encoded)
             self.count += 1
             self.unknown += row["status"] != "measured"
             self.previous = row
@@ -164,6 +183,8 @@ class _ResourceLog:
             "sample_count": self.count, "unknown_or_partial_samples": self.unknown,
             "truncated": self.truncated, "error_code": self.error_code, "unknown_is_null": True,
             "sample_interval_seconds": self.interval, "sample_byte_limit": self.max_bytes,
+            "idle_after_budget_cache_used": self.idle_cache_used,
+            "idle_cache_scope": "drained single-writer phase only; mutation, phase and final full-tree checks retained; not tamperproof",
             "phase_windows": self.windows, "path": self.path.name}
 
 
@@ -280,7 +301,7 @@ def exercise(root, config, *, stop_requested=None):
             progress["phases"].append({"phase": phase, "at": utc(),
                                        "elapsed_seconds": time.monotonic()-start})
         save(root, "progress.json", progress, config["max_report_bytes"])
-        resources.record(resource_phase)
+        resources.record(resource_phase, mutation=True)
         check_limits()
     try:
         store = EventStore(root/"source", max_events=capacity, max_bytes=262144,

@@ -218,6 +218,60 @@ class BackgroundTests(unittest.TestCase):
                 self.assertFalse(bg._control(self.runtime)["enabled"])
                 stop.assert_not_called()
 
+    def test_scoped_stop_binds_locked_owner_when_initial_run_status_read_fails(self):
+        for grace in (0, 1):
+            for guarded in (False, True):
+                with self.subTest(grace=grace, guarded=guarded):
+                    self.enable()
+                    owner = self.owner()
+                    real_read = bg._read
+                    failed_reads = []
+
+                    def transient_read(runtime, name):
+                        if name == "run.json" and not failed_reads:
+                            failed_reads.append(name)
+                            raise PermissionError("synthetic_atomic_replace_window")
+                        return real_read(runtime, name)
+
+                    expected = {"expected_namespace": "live"}
+                    if guarded:
+                        expected.update(expected_run_id=owner["run_id"],
+                            expected_control_generation=owner["generation"], expected_job_name=owner["job_name"])
+                    self.identity.return_value = {"state": "missing", "pid": PID}
+                    with patch.object(bg, "_read", side_effect=transient_read), \
+                            patch.object(bg.processes, "stop_persistent") as stop:
+                        value = bg.stop(self.root, grace_seconds=grace, **expected)
+                    self.assertEqual(failed_reads, ["run.json"])
+                    self.assertEqual((value["state"], value["reason"]), ("stopped", "background_exit_verified"))
+                    self.assertFalse(bg._control(self.runtime)["enabled"])
+                    self.assertEqual(real_read(self.runtime, "stop.json")["run_id"], owner["run_id"])
+                    self.assertNotIn("synthetic_atomic_replace_window", json.dumps(value))
+                    stop.assert_not_called()
+
+    def test_scoped_stop_ignores_stale_initial_status_run_when_locked_owner_matches(self):
+        self.enable()
+        owner = self.owner()
+        original_status = bg.status
+        calls = []
+
+        def stale_first_status(root):
+            calls.append(True)
+            if len(calls) == 1:
+                return {"state": "running", "namespace": "live", "run_id": "d" * 32,
+                        "desired_enabled": True, "host_liveness": "alive_verified", "model_calls": 0}
+            return original_status(root)
+
+        self.identity.return_value = {"state": "missing", "pid": PID}
+        with patch.object(bg, "status", side_effect=stale_first_status), \
+                patch.object(bg.processes, "stop_persistent") as stop:
+            value = bg.stop(self.root, grace_seconds=0, expected_namespace="live",
+                expected_run_id=owner["run_id"], expected_control_generation=owner["generation"],
+                expected_job_name=owner["job_name"])
+        self.assertEqual((value["state"], value["reason"]), ("stopped", "background_exit_verified"))
+        self.assertEqual(bg._read(self.runtime, "stop.json")["run_id"], owner["run_id"])
+        self.assertFalse(bg._control(self.runtime)["enabled"])
+        stop.assert_not_called()
+
     def test_invalid_scoped_stop_namespace_is_rejected_without_control_write(self):
         for namespace in ("elsewhere", [], 1, True):
             with self.subTest(namespace=namespace), self.assertRaisesRegex(ValueError, "invalid_background_stop_namespace"):

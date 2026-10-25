@@ -2,6 +2,14 @@
 
 狀態：**計畫已提出，尚未執行；實際注入、長時間監看、登出或重啟都須當次批准**。本文件不啟動程序、不寫登錄或安全設定。先讀 [現況](../STATUS.md)、[生命週期](PROCESS_LIFECYCLE.md) 及 [soak 計畫](SOAK_PLAN.md)。不呼叫模型、不連外、不提權、不停止非本工具程序。
 
+## 2026-10-26：可執行前置與規則界線
+
+新增 `scripts/validate_windows_listener.py`，預設只準備專用 reports/windows-listener-*、source hashes、批准請求及未批准 template；不建立 native collector。`--execute` 只接受同一 run/root/hash、嚴格固定 scope 及當次人類授權：一次 native listeners、query 5 秒、總工作預算 30 秒，無 socket、registry、模型或其他來源。不保存其他 listener 的 address/port/PID/name/path/raw facts。成功僅代表這次 baseline 完整，不代表主機安全或完整生命週期通過。
+
+原計畫的 loopback→陽性 new/resolved 期待與產品不符：`rules/detector.py` 明確只讓 unspecified address 成為候選，127.0.0.1 按設計被忽略；恢復另需兩次完整缺席觀測。不得偽造 wildcard facts、改綁全介面或為測試改規則。下列 loopback 案例應作負向驗收；陽性實機案例仍須另訂必要且安全的範圍。既有 fixture 可驗 wildcard new／三輪去重／兩輪 resolved，但不是實機證據。
+
+執行時須由私有 Job launcher 保留原 HANDLE，先用該 root 的 stop.request 合作取消，再有限 grace/自有 Job 收尾；單看 elapsed 的後驗檢查不等於硬截止保證。準備及 fixture 通過不構成原生採集授權，結果與限制記在 STATUS/EVIDENCE。
+
 ## 批准前可審查的範圍
 
 一台已指定 Windows 主機、一般使用者、專用新 reports 目錄、一次前景 monitor；只觀測 listeners/startup 及必要 health/owner，不擴大全機掃描。人類先選本輪案例與總時限。保持 transport disabled，不啟動 dispatcher 或 Codex；這是採集／規則／恢復驗證，不是真 agent 驗收。
@@ -10,7 +18,7 @@
 
 | 案例 | 有界注入與回復（批准後） | 查核與通過標準 |
 | --- | --- | --- |
-| 本機 listener | 私有 Job 內的 Python 以 `127.0.0.1`／OS 指派 port 綁定 TCP listener；不接受／傳送應用資料。保存 PID+建立時間及 port，先合作關閉 socket，再等待本工具 Job 退出 | 基線成功後才注入；同一 PID+時間+port 有新事件，連續三輪相同觀察不得重複 new；關閉後要有完整成功觀測才可 resolved。loopback 不推導 Internet 可達 |
+| 本機 loopback listener（負向，尚未執行） | 另行批准後，才以私有 Job 內 Python 綁定 `127.0.0.1`／OS 指派 port；不接受／傳送應用資料。只保存本工具 PID+建立時間及 port，先合作關閉 socket，再核對原 Job 退出 | 完整 baseline 後才注入；來源應觀測到本工具端點，規則按設計不產生 listener.changed，不能宣稱陽性 new/resolved 通過。不得推導 Internet 可達或主機安全 |
 | HKCU Run 名稱 | 只建本輪唯一值名稱，型別 REG_SZ、內容空字串，不放可執行命令。先證明同名不存在，碰撞就中止，不覆寫；測完只刪同名稱且仍為原型別/空值的測試值，不刪 Run key | 新增／移除各自有事件且共用可追溯 episode；三輪不變無重複。父程序另記清理義務，即使 child 例外也查證值已不存在；不一致停止並報告，不刪其他值 |
 | monitor 正常停止／重開 | 先 stop，核對該 instance 的真退出與 Job active=0，再由人類明確啟動下一次 | 單例釋放、沒有殘留；gap 若存在須保存為未觀測區間，不能變成無事件／安全 |
 | 本工具 monitor 失敗 | 專用啟動器保存自己 Job handle、PID+建立時間；先合作停止，需模擬非正常中止時只關閉本工具 Job，記 forcibly_terminated，不能當自然退出通過 | 下次啟動從先前 checkpoint／heartbeat 產生耐久 monitor_gap；保存失敗則阻擋採集，同 gap ID 可恢復；不碰 Job 外程序 |

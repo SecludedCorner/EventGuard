@@ -1,5 +1,13 @@
 # 24 小時 soak 計畫（尚未執行）
 
+## 2026-10-26：自身 worker 的長窗 idle 已驗證（最新）
+
+`reports/soak-idle-30m-20261026-01` 實跑1900.017392秒，16件synthetic事件全部唯一ACK、pending0；475筆有效資源樣本，原HANDLE自然exit0／Job0／無強停、7個來源檔hash不變。獨立32/32核對的末段實際1802.489810秒窗：CPU0.343275%單核心、private峰增73728B（72KiB）、handle增0，符合這個自身idle窗的三項目標。沒有插值冒充恰1800秒。
+
+此切片僅排空後的foreground synthetic worker；不是整Job、production monitor、steady四窗趨勢、OS重啟、真agent或下方完整24h背景流程。採樣間隔3.8671875秒，完整idle_after1874.956124秒；短窗與長窗不是控制host負載的因果實驗。
+
+observer每秒全樹usage的已量測成本，已改為排空後單writer的已驗其他檔總量＋自身append bytes；每筆仍guard、核對檔案大小及兩層byte cap，mutation／phase／final全樹核對保留。外部其他檔／同大小突變不是即時防篡改保證。詳見最新STATUS/EVIDENCE與measurement-crosscheck.json；下方舊短窗未達標是保留歷史，不是這輪結果。
+
 ## 2026-10-26 已執行的有限增量（不等於本頁24h計畫通過）
 
 scripts/soak.py 已能以專用reports執行有界synthetic恢復流程。--duration-seconds是上限，--min-wall-seconds是獨立最小總wall，--pacing-seconds是ACK間合作等待；總wall包含工作時間，不能當成同長idle。啟動後異常先耐久stop.request再grace/自有Job，未知或保存失敗維持未確認。

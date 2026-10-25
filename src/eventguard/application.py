@@ -92,6 +92,46 @@ class Application:
         return (self._same_monitor(saved) and saved.get("control_generation") == self._pause_generation
                 and saved.get("desired_enabled") is False and saved.get("host_liveness") == "exited_verified")
 
+    def _monitor_status_for_control(self):
+        """Reobserve only a transient missing snapshot, never a foreign owner."""
+        from .background import status
+        saved = status(self.runtime.root)
+        scope = self._owned_scope
+        generation = self._pause_generation or (scope or {}).get("control_generation")
+
+        def foreign(view):
+            if not isinstance(scope, dict):
+                return False
+            owner = view.get("owner") if isinstance(view.get("owner"), dict) else {}
+            anchored = (view.get("run_id") is not None or view.get("control_generation") is not None
+                        or any(owner.get(key) is not None for key in ("run_id", "pid", "created_at", "job_name")))
+            return (view.get("run_id") is not None and view["run_id"] != scope.get("run_id")
+                    or view.get("control_generation") is not None and view["control_generation"] != generation
+                    or anchored and view.get("namespace") != self.namespace
+                    or any(owner.get(key) is not None and owner[key] != scope.get(key)
+                           for key in ("run_id", "namespace", "pid", "created_at", "job_name")))
+
+        if foreign(saved):
+            return saved, "monitor_ownership_changed"
+        unknown = saved.get("host_liveness") in {"unknown", "alive_unverified"}
+        if (isinstance(scope, dict) and unknown and saved.get("state") in {"blocked", "unknown"}
+                and saved.get("reason") == "background_state_unverifiable"):
+            saved = status(self.runtime.root)  # One fresh complete observation; no action is retried.
+            if foreign(saved):
+                return saved, "monitor_ownership_changed"
+            owner = saved.get("owner") if isinstance(saved.get("owner"), dict) else {}
+            complete = (self._same_monitor(saved) and saved.get("control_generation") == generation
+                        and type(saved.get("desired_enabled")) is bool
+                        and saved.get("host_liveness") in {"alive_verified", "exited_verified"}
+                        and all(owner.get(key) == scope.get(key) and owner.get(key) is not None
+                                for key in ("run_id", "namespace", "pid", "created_at", "job_name")))
+            if not complete:
+                return saved, "monitor_scope_unverifiable"
+            unknown = False
+        if unknown:
+            return saved, "monitor_scope_unverifiable"
+        return saved, None
+
     @staticmethod
     def _request(source, operation_id):
         if type(source) is not str or source not in _SOURCES:
@@ -190,7 +230,9 @@ class Application:
         if not self._started:
             return {"state": "blocked", "reason": "monitor_application_not_running"}
         from .background import status
-        saved = status(self.runtime.root)
+        saved, scope_error = self._monitor_status_for_control()
+        if scope_error is not None:
+            return {"state": "blocked", "reason": scope_error}
         if action in {"start", "resume"}:
             if self._shutdown_unconfirmed:
                 return {"state": "blocked", "reason": "monitor_previous_shutdown_unconfirmed"}

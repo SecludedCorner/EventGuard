@@ -2,17 +2,18 @@
 
 ## 持續工程佇列：2026-10-26（優先閱讀）
 
-分支feat/local-codex-acceptance；基底9a34a5b。既定真CLI receive→query→result→ACK及五層自然退出已通過；後續可靠性工作不把commit當停止條件。只在EventGuard、既有一般權限及已安裝runtime工作，未push。
+分支feat/local-codex-acceptance；基底4a1a95b。既定真CLI receive→query→result→ACK及五層自然退出已通過；後續可靠性工作不把commit當停止條件。只在EventGuard、既有一般權限及已安裝runtime工作，未push。
 
 | ID／優先級 | 預期成果／驗收條件 | 依賴／權限 | 現在證據與未驗範圍 | 下一個動作 |
 | --- | --- | --- | --- | --- |
+| P0-OWNER-SNAPSHOT-005 DONE | 暫時status缺失/舊快照不得誤綁owner或放寬控制 | 原Job/owner/control代際不變，純fixture | 鎖內selected_owner＋一次完整重觀測；原full03兩fail留存，新增2背景/3Appfixture，已通過對應回歸 | 轉下一授權關卡 |
 | P2-MCP-EXIT-001 DONE | ACK flush→同Job活體HANDLE自然0 | 單事件真CLI既有授權、Windows/SDK | 真04五層exit0/三工具各1/pending0 | 來源變更受影響才複驗 |
 | P2-MCP-STATUS-001 DONE | CLI/Web/Tk有界摘要；缺原證據為unknown | 同instance/read-only status，不新啟模型 | 定向、真閒置App/API/CLI/瀏覽器及原64檔不變；GUI合作退出 | 保留新舊證據界線 |
 | P1-SOAK-001／GUARD-002 DONE | 拒絕保留同ID/hash、pin恢復、唯一ACK、異常先合作收尾 | synthetic新reports/privateJob | 64件有限基準＋兩輪16件/60秒守恆/自然0；故障fixture通過 | 不是OS重啟或24h |
 | P2-SOAK-MEASURE-001 DONE有限範圍 | min-wall/pacing/worker自己資源有界採樣 | 無模型/網路/原生掃描 | 59有效樣本/handles111，unknown不填0；不是整Job | 接續下列CPU缺口 |
 | P2-GH-PAGES-001 DONE有界契約 | 頁數/bytes/deadline共享、repo mapping、after/page安全、partial/304保護 | 公開既有來源；無token/設定改動 | 22 fixtures、201項整合、真兩頁smoke＋mapping；05完整要求未達但partial正確 | 不為洗綠再加cap；完整來源freshness另依實抓 |
-| P2-IDLE-CPU-003 CURRENT | 查明本harness idle CPU成本；證據支持最小修正後比較 | stdlib profiling、自有Job、bounded synthetic | 兩短窗4.393%/4.069%，未達<1%；降低poll假說無法消除 | profiling後只改已確認成本；不得當真monitor性能 |
-| P2-OS-001 BLOCKED | 單來源真Windows coverage/必要互動/恢復 | WINDOWS_VALIDATION_PLAN要求具體案例、時限及當次批准 | denied/unknown不變安全；未全機重掃/注入 | 待人類固定範圍；不改Defender/網路/Run值 |
+| P2-IDLE-CPU-003／30M DONE自身範圍 | observer成本修正及>=1800秒真idle樣本窗 | synthetic私有Job/無模型/掃描 | 12/12；1900秒總wall、末段1802.49秒CPU0.3433%、private峰增72KiB、handles增0，獨立32/32 | 非整Job/production/24h，不再重跑短profile |
+| P2-OS-001 READY／實跑待人類批准 | 一次native listeners baseline-only，query5秒/30秒工作預算 | 明確root/hash/scope/時效人類授權；無socket/registry/model | gate15/15，實際root僅prepare/query0；loopback陽性不符產品，計畫已改負向 | 回覆已提出的單次scope後才execute，不自動擴來源 |
 | P3-24H／DESKTOP／PUBLISH 暫緩/外部條件 | 分別真24h、既有聊天喚醒、正式發布 | 固定長時窗/受支援入口/明確push部署批准 | 尚未驗，不能由短測或新App顯示升格 | 條件具備才執行，不自行排程或承諾會話外喚醒 |
 
 最新命令、時間、失敗恢復、證據、限制見STATUS/EVIDENCE頂部；所有reports/SQLite/native輸出留本機，保留其他Agent與既有未追蹤目錄。

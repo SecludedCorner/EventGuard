@@ -166,6 +166,79 @@ class MockApplicationControls(ApplicationControlFixture):
                 self.run_mock(app, announce, start=external)
                 self.assertTrue(self.view["desired_enabled"])
 
+    def test_transient_status_gap_reobserves_complete_same_owner_before_pause(self):
+        app = self.application()
+        def announce(_value):
+            reads = []
+            transient = {"state": "blocked", "namespace": "live", "desired_enabled": False,
+                         "host_liveness": "unknown", "reason": "background_state_unverifiable"}
+            def observe(_root):
+                reads.append(True)
+                if len(reads) == 1:
+                    return transient
+                if len(reads) == 2:
+                    self.assertEqual(self.closes, [], "no control before complete same-owner evidence")
+                return dict(self.view)
+            try:
+                with patch.object(background, "status", side_effect=observe):
+                    result = app.monitor_control("pause")
+                self.assertEqual(result["state"], "paused", result)
+                self.assertEqual(len(self.closes), 1)
+                self.assertEqual(len(self.starts), 1)
+                self.assertTrue(result["monitor_controls"]["paused"])
+                self.assertEqual(len(reads), 4, "two admission reads, post-stop proof, and current reply")
+            finally:
+                app.cancel.set()
+        self.run_mock(app, announce)
+
+    def test_persistent_status_gap_blocks_without_stop_or_repeated_actions(self):
+        app = self.application()
+        def announce(_value):
+            transient = {"state": "blocked", "namespace": "live", "desired_enabled": False,
+                         "host_liveness": "unknown", "reason": "background_state_unverifiable"}
+            try:
+                with patch.object(background, "status", return_value=transient) as observe:
+                    result = app.monitor_control("pause")
+                self.assertEqual(result["state"], "blocked")
+                self.assertEqual(result["reason"], "monitor_scope_unverifiable")
+                self.assertEqual(observe.call_count, 3, "only two admission reads plus reply; no polling")
+                self.assertEqual(self.closes, [])
+                self.assertTrue(self.view["desired_enabled"])
+                self.assertFalse(result["monitor_controls"]["can_pause"])
+            finally:
+                app.cancel.set()
+        self.run_mock(app, announce)
+
+    def test_explicit_foreign_identity_is_never_reobserved_into_same_owner(self):
+        for changed in ("run_id", "control_generation", "pid", "created_at", "job_name", "namespace"):
+            with self.subTest(changed=changed):
+                self.starts.clear()
+                self.closes.clear()
+                self.view = {"state": "not_started", "namespace": "test", "desired_enabled": False,
+                             "host_liveness": "not_recorded"}
+                app = self.application()
+                def announce(_value):
+                    foreign = {**self.view, "owner": dict(self.view["owner"]), "state": "blocked",
+                               "host_liveness": "unknown", "reason": "background_state_unverifiable"}
+                    if changed in ("run_id", "control_generation"):
+                        foreign[changed] = "f" * 32
+                    elif changed == "namespace":
+                        foreign["namespace"] = "live"
+                    else:
+                        foreign["owner"][changed] = {"pid": 99999, "created_at": "2026-10-25T00:00:00Z",
+                                                     "job_name": "Global\\EventGuard-" + "f" * 32}[changed]
+                    try:
+                        with patch.object(background, "status", side_effect=[foreign, dict(self.view)]) as observe:
+                            result = app.monitor_control("pause")
+                        self.assertEqual(result["state"], "blocked")
+                        self.assertEqual(result["reason"], "monitor_ownership_changed")
+                        self.assertEqual(observe.call_count, 2, "one admission read and separate current reply")
+                        self.assertEqual(self.closes, [])
+                        self.assertTrue(self.view["desired_enabled"])
+                    finally:
+                        app.cancel.set()
+                self.run_mock(app, announce)
+
     def test_unknown_exit_or_failed_receipt_cannot_enable_resume(self):
         for fault in ({"child_exited": None}, {"evidence_write_failed": True}):
             with self.subTest(fault=fault):

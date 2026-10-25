@@ -531,13 +531,17 @@ def stop(root, *, grace_seconds=10, expected_namespace=None, expected_run_id=Non
                     if scoped_owner["namespace"] != expected_namespace:
                         return dict(current, state="not_applicable", reason="background_outside_launcher_namespace",
                                     process_terminated=False)
-                scoped_run = current.get("run_id")
+                # Scope comes only from the selected launch/owner checked
+                # under control.lock. A transient run.json status read can
+                # omit its run_id while that authority remains unchanged.
+                scoped_run = scoped_owner.get("run_id") if scoped_owner is not None else None
             if control is None:
                 control = {"kind": CONTROL_KIND, "namespace": "live", "fixture": None, "max_cycles": None}
             control.update(enabled=False, generation=uuid.uuid4().hex, updated_at=_stamp(), reason="explicit_stop")
             _write(runtime, "control.json", control)
             disabled_written = True
-            _write(runtime, "stop.json", {"run_id": current.get("run_id"), "generation": control["generation"], "requested_at": _stamp()})
+            _write(runtime, "stop.json", {"run_id": scoped_run if expected_namespace is not None else current.get("run_id"),
+                                          "generation": control["generation"], "requested_at": _stamp()})
         until = time.monotonic() + grace_seconds
         while time.monotonic() < until:
             current = status(root)

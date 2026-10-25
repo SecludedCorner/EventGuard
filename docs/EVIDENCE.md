@@ -1,5 +1,23 @@
 # 證據與時間日誌
 
+## 2026-10-26：observer長窗、原生閘道與所有權競態（最新）
+
+基底4a1a95b，Python3.13.3，一般使用者；模型／原生掃描在本增量測試中均0。既定真04五層退出／三工具各1的原證據未重跑或覆寫。
+
+- observer根因：reports/soak-observer-cprofile-20261026-01，12秒受控cProfile，record累積wall .809478秒，其中usage .775133秒≈95.8%；內層_guard與stat為重疊累計，不相加當CPU。原worker自然0/Job0。修正僅排空後單writer byte accounting重用；每append guard/size/cap及mutation/phase/final全樹檢查保留，非即時防篡改。
+- `py -3.13 -B scripts/verify.py --run-dir reports/verify-soak-observer-budget-20261026-01 --timeout-seconds 180 --module test_soak`：11/12，恢復語意fixture12件I/O超20秒；原失敗保存。該fixture改虛擬monotonic/sleep而SQLite仍真，02同命令12/12，UTC17:06:53–17:07:22、source_unchanged、自然0/Job0，非性能證據。
+- `py -3.13 -B scripts/soak.py --root reports/soak-measured-20261026-03 --duration-seconds 180 --min-wall-seconds 60 --pacing-seconds .05 --max-events 16`：UTC17:07:38起，真wall60.012212秒／16ACK／pending0，idle31.411523秒CPU0.945115%；50樣本皆有效，原Job自然0。跨輪host I/O未控制，觀察下降非單因果證明。
+- `py -3.13 -B scripts/soak.py --root reports/soak-idle-30m-20261026-01 --duration-seconds 1980 --min-wall-seconds 1900 --pacing-seconds .05 --max-events 16`：UTC17:12:21–17:44:01，1900.017392秒、475樣本。measurement-crosscheck.json獨立32/32、SQL mode=ro+query_only+closing、原artifact hash未改。最後真樣本窗17:13:58.791556–17:44:01.281371、1802.489810秒／450筆，CPU6.1875秒=0.343275%；private首14061568B／峰14135296B，峰增73728B<32MiB；handles首/峰/末111，增0<20。完整idle1874.956124秒；非插值恰1800秒、非24h/整Job/production。原HANDLE1432自然0、remaining0、無強停，7source hash相符。
+- `py -3.13 -B scripts/verify.py --run-dir reports/verify-windows-listener-gate-20261026-01 --timeout-seconds 180 --module test_windows_listener_validation`：13/13；追加固定stop watcher及兩個行為fixture後02為15/15、UTC17:26:35–17:26:50，自然0/Job0/source_unchanged。mock collector未查原生；完整/denied/partial/forced/unknown、批准缺失/失效/錯scope/hash、intent fsync故障、loopback無候選與wildcard兩輪恢復分開驗證。
+- `py -3.13 -B scripts/validate_windows_listener.py --root reports/windows-listener-baseline-20261026-01`：只prepare，無collector、query_started=false。AUTHORIZATION_REQUEST.md與未批准template保留；非同步請求尚未回覆，沒有執行--execute。外層reports/windows-listener-preparation-20261026-01/run-owned.py保留原HANDLE、20秒觸發合作stop／3秒grace／僅原Job，固定錯誤摘要、無raw console；未以source/fixture資料當人類授權。
+- `py -3.13 -B scripts/verify.py --run-dir reports/verify-full-20261026-03 --timeout-seconds 1800`：UTC17:27:59–17:38:48，1561／1556pass／3skip／2fail，無error/殘留、source_unchanged、自然exit1/Job0。兩fail為App pause的monitor_ownership_changed、SDK stop的background_owner_changed。原trace及回條保存，不能改稱環境flaky或綠。
+- 修復：background.py以鎖內selected_owner作scoped_run/stop target，不用可能缺失/過期的status；App僅固定unverifiable作一次完整重觀測，同owner/liveness verified才控制，foreign/持續unknown拒絕。新增2+3確定性fixtures，已通過對應回歸。定向命令在reports/verify-owner-snapshot-races-20261026-01/verification-summary.json（8模組完整argv）；最新完整回歸 1566 項／1563 通過／3 略過、0 failure/error；source_unchanged=true，原Job自然0／remaining0／無強停。
+- P0定向guardian：126項125pass／1通知圖示略過，UTC17:48:10–17:49:40、source_unchanged、自然0/Job0，原兩個實際失敗與新增確定性fixtures都過，無逐測試殘留。最新完整命令：py -3.13 -B scripts/verify.py --run-dir reports/verify-full-20261026-04 --timeout-seconds 1800。UTC 2026-10-25T17:51:54.025484+00:00 至 2026-10-25T18:02:08.911585+00:00，613.649秒；最新完整回歸 1566 項／1563 通過／3 略過、0 failure/error；source_unchanged=true，原Job自然0／remaining0／無強停。 三項略過為兩項symlink creation unavailable及一項notification_icon_unavailable；model_calls0、machine_scan_executed=false。
+
+本切片變更檔案：src/eventguard/application.py、background.py、soak.py；scripts/validate_windows_listener.py；tests/test_application_controls.py、test_background.py、test_soak.py、test_windows_listener_validation.py；STATUS.md、HANDOFF.md及docs/EVIDENCE.md、MAINTENANCE_GOAL.md、SOAK_PLAN.md、WINDOWS_VALIDATION_PLAN.md。前一4a1a95b的公告分頁、store/view、agent status與GUI/Web等23檔清單在該commit，最新頂部沿用對應真公開分頁及產品頁面證據，不重跑模型。
+
+本版來源commit由提交後各source-commit.json綁定，reports/SQLite/授權/native輸出只留本機；不push。所有成功判斷保持scope，未評估主機安全。
+
 ## 2026-10-26：產品呈現、canonical 分頁、guardian與資源量測
 
 基底 9a34a5b，分支 feat/local-codex-acceptance；依既有授權繼續，未 push、未改系統／帳戶設定。AGENTS 的 Continuous Execution Policy 已在 a34e466 逐字加入，繼續有效。
