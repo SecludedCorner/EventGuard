@@ -1,5 +1,14 @@
 # 證據與時間日誌
 
+## 2026-10-26：使用者授權開發分支遠端保存（最新）
+
+使用者直接要求先Git checkpoint並推既有授權開發分支，再續開發。核對cwd EventGuard、branch feat/local-codex-acceptance、HEAD cd117f93ef4e6af1346e44065a888716a9a664ec、upstream origin同名，origin HTTPS GitHub/SecludedCorner/EventGuard。普通工具網路沙箱git ls-remote連線拒絕；已批准的工具網路例外下唯讀查回遠端feat=9576b13a6773ce81c3a01799743d30094a48449a、main=615f77f55a29f856b2305fc54a5225b5ed58bc65，未改Windows／帳戶設定。當時ahead57，遠端→HEAD264檔/+52654/-1961；未提交只是兩個golden檔案，其他未追蹤目錄保留，畫面變更基準不混用。
+
+reports/git-checkpoint-20261026-01/history-audit.json：review本分支全部待推歷史265路徑、55946新增patch行，runtime/秘密檔案路徑及私鑰/OpenAI/GitHub/AWS/JWT高信度pattern無命中；固定pattern不保證偵出所有秘密。只推指定ref，保留其他本機驗收refs，不推runtime或原始證據。既有workflow可能按普通push跑離線CI，不手動dispatch、不宣稱CI通過。
+
+新增test_investigation_source_golden.py及9案例JSON。01定向29test methods、9subcase errors皆因測試讀list_events不存在的payload_hash，原trace保留；改以event_payload_hash(validate_event(row))比對公開介面不動產品。命令 py -3.13 -B scripts/verify.py --run-dir reports/verify-investigation-source-golden-20261026-02 --timeout-seconds 180 --module test_investigation_source_golden --module test_event_investigation --module test_investigation_diagnostics：UTC14:17:44.336103–14:17:49.912372、4.368秒，29/29、211AST無錯、source_unchanged、guardian自然0/remaining0/無強停，model0/scanfalse。這個checkpoint在推送確認前不宣稱已遠端保存。
+
+
 ## 2026-10-26：已保存診斷的案件來源脈絡（最新）
 
 接續bc5f028。investigation引擎新增1.1診斷摘要及固定缺口，catalog只接validate_saved_review通過的同事件紀錄，store在保存交易內重核review hash防競態；Web／CLI呈現query類型、來源、狀態、列數及時間。rows不轉送，不執行新DiagnosticAPI／collector／模型，ACK及人工處置分開。1.0案件向後相容；新8個有辨識力測試含缺失、過期／未來、空結果／partial、跨事件誤綁、保存競態、後續變更／刪除、格式竄改及舊schema。

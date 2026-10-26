@@ -1,5 +1,12 @@
 # EventGuard 接手
 
+## 2026-10-26 遠端checkpoint接續（最新）
+
+使用者已明確要求本專案checkpoint提交並push既有開發分支；目標origin/feat/local-codex-acceptance，禁止force／改寫歷史／推main或其他保留refs，不是正式發布。遠端推前SHA9576b13a6773ce81c3a01799743d30094a48449a，cd117f9領先57。舊「不push」段落屬歷史。當前新增兩個golden fixture/test將單獨保存，其他兩個未追蹤目錄不動。
+
+golden資料集9案例覆蓋listeners/startup/services/tasks/defender/versions/unknown，含partial、歷史resolved與多實體歧義；不聲稱7來源完整防護或惡意偵測。測試getter誤用已修，verify-investigation-source-golden-20261026-02為29/29、自然0/Job0，原9subcase失敗保留。推送並驗遠端包含本commit後，立即接續同資料集的逐案關聯錯加／漏加／UNKNOWN及有限成本產物；不要重跑真ACK或全庫。
+
+
 ## 2026-10-26 查證來源切片接續（最新）
 
 P1-INVEST-001在bc5f028；後續002已實作及驗證，1.1案件固定投影同事件已驗證診斷摘要／hash／時間，缺失／舊／矛盾範圍保留限制，絕不重新query。兩個切片共用既有EventStore／EventCatalog及CLI／Web。不要把保存metadata診斷升格為真主機查證；03使用明示fixture review。1.0舊案件仍讀原樣，不自動升級。

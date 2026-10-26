@@ -1,5 +1,14 @@
 # EventGuard 現況
 
+## 2026-10-26 Git遠端保存 checkpoint（最新）
+
+最新直接使用者要求先提交及遠端保存，再接續開發；這是本專案既有開發分支的push授權，取代下方本輪「只本機／不push」限制，但不授權正式發布或推其他分支。位置EventGuard，分支feat/local-codex-acceptance，上游origin同名，remote https://github.com/SecludedCorner/EventGuard.git。推送前遠端實查9576b13a6773ce81c3a01799743d30094a48449a，本機cd117f9已領先57commit；比較遠端→HEAD為264檔、+52654/-1961行，屬歷史累積，不是當前未提交量。
+
+本checkpoint保存9個多來源golden case及其測試。首輪9個subcase同因測試誤讀list_events未公開payload_hash欄位而error，產品碼未改；改用公開schema正規化後計算hash。定向02為29/29，無fail/error/skip、source_unchanged，自有Job自然0／remaining0／無強停，未採集／啟模型／ACK。先保存，再續逐案例成本／錯加／漏加產物。
+
+推送範圍只refs/heads/feat/local-codex-acceptance，不推其他本機保留refs。57commit逐檔路徑及所有新增patch行審查：265路徑／55946新增行，無runtime禁入路徑或高信度secret pattern命中；不等於形式化無秘密保證。reports/data/logs/SQLite/授權及他人未追蹤.codex-remote-attachments/、docs/research/不加入。推送結果以遠端核對回條及後續補記為準，不把意圖當成功。
+
+
 ## 2026-10-26 調查查證脈絡接通（最新）
 
 接續bc5f028，P1-INVEST-002完成：新1.1案件納入同事件已驗證的保存診斷hash／時間／query類型／來源／狀態／列數，rows不複製、不重新diagnose。缺失／過期／未來／空結果／partial列缺口；跨事件誤綁及保存競態拒絕，診斷後續變更／刪除標明且保留原case，1.0仍可讀。CLI／Web均顯示來源脈絡。

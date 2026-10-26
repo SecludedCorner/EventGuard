@@ -1,0 +1,15 @@
+{
+  "kind": "synthetic-saved-source-golden-v1",
+  "not_malware_detection_ground_truth": true,
+  "cases": [
+    {"id":"listeners-process","source":"listeners","event_type":"listener.changed","evidence":{"protocol":"TCP","port":18080,"pid":4100,"process_created_at":"2026-10-26T00:00:00Z"},"expected_members":2,"expected_gaps":[],"label":"same stable process; different saved observations"},
+    {"id":"startup-single-entry","source":"startup","event_type":"persistence.changed","evidence":{"kind":"startup","changed_keys":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]},"expected_members":2,"expected_gaps":[],"label":"single opaque startup entry reference"},
+    {"id":"services-single-entry","source":"services","event_type":"persistence.changed","evidence":{"kind":"services","entry_ref":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","state":"running"},"expected_members":2,"expected_gaps":[],"label":"same service entry; no maliciousness inferred"},
+    {"id":"tasks-multiple-entries","source":"tasks","event_type":"persistence.changed","evidence":{"kind":"tasks","changed_keys":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"]},"expected_members":1,"expected_gaps":["stable_entity_missing"],"label":"ambiguous multiple entries stay uncorrelated"},
+    {"id":"defender-no-entity","source":"defender","event_type":"protection.changed","evidence":{"property":"RealTimeProtectionEnabled","current":false},"expected_members":1,"expected_gaps":["stable_entity_missing"],"label":"a protection flag does not identify a process"},
+    {"id":"versions-no-entity","source":"versions","event_type":"coverage.degraded","evidence":{"status":"unknown","count":1},"expected_members":1,"expected_gaps":["stable_entity_missing"],"label":"version source status is not a process or attack chain"},
+    {"id":"listeners-partial","source":"listeners","event_type":"listener.changed","coverage":"partial","evidence":{"protocol":"TCP","port":18080,"pid":4100,"process_created_at":"2026-10-26T00:00:00Z"},"expected_members":2,"expected_gaps":["source_incomplete"],"label":"relationship preserved but partial coverage cannot become complete"},
+    {"id":"services-historical-resolution","source":"services","event_type":"persistence.changed","resolved":true,"evidence":{"kind":"services","entry_ref":"cccccccccccccccccccccccccccccccc"},"expected_members":2,"expected_gaps":[],"label":"resolved event uses original binding; no current recovery proof"},
+    {"id":"unknown-source","source":"unknown","event_type":"metadata.changed","evidence":{"count":1},"expected_members":1,"expected_gaps":["stable_entity_missing","source_unknown"],"label":"unknown source remains unknown"}
+  ]
+}
