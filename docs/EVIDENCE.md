@@ -1,5 +1,16 @@
 # 證據與時間日誌
 
+## 2026-10-26：已保存診斷的案件來源脈絡（最新）
+
+接續bc5f028。investigation引擎新增1.1診斷摘要及固定缺口，catalog只接validate_saved_review通過的同事件紀錄，store在保存交易內重核review hash防競態；Web／CLI呈現query類型、來源、狀態、列數及時間。rows不轉送，不執行新DiagnosticAPI／collector／模型，ACK及人工處置分開。1.0案件向後相容；新8個有辨識力測試含缺失、過期／未來、空結果／partial、跨事件誤綁、保存競態、後續變更／刪除、格式竄改及舊schema。
+
+核心命令 py -3.13 -B scripts/verify.py --run-dir reports/verify-investigation-diagnostics-20261026-01 --timeout-seconds 600（11個--module見summary完整argv）：UTC13:46:47.588845–13:47:32.948041，44.31秒，160項159pass／1通知圖示skip，0failure/error；210檔AST無錯，source_unchanged，自有guardian自然0／Job0／無強停／逐測試殘留0。之後只增加Web／presentation顯示，命令 py -3.13 -B scripts/verify.py --run-dir reports/verify-investigation-diagnostic-views-20261026-01 --timeout-seconds 300 --module test_local_product --module test_core_cli --module test_cli_workflow --module test_investigation_diagnostics：UTC13:48:56.020628–13:49:15.043912，17.977秒，52項51pass／1同skip、0fail/error、source_unchanged／自然0/Job0。兩個範圍不加總成全庫；前者核心來源與最終相同，Web/presentation以後者及產品03為準。
+
+產品命令 py -3.13 -B reports/investigation-product-20261026-03/exercise.py，私有Job執行worker；UTC13:50:08.807087–13:51:51.290008。明示FixtureAPI建立已保存診斷system_query_executed=false，非native查詢；producer-manifest／fixture-diagnosis保留輸入。CLI建案→真IAB更新→HTTP／CLI同案→關server→重開IAB／CLI同case、同診斷hash，web-saved.png／web-reopened.png及完整AX可檢閱。18/18，source-sha256十檔相符，2個保存query摘要、8事件仍pending／0receipts／1case、read前後DB hash不變，兩Web thread退出；原worker PID39088／建立時間綁定HANDLE自然0／remaining0／無強停。沒有新增模型、native源採集或ACK。
+
+有限成本03：一次CLI建案0.0966885秒、重開HTTP讀0.0080031秒，DB57344→65536B、case JSON3210B。自身資源兩點CPU0.59375→0.703125秒、private24027136→25030656B、handles120不變；此區間包含fixture準備，不冒充僅建案CPU／峰值／整Job／production或人類調查時間。來源commit以提交後source-commit.json綁定；runtime不提交、不push。原真04／1563pass／舊idle保持歷史scope。官方競品差距表只列宣稱及未測，沒有勝負結論。
+
+
 ## 2026-10-26：可保存事件調查與競品差距（最新）
 
 基底124b42c，既有Python3.13.3／一般使用者。新增events/investigation.py、EventCatalog/Store懶建event_investigations表、CLI investigate／text、Web同源CSRF保存與時間線，fixture和20項新測試。每錨點一份最新case、64KiB上限，保留pending與ACK容量；源事件輪替同步清case，成員內容／hash變動或缺失標UNKNOWN。只有同host/source和穩定實體可關聯，owner_ref是host範圍hash，OS帳戶owner固定unknown。沒有模型、原生來源query、ACK或敏感處置。

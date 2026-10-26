@@ -1,5 +1,14 @@
 # EventGuard 現況
 
+## 2026-10-26 調查查證脈絡接通（最新）
+
+接續bc5f028，P1-INVEST-002完成：新1.1案件納入同事件已驗證的保存診斷hash／時間／query類型／來源／狀態／列數，rows不複製、不重新diagnose。缺失／過期／未來／空結果／partial列缺口；跨事件誤綁及保存競態拒絕，診斷後續變更／刪除標明且保留原case，1.0仍可讀。CLI／Web均顯示來源脈絡。
+
+新增8 fixture，核心定向160項159pass／1通知skip、0failure/error；之後僅Web／presentation變更的52項增量51pass／1同skip、0failure/error，兩輪source_unchanged，原Job自然0／remaining0／無強停，不相加為全庫。最終reports/investigation-product-20261026-03原來源10檔hash相符，18/18；真IAB保存／重開同case及診斷hash、2項保存query摘要一致，8事件仍pending／ACK0／單case，原worker自然0／Job0／無強停。診斷來自FixtureAPI，明示system_query_executed=false，不是原生主機證據。
+
+原真04與1563pass、30分鐘idle均保留原scope；未重跑模型／全庫或native baseline。兩個調查切片已可用，操作及競品差距在OPERATIONS／MAINTENANCE_GOAL；沒有同環境競品實測，不能宣稱超越或全天候防護。下一可離線切片為P2-INVEST-COVERAGE-003多來源黃金資料集／誤關聯與UNKNOWN量測；listeners原具名批准仍待答覆，只阻擋該次原生觀測。執行資料不提交，本機commit、不push。
+
+
 ## 2026-10-26 事件調查產品切片（最新）
 
 基底124b42c、分支feat/local-codex-acceptance；已新增同SQLite的保存案件、穩定實體關聯時間線、來源／過期／矛盾／截斷限制、CLI events investigate 與Web建立／更新。查看及重開不重算，不採集、不啟模型、不ACK，allowed_actions空；OS帳戶owner未保存，固定UNKNOWN，不把host雜湊當帳戶證據。

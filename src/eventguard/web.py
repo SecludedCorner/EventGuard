@@ -57,6 +57,8 @@ function renderInvestigation(value){
   const labels={stable_entity_missing:'缺少穩定實體綁定，不能關聯',source_unknown:'來源未知',source_incomplete:'來源觀測不完整',saved_observation_stale:'保存觀測已過期',observation_in_future:'觀測時間在未來',simultaneous_metadata_conflict:'同時間／序號 metadata 矛盾',sequence_time_conflict:'序號與時間順序矛盾',candidate_or_member_limit:'候選或案件事件達上限，關聯不完整'};
   const gaps=node('ul');for(const gap of c.gaps)gaps.append(node('li',(labels[gap.reason]||gap.reason)+'：'+gap.event_id));target.append(node('h4','缺失／過期／矛盾證據'),gaps);if(!c.gaps.length)target.append(node('p','此快照未發現上述 metadata 缺口；不代表主機安全。'));
   if(value.evidence_status==='unknown')target.append(node('p','原事件缺失或內容已變，證據目前為 UNKNOWN：'+[...value.missing_event_ids,...value.changed_event_ids].join(', '),'result-unknown'));
+  const diagnosticLabels={missing:'沒有已保存診斷',matched:'保存hash相符',changed:'診斷已變，原快照不改寫',not_bound:'舊案件未綁定診斷'};
+  if(c.diagnostic_context){const d=c.diagnostic_context;target.append(node('h4','已保存的查證依據'),node('p',(diagnosticLabels[value.diagnostic_evidence_status]||'未知')+'。觀測時間：'+when(d.observed_at)+'。'+(d.review_hash?'hash '+d.review_hash:'缺少診斷結果。')));for(const observation of d.observations)target.append(node('p',observation.operation+' / '+(sourceNames[observation.source]||observation.source)+' / '+(states[observation.status]||observation.status)+' / 保存列數 '+observation.row_count+' / '+when(observation.observed_at)));target.append(node('p','這裡只讀既有診斷摘要，沒有重新查詢。之後的觀測不能證明過去已恢復。'));}
   target.append(node('p','作業系統帳戶 owner：UNKNOWN（未保存）；沒有推定跨帳戶因果。快照新鮮度：'+(states[value.snapshot_freshness]||value.snapshot_freshness)));
   target.append(node('p','下一步：人工檢閱保存事實；需要新觀測時先取得該來源的採集批准。允許處置清單為空；此頁不執行隔離、終止或修復。'));
 }

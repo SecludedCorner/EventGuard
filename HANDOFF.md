@@ -1,5 +1,14 @@
 # EventGuard 接手
 
+## 2026-10-26 查證來源切片接續（最新）
+
+P1-INVEST-001在bc5f028；後續002已實作及驗證，1.1案件固定投影同事件已驗證診斷摘要／hash／時間，缺失／舊／矛盾範圍保留限制，絕不重新query。兩個切片共用既有EventStore／EventCatalog及CLI／Web。不要把保存metadata診斷升格為真主機查證；03使用明示fixture review。1.0舊案件仍讀原樣，不自動升級。
+
+最新證據：verify-investigation-diagnostics-20261026-01核心159pass/1skip；verify-investigation-diagnostic-views-20261026-01呈現51pass/1skip，均無fail/error／自然0/Job0。investigation-product-20261026-03最終來源18/18／真IAB保存和重開同診斷hash／8pending/ACK0／自然0，兩張png可檢閱。runtime與SQLite不提交，其他未追蹤目錄保留，無push。
+
+下一個具體工程項：P2-INVEST-COVERAGE-003，延伸既有fixture到多來源／多實體良性序列，先固定預期關聯／UNKNOWN與負控制、成本，再接實作缺口；不重跑真ACK或全庫。原listeners具名問題未獲批准，不重問、不擴大到native；也不要把它當全部離線工程停工條件。
+
+
 ## 2026-10-26 調查切片接續（最新）
 
 保留分支feat/local-codex-acceptance。P1-INVEST-001已可操作：CLI events investigate 明確保存，events detail與Web讀同來源最新case；最多256候選／16件／前後15分鐘、同host/source/stable entity，PID重用與異scope不關聯。序號／同時矛盾只比較同episode；OS帳戶owner為UNKNOWN。原子保存64KiB上限／ACK保留空間／錨點輪替同步清case，member缺失／改壞則保留snapshot標unknown。

@@ -28,6 +28,60 @@ def _encoded(value):
     return json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
 
+def diagnostic_summary(review):
+    """Only a validated saved review enters here; never query or forward rows."""
+    if review is None:
+        return {"state": "missing", "review_hash": None, "payload_hash": None, "observed_at": None,
+                "result_status": "unknown", "observations": []}
+    return {"state": "saved", "review_hash": hashlib.sha256(_encoded(review).encode()).hexdigest(),
+            "payload_hash": review["payload_hash"], "observed_at": _timestamp(review["observed_at"]),
+            "result_status": review["status"], "observations": [
+                {"operation": row["operation"], "source": row["source"], "status": row["status"],
+                 "observed_at": _timestamp(row["observed_at"]) if row["observed_at"] is not None else None,
+                 "row_count": len(row["rows"]), "truncated": row["truncated"]}
+                for row in review["observations"]]}
+
+
+def _diagnostic_view(summary, anchor_hash, as_of):
+    required = {"state", "review_hash", "payload_hash", "observed_at", "result_status", "observations"}
+    if type(summary) is not dict or set(summary) != required:
+        raise ValueError("invalid_investigation_diagnostic")
+    if summary["state"] == "missing":
+        if summary != diagnostic_summary(None):
+            raise ValueError("invalid_investigation_diagnostic")
+        return dict(summary, gaps=["diagnostic_not_saved"])
+    if (summary["state"] != "saved" or type(summary["review_hash"]) is not str or not HASH.fullmatch(summary["review_hash"])
+            or summary["payload_hash"] != anchor_hash or _timestamp(summary["observed_at"]) != summary["observed_at"]
+            or summary["result_status"] not in {"partial", "observed"} or type(summary["observations"]) is not list
+            or len(summary["observations"]) > 2):
+        raise ValueError("invalid_investigation_diagnostic")
+    gaps = set()
+    if summary["result_status"] != "observed":
+        gaps.add("diagnostic_incomplete")
+    if not summary["observations"]:
+        gaps.add("diagnostic_result_missing")
+    for observed in summary["observations"]:
+        if (type(observed) is not dict or set(observed) != {"operation", "source", "status", "observed_at", "row_count", "truncated"}
+                or observed["operation"] not in {"query_listener", "query_process", "query_defender", "query_persistence_diff"}
+                or observed["source"] not in SOURCES or observed["status"] not in STATUS_VALUES
+                or type(observed["row_count"]) is not int or not 0 <= observed["row_count"] <= 20
+                or type(observed["truncated"]) is not bool):
+            raise ValueError("invalid_investigation_diagnostic")
+        if observed["status"] != "ok" or observed["truncated"]:
+            gaps.add("diagnostic_incomplete")
+        if observed["row_count"] == 0 or observed["observed_at"] is None:
+            gaps.add("diagnostic_result_missing")
+        elif _timestamp(observed["observed_at"]) != observed["observed_at"]:
+            raise ValueError("invalid_investigation_diagnostic")
+    for stamp in [summary["observed_at"], *(row["observed_at"] for row in summary["observations"] if row["observed_at"] is not None)]:
+        age = _seconds(as_of)-_seconds(stamp)
+        if age > WINDOW_SECONDS:
+            gaps.add("diagnostic_stale")
+        elif age < -60:
+            gaps.add("diagnostic_in_future")
+    return dict(summary, gaps=sorted(gaps))
+
+
 def _seconds(value):
     return (datetime.fromisoformat(_timestamp(value))-datetime(1970, 1, 1, tzinfo=timezone.utc)).total_seconds()
 
@@ -98,7 +152,7 @@ def exclusion(anchor, item):
     return None
 
 
-def _render(anchor, members, *, as_of, examined, truncated, excluded):
+def _render(anchor, members, *, as_of, examined, truncated, excluded, diagnosis=None):
     timeline = sorted(members, key=lambda x: (x["observed_at"], x["sequence"], x["event_id"]))
     gaps = []
     for item in timeline:
@@ -126,8 +180,11 @@ def _render(anchor, members, *, as_of, examined, truncated, excluded):
             gaps.append({"event_id": item["event_id"], "reason": "sequence_time_conflict"})
     if truncated:
         gaps.append({"event_id": anchor["event_id"], "reason": "candidate_or_member_limit"})
+    context = _diagnostic_view(diagnosis, anchor["payload_hash"], as_of) if diagnosis is not None else None
+    if context is not None:
+        gaps += [{"event_id": anchor["event_id"], "reason": reason} for reason in context["gaps"]]
     identity = hashlib.sha256(_encoded([anchor["owner_ref"], anchor["event_id"], anchor["payload_hash"]]).encode()).hexdigest()[:32]
-    return {"schema_version": "1.0", "engine_version": "saved-metadata-1", "case_id": "case-"+identity,
+    result = {"schema_version": "1.0", "engine_version": "saved-metadata-1", "case_id": "case-"+identity,
             "anchor_event_id": anchor["event_id"], "anchor_payload_hash": anchor["payload_hash"], "as_of": as_of,
             "status": "limited" if gaps else "related_metadata_only", "timeline": timeline,
             "correlation": {"basis": "same_host_source_stable_entity", "window_seconds": WINDOW_SECONDS,
@@ -138,9 +195,12 @@ def _render(anchor, members, *, as_of, examined, truncated, excluded):
             "limitations": ["metadata_relationship_is_not_causality", "no_process_tree_or_attack_chain_inferred",
                             "saved_observation_is_not_current_host_state", "os_account_owner_not_observed", "ack_and_handling_are_separate"],
             "model_calls": 0, "native_queries": 0, "data_trust": "untrusted_data"}
+    if context is not None:
+        result.update(schema_version="1.1", engine_version="saved-metadata-2", diagnostic_context=context)
+    return result
 
 
-def build(anchor, candidates, *, as_of=None, truncated=False):
+def build(anchor, candidates, *, as_of=None, truncated=False, diagnosis=None):
     if type(candidates) is not list or len(candidates) > MAX_CANDIDATES:
         raise ValueError("investigation_candidate_limit")
     as_of = _timestamp(as_of or datetime.now(timezone.utc).isoformat())
@@ -157,7 +217,7 @@ def build(anchor, candidates, *, as_of=None, truncated=False):
             members.append(item)
         else:
             truncated = True
-    return _render(anchor, members, as_of=as_of, examined=len(candidates), truncated=truncated, excluded=excluded)
+    return _render(anchor, members, as_of=as_of, examined=len(candidates), truncated=truncated, excluded=excluded, diagnosis=diagnosis)
 
 
 def validate_saved(value, event):
@@ -204,8 +264,10 @@ def validate_saved(value, event):
                 or type(correlation["examined"]) is not int or not 0 <= correlation["examined"] <= MAX_CANDIDATES
                 or type(correlation["truncated"]) is not bool):
             raise ValueError()
+        context = value.get("diagnostic_context")
+        summary = {k: v for k, v in context.items() if k != "gaps"} if type(context) is dict else None
         rebuilt = _render(anchor, timeline, as_of=_timestamp(value["as_of"]), examined=correlation["examined"],
-                          truncated=correlation["truncated"], excluded=excluded)
+                          truncated=correlation["truncated"], excluded=excluded, diagnosis=summary)
         if rebuilt != value:
             raise ValueError()
         return value

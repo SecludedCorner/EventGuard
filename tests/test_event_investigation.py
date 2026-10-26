@@ -73,7 +73,8 @@ class InvestigationTests(unittest.TestCase):
         self.assertEqual([v["event_id"] for v in case["timeline"]], ["evt-anchor", "evt-related"])
         self.assertEqual(case["correlation"]["excluded"], {"different_entity": 2, "different_owner": 1,
                          "different_source": 1, "missing_binding": 1, "outside_window": 1})
-        self.assertEqual(case["status"], "related_metadata_only")
+        self.assertEqual(case["status"], "limited")
+        self.assertIn("diagnostic_not_saved", [g["reason"] for g in case["gaps"]])
         self.assertEqual(case["allowed_actions"], [])
         self.assertEqual(case["incident_conclusion"], "not_assessed")
         self.assertEqual(before, self.rows())

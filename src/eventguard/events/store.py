@@ -508,7 +508,7 @@ class EventStore:
 
     def save_investigation(self, event_id, payload_hash, result):
         """One latest bounded case per anchor; preserve pending and ACK reserve."""
-        from .investigation import validate_saved
+        from .investigation import validate_saved, diagnostic_summary
         encoded = json.dumps(result, ensure_ascii=True, sort_keys=True, allow_nan=False)
         if len(encoded.encode("ascii")) > 65536:
             raise CapacityError("investigation_result_capacity")
@@ -523,6 +523,19 @@ class EventStore:
                     saved = db.execute("SELECT * FROM events WHERE event_id=?", (member["event_id"],)).fetchone()
                     if saved is None or event_payload_hash(validate_event(self._row(saved))) != member["payload_hash"]:
                         raise StoreError("investigation_member_identity_conflict")
+                context = result.get("diagnostic_context")
+                if context is not None:
+                    from ..diagnostics.review import validate_saved_review
+                    has_reviews = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_reviews'").fetchone()
+                    saved_review = db.execute("SELECT payload_hash,result FROM event_reviews WHERE event_id=?", (event_id,)).fetchone() if has_reviews else None
+                    current_review = None
+                    if saved_review is not None:
+                        if saved_review[0] != payload_hash or type(saved_review[1]) is not str or len(saved_review[1]) > 65536:
+                            raise StoreError("investigation_diagnostic_identity_conflict")
+                        current_review = validate_saved_review(json.loads(saved_review[1]), self._row(row))
+                    summary = diagnostic_summary(current_review)
+                    if summary != {k: v for k, v in context.items() if k != "gaps"}:
+                        raise StoreError("investigation_diagnostic_changed")
                 db.execute("""CREATE TABLE IF NOT EXISTS event_investigations(event_id TEXT PRIMARY KEY,
                     payload_hash TEXT NOT NULL,result TEXT NOT NULL,updated_at REAL NOT NULL)""")
                 previous = db.execute("SELECT length(CAST(result AS BLOB)) FROM event_investigations WHERE event_id=?", (event_id,)).fetchone()

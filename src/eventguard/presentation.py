@@ -287,6 +287,12 @@ def render(result, command="", operation=""):
             lines+=_row_lines([item.get("facts",{})])
         for gap in case.get("gaps",[]):
             lines.append("證據缺口："+text(gap.get("reason"))+" / "+text(gap.get("event_id")))
+        diagnosis=case.get("diagnostic_context")
+        if isinstance(diagnosis,dict):
+            lines.append("已保存查證："+text(result.get("diagnostic_evidence_status"))+" / "+text(diagnosis.get("observed_at"))+" / hash="+text(diagnosis.get("review_hash")))
+            for observed in diagnosis.get("observations",[]):
+                lines.append("查詢摘要："+text(observed.get("operation"))+" / "+text(observed.get("source"))+" / "+state(observed.get("status"))+" / 列數="+text(observed.get("row_count")))
+            lines.append("只讀既有診斷摘要，未重新查詢；OS帳戶owner仍UNKNOWN。")
         if result.get("evidence_status")=="unknown":
             lines.append("UNKNOWN：原事件缺失或內容已變；保存快照不代表目前狀態。")
         lines.append("下一步：檢閱保存事實；新來源觀測須先批准。allowed_actions=[]；未採集、未呼叫模型、未ACK。")

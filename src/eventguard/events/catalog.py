@@ -180,7 +180,7 @@ class EventCatalog:
 
     @staticmethod
     def _saved_investigation(db, event, source):
-        from .investigation import validate_saved
+        from .investigation import validate_saved, diagnostic_summary
         if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_investigations'").fetchone():
             return None
         row = db.execute("SELECT payload_hash,result FROM event_investigations WHERE event_id=?", (event["event_id"],)).fetchone()
@@ -210,14 +210,21 @@ class EventCatalog:
                     changed.append(member["event_id"])
         from datetime import datetime, timezone
         age = (datetime.now(timezone.utc)-datetime.fromisoformat(case["as_of"])).total_seconds()
+        context = case.get("diagnostic_context")
+        diagnostic_status = "not_bound"
+        if context is not None:
+            current_review = diagnostic_summary(EventCatalog._saved_diagnosis(db, event))
+            diagnostic_status = ("missing" if current_review["state"] == "missing" else
+                                 "matched" if current_review["review_hash"] == context["review_hash"] else "changed")
         return {"case": case, "evidence_status": "unknown" if missing or changed else "saved_snapshot",
                 "snapshot_freshness": "unknown" if age < -60 else "stale" if age > 900 else "ok",
+                "diagnostic_evidence_status": diagnostic_status,
                 "missing_event_ids": missing, "changed_event_ids": changed,
                 "ack_performed": False, "model_calls": 0, "native_queries": 0}
 
     def investigate(self, event_id, *, now=None):
         """Explicitly save a snapshot of existing metadata, never refresh OS facts."""
-        from .investigation import MAX_CANDIDATES, build, project
+        from .investigation import MAX_CANDIDATES, build, project, diagnostic_summary
         _identifier(event_id)
         with self._read() as db:
             if db is None:
@@ -232,7 +239,8 @@ class EventCatalog:
                               "ABS(julianday(json_extract(e.payload,'$.observed_at'))-julianday(?)),e.event_id LIMIT ?",
                               (event["observed_at"], MAX_CANDIDATES+1)).fetchall()
             candidates = [project(EventStore._row(item), item["catalog_source"]) for item in rows[:MAX_CANDIDATES]]
-            case = build(anchor, candidates, as_of=now, truncated=len(rows) > MAX_CANDIDATES)
+            case = build(anchor, candidates, as_of=now, truncated=len(rows) > MAX_CANDIDATES,
+                         diagnosis=diagnostic_summary(self._saved_diagnosis(db, event)))
         EventStore(self.directory).save_investigation(event_id, anchor["payload_hash"], case)
         return self.detail(event_id)["investigation"]
 
