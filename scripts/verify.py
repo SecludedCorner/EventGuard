@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import subprocess
 import sys
 import time
 import unittest
@@ -34,6 +35,58 @@ def sources():
 MOCK_MODULES = ("test_events_transport", "test_rules_playbooks", "test_mcp_protocol", "test_mcp_store")
 
 
+def guardian_start(child, job_name):
+    return {"kind": "eventguard-verification-worker-v1", "pid": child.pid,
+            "created_at": getattr(child, "created_at", None), "job_name": job_name,
+            "managed": job_name is not None, "started_at": datetime.now(timezone.utc).isoformat(), "model_calls": 0}
+
+
+def guardian_exit(child, job_name, output, reason, grace=.5):
+    if job_name is not None:
+        return finish(child, reason, grace=grace)
+    # Non-Windows mock CI owns this exact Popen child, not a Windows Job or an
+    # observable process tree. Keep missing creation/tree evidence explicit.
+    forced, cooperative, cleanup_confirmed = False, None, True
+    if child.poll() is None:
+        try:
+            atomic_json(output / "guardian-stop.request", {"reason": reason})
+            cooperative = True
+        except (OSError, ValueError):
+            cooperative = False
+        try:
+            child.wait(timeout=grace)
+        except subprocess.TimeoutExpired:
+            forced = True
+            try:
+                child.terminate()
+                try:
+                    child.wait(timeout=max(.1, grace))
+                except subprocess.TimeoutExpired:
+                    child.kill()
+                    child.wait(timeout=max(.1, grace))
+            except (OSError, subprocess.TimeoutExpired):
+                cleanup_confirmed = False
+    code = child.poll()
+    return {"managed": False, "pid": child.pid, "created_at": None, "job_name": None,
+            "child_exited": code is not None, "exit_code": code, "forcibly_terminated": forced,
+            "remaining_owned_processes": None, "process_tree_verified": False,
+            "cleanup_confirmed": cleanup_confirmed, "cooperative_stop_requested": cooperative,
+            "deadline_or_owner_failure": reason in {"timeout", "owner_exception"},
+            "reason": "natural_worker_exit" if code is not None and not forced else "worker_timeout_or_unconfirmed",
+            "scope": "non_windows_mock_single_worker_only"}
+
+
+def guardian_succeeded(receipt, scope):
+    if (not receipt or receipt.get("child_exited") is not True or receipt.get("exit_code") != 0
+            or receipt.get("forcibly_terminated") is not False):
+        return False
+    if receipt.get("managed") is True:
+        return receipt.get("remaining_owned_processes") == 0
+    return (scope == "mock" and receipt.get("scope") == "non_windows_mock_single_worker_only"
+            and receipt.get("cleanup_confirmed") is True and receipt.get("cooperative_stop_requested") is not False
+            and receipt.get("deadline_or_owner_failure") is False)
+
+
 def worker(output, guardian_name, scope="full", modules=()):
     evidence, residuals, syntax = [], [], []
     baseline = {}
@@ -50,6 +103,8 @@ def worker(output, guardian_name, scope="full", modules=()):
             super().addSuccess(test)
 
         def stopTest(self, test):
+            if (output / "guardian-stop.request").exists():
+                self.stop()
             receipts = cleanup_owned(grace=.1)
             forced = [r for r in receipts if r.get("forcibly_terminated")]
             members = current_job_members(guardian_name) if os.name == "nt" else {}
@@ -126,30 +181,28 @@ def main(argv=None):
     child, receipt = None, None
     try:
         with (output / "worker.stdout.txt").open("xb") as stdout, (output / "worker.stderr.txt").open("xb") as stderr:
-            job_name = "Local\\EventGuard-" + uuid.uuid4().hex
+            job_name = "Local\\EventGuard-" + uuid.uuid4().hex if os.name == "nt" else None
             selections = [item for name in args.module for item in ("--module", name)]
-            child = spawn([sys.executable, "-B", str(Path(__file__).resolve()), "--_worker", "--scope", args.scope, "--run-dir", str(output), "--guardian-job-name", job_name, *selections],
+            job_args = ["--guardian-job-name", job_name] if job_name is not None else []
+            child = spawn([sys.executable, "-B", str(Path(__file__).resolve()), "--_worker", "--scope", args.scope, "--run-dir", str(output), *job_args, *selections],
                           **({"job_name": job_name} if os.name == "nt" else {}), stdout=stdout, stderr=stderr)
             # Retain bounded ownership metadata even if the invoking terminal
             # disappears before the final receipt. This is not an exit proof.
-            atomic_json(output / "guardian-start.json", {
-                "kind": "eventguard-verification-worker-v1", "pid": child.pid,
-                "created_at": child.created_at, "job_name": job_name,
-                "started_at": datetime.now(timezone.utc).isoformat(), "model_calls": 0})
+            atomic_json(output / "guardian-start.json", guardian_start(child, job_name))
             deadline = time.monotonic()+args.timeout_seconds
             while child.poll() is None and time.monotonic() < deadline:
                 time.sleep(.1)
-            receipt = finish(child, "timeout" if child.poll() is None else "descendants_remaining", grace=.5)
+            receipt = guardian_exit(child, job_name, output, "timeout" if child.poll() is None else "descendants_remaining")
     finally:
         if child is not None:
-            receipt = finish(child, "owner_exception", grace=.1)
+            if receipt is None:
+                receipt = guardian_exit(child, job_name, output, "owner_exception", grace=.1)
             atomic_json(output / "guardian-exit.json", receipt)
     worker_path = output / "worker-summary.json"
     value = json.loads(worker_path.read_text(encoding="utf-8")) if worker_path.exists() else {"worker_summary_missing": True}
     value.update(source_unchanged=before == sources(), guardian=receipt,
                  command="python -B scripts/verify.py --scope " + args.scope + "".join(" --module "+name for name in args.module) + " --run-dir " + str(output.relative_to(ROOT)), output_dir=str(output.relative_to(ROOT)),
-                 passed_checks=bool(receipt and receipt.get("child_exited") and receipt.get("exit_code") == 0
-                     and not receipt.get("forcibly_terminated") and receipt.get("remaining_owned_processes", 0) == 0
+                 passed_checks=bool(guardian_succeeded(receipt, args.scope)
                      and before == sources() and not value.get("worker_summary_missing")
                      and not value.get("failures") and not value.get("errors") and not value.get("per_test_residuals")))
     atomic_json(output / "verification-summary.json", value, 2*1024*1024)

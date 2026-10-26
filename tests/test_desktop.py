@@ -12,7 +12,7 @@ class DesktopTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
-        self.root = Path(temporary.name)
+        self.root = Path(temporary.name).resolve()
         self.controller = desktop.DesktopController(self.root)
         self.controller.api = Mock()
         self.agent = self.enterContext(patch("eventguard.agent_access.status", return_value={
@@ -243,7 +243,7 @@ class DesktopAutomaticAgentTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
-        self.root = Path(temporary.name)
+        self.root = Path(temporary.name).resolve()
         self.executable = self.root / "codex.exe"
         self.executable.write_bytes(b"inert fixture, never execute")
         self.controller = desktop.DesktopController(self.root)

@@ -268,6 +268,8 @@ def _osv(data: Any, source: dict) -> list[dict]:
 
 
 def _rustsec(text: str, source: dict) -> list[dict]:
+    # A CRLF fence must not leave a bare trailing CR in the TOML capture.
+    text = text.replace("\r\n", "\n")
     match = re.search(r"\A\s*```toml\s*\n(.*?)\n```", text, re.S)
     data = tomllib.loads(match.group(1) if match else text)
     advisory, versions = data.get("advisory", {}), data.get("versions", {})

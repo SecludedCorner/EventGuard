@@ -49,6 +49,11 @@ class IntelligenceSourcesTests(unittest.TestCase):
         self.assertEqual(record["affected"][0]["patched"], [">= 0.103.16, < 0.104.0-alpha.1", ">= 0.104.0-alpha.8"])
         self.assertEqual(record["conditions"]["deployment"], "unknown")
 
+    def test_rustsec_crlf_fence_preserves_the_same_advisory(self):
+        body = (FIXTURES / "rustsec.md").read_bytes().replace(b"\r\n", b"\n")
+        self.assertEqual(parse_source(body, source("rustsec")),
+                         parse_source(body.replace(b"\n", b"\r\n"), source("rustsec")))
+
     def test_git_fix_commit_does_not_prove_merge_or_release(self):
         data = {"id": "CVE-2026-111943", "affected": [{"package": {"ecosystem": "Linux", "name": "linux"}, "ranges": [{"type": "GIT", "events": [{"introduced": "0"}, {"fixed": "a" * 40}]}]}]}
         record = parse_source(json.dumps(data).encode(), source())[0]

@@ -1,5 +1,14 @@
 # EventGuard 現況
 
+## 2026-10-26 精確CI失敗已核對與修復（最新）
+
+已唯讀核對bc56e37b4cfb63ed3e0a9caf98d11a66b140372d的push CI：Offline verification run40339572814／attempt1，結論failure；Windows job121630253841及mock job121630254549都失敗，不能用空legacy statuses或本機綠燈代用。Windows摘要為9個failure entries／1error，mock因非Windows Popen無created_at在驗證器137行中斷，原run無artifacts，沒有更細unit trace。原CI狀態保持failure。
+
+已在隔離合成條件重現全部9個Windows失敗名稱及RustSec CRLF TOMLDecodeError。修正：desktop/schedule/service測試根目錄先canonical resolve、損壞pending測試明示fixture SDK前置；產品安全閘道不改。RustSec解析正規化CRLF。驗證器非Windows僅保留原Popen worker的退出碼、合作取消／有界自有child收尾，creation/job/tree缺證據維持None/false；只有mock scope可接受worker-only證據，timeout/owner failure即使exit0也不得pass。Windows原privateJob finish不變，workflow／權限未改。
+
+本機受影響127/127；相同短路徑＋缺SDK重現6方法／原9failure entries現為0，CRLF accepted、兩次Job均自然0/無殘留。最後guardian邊界7/7、mock範圍104/104，皆source_unchanged、自然0/Job0、model0/scanfalse；不同範圍不加總成全庫，也不是Linux實跑或遠端CI通過。修復提交依既有規則普通push同分支後，另查新SHA的既有CI，不手動dispatch/re-run、不新增workflow或權限。證據在reports/ci-head-bc56e37-20261026-01及verify-ci-*。
+
+
 ## 2026-10-26 已確認遠端保存並接續golden量測（最新）
 
 已普通fast-forward推至origin/feat/local-codex-acceptance；git ls-remote實查遠端與本機同為548efe8bbfc7548b5b2d530db2c9203295583bce，ahead/behind=0/0。先前57個待推commit及本checkpoint已保存，不是正式發布；未推main／其他保留refs，不force、不改歷史。推前累積264檔/+52654/-1961是9576b13→cd117f9的比較，548efe8本身只有5檔/+106。其他兩個未追蹤目錄仍保留。

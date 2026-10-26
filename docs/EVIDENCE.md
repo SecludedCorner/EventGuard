@@ -1,5 +1,18 @@
 # 證據與時間日誌
 
+## 2026-10-26：bc56e37遠端CI精確失敗與相容性修復（最新）
+
+連接GitHub以GET actions/runs?head_sha=bc56e37b4cfb63ed3e0a9caf98d11a66b140372d&branch=feat/local-codex-acceptance，及該SHA/check-runs核對：run40339572814，event push、attempt1、check suite109331954956、status completed/conclusion failure。Windows job121630253841，UTC14:25:52–14:30:58；mock job121630254549，14:25:52–14:26:00，均failure。legacy statuses空不能蓋過Actions。讀job必要log：Windows只輸出1595 tests摘要（9 failure entries、1 RustSec error、47 skip），無unit trace／artifacts；mock明示scripts/verify.py:137 AttributeError:Popen無created_at。沒有借用其他SHA綠燈、沒有rerun/dispatch。metadata／過濾錯誤存reports/ci-head-bc56e37-20261026-01，不存raw logs。
+
+reproduce.py以自有Job跑6個已失敗方法、缺mcp spec與本工具temp短路徑別名（GetShortPathName只讀本測試路徑），重現與CI同名9 failure entries，無error；直接CRLF fixture重現TOMLDecodeError。模型／native source query0，原worker自然0／Job0。修test根目錄resolve並明示單一SDK preflight fixture後，reproduce-after.py同條件6方法無failure/error，CRLF accepted；原／修後report分開保留，未重跑真ACK／九案例／全庫。
+
+修復產品／harness：RustSec僅將CRLF正規化LF，fenced TOML不再留下bare CR。verifier不讀非Windows不存在的created_at；起始managedfalse、creation/job=None，保留原Popen exit_code，tree/remaining維持unknown，不宣稱Linux native；cooperative stop檔→grace→只該child收尾，強停／逾時／owner錯誤／停用記錄失敗不得pass。mock worker-only成功與Windows privateJob成功分契約，Windows finish仍委派原實作。新增7個有辨識力guardian fixtures（含timeout合作exit0不得洗綠）與1個LF/CRLF結果等價fixture，不改workflow或權限。
+
+命令 py -3.13 -B scripts/verify.py --run-dir reports/verify-ci-portability-20261026-01 --timeout-seconds 600 --module test_verify_portability --module test_desktop --module test_schedule --module test_agent_service --module test_intelligence_sources：UTC14:59:10.520043–14:59:30.759849，19.115秒，127/127、0fail/error/skip、source_unchanged／自然0/Job0。追加timeout0與保存失敗兩個邊界後，verify-ci-guardian-20261026-01同入口只--module test_verify_portability，UTC15:01:10.427819–15:01:11.953336，7/7、.367秒；其餘四模組來源未變。py -3.13 -B scripts/verify.py --run-dir reports/verify-ci-mock-contract-20261026-01 --timeout-seconds 180 --scope mock：UTC15:01:19.179420–15:01:28.653361，8.205秒，104/104、無skip/fail/error、source_unchanged、原Windows guardian自然0/Job0。這是本機Windows mock範圍，不是Linux實跑；三個範圍不相加為全庫，也不宣稱遠端新版本CI已過。
+
+依原人類授權普通commit/push原開發分支，再唯讀核對新SHA CI；不手動重跑舊run、不新增CI／權限、不推main／force／runtime。新HEAD若pending/unknown就如實保留，舊bc56仍failure。
+
+
 ## 2026-10-26：遠端實查成功，推後續做九案例量測（最新）
 
 推送命令 git push origin HEAD:refs/heads/feat/local-codex-acceptance 成功，回9576b13..548efe8；後續 git ls-remote --heads origin refs/heads/feat/local-codex-acceptance 實查548efe8bbfc7548b5b2d530db2c9203295583bce，與本機HEAD相同，git rev-list --left-right --count HEAD...origin同名為0/0。只此開發ref、沒有force或main／其他refs／正式發布。初始工作樹2個新golden檔，checkpoint連同3份狀態共5檔/+106；先前264檔/+52654/-1961明確為已提交歷史9576b13→cd117f9比較，不是未提交量。回條reports/git-checkpoint-20261026-01/remote-verified-first.json，runtime不提交。已保留他人兩個未追蹤目錄。

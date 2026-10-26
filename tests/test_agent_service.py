@@ -43,7 +43,7 @@ class AgentServiceTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
-        self.root = Path(temporary.name)
+        self.root = Path(temporary.name).resolve()
         self.source = self.root / "data/test"
         self.source.mkdir(parents=True)
         self.store = EventStore(self.source)
@@ -450,6 +450,7 @@ class AgentServiceTests(unittest.TestCase):
         source_before = self.store.path.read_bytes()
         with isolated_launch(self.root) as launch, \
              patch.object(service.processes, "adopt_current_job", return_value=self.keeper()), \
+             patch("eventguard.agent_dispatch.importlib.util.find_spec", return_value=object()), \
              patch.object(service.agent_dispatch, "spawn", side_effect=AssertionError("No child permitted")) as spawn:
             result = service.serve(self.root, self.run_id, self.job)
             self.assertEqual(result["state"], "blocked")

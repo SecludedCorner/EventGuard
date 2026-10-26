@@ -1,5 +1,12 @@
 # EventGuard 接手
 
+## 2026-10-26 CI精確核對與可重現修復（最新）
+
+原bc56e37 CI確定failure：run40339572814，Windows job121630253841／mock121630254549，不能升格為綠。原run無artifacts，只summary；已保存過濾後status／Windows summary／mock錯因，不保存整段raw log。短路徑＋missing SDK隔離重現全部9個Windows失敗、CRLF error；修後相同條件0fail/error且CRLF accepted。
+
+已改scripts/verify.py非Windowsworker退出證據（不冒稱Job／程序樹；timeout合作exit0仍失敗），sources.py RustSec CRLF，三個test檔root.resolve及單一SDK前置fixture；新增7個verifier邊界與1個CRLF等價測試。127/127定向、7/7guardian、104/104本機mock，非新全庫／Linux實跑，無模型／新採集／敏感動作。所有自有Job自然0、remaining0。下一步普通push修復到原feat/local-codex-acceptance後，唯讀查新HEAD的Actions run/job；舊bc56failure不改寫，不手動重跑CI。
+
+
 ## 2026-10-26 遠端保存已核對（最新）
 
 origin/feat/local-codex-acceptance已保存548efe8bbfc7548b5b2d530db2c9203295583bce，推後ls-remote與HEAD一致、ahead/behind0/0；本次僅普通fast-forward，其他分支／保留本機refs未推，不是正式發布。使用者要求往後每個可獨立checkpoint立即commit/push。舊只本機／不push文字已被直接新指示取代；runtime與他人未追蹤兩目錄仍排除。
