@@ -277,7 +277,10 @@ class EventStore:
                 ORDER BY updated_at,event_id LIMIT ?""", (needed,)).fetchall()
             has_reviews = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_reviews'").fetchone()
             has_dispositions = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_dispositions'").fetchone()
+            has_investigations = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_investigations'").fetchone()
             for row in rows:
+                if has_investigations:
+                    db.execute("DELETE FROM event_investigations WHERE event_id=?", (row["event_id"],))
                 if has_reviews:
                     db.execute("DELETE FROM event_reviews WHERE event_id=?", (row["event_id"],))
                 if has_dispositions:
@@ -300,7 +303,10 @@ class EventStore:
     def _delete_completed(self, db, rows):
         has_reviews = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_reviews'").fetchone()
         has_dispositions = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_dispositions'").fetchone()
+        has_investigations = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_investigations'").fetchone()
         for row in rows:
+            if has_investigations:
+                db.execute("DELETE FROM event_investigations WHERE event_id=?", (row["event_id"],))
             if has_reviews:
                 db.execute("DELETE FROM event_reviews WHERE event_id=?", (row["event_id"],))
             if has_dispositions:
@@ -496,6 +502,35 @@ class EventStore:
                 if self._used_bytes(db) + growth + page + self.ack_reserve_bytes > self.max_bytes:
                     raise CapacityError("review_capacity_pending_and_ack_space_preserved")
                 db.execute("INSERT OR REPLACE INTO event_reviews(event_id,payload_hash,result,updated_at) VALUES(?,?,?,?)",
+                           (event_id, payload_hash, encoded, time.time()))
+        except sqlite3.Error as exc:
+            raise self._sqlite_error(exc) from exc
+
+    def save_investigation(self, event_id, payload_hash, result):
+        """One latest bounded case per anchor; preserve pending and ACK reserve."""
+        from .investigation import validate_saved
+        encoded = json.dumps(result, ensure_ascii=True, sort_keys=True, allow_nan=False)
+        if len(encoded.encode("ascii")) > 65536:
+            raise CapacityError("investigation_result_capacity")
+        try:
+            with self._lock, self._connect() as db:
+                db.execute("BEGIN IMMEDIATE")
+                row = db.execute("SELECT * FROM events WHERE event_id=?", (event_id,)).fetchone()
+                if row is None or row["payload_hash"] != payload_hash:
+                    raise StoreError("investigation_source_identity_conflict")
+                validate_saved(result, self._row(row))
+                for member in result["timeline"]:
+                    saved = db.execute("SELECT * FROM events WHERE event_id=?", (member["event_id"],)).fetchone()
+                    if saved is None or event_payload_hash(validate_event(self._row(saved))) != member["payload_hash"]:
+                        raise StoreError("investigation_member_identity_conflict")
+                db.execute("""CREATE TABLE IF NOT EXISTS event_investigations(event_id TEXT PRIMARY KEY,
+                    payload_hash TEXT NOT NULL,result TEXT NOT NULL,updated_at REAL NOT NULL)""")
+                previous = db.execute("SELECT length(CAST(result AS BLOB)) FROM event_investigations WHERE event_id=?", (event_id,)).fetchone()
+                growth = max(0, len(encoded)-(previous[0] if previous else 0))
+                page = db.execute("PRAGMA page_size").fetchone()[0]
+                if self._used_bytes(db)+growth+page+self.ack_reserve_bytes > self.max_bytes:
+                    raise CapacityError("investigation_capacity_pending_and_ack_space_preserved")
+                db.execute("INSERT OR REPLACE INTO event_investigations VALUES(?,?,?,?)",
                            (event_id, payload_hash, encoded, time.time()))
         except sqlite3.Error as exc:
             raise self._sqlite_error(exc) from exc

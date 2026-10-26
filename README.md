@@ -54,6 +54,8 @@ flowchart LR
 
 處置狀態為「新增、已讀、已處理、忽略」。狀態會保存。它與投遞 ACK 分開。改成已處理不會執行系統處置。
 
+事件詳情可「建立／更新保存的調查」，CLI 為 `events investigate --event-id <ID>`。兩者共用同一保存案件、關聯時間線與證據缺口，重開後可由 `events detail` 恢復；只讀已保存 metadata，不採集、不啟模型、不 ACK。關聯不等於因果或攻擊鏈，OS 帳戶 owner 缺證據時維持 UNKNOWN。界線與操作見 [保存事件調查](docs/OPERATIONS.md#保存事件調查)。
+
 ```powershell
 .\EventGuard.cmd events list --severity high --source listeners --status new
 .\EventGuard.cmd events detail --event-id <ID>

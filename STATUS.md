@@ -1,5 +1,16 @@
 # EventGuard 現況
 
+## 2026-10-26 事件調查產品切片（最新）
+
+基底124b42c、分支feat/local-codex-acceptance；已新增同SQLite的保存案件、穩定實體關聯時間線、來源／過期／矛盾／截斷限制、CLI events investigate 與Web建立／更新。查看及重開不重算，不採集、不啟模型、不ACK，allowed_actions空；OS帳戶owner未保存，固定UNKNOWN，不把host雜湊當帳戶證據。
+
+最新定向 reports/verify-investigation-20261026-03：152項、151通過／1 notification_icon_unavailable略過、0失敗／error，source_unchanged；guardian自然0／Job0／無強停。這不是重跑全庫；原1563pass與真04原版scope沿用。review發現跨episode序號不可比，最低成本改成同episode檢查，新增正常多端點／序號重置負控制，01/02前版證據保留。
+
+最終產品 reports/investigation-product-20261026-02：CLI→HTTP→CLI→重開同case14/14，8事件全保留pending、ACK0、1最新case，自有worker自然0／Job0／無強停；01有實際瀏覽器保存／重開圖，web.py相同，02是episode修正後的最終來源重核。一次建案89.13ms、DB增8KiB、case2574B；非人類調查時間／production峰值或競品勝負。官方競品差距與量測方法在docs/MAINTENANCE_GOAL.md，操作在docs/OPERATIONS.md。
+
+CURRENT/NEXT：離線P1-INVEST-002可繼續，接同事件已保存的診斷/query來源脈絡與時效，不重新diagnose。listeners具名批准只阻擋該次原生觀測；不是全部離線工程停止條件。真EDR／跨產品優劣、OS owner／跨來源攻擊鏈、24h／reboot／既有桌面喚醒仍未驗。先本機提交，不push。
+
+
 ## 2026-10-26 持續工程：長窗與所有權修復（最新）
 
 操作入口補記（2026-10-26T07:43:13.5264320+00:00）：README／AGENT_SERVICE 已交付當前入口、一次 service 操作、固定 metadata 結果／ACK／五層退出查閱方法及適用情境；CONNECT_AGENT／LIVE_CHANNEL 舊相容流程加現行入口指引。17/17 唯讀核對，五份原真04證據 hash 不變、native baseline 11檔 source hash 相符，無新模型／採集／重跑回歸。紀錄 reports/operator-entry-review-20261026-01/validation.json。原聊天無新增 baseline 答覆，唯一待決點仍為同一目錄的單次批准，不重複提問。

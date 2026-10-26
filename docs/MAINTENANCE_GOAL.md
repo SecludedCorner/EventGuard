@@ -1,5 +1,24 @@
 # EventGuard 目前目標
 
+## 2026-10-26 產品方向與競品差距（優先於下方歷史佇列）
+
+使用者要求參考 CrowdStrike／SentinelOne，持續完成可用產品；listeners 單次實機批准只阻擋該觀測，不阻擋離線工程。優先差異化假說是「本機可查證、易理解、低開銷的調查閉環」，尚未證明優於任何 EDR。
+
+官方資料讀於2026-10-26，以下均是廠商宣稱、沒有同環境實測：Falcon Insight XDR 描述跨端點／身分／雲端調查、攻擊路徑／ATT&CK 與 RTR／Fusion 回應。[CrowdStrike 官方](https://www.crowdstrike.com/en-us/platform/endpoint-security/falcon-insight-xdr/)。Singularity Endpoint 描述行為偵測、Storyline 關聯、隔離／rollback 與受控更新。[SentinelOne 官方](https://www.sentinelone.com/platform/endpoint-protection-platform/)。2026-10-21 ADR 公告列 agent/MCP inventory、traces、統一執行圖與受控回應，狀態為 early access；接上 AI／MCP 不是 EventGuard 獨有優勢。[SentinelOne ADR 公告](https://investors.sentinelone.com/press-releases/news-details/2026/SentinelOne-Launches-Singularity-Agentic-Detection-and-Response-to-Stop-Rogue-and-Malicious-AI-Agents-at-Machine-Speed/default.aspx)。
+
+| 對照項目 | EventGuard 現有程式／證據 | 可重現量測方法與剩餘差距 |
+| --- | --- | --- |
+| 偵測覆蓋／良性誤報 | rules/detector.py 是唯讀 metadata 規則；尚非 EDR。investigation-metadata.json 含相似良性活動／PID重用／異host／異source／缺identity／窗外樣本 | 固定fixture與版本，分列規則命中及漏報／良性誤報；本切片只測關聯，不能用8件樣本或測試數當惡意偵測率。三產品同環境良性／攻擊資料未測 |
+| 關聯正確性 | events/investigation.py；預期2件全部加入、6件負控制全排除；正常不同episode不標假矛盾。OS帳戶owner未知，跨來源／程序樹／攻擊鏈未做 | 以固定相關集合核對漏／錯加，另測缺欄位、部分來源、過期、同episode矛盾、截斷；檢查未知維持未知。不能把同host測試冒充OS跨owner測量。兩競品實際關聯正確率未測 |
+| 調查完成時間 | 最終 reports/investigation-product-20261026-02：8件來源的一次CLI建案89.13ms，HTTP保存27.73ms，重開讀取7.14ms | 用monotonic記建案／保存／重開；固定來源與hash，保留各段耗時。這是單次引擎時間，非人類調查完成時間、p95或SLA；盲測分析員完成任務時間及競品皆未測 |
+| 事件遺失／重複／恢復 | catalog/store同SQLite，CLI→Web→CLI及重開案件一致，8件仍pending／ACK0、只1份最新案件。歷史真04與30分鐘harness沿用原版scope | producer ID/hash→來源→案件引用→ACK各自核對，不用案件保存冒充ACK。容量回滾、成員改壞／缺失、錨點輪替測試；新版本完整長跑／reboot與競品未測 |
+| CPU／RAM／磁碟 | 最終02單次建案前後自身CPU增0.0625秒，private bytes25288704→24354816、handles120→120；DB49152→57344B，案件JSON2574B | 來源入列後取自身pseudo-HANDLE快照與DB大小；不是峰值／整Job／production或受控跨產品比較。RAM下降不能當長期成長率。既有0.3433%是舊harness idle，不能套到新調查 |
+| 處置批准／可追溯性 | 事件詳情保留payload/hash、as_of、engine、episode、來源及固定缺口；Web同源CSRF，allowed_actions空；人工狀態／ACK分離 | 拒絕跨scope／篡改案件／未知來源，核對保存失敗不ACK；最新快照會覆蓋舊版，尚無案件修訂歷史。沒有 RTR、隔離、rollback 或敏感動作能力，不拿較少能力當較安全的實測勝出 |
+
+本批 P1-INVEST-001 已完成有限產品切片：152項定向／151通過／1通知圖示略過，0失敗；不是新一輪全庫結果。01有實際瀏覽器保存／重開圖，後續只修episode判定，02按最終來源重做CLI／HTTP／SQLite核對14/14；web.py與01相同。所有runtime只留reports，不提交。
+
+下一個可執行切片 P1-INVEST-002：將同事件已保存且已驗證的診斷／query證據接入案件的來源脈絡；只讀既有允許投影、保存hash／時間／狀態與缺口，不重新diagnose或啟模型。驗收要涵蓋舊診斷過期／身分不符／缺結果及CLI／Web一致，不能以ACK替代查證。原生listeners、真模型／敏感處置仍集中沿用既有批准問題，不擴張本批授權。
+
 ## 持續工程佇列：2026-10-26（優先閱讀）
 
 分支feat/local-codex-acceptance；基底4a1a95b。既定真CLI receive→query→result→ACK及五層自然退出已通過；後續可靠性工作不把commit當停止條件。只在EventGuard、既有一般權限及已安裝runtime工作，未push。

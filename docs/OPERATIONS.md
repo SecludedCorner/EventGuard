@@ -14,6 +14,24 @@ monitor 需要由人類明確啟動；另一同專案終端 `py -3.13 -B scripts
 
 `events list --namespace live` 查看已存 ID，`events inspect --namespace live --event-id EVENT_ID` 查看當時事實。只有明確 `events diagnose` 才執行事件綁定唯讀查詢；不接受自由命令。合成資料用 test namespace，不拿 test 結果判真主機安全。`report export` 只寫本機 JSON／HTML。
 
+## 保存事件調查
+
+事件頁「查看」後，按「建立／更新保存的調查」。它只讀目前來源 SQLite 的允許 metadata，保存一份案件與時間線；不呼叫模型、不採集、不 ACK、不改人工處置狀態。CLI 使用相同 EventCatalog：
+
+```powershell
+.\EventGuard.cmd events list
+.\EventGuard.cmd events investigate --event-id <已保存的事件ID>
+.\EventGuard.cmd events detail --event-id <同一事件ID>
+```
+
+`investigate` 明確建立／更新；`detail` 與 Web 重開只讀已保存調查。合成資料加 `--namespace test`，自訂隔離來源另加 `--event-source <專案內既有source目錄>`；兩端必須讀同一來源，不能把預設 data/test 與 reports 來源混用。
+
+案件最多16件、候選最多256件、時間範圍為錨點前後15分鐘。關聯還必須同 host 範圍、同來源及同穩定程序實例，或同持久項目 reference。PID 需要建立時間，已知 reference／建立時間衝突不能靠 PID 補回；只有時間／port／名稱相似不加入。序號及同時矛盾只比較同一 episode，不把正常多端點或 episode 序號重置當矛盾。這是 metadata 關係，不建立程序樹、ATT&CK 確證或攻擊因果。
+
+頁面與 JSON 列出事實、來源 coverage、過期／未來時間／缺綁定／矛盾／截斷、下一個可批准觀測及限制。既有事件沒有 OS 帳戶 owner 證據，固定顯示 UNKNOWN；案件內 `owner_ref` 僅為 host_id＋synthetic 的不透明範圍雜湊，不是 OS 帳戶。不能宣稱已驗證跨帳戶關聯。新觀測需適用批准，`allowed_actions=[]`，此入口不執行系統處置。
+
+每個錨點只保留最新一份64KiB以內的調查，原子交易保存，預留 pending／ACK 空間；尚無版本歷史。來源事件輪替時一併清理其案件。關聯成員缺失或 payload/hash 改變時保留原快照並標 UNKNOWN；錨點身分不符或案件被改壞則拒讀。新鮮度在讀取時另顯示，不覆寫原保存時間。此功能與真 CLI 收件證據分開，完整驗收範圍見 [EVIDENCE](EVIDENCE.md)。
+
 ## 故障與資料保留
 
 | 觀察 | 查證／恢復 |

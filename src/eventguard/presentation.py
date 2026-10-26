@@ -278,11 +278,25 @@ def render(result, command="", operation=""):
     if command=="events" and operation=="set-status":
         names={"new":"新增","read":"已讀","handled":"已處理","ignored":"忽略"}
         return "事件 "+text(result.get("event_id"))+"。狀態已保存："+names.get(result.get("status"),"未知")+"。未執行ACK或系統處置。"
+    if command=="events" and operation=="investigate":
+        case=result.get("case",{})
+        lines=["事件調查："+text(case.get("case_id")),"保存時間："+text(case.get("as_of")),
+               "僅關聯同主機／來源／穩定實體 metadata；不代表因果、攻擊鏈或主機安全。"]
+        for item in case.get("timeline",[]):
+            lines.append("時間線："+text(item.get("observed_at"))+" / "+text(item.get("event_id"))+" / "+text(item.get("transition"))+" / "+state(item.get("coverage_status")))
+            lines+=_row_lines([item.get("facts",{})])
+        for gap in case.get("gaps",[]):
+            lines.append("證據缺口："+text(gap.get("reason"))+" / "+text(gap.get("event_id")))
+        if result.get("evidence_status")=="unknown":
+            lines.append("UNKNOWN：原事件缺失或內容已變；保存快照不代表目前狀態。")
+        lines.append("下一步：檢閱保存事實；新來源觀測須先批准。allowed_actions=[]；未採集、未呼叫模型、未ACK。")
+        return "\n".join(lines)
     if command=="events" and operation=="detail":
         return "\n".join(["事件詳情："+text(result.get("event_id")),
                           "處置狀態："+text(result.get("status")),
                           "來源："+text(result.get("source")),
-                          render({**result.get("interpretation",{}),"guidance":result.get("guidance",{})},"events","inspect")])
+                          render({**result.get("interpretation",{}),"guidance":result.get("guidance",{})},"events","inspect"),
+                          render(result["investigation"],"events","investigate") if result.get("investigation") else "尚無保存調查。使用 events investigate 明確建立。"])
     if command=="events" and operation in {"receive","ack","retry"}:
         lines=["事件操作："+text(operation)+" / "+state(result.get("status",result.get("state"))),
                "event_id="+text(result.get("event_id")),"query_id="+text(result.get("query_id"))]

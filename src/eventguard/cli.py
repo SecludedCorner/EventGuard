@@ -131,6 +131,10 @@ def parser():
     detail.add_argument("--namespace",choices=("live","test"),default="live")
     detail.add_argument("--event-id",required=True)
     detail.add_argument("--event-source",type=Path,help="選填。test範圍內既有的合成事件source。")
+    investigation=eventsub.add_parser("investigate",help="保存既有metadata的關聯時間線；不採集、不呼叫模型、不ACK。")
+    investigation.add_argument("--namespace",choices=("live","test"),default="live")
+    investigation.add_argument("--event-id",required=True)
+    investigation.add_argument("--event-source",type=Path)
     handling=eventsub.add_parser("set-status",help="保存處置狀態。不ACK、不修改系統。")
     handling.add_argument("--namespace",choices=("live","test"),default="live")
     handling.add_argument("--event-id",required=True)
@@ -288,7 +292,7 @@ def execute(args,runtime,progress=None):
         from .diagnostics.api import DiagnosticAPI
         return DiagnosticAPI(query_admission=runtime.query_launch).query(args.operation,values)
     if args.command=="events":
-        if args.event_command in {"list","detail","set-status"}:
+        if args.event_command in {"list","detail","set-status","investigate"}:
             from .events.catalog import EventCatalog
             catalog=EventCatalog(runtime.root,args.namespace,directory=args.event_source)
             if args.event_command=="list":
@@ -296,6 +300,8 @@ def execute(args,runtime,progress=None):
                                     limit=args.limit,offset=args.offset)
             if args.event_command=="detail":
                 return catalog.detail(args.event_id)
+            if args.event_command=="investigate":
+                return catalog.investigate(args.event_id)
             return catalog.set_status(args.event_id,args.status)
         if args.event_command=="receive":
             return operator.call("receive_event",args.event_id,args.namespace)

@@ -1,5 +1,14 @@
 # EventGuard 接手
 
+## 2026-10-26 調查切片接續（最新）
+
+保留分支feat/local-codex-acceptance。P1-INVEST-001已可操作：CLI events investigate 明確保存，events detail與Web讀同來源最新case；最多256候選／16件／前後15分鐘、同host/source/stable entity，PID重用與異scope不關聯。序號／同時矛盾只比較同episode；OS帳戶owner為UNKNOWN。原子保存64KiB上限／ACK保留空間／錨點輪替同步清case，member缺失／改壞則保留snapshot標unknown。
+
+最終定向03為152/151pass/1skip/0fail，產品02的14核對全通過／自然0／Job0，01的兩張真瀏覽器圖屬同web.py。原真04與全庫1563pass不重跑、不升格為新版本全庫結果。來源及runtime hash、完整命令在reports與EVIDENCE，runtime不提交；不碰其他未追蹤目錄。
+
+下一具體動作：P1-INVEST-002，讀已保存且validate_saved_review通過的同事件診斷，保存hash／時間／固定狀態／缺口於案件來源脈絡；補missing/stale/mismatch/變更競態負控制，CLI/Web一致，不查主機或啟模型。原生listeners仍待原問題答覆，只阻擋該次採集。
+
+
 ## 2026-10-26 接續：長窗完成、所有權修復（最新）
 
 操作交付已補齊：直接按 docs/AGENT_SERVICE.md 查現成真04的完成 ledger／ACK／MCP與外層退出；不可用預設 agent inspect 代讀 reports 隔離來源。--verify-only 會重寫摘要，僅查看請直接讀檔。文件唯讀核對17/17，產品碼與 baseline 11檔 hash 未改；沒有新的模型／採集或 baseline 批准。下一動作仍核對原具名批准問題的直接人類答覆，不另開問題。

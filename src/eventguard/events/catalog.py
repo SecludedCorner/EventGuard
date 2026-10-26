@@ -170,12 +170,71 @@ class EventCatalog:
             result = {**self._summary(row, event), "namespace": self.namespace, "event": event_view(event),
                     "interpretation": review(event), "guidance": event_guidance(event),
                     "latest_diagnosis": self._saved_diagnosis(db, event), "latest_diagnosis_is_saved": True,
-                    "data_trust": "untrusted_data", "incident_conclusion": "not_assessed", "model_calls": 0}
+                    "data_trust": "untrusted_data", "incident_conclusion": "not_assessed", "model_calls": 0,
+                    "investigation": self._saved_investigation(db, event, row["catalog_source"])}
             if event["event_type"] == "advisory.changed":
                 from ..intelligence.views import public_advisories
                 result["advisory_context"] = public_advisories(self.runtime.root, self.namespace,
                                                                limit=1, event_id=event_id)
             return result
+
+    @staticmethod
+    def _saved_investigation(db, event, source):
+        from .investigation import validate_saved
+        if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_investigations'").fetchone():
+            return None
+        row = db.execute("SELECT payload_hash,result FROM event_investigations WHERE event_id=?", (event["event_id"],)).fetchone()
+        if row is None:
+            return None
+        if (row["payload_hash"] != event_payload_hash(validate_event(event)) or type(row["result"]) is not str
+                or len(row["result"].encode("utf-8")) > 65536):
+            raise ValueError("saved_investigation_identity_conflict")
+        try:
+            case = validate_saved(json.loads(row["result"]), event)
+        except (ValueError, TypeError):
+            raise ValueError("saved_investigation_invalid") from None
+        anchor = next(item for item in case["timeline"] if item["event_id"] == event["event_id"])
+        if anchor["source"] != source:
+            raise ValueError("saved_investigation_identity_conflict")
+        missing, changed = [], []
+        for member in case["timeline"]:
+            current = db.execute("SELECT * FROM events WHERE event_id=?", (member["event_id"],)).fetchone()
+            if current is None:
+                missing.append(member["event_id"])
+            else:
+                try:
+                    current_hash = event_payload_hash(validate_event(EventStore._row(current)))
+                except (ValueError, TypeError, StoreError):
+                    current_hash = None
+                if current_hash != member["payload_hash"]:
+                    changed.append(member["event_id"])
+        from datetime import datetime, timezone
+        age = (datetime.now(timezone.utc)-datetime.fromisoformat(case["as_of"])).total_seconds()
+        return {"case": case, "evidence_status": "unknown" if missing or changed else "saved_snapshot",
+                "snapshot_freshness": "unknown" if age < -60 else "stale" if age > 900 else "ok",
+                "missing_event_ids": missing, "changed_event_ids": changed,
+                "ack_performed": False, "model_calls": 0, "native_queries": 0}
+
+    def investigate(self, event_id, *, now=None):
+        """Explicitly save a snapshot of existing metadata, never refresh OS facts."""
+        from .investigation import MAX_CANDIDATES, build, project
+        _identifier(event_id)
+        with self._read() as db:
+            if db is None:
+                raise ValueError("event_not_found")
+            selection = "e.*," + _SOURCE_SQL + " AS catalog_source"
+            row = db.execute("SELECT " + selection + " FROM events e WHERE e.event_id=?", (event_id,)).fetchone()
+            if row is None:
+                raise ValueError("event_not_found")
+            event = EventStore._row(row)
+            anchor = project(event, row["catalog_source"])
+            rows = db.execute("SELECT " + selection + " FROM events e ORDER BY "
+                              "ABS(julianday(json_extract(e.payload,'$.observed_at'))-julianday(?)),e.event_id LIMIT ?",
+                              (event["observed_at"], MAX_CANDIDATES+1)).fetchall()
+            candidates = [project(EventStore._row(item), item["catalog_source"]) for item in rows[:MAX_CANDIDATES]]
+            case = build(anchor, candidates, as_of=now, truncated=len(rows) > MAX_CANDIDATES)
+        EventStore(self.directory).save_investigation(event_id, anchor["payload_hash"], case)
+        return self.detail(event_id)["investigation"]
 
     def set_status(self, event_id, status):
         _identifier(event_id)

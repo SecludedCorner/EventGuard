@@ -1,0 +1,16 @@
+{
+  "kind": "synthetic-investigation-metadata-v1",
+  "purpose": "Correlation correctness, not malware detection or attack-chain ground truth",
+  "anchor": "evt-anchor",
+  "expected_related": ["evt-anchor", "evt-related"],
+  "events": [
+    {"id":"evt-anchor","offset":-120,"sequence":1,"pid":4100,"created":"2026-10-26T00:00:00+00:00","ref":"aaaaaaaaaaaaaaaaaaaaaaaa","port":18080,"label":"synthetic suspicious-looking wildcard metadata; unassessed"},
+    {"id":"evt-related","offset":-60,"sequence":2,"pid":4100,"created":"2026-10-26T00:00:00+00:00","ref":"aaaaaaaaaaaaaaaaaaaaaaaa","port":18081,"label":"same process, different saved endpoint; relationship only"},
+    {"id":"evt-benign-similar","offset":-61,"sequence":1,"pid":4200,"created":"2026-10-26T00:00:01+00:00","ref":"bbbbbbbbbbbbbbbbbbbbbbbb","port":18080,"label":"benign similar activity; must not join by port or time"},
+    {"id":"evt-pid-reused","offset":-59,"sequence":1,"pid":4100,"created":"2026-10-26T00:01:00+00:00","ref":"cccccccccccccccccccccccc","port":18080,"label":"PID reuse negative control"},
+    {"id":"evt-foreign-owner","offset":-62,"sequence":1,"pid":4100,"created":"2026-10-26T00:00:00+00:00","ref":"aaaaaaaaaaaaaaaaaaaaaaaa","port":18080,"host":"synthetic-other-host","label":"cross-owner negative control"},
+    {"id":"evt-foreign-source","offset":-63,"sequence":1,"pid":4100,"created":"2026-10-26T00:00:00+00:00","ref":"aaaaaaaaaaaaaaaaaaaaaaaa","port":18080,"source":"services","label":"cross-source negative control"},
+    {"id":"evt-no-identity","offset":-64,"sequence":1,"port":18080,"label":"missing process identity; unknown"},
+    {"id":"evt-old","offset":-2000,"sequence":1,"pid":4100,"created":"2026-10-26T00:00:00+00:00","ref":"aaaaaaaaaaaaaaaaaaaaaaaa","port":18080,"label":"out-of-window negative control"}
+  ]
+}

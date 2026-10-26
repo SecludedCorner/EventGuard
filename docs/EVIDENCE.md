@@ -1,5 +1,20 @@
 # 證據與時間日誌
 
+## 2026-10-26：可保存事件調查與競品差距（最新）
+
+基底124b42c，既有Python3.13.3／一般使用者。新增events/investigation.py、EventCatalog/Store懶建event_investigations表、CLI investigate／text、Web同源CSRF保存與時間線，fixture和20項新測試。每錨點一份最新case、64KiB上限，保留pending與ACK容量；源事件輪替同步清case，成員內容／hash變動或缺失標UNKNOWN。只有同host/source和穩定實體可關聯，owner_ref是host範圍hash，OS帳戶owner固定unknown。沒有模型、原生來源query、ACK或敏感處置。
+
+命令 py -3.13 -B scripts/verify.py --run-dir reports/verify-investigation-20261026-01 --timeout-seconds 240 --module test_event_investigation：首14/14。擴充10模組02為151/150pass/1通知skip；審查定位跨episode的序號／同時metadata不應直接比較，停止該判定路線，最低成本綁episode_ref，增加正常多端點與序號重置負控制。03命令同10模組（完整argv在summary），152/151pass/1同skip/0failure/error，UTC13:32:15.829372–13:32:55.929317，39.046秒，209Python AST無錯、source_unchanged=true、guardian自然0／remaining0／無強停／逐測試殘留0。
+
+產品命令 py -3.13 -B reports/investigation-product-20261026-01/exercise.py：私有Job執行worker，CLI建案後實際IAB點查看／更新保存，保存web-saved.png／web-reopened.png與AX；合作關頁／重開server後同案件恢復，14核對全true，8件仍pending／ACK0，原HANDLE自然0／Job0／無強停。頁面頂部監看控制刻意未綁定，顯示未知且停用，未啟動採集。
+
+episode修正後命令 py -3.13 -B reports/investigation-product-20261026-02/exercise.py：UTC13:35:07.530143–13:35:08.773920，最終來源8檔hash相符，CLI→HTTP GET→同源POST→CLI→Web關閉／重開→CLI同case，14/14。producer-manifest保存本輪8個完整synthetic輸入；related恰2、6負控制排除，資料庫保持8 pending／0 receipts／1 case，reopen讀前後hash不變；worker自然0/Job0/無強停。01視覺屬相同web.py、不能把01舊engine source說成最終；02保留最終來源hash及HTTP／SQLite產物。
+
+有限量測02：一次CLI建案0.0891329秒、HTTP存0.027727秒／重開讀0.0071434秒；source DB49152→57344B、case JSON2574B。入列8件後、單次建案前後自身CPU0.671875→0.734375秒，private bytes25288704→24354816、handles120→120。只有自身pseudo-HANDLE兩點快照，非峰值、整Job、分析員調查時間或受控競品基準；不拿RAM下降判長期成長率。沒有本次真模型／native採集。CrowdStrike／SentinelOne官方宣稱、方法、未測與實際程式對照在MAINTENANCE_GOAL同一表，沒有宣稱超越。保留原真04、1563pass及舊idle的scope。
+
+純格式界線：web.py原有mixed換行不作整檔格式重寫，以git -c core.whitespace=cr-at-eol diff --check核對。執行資料／SQLite／授權不提交，僅本機commit、不push。接續P1-INVEST-002只讀已保存診斷，不由listeners待批阻擋全部離線工作。
+
+
 ## 2026-10-26：observer長窗、原生閘道與所有權競態（最新）
 
 操作交付增量（2026-10-26T07:43:13.5264320+00:00，基底 d805ec5）：修正 AGENT_SERVICE 的「真投遞未完成」舊文字，新增可用入口、單事件 service 命令、五份固定 JSON 的 PowerShell Get-Content／ConvertFrom-Json 查閱、固定 metadata 結果與人工處置／ACK 界線；README導入，CONNECT_AGENT／LIVE_CHANNEL指向現行無每日五次的 App/service，保留舊相容流程。獨立審查修正「所有失敗仍pending」誤述：ACK後收尾失敗不回退來源。
