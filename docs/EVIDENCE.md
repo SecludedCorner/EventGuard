@@ -1,5 +1,10 @@
 # 證據與時間日誌
 
+## 2026-10-26：固定checkpoint推送提醒
+
+直接人類要求不再等提醒才push；本輪只改AGENTS.md／新增CLAUDE.md入口及STATUS/EVIDENCE。政策為每checkpoint審查後commit並普通push，連續小commit上限3、交接前補推、遠端核對與失敗保留／有界重試；不自動擴分支、推main／其他refs或提交runtime／秘密。沒有建立定時背景程序。2026-10-26T16:00:08.752770+00:00以Python逐項文字／入口核對8/8、git diff --check；reports/git-push-policy-20261026-01/validation.json保留結果，沒有程序碼修改、本機回歸／模型／採集或CI重跑。以[skip ci]文件checkpoint推送並另留遠端確認回條，不把文件SHA稱為新受測版本。
+
+
 ## 2026-10-26：1e8f7e0的精確遠端CI終結success（最新）
 
 本輪第一動作只以GitHub連接器GET /actions/runs/40345960922及該run jobs核對：head_sha=1e8f7e0e74f2018849b44cb02e2052d2fe817da4、attempt1、event push，status completed／conclusion success，updated_at2026-10-26T15:11:02Z。Windows job121652823962及Fixture/SQLite job121652824391均屬該run且completed/success，沒有沿用其他SHA。只為列明optional skips再讀job結果摘要，不保存raw logs，不手動rerun/dispatch、不修改workflow或權限。

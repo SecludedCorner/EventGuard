@@ -37,3 +37,15 @@
 - 遵守現有授權、安全限制及正式環境變更規則。
 
 **預設行為：完成當前工作後，繼續下一個可執行工作，而不是等待新的 Prompt。**
+
+## Git checkpoint 與遠端保存
+
+使用者已要求主動、固定保存，不需再等提醒。此規則只適用本 EventGuard 專案及既有授權開發分支。
+
+- 每完成一個可獨立保存的 checkpoint，就審查差異、commit 並立即普通 push，不等待整體功能或所有測試完成；未完成成果須明示 WIP、已驗證範圍與下一步。
+- 若短時間連續產生小 commit，最多累積 3 個未推送 commit；達到 3 個時，先推送再接續開發。交接或結束工作階段前，也要補推已有且可安全保存的 checkpoint。
+- 每次恢復工作先核對目錄、branch、HEAD、remote、upstream 及 ahead/behind。現在的目的地為 `origin/feat/local-codex-acceptance`，remote 是 `https://github.com/SecludedCorner/EventGuard.git`；目的地或授權範圍改變時先確認，不自行推 main 或其他保留 refs。
+- 只暫存已審查的明確檔案；排除秘密、runtime、SQLite、授權紀錄、暫存及他人修改。不得為保存而 reset、clean、force push、改寫歷史或合併主線。
+- 推送後直接核對遠端包含本次 SHA，再記錄分支、SHA、結果與剩餘變更；push 成功不等於 CI 通過或正式發布。純狀態文件更新可沿用 `[skip ci]`，避免反覆啟動 CI；產品變更仍依既有驗證流程。
+- 遠端連線或權限失敗時保留本機 commit，記錄實際錯誤與待推 SHA，採有界重試；無法推送時記錄後可續做已授權的本機工作，恢復後優先補推；不假報成功，也不因推送受阻丟棄成果。
+- 本規則是工作中的保存流程，不代表已建立定時背景程序，也不承諾會話結束後自動執行。

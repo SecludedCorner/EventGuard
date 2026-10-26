@@ -1,5 +1,10 @@
 # EventGuard 現況
 
+## 2026-10-26 固定Git保存規則（最新）
+
+依直接使用者要求，AGENTS新增Git checkpoint與遠端保存規則，CLAUDE.md作簡短入口：每個可保存checkpoint立即commit/push，連續小commit最多3個未推送；恢復／交接時補推，失敗保留本機與待推SHA，推後直接核對遠端。僅原origin/feat/local-codex-acceptance，不改產品、安全或資料界線，也沒有建立背景排程。文字驗證8/8與git diff --check；證據reports/git-push-policy-20261026-01/validation.json（2026-10-26T16:00:08.752770+00:00）。本次純文件以[skip ci]保存，不重跑已通過CI／測試；受測產品版本仍1e8f7e0。
+
+
 ## 2026-10-26 精確版本遠端CI已成功（最新）
 
 受測可用產品版本為1e8f7e0e74f2018849b44cb02e2052d2fe817da4，分支feat/local-codex-acceptance。獨立GET核實Offline verification run40345960922／attempt1／push，head_sha完全相同，UTC2026-10-26T15:11:02Z（台北23:11:02）已completed/success。Windows job121652823962：1603項、1556pass／47可選SDK及相關transport/SSE依賴skip，0failure/error；原Job自然exit0／remaining0／無強停。Linux mock job121652824391：104/104、無skip/fail/error，僅自身worker exit0，creation/job/tree/remaining未知，仍明示無Linux native。
