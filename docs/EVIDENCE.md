@@ -1,5 +1,16 @@
 # 證據與時間日誌
 
+## 2026-10-26：1e8f7e0的精確遠端CI終結success（最新）
+
+本輪第一動作只以GitHub連接器GET /actions/runs/40345960922及該run jobs核對：head_sha=1e8f7e0e74f2018849b44cb02e2052d2fe817da4、attempt1、event push，status completed／conclusion success，updated_at2026-10-26T15:11:02Z。Windows job121652823962及Fixture/SQLite job121652824391均屬該run且completed/success，沒有沿用其他SHA。只為列明optional skips再讀job結果摘要，不保存raw logs，不手動rerun/dispatch、不修改workflow或權限。
+
+Windows摘要：Python3.13.16，1603項／1556pass／47skip／0failure/error，source_unchanged，原私有Job child自然0／remaining0／無強停，model0／machine_scan=false。47skip原名單保存在repair-windows-summary.json，均為未安裝的可選MCP SDK及其transport/SSE相關依賴；缺依賴保持skip，沒有安裝或冒稱執行。Linux mock摘要104/104、0skip/fail/error，原Popen worker自然exit0，managedfalse／created_at、job、remaining=null／process_tree_verified=false，scope明示non_windows_mock_single_worker_only及linux_native_support=false；不可改寫成Linux native或程序樹退出證明。
+
+新終結收據reports/ci-head-bc56e37-20261026-01/repair-ci-terminal.json與兩份原摘要保存run/job/SHA及scope。原bc56e37 run40339572814 failure、repair-ci-observed-01.json及複製保存的repair-ci-observed-02.json pending均保留，repair-ci-latest.json現指向終結成功。本輪未重跑本機全庫、九案例或真收件；未採集主機、啟模型或敏感處置。
+
+僅更新三份狀態文件，文件commit使用[skip ci]避免純狀態更新觸發反覆CI；產品受測版本仍1e8f7e0，不把文件SHA宣稱另有CI成功。提交後以相對1e8f7e0的變更路徑只含這三份文件核對，再普通push原開發分支；runtime回條不提交。下一既定P2-OS-001仍待原具名單次listeners批准，不重新詢問，也不將本次成功升格為正式發布／真主機防護／24h/reboot／任意桌面喚醒。
+
+
 ## 2026-10-26：bc56e37遠端CI精確失敗與相容性修復（最新）
 
 連接GitHub以GET actions/runs?head_sha=bc56e37b4cfb63ed3e0a9caf98d11a66b140372d&branch=feat/local-codex-acceptance，及該SHA/check-runs核對：run40339572814，event push、attempt1、check suite109331954956、status completed/conclusion failure。Windows job121630253841，UTC14:25:52–14:30:58；mock job121630254549，14:25:52–14:26:00，均failure。legacy statuses空不能蓋過Actions。讀job必要log：Windows只輸出1595 tests摘要（9 failure entries、1 RustSec error、47 skip），無unit trace／artifacts；mock明示scripts/verify.py:137 AttributeError:Popen無created_at。沒有借用其他SHA綠燈、沒有rerun/dispatch。metadata／過濾錯誤存reports/ci-head-bc56e37-20261026-01，不存raw logs。

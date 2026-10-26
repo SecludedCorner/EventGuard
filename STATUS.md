@@ -1,5 +1,14 @@
 # EventGuard 現況
 
+## 2026-10-26 精確版本遠端CI已成功（最新）
+
+受測可用產品版本為1e8f7e0e74f2018849b44cb02e2052d2fe817da4，分支feat/local-codex-acceptance。獨立GET核實Offline verification run40345960922／attempt1／push，head_sha完全相同，UTC2026-10-26T15:11:02Z（台北23:11:02）已completed/success。Windows job121652823962：1603項、1556pass／47可選SDK及相關transport/SSE依賴skip，0failure/error；原Job自然exit0／remaining0／無強停。Linux mock job121652824391：104/104、無skip/fail/error，僅自身worker exit0，creation/job/tree/remaining未知，仍明示無Linux native。
+
+新終結收據reports/ci-head-bc56e37-20261026-01/repair-ci-terminal.json；兩次pending與bc56e37原failure各自保留，latest回條已指向成功。完整47個skip名單保存在repair-windows-summary.json，不把skip當實際執行，也不借本機SDK或其他SHA綠燈補足。這輪只讀遠端metadata及必要結果摘要，沒有CI rerun/dispatch、本機全庫／九案例重跑、workflow／權限變更或新模型／主機採集。
+
+本次只更新STATUS/HANDOFF/EVIDENCE，以[skip ci]提交／普通push保存狀態，避免純觀察形成CI循環。這個文件checkpoint的SHA不是另一個受測SHA；產品程式與1e8f7e0相同，CI成功只綁定1e8f7e0。下一既定里程碑P2-OS-001仍是原單次listeners baseline，需原具名問題的直接批准；不重問、不擴範圍。正常收件／調查與CI閉環已交付，不宣稱真主機防護、既有聊天喚醒、24h/reboot、Linux native或已超越競品。
+
+
 ## 2026-10-26 精確CI失敗已核對與修復（最新）
 
 已唯讀核對bc56e37b4cfb63ed3e0a9caf98d11a66b140372d的push CI：Offline verification run40339572814／attempt1，結論failure；Windows job121630253841及mock job121630254549都失敗，不能用空legacy statuses或本機綠燈代用。Windows摘要為9個failure entries／1error，mock因非Windows Popen無created_at在驗證器137行中斷，原run無artifacts，沒有更細unit trace。原CI狀態保持failure。

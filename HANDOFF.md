@@ -1,5 +1,12 @@
 # EventGuard 接手
 
+## 2026-10-26 CI終結成功接續（最新）
+
+受測產品SHA1e8f7e0e74f2018849b44cb02e2052d2fe817da4的run40345960922／attempt1／push已completed/success（UTC15:11:02）。Windows job121652823962：1556pass/47可選依賴skip/0fail/error；Linux mock job121652824391：104/104，只確認自身worker退出，不是Linux native。完整skip及終結metadata在reports/ci-head-bc56e37-20261026-01/repair-ci-terminal.json及repair-windows-summary.json；原bc56failure及兩次pending不覆寫，latest已更新。
+
+本輪僅三份狀態文件，以[skip ci]保存，產品程式未變，不為文件checkpoint另跑CI。請區分文件HEAD與受測產品1e8f7e0，不能把不同SHA稱為另一次CI綠燈。既有調查／診斷脈絡／九案例與真04證據沿用各自scope，不新增模型、主機採集或正式發布。下一里程碑沿用P2-OS-001已準備單次listeners；原人類批准未答，不重問、不擴fixture或另造研究維持忙碌。有具體必要產品缺陷才接續修，保存點不取消有效授權。
+
+
 ## 2026-10-26 CI精確核對與可重現修復（最新）
 
 原bc56e37 CI確定failure：run40339572814，Windows job121630253841／mock121630254549，不能升格為綠。原run無artifacts，只summary；已保存過濾後status／Windows summary／mock錯因，不保存整段raw log。短路徑＋missing SDK隔離重現全部9個Windows失敗、CRLF error；修後相同條件0fail/error且CRLF accepted。
