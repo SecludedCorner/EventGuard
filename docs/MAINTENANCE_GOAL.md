@@ -19,7 +19,7 @@
 
 P1-INVEST-002 DONE有限範圍：同事件已驗證診斷的hash／時間／query類型／來源／狀態／列數已接入1.1案件，缺失／過期／未來／空結果／partial列缺口，跨事件誤綁與保存競態拒絕，原1.0案件仍可讀。8項新診斷fixture；核心160項159pass／1skip，呈現增量52項51pass／1skip，均0fail/error；不同範圍不相加或冒充全庫。reports/investigation-product-20261026-03為最終來源18/18，含真瀏覽器保存及重開同hash、8 pending／ACK0、原Job自然0。一次CLI建案96.69ms、重開HTTP讀8.00ms，case3210B、DB增8KiB；CPU／RAM為包含fixture準備的自身兩點快照，沿用上表限制，仍非競品測量。
 
-下一必要驗收分兩條：P2-INVEST-COVERAGE-003可離線擴充多來源／多實體與良性序列的黃金資料集，先對同一能力按錯加／漏加／UNKNOWN及成本分開量測，不能用單來源樣本外推7來源完整調查；原生listeners仍只待原具名批准。真模型／敏感處置沿用既有集中批准，不擴張本批授權，亦不把native待批寫成離線工程全部blocked。
+P2-INVEST-COVERAGE-003 DONE九案例有限範圍：29/29定向、九組source shape逐案保存／重開及獨立SQL/hash核對9/9，錯加0／漏加0、4案例維持entity/source UNKNOWN，18pending/ACK0、自有Job自然0。案例建案37.255–101.101ms、DB合計405504B，僅合成shape，仍不能外推7來源完整調查或惡意偵測率。已先push 548efe8並實查遠端，再續完成這項study；本補記亦同分支保存。下一必要真驗收為原具名listeners批准，OS owner／跨來源因果與競品同環境資料仍缺；離線僅接具體已辨識的產品缺口，不用反覆加fixture數取代真證據。
 
 ## 持續工程佇列：2026-10-26（優先閱讀）
 

@@ -1,5 +1,14 @@
 # EventGuard 現況
 
+## 2026-10-26 已確認遠端保存並接續golden量測（最新）
+
+已普通fast-forward推至origin/feat/local-codex-acceptance；git ls-remote實查遠端與本機同為548efe8bbfc7548b5b2d530db2c9203295583bce，ahead/behind=0/0。先前57個待推commit及本checkpoint已保存，不是正式發布；未推main／其他保留refs，不force、不改歷史。推前累積264檔/+52654/-1961是9576b13→cd117f9的比較，548efe8本身只有5檔/+106。其他兩個未追蹤目錄仍保留。
+
+之後已接續原任務，完成reports/investigation-source-golden-20261026-01：9案例全過、錯加0／漏加0，4案例缺實體／來源維持UNKNOWN，18事件仍pending／ACK0，逐案保存與重開一致。獨立9/9 SQLite mode=ro/query_only核對來源hash與case；自有worker原HANDLE自然0／Job0／無強停。每案建案37.255–101.101ms，九來源庫合計405504B；僅這組synthetic來源shape，不是7來源全覆蓋、惡意偵測率或production效能。02定向29/29證據沿用，產品碼未改。
+
+本補記為下一個小checkpoint，同既有分支普通推送並實查遠端；實際最終SHA見Git及reports/git-checkpoint-20261026-01/remote-verified-final.json，不用文件意圖代替推送結果。後續每個可獨立保存階段提交並推送，不再累積。尚缺真來源／OS帳戶owner／跨來源因果、24h/reboot及實際競品同環境評測；原listeners具名批准不重問、不代授權。離線下一實作僅在有具體產品缺陷或契約缺口時進行，不用擴fixture數替代真路徑。
+
+
 ## 2026-10-26 Git遠端保存 checkpoint（最新）
 
 最新直接使用者要求先提交及遠端保存，再接續開發；這是本專案既有開發分支的push授權，取代下方本輪「只本機／不push」限制，但不授權正式發布或推其他分支。位置EventGuard，分支feat/local-codex-acceptance，上游origin同名，remote https://github.com/SecludedCorner/EventGuard.git。推送前遠端實查9576b13a6773ce81c3a01799743d30094a48449a，本機cd117f9已領先57commit；比較遠端→HEAD為264檔、+52654/-1961行，屬歷史累積，不是當前未提交量。

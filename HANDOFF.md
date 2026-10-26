@@ -1,5 +1,14 @@
 # EventGuard 接手
 
+## 2026-10-26 遠端保存已核對（最新）
+
+origin/feat/local-codex-acceptance已保存548efe8bbfc7548b5b2d530db2c9203295583bce，推後ls-remote與HEAD一致、ahead/behind0/0；本次僅普通fast-forward，其他分支／保留本機refs未推，不是正式發布。使用者要求往後每個可獨立checkpoint立即commit/push。舊只本機／不push文字已被直接新指示取代；runtime與他人未追蹤兩目錄仍排除。
+
+推後接續golden study已完成，9/9案例、0錯加/漏加、4個entity/source UNKNOWN、18pending/ACK0、9/9獨立唯讀SQL/hash核對、原Job自然0；reports/investigation-source-golden-20261026-01保留逐案producer/case/validation/資源。這份補記同分支保存後，再以remote-verified-final.json及git ls-remote查最終SHA；不要假定先前SHA永遠最新。
+
+下一必要驗收仍依真資料範圍：原單次listeners批准問題未答，不重問、不把本授權當採集批准；OS owner與跨來源因果缺證據仍UNKNOWN。更大惡意／良性真樣本和同環境競品比較尚未具備，不把九種合成shape當偵測率。後續發現具體離線產品缺口可直接修，不再以整體未完成為由延遲保存，也不重跑真ACK／全庫堆證據。
+
+
 ## 2026-10-26 遠端checkpoint接續（最新）
 
 使用者已明確要求本專案checkpoint提交並push既有開發分支；目標origin/feat/local-codex-acceptance，禁止force／改寫歷史／推main或其他保留refs，不是正式發布。遠端推前SHA9576b13a6773ce81c3a01799743d30094a48449a，cd117f9領先57。舊「不push」段落屬歷史。當前新增兩個golden fixture/test將單獨保存，其他兩個未追蹤目錄不動。

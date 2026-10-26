@@ -1,5 +1,14 @@
 # 證據與時間日誌
 
+## 2026-10-26：遠端實查成功，推後續做九案例量測（最新）
+
+推送命令 git push origin HEAD:refs/heads/feat/local-codex-acceptance 成功，回9576b13..548efe8；後續 git ls-remote --heads origin refs/heads/feat/local-codex-acceptance 實查548efe8bbfc7548b5b2d530db2c9203295583bce，與本機HEAD相同，git rev-list --left-right --count HEAD...origin同名為0/0。只此開發ref、沒有force或main／其他refs／正式發布。初始工作樹2個新golden檔，checkpoint連同3份狀態共5檔/+106；先前264檔/+52654/-1961明確為已提交歷史9576b13→cd117f9比較，不是未提交量。回條reports/git-checkpoint-20261026-01/remote-verified-first.json，runtime不提交。已保留他人兩個未追蹤目錄。
+
+依要求推後立刻續工程：py -3.13 -B reports/investigation-source-golden-20261026-01/exercise.py。九個隔離source shape各2 synthetic事件，固定fixture預期關聯／UNKNOWN，逐案保存case/producer/validation／自身資源前後快照。總wall1.2740033秒，各案建案37.255–101.101ms，9/9、錯加0／漏加0、4個entity/source unknown；總DB405504B，18件保留pending、0ACK／receipts。獨立crosscheck.json逐案mode=ro/query_only/closing核對來源payload hash、保存case、producer synthetic與守恆，9/9；原worker PID55624／UTC14:21:45.154679綁定HANDLE自然exit0／remaining0／forciblyfalse，source hash不變。無Web／模型／原生來源query／額外ACK，全部只在EventGuard reports。不是惡意偵測率、7來源完整覆蓋、峰值或競品同環境基準。
+
+本補記作新checkpoint並同分支push；最終remote-verified-final.json保存推後直接ls-remote實查，未驗成功前不以預期冒稱。每個後續可保存階段即提交及普通推送，真正實機／模型／敏感動作仍按各自原授權界線。
+
+
 ## 2026-10-26：使用者授權開發分支遠端保存（最新）
 
 使用者直接要求先Git checkpoint並推既有授權開發分支，再續開發。核對cwd EventGuard、branch feat/local-codex-acceptance、HEAD cd117f93ef4e6af1346e44065a888716a9a664ec、upstream origin同名，origin HTTPS GitHub/SecludedCorner/EventGuard。普通工具網路沙箱git ls-remote連線拒絕；已批准的工具網路例外下唯讀查回遠端feat=9576b13a6773ce81c3a01799743d30094a48449a、main=615f77f55a29f856b2305fc54a5225b5ed58bc65，未改Windows／帳戶設定。當時ahead57，遠端→HEAD264檔/+52654/-1961；未提交只是兩個golden檔案，其他未追蹤目錄保留，畫面變更基準不混用。
