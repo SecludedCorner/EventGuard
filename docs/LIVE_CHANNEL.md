@@ -1,5 +1,7 @@
 # 本機持續等待與專用 agent 接收
 
+2026-10-26 入口更新：現行 App／agent service、單事件真 CLI 與結果／ACK 查閱方式見 [AGENT_SERVICE](AGENT_SERVICE.md)。該現行通訊不設每日五次限制、不讀寫歷史預算；本頁以下保留舊 GUI／watch 相容契約，不能將舊預算初始化當成新入口的必要操作。已通過的是真專用 CLI，不是既有桌面聊天喚醒或 24 小時 production。
+
 正常採集不需要模型。自動模式另外明示啟用，使用既有登入與本機 MCP SDK；不建立帳號、憑證、服務或排程。設定步驟及聊天 MCP 範本見 [CONNECT_AGENT](CONNECT_AGENT.md)，本機結果見 [EVIDENCE](EVIDENCE.md)。
 
 ## 一條事件通路

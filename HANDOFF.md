@@ -2,6 +2,8 @@
 
 ## 2026-10-26 接續：長窗完成、所有權修復（最新）
 
+操作交付已補齊：直接按 docs/AGENT_SERVICE.md 查現成真04的完成 ledger／ACK／MCP與外層退出；不可用預設 agent inspect 代讀 reports 隔離來源。--verify-only 會重寫摘要，僅查看請直接讀檔。文件唯讀核對17/17，產品碼與 baseline 11檔 hash 未改；沒有新的模型／採集或 baseline 批准。下一動作仍核對原具名批准問題的直接人類答覆，不另開問題。
+
 分支feat/local-codex-acceptance，基底4a1a95b。只EventGuard；保留未追蹤.codex-remote-attachments/與docs/research/。真04 receive→query→result→ACK及五層自然0沿用，沒有新模型任務。
 
 observer修改12/12；真03短窗0.945115%；長窗已自然結束，不要再依worker1432舊PID操作。長窗measurement-crosscheck.json獨立32/32，末段真1802.489810秒CPU0.343275%、private峰增72KiB、handle增0；16ACK/pending0、475有效樣本、7source hash未變，非整Job/production/24h。

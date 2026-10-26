@@ -2,7 +2,44 @@
 
 普通 Python 程式等待原佇列。有符合條件的事件才啟動短期 Codex CLI。
 不續接既有桌面聊天。不建立服務、排程或開機自啟。
-本批只執行無模型測試。真實投遞驗收尚未完成。
+專用原生 Codex CLI 的單事件真收件已通過：receive → query → 保存結果 → ACK 各一次，pending 0；MCP、CLI、supervisor、host、外層驗收程序皆自然 exit 0。證據是 `reports/service-acceptance-eventguard-mcp-exit-20261025-04`，不是既有桌面聊天喚醒。最新完整回歸與適用版本見 [STATUS](../STATUS.md)；本頁命令不構成新增模型或主機採集授權。
+
+## 現在可以怎麼用
+
+適合把已保存且符合條件的本機事件交給一個短期 Codex 任務，取得最小 metadata 查證及耐久收件回條。沒有事件時由普通程式等待；不讓模型持續輪詢。人類仍可獨立查看事件、保存處置狀態及停止應用。ACK 表示接收流程完成，不表示漏洞已修復或主機安全。
+
+這裡保存的結果是固定 decision、result ID 與 `incident_conclusion=not_assessed` 等結構化收件紀錄；不是任意 agent 分析全文。`query_evidence` 重讀已保存的七欄摘要，不查 Windows；事件 `diagnose` 是另外一個會執行事件綁定唯讀查證的操作。人工 `set-status handled` 與投遞 ACK 分開。
+
+| 目的 | 入口 | 查證範圍 |
+| --- | --- | --- |
+| 看當前產品狀態、檢查既有原生 CLI 能力 | 下節 `agent status / capabilities / start` 預檢 | 不啟動模型；CLI 可啟動不等於已登入或能完成收件 |
+| 已批准來源的持續派送 | `agent start ... --execute`，操作見下文 | 預設讀 `data/live`；是持續 host，不能當成只跑一件的驗收 |
+| 精確一件合成事件、一個 CLI 任務 | 本頁「驗收界線」的 `validate_delivery.py service` | 單次新目錄、180 秒有限生命期；需要當次有效模型範圍 |
+| 查已通過那一件，不再執行 | 下列 PowerShell 讀檔 | 原證據，沒有重新接收、ACK、模型或原生採集 |
+
+### 查閱已完成事件的結果與 ACK
+
+在專案根目錄執行以下讀檔命令：
+
+```powershell
+$egProof = 'reports/service-acceptance-eventguard-mcp-exit-20261025-04'
+$egDelivery = Get-Content -LiteralPath "$egProof/communication-result.json" -Raw | ConvertFrom-Json
+$egDelivery | Select-Object passed,event_id,query_id,result_id,counts
+Get-Content -LiteralPath "$egProof/validation.json" -Raw | ConvertFrom-Json |
+    Select-Object passed,chronology_verified,one_attempt_verified,per_stage
+Get-Content -LiteralPath "$egProof/inbox/completed-3ec2cdb0a81b98d4004ad7152cee44be1b7c8c1698ae18d18a7676fabfe1730d.json" -Raw |
+    ConvertFrom-Json | Select-Object snapshot,query,result
+Get-Content -LiteralPath "$egProof/mcp-exit-validation.json" -Raw | ConvertFrom-Json
+Get-Content -LiteralPath "$egProof/execution-exit.json" -Raw | ConvertFrom-Json
+```
+
+該 event ID 是 `evt-a6e83a0f0b754013952fca894cd615b8`。先核對生成、接收、query、result、ACK 都指向它，計數各 1、pending 0、duplicates 0；query ID 與 result ID 也必須一致。完成檔保留實際 receive/query/result 時間與七欄 snapshot；SQLite `source/eventguard.sqlite3` 保存來源事件及 ACK，原始交叉核對已按唯讀連線驗證結果先存再 ACK。完成檔自身的 `acked_at` 不應替代來源 SQLite 的 ACK 時間。
+
+`validation.json` 保留三個真工具完成、時間順序與 host 身分核對；`communication-result.json` 分別列 CLI、supervisor、host、外層的退出回條。MCP 另看 `mcp-exit-validation.json` 的 `passed=true`、`ack_response_flushed=true`、`mcp_natural_exit_verified=true` 及 `mcp_exit_code=0`，其原始 marker／活體保留 HANDLE 回條在該 attempt。外層 `execution-exit.json` 須為 exit 0、remaining 0、無強停及擷取完整。不能只憑模型文字或一個 `passed` 欄位判定收件。
+
+一般 `agent inspect --namespace test` 讀預設 `data/test`／`data/agent-delivery-test`，不會自動找到這份 reports 內的隔離來源。`events detail --namespace test --event-source <上述目錄>/source` 可看來源事件及人工處置，但不會合併 query/result 或 MCP 退出證據。避免將不同來源的空清單誤判為未收件。
+
+既有 `--verify-only --require-mcp-exit` 可重讀並核對原證據，不啟動模型或再 ACK；它會取得鎖並重寫驗證摘要，並非純檔案唯讀。只需查看時使用上方讀檔命令，不必重跑已通過的驗收。
 
 ## 查看與預檢
 
@@ -21,7 +58,7 @@
 
 ## 明確啟用、暫停與停止
 
-以下啟用會使用模型。須先有適用的資料及模型批准。本批未執行。
+以下啟用會使用模型。須先有適用的資料及模型批准；已通過的單事件證據不等於啟用正式來源的持續批准。
 
 ```powershell
 .\EventGuard.cmd agent start --codex-executable C:\既有安裝\codex.exe --execute
@@ -120,7 +157,13 @@ ACK 不代表漏洞已修復、主機安全或人類案件結束。
 py -3.13 -B scripts/validate_delivery.py service --root reports/service-acceptance-NEW
 ```
 
-取得本輪有限批准後，才在同一目錄加 `--codex-executable $codexExe --execute`。
+取得本輪有限批准後，先在該新目錄的 `human-approval.json` 記下直接授權文字、時間、事件／CLI／期限範圍。由當次已審查的私有 Job 啟動器執行以下內層命令，保留外層原 HANDLE 與退出回條；不可重用已消耗的真04目錄或它的單次啟動器：
+
+```powershell
+py -3.13 -B scripts/validate_delivery.py service --root reports/service-acceptance-NEW --codex-executable $codexExe --execute --require-mcp-exit
+```
+
+`$codexExe` 是已安裝、已核對的原生 `codex.exe` 完整路徑。只執行 prepare 不啟動程序或收件；實際流程才會先空等、生成／入列一件、啟動唯一 CLI，依序呼叫 `receive_event`、`query_evidence`、`ack_event`。結果由工具保存後才 ACK。失敗保留來源原狀、已保存結果與 ACK 進度，先核對退出，不自動新增事件或重送模型。ACK 已成功但收尾驗證失敗時，不會回退為 pending。`--execute` 是執行開關，不能代替人類授權記錄與啟動器檢查。
 程式先等空佇列，再加入事件。最多一個任務，總期限 180 秒，最後合作停止隔離 host。
 有限驗收使用既有 application-owned Job。驗收程式持有實際 child handle，不 detach、不離開外層 Job。
 父應用身分不明、退出或期限到達時，host 合作停止。CLI 啟動前也重查父應用與期限。
@@ -131,3 +174,18 @@ py -3.13 -B scripts/validate_delivery.py service --root reports/service-acceptan
 驗收另核對 SQLite 保存時間、worker／CLI 建立時間、receive／query／result／ACK 順序。
 空閒觀察同時核對 UTC 及同一 scope 的 monotonic 時鐘。缺證據或時間倒置不通過。
 前後短暫空閒只證明該窗口。它不代表長期 soak 或獨立背景壽命已驗證。
+
+## 下一項實機關卡與未涵蓋範圍
+
+單次 listeners 基線已準備於 `reports/windows-listener-baseline-20261026-01`；具名批准問題仍未取得答覆。保留這一個待決點，不另建相同請求或執行目錄。完整範圍見該目錄的 `AUTHORIZATION_REQUEST.md` 與 manifest：
+
+| 項目 | 已準備的範圍／完成條件 |
+| --- | --- |
+| 目的與資料 | 一次 native TCP／UDP、IPv4／IPv6 listeners 表與必要 owner 建立時間；端點事實只在記憶體處理，落盤只留固定狀態／計數及本工具退出回條 |
+| 時限 | query 5 秒、總工作預算 30 秒；既有外層啟動器在 20 秒觸發合作 stop，再留 3 秒 grace；不是對每個 OS syscall 的硬中斷保證 |
+| 收尾 | 執行前加入私有 Job，保留原 HANDLE；四項查詢完整、無截斷／缺口／取消、內外自有程序自然 exit 0、remaining 0、無強停才通過 |
+| 授權 | 當次直接人類批准，綁定既有 root/run/hash/scope；批准時間及最長 30 分鐘有效期在執行前寫入 `human-approval.json`，一次使用 |
+
+這個 baseline 不注入 socket、不修改登錄／系統／帳戶、不啟動模型或其他來源。它只查當次採集完整性，不生成新事件、不重新驗收 agent，也不證明 listener new/resolved 生命週期；loopback 按現有規則被忽略，不能拿它冒充陽性事件。
+
+原生來源端到端、既有桌面／dot 閒置喚醒、24 小時 production 與 reboot 皆未驗。24 小時需依 [既有 soak 計畫](SOAK_PLAN.md) 固定隔離目錄、真實起訖、負載、資源及停止條件，有限 runner 不能直接當 24 小時成果。桌面喚醒需具名目的地、受支援入口及真 turn／事件／結果／ACK 證據，不能由新專用 CLI 推定；條件與授權見 [事件驅動](AGENT_EVENT_DRIVEN.md)。沒有建立排程或會話外自動恢復機制。

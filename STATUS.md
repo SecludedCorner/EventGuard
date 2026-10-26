@@ -2,6 +2,8 @@
 
 ## 2026-10-26 持續工程：長窗與所有權修復（最新）
 
+操作入口補記（2026-10-26T07:43:13.5264320+00:00）：README／AGENT_SERVICE 已交付當前入口、一次 service 操作、固定 metadata 結果／ACK／五層退出查閱方法及適用情境；CONNECT_AGENT／LIVE_CHANNEL 舊相容流程加現行入口指引。17/17 唯讀核對，五份原真04證據 hash 不變、native baseline 11檔 source hash 相符，無新模型／採集／重跑回歸。紀錄 reports/operator-entry-review-20261026-01/validation.json。原聊天無新增 baseline 答覆，唯一待決點仍為同一目錄的單次批准，不重複提問。
+
 基底4a1a95b，分支feat/local-codex-acceptance；只本機提交、不push。既定真CLI鏈仍通過：真04的一件合成事件 receive→query→result保存→ACK各1、pending0；MCP/CLI/supervisor/host/outer五層自然0。UI/API/CLI真頁面顯示亦已驗證。本增量沒有新模型任務。
 
 P2-IDLE-CPU-003／30M：profile定位本harness每秒全樹usage成本，改為排空後單writer的已驗總量＋自身append delta。每筆仍_guard/實際大小/sample與report cap；mutation／phase／final仍全樹檢查，外部其他檔突變不是即時防篡改。12/12定向通過；恢復語意fixture明示虛擬deadline，不冒充真wall。真03 wall60.012212秒、idle31.411523秒CPU0.945115%，16ACK/pending0、自然0。

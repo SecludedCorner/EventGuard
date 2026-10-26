@@ -2,6 +2,10 @@
 
 ## 2026-10-26：observer長窗、原生閘道與所有權競態（最新）
 
+操作交付增量（2026-10-26T07:43:13.5264320+00:00，基底 d805ec5）：修正 AGENT_SERVICE 的「真投遞未完成」舊文字，新增可用入口、單事件 service 命令、五份固定 JSON 的 PowerShell Get-Content／ConvertFrom-Json 查閱、固定 metadata 結果與人工處置／ACK 界線；README導入，CONNECT_AGENT／LIVE_CHANNEL指向現行無每日五次的 App/service，保留舊相容流程。獨立審查修正「所有失敗仍pending」誤述：ACK後收尾失敗不回退來源。
+
+唯讀驗證：PowerShell Parser.ParseInput 核對新讀檔區塊，Get-Content／ConvertFrom-Json 核對同event/query/result及既有三工具／自然退出摘要，Get-FileHash前後核對五份原證據與baseline manifest綁定的11個來源檔、四份操作文件本機連結；reports/operator-entry-review-20261026-01/validation.json 為17/17、failed_checks空、model_tasks_started=0、native_queries_started=0、subprocesses_started_by_check=0。未重跑真ACK、完整回歸或verify-only，未啟動任何collector；原baseline仍無human-approval.json／intent／result／outer-start，template未批准。只文件變更，沿用1563pass／3skip／0fail及真04原證據，未宣稱重新驗收。提交前執行 git diff --check；runtime報告不提交、不push。
+
 基底4a1a95b，Python3.13.3，一般使用者；模型／原生掃描在本增量測試中均0。既定真04五層退出／三工具各1的原證據未重跑或覆寫。
 
 - observer根因：reports/soak-observer-cprofile-20261026-01，12秒受控cProfile，record累積wall .809478秒，其中usage .775133秒≈95.8%；內層_guard與stat為重疊累計，不相加當CPU。原worker自然0/Job0。修正僅排空後單writer byte accounting重用；每append guard/size/cap及mutation/phase/final全樹檢查保留，非即時防篡改。
