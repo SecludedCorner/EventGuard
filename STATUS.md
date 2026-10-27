@@ -1,5 +1,15 @@
 # EventGuard 現況
 
+## 2026-10-27 接續核對與 soak 時區修正（最新）
+
+接續 HEAD d922f48，分支 feat/local-codex-acceptance、upstream origin 同名；接手時追蹤檔案乾淨、ahead/behind 0/0，原兩個未追蹤目錄保留。受測產品仍為 1e8f7e0；既有 CI success、真04及調查證據沿用原 scope，不重跑全套。
+
+原 soak summary 的實際 UTC 起訖為 2026-10-25T17:12:21.291029+00:00 至 2026-10-25T17:44:01.298238+00:00，等於台北 2026-10-26 01:12:21.291029–01:44:01.298238+08:00。下方 10/26 標題是本地日期，不能把 UTC 17:12 誤配成 10/26；1900.017392 秒 wall 及既有量測結論不變，未重跑 soak、未改原收據。
+
+P2-OS-001 仍缺原具名單次批准：是否批准 reports/windows-listener-baseline-20261026-01 的一次 native TCP/UDP、IPv4/IPv6 listeners baseline 及必要 owner 建立時間查核（query 5 秒、總預算 30 秒，只保存狀態／計數與自有 Job 退出回條；不開 socket、不改 registry／系統、不啟模型或其他來源）？此處記錄原待決問題，沒有重新建立請求。此次轉達不代答；現有目錄無 human-approval.json、execution-intent.json、result.json 或 outer-start.json，未執行採集。有直接有效批准後才依同 root/run/hash/scope 執行一次；無已辨識的新離線缺陷，不用擴 fixture 或重跑驗證替代真來源驗收。
+
+本次只修正文件與核對原收據；命令為 PowerShell Get-Content／ConvertFrom-Json、DateTimeOffset UTC→+08:00、Get-FileHash 及 git diff --check。證據 reports/soak-time-correction-20261027-01/state-verified.json 與 validation.json；提交／推送仍依既有 checkpoint 規則，遠端結果另留回條，不把文件 SHA 當新受測產品。
+
 ## 2026-10-26 固定Git保存規則（最新）
 
 依直接使用者要求，AGENTS新增Git checkpoint與遠端保存規則，CLAUDE.md作簡短入口：每個可保存checkpoint立即commit/push，連續小commit最多3個未推送；恢復／交接時補推，失敗保留本機與待推SHA，推後直接核對遠端。僅原origin/feat/local-codex-acceptance，不改產品、安全或資料界線，也沒有建立背景排程。文字驗證8/8與git diff --check；證據reports/git-push-policy-20261026-01/validation.json（2026-10-26T16:00:08.752770+00:00）。本次純文件以[skip ci]保存，不重跑已通過CI／測試；受測產品版本仍1e8f7e0。
@@ -69,7 +79,7 @@ CURRENT/NEXT：離線P1-INVEST-002可繼續，接同事件已保存的診斷/que
 
 P2-IDLE-CPU-003／30M：profile定位本harness每秒全樹usage成本，改為排空後單writer的已驗總量＋自身append delta。每筆仍_guard/實際大小/sample與report cap；mutation／phase／final仍全樹檢查，外部其他檔突變不是即時防篡改。12/12定向通過；恢復語意fixture明示虛擬deadline，不冒充真wall。真03 wall60.012212秒、idle31.411523秒CPU0.945115%，16ACK/pending0、自然0。
 
-長窗 reports/soak-idle-30m-20261026-01：UTC17:12:21–17:44:01，wall1900.017392秒、16ACK/pending0、475有效樣本；原HANDLE自然0/Job0/無強停，7檔source hash不變。獨立32/32核對：最後實際1802.489810秒窗CPU0.343275%單核心、private峰增73728B（72KiB）、handle增0（111不變），三目標通過。這是自身harness idle，非整Job／production／24h／重啟或主機安全證據。
+長窗 reports/soak-idle-30m-20261026-01：UTC 2026-10-25 17:12:21–17:44:01（台北 2026-10-26 01:12:21–01:44:01+08:00），wall1900.017392秒、16ACK/pending0、475有效樣本；原HANDLE自然0/Job0/無強停，7檔source hash不變。獨立32/32核對：最後實際1802.489810秒窗CPU0.343275%單核心、private峰增73728B（72KiB）、handle增0（111不變），三目標通過。這是自身harness idle，非整Job／production／24h／重啟或主機安全證據。
 
 P0-OWNER-SNAPSHOT-005：已通過對應回歸。背景stop改綁control.lock內已驗selected_owner，避免診斷status瞬斷/舊run_id誤綁scope；App僅對固定unverifiable、無明確foreign identity的快照重觀測一次，第二份必須完整同namespace/run/PID/creation/Job/generation才控制，持續unknown仍阻擋。新增2背景＋3App確定性fixture；不推斷原失敗特定Win32錯碼。最新完整回歸 1566 項／1563 通過／3 略過、0 failure/error；source_unchanged=true，原Job自然0／remaining0／無強停。
 

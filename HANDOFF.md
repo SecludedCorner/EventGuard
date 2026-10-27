@@ -1,5 +1,13 @@
 # EventGuard 接手
 
+## 2026-10-27 原收據時區與待批關卡（最新）
+
+從 d922f48 增量接續；產品仍為受測 1e8f7e0，既有 CI success 不重跑。本次只修正 soak 時間標示：原 summary UTC 2026-10-25 17:12:21.291029–17:44:01.298238，等於台北 2026-10-26 01:12:21.291029–01:44:01.298238+08:00；原 wall／資源結論與原收據不變。核對回條在 reports/soak-time-correction-20261027-01，文件 checkpoint 依既有規則 commit/push 並另留遠端回條。
+
+目前 DOING 是此文件修正與保存；沒有啟動採集、模型或新 runner。下一必要 P2-OS-001 仍需人類回答原單一問題：是否批准既有 reports/windows-listener-baseline-20261026-01 的一次 native listeners baseline（TCP/UDP、IPv4/IPv6 及必要 owner 建立時間；query 5 秒／總預算 30 秒；只保存狀態計數及自有 Job 回條；不開 socket、不改 registry／系統、不啟模型或其他來源）？沒有新問卷，也不把 dot 轉達、template 或一般持續開發要求當批准。現有 human-approval／execution-intent／result／outer-start 均未產生。若取得直接有效批准，先寫原文與時間，再依原 root/run/hash/scope／30 分鐘有效窗執行一次既有 run-owned.py，不另啟競爭 runner、不自動換目錄重試。
+
+既定離線切片已完成，尚無具體新 regression；不得為保持忙碌新增 fixture 或重跑真04／全庫。原生來源、OS 帳戶 owner／跨來源因果、24h/reboot、既有桌面喚醒與競品同環境比較仍未驗；本次不擴大其授權。
+
 ## 2026-10-26 CI終結成功接續（最新）
 
 受測產品SHA1e8f7e0e74f2018849b44cb02e2052d2fe817da4的run40345960922／attempt1／push已completed/success（UTC15:11:02）。Windows job121652823962：1556pass/47可選依賴skip/0fail/error；Linux mock job121652824391：104/104，只確認自身worker退出，不是Linux native。完整skip及終結metadata在reports/ci-head-bc56e37-20261026-01/repair-ci-terminal.json及repair-windows-summary.json；原bc56failure及兩次pending不覆寫，latest已更新。
