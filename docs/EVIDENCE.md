@@ -1,5 +1,15 @@
 # 證據與時間日誌
 
+## 2026-10-27：一次已批准 native listeners 實跑，partial 如實保存
+
+人類於03:00 UTC回覆 dot 的三項具體範圍「同意1、2、3」，原主責只接第3項。接續 edc088c，原 root/run/manifest hash與11 source hashes匹配且未執行，於 reports/windows-listener-baseline-20261026-01/human-approval.json先保存原文、轉達來源及時間；批准保守綁03:00:00–03:30:00 UTC，執行在有效窗內。manifest與未批准template原件均保留，不將一般持續工程要求當OS授權。
+
+命令 py -3.13 -B reports/windows-listener-preparation-20261026-01/run-owned.py --root reports/windows-listener-baseline-20261026-01，只執行一次。原result UTC03:04:36.844483–03:04:37.668540（台北11:04:36.844483–11:04:37.668540+08:00）、elapsed0.739012秒，query_started=true；四表GetExtendedTcpTableIPv4/IPv6計數28/13、GetExtendedUdpTableIPv4/IPv6計數132/62，皆ok，共235列、未截斷。error_count21、process_identity_missing_count111（列數，不是111個不同owner），identity unknown／source partial／complete=false，整體blocked:baseline_incomplete。固定計數不足以判斷21錯誤的具體原因，不能歸咎必需管理員、sandbox或特定程序；未重查原始事實。
+
+owned_query managedtrue／自然exit0／remaining0／forciblyfalse；outer-start保留原HANDLE，outer-exit自然exit2／remaining0／forciblyfalse／wrapper_errorfalse／deadlinefalse／cooperative_stop not_needed。命令返回1，沒有逾時或強停。stop watcher已退出；raw_facts_saved=false、model0、injectionfalse、host_safety_assessed=false、full_lifecycle_verified=false。未開socket、改registry／系統、啟其他來源或長期採集。
+
+同目錄acceptance-crosscheck.json獨立13/13核對run/批准hash與時窗/scope/計數/退出/11source hashes，保存六份原artifact hash；receipt_consistency_passed=true與baseline_acceptance_passed=false分列，不把收據核對當驗收PASS。沒有產品碼修改、CI／全庫／真04重跑；原受測產品1e8f7e0沿用。只保存必要聚合結果到狀態／計畫文件，runtime、批准原文及自有PID回條不提交；普通commit/push原開發分支，不是正式發布。原一次批准已用完；不重複要求這次批准，也不自行補查／提權／放寬標準，後續精確native診斷須另授權。
+
 ## 2026-10-27：原 soak 日期／時區更正，原生批准仍缺
 
 以 reports/soak-idle-30m-20261026-01/exercise/summary.json 的原 started_at／finished_at 核對：UTC 2026-10-25T17:12:21.291029+00:00 至 2026-10-25T17:44:01.298238+00:00；台北為 2026-10-26 01:12:21.291029–01:44:01.298238+08:00。末段實際樣本窗的 UTC 日期亦為 2026-10-25。修正 STATUS／本頁及 SOAK_PLAN 的日期關聯、HANDOFF 頂部接續；1900.017392 秒 monotonic wall、1802.489810 秒末窗與原資源結論不改，原資料不覆寫。

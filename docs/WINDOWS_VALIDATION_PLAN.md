@@ -1,5 +1,11 @@
 # Phase 7：Windows 可逆狀態與故障恢復驗證計畫
 
+## 2026-10-27：單次 baseline 已執行，完整驗收仍不通過（最新）
+
+P2-OS-001 已獲原具名單次批准，並在 reports/windows-listener-baseline-20261026-01 執行一次。四表ok共235列，但必要程序身分缺111列／error21，source partial、baseline_incomplete；query elapsed0.739012秒，內query原Job自然exit0、外validator原Job自然exit2，兩者remaining0／無強停。13/13是收據一致性，不是完整baseline PASS；result與原回條保留。沒有注入、模型、系統修改或額外查詢，一次批准現已用完。
+
+本次不能定位身分失敗的具體原因；後續精確診斷／重驗需另批准，不以提權或降低完整性標準解決。下方注入／長時／恢復計畫仍未執行，「尚未執行」不包含這次已保存的baseline。最新接續見STATUS/HANDOFF。
+
 狀態：**計畫已提出，尚未執行；實際注入、長時間監看、登出或重啟都須當次批准**。本文件不啟動程序、不寫登錄或安全設定。先讀 [現況](../STATUS.md)、[生命週期](PROCESS_LIFECYCLE.md) 及 [soak 計畫](SOAK_PLAN.md)。不呼叫模型、不連外、不提權、不停止非本工具程序。
 
 ## 2026-10-26：可執行前置與規則界線

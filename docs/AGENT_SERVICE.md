@@ -177,7 +177,7 @@ py -3.13 -B scripts/validate_delivery.py service --root reports/service-acceptan
 
 ## 下一項實機關卡與未涵蓋範圍
 
-單次 listeners 基線已準備於 `reports/windows-listener-baseline-20261026-01`；具名批准問題仍未取得答覆。保留這一個待決點，不另建相同請求或執行目錄。完整範圍見該目錄的 `AUTHORIZATION_REQUEST.md` 與 manifest：
+單次 listeners 基線位於 `reports/windows-listener-baseline-20261026-01`，2026-10-27 已取得原具名批准並執行一次，授權已使用。四表成功共235列，但必要程序身分缺111列、21錯誤，結果為 `partial`／`baseline_incomplete`，完整基線未通過。query .739012秒、內Job自然exit0／外validator自然exit2，兩者remaining0／無強停；結果與13/13收據一致性核對在同目錄，不把後者當baseline PASS。不要再執行原命令或重問這次批准；後續native診斷／重驗需另有精確授權。原單次範圍見該目錄的 `AUTHORIZATION_REQUEST.md`、manifest與下表：
 
 | 項目 | 已準備的範圍／完成條件 |
 | --- | --- |

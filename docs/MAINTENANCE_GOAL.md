@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-27 原生關卡的最新狀態
+
+P2-OS-001 已獲原具名批准並執行一次，原先待批文字不再是現況。四表ok共235列，必要程序身分缺111列／error21，partial／baseline_incomplete，完整baseline未通過；內Job自然0／外validator自然2，均remaining0／無強停。原目錄保存結果與13/13收據一致性核對（非驗收PASS），一次授權已使用。後續native診斷／重驗需另批准；既定離線切片與受測1e8f7e0 CI成果保留，不能用fixture替代身分缺口的真實查證。
+
 ## 2026-10-26 產品方向與競品差距（優先於下方歷史佇列）
 
 使用者要求參考 CrowdStrike／SentinelOne，持續完成可用產品；listeners 單次實機批准只阻擋該觀測，不阻擋離線工程。優先差異化假說是「本機可查證、易理解、低開銷的調查閉環」，尚未證明優於任何 EDR。
@@ -34,7 +38,7 @@ P2-INVEST-COVERAGE-003 DONE九案例有限範圍：29/29定向、九組source sh
 | P2-SOAK-MEASURE-001 DONE有限範圍 | min-wall/pacing/worker自己資源有界採樣 | 無模型/網路/原生掃描 | 59有效樣本/handles111，unknown不填0；不是整Job | 接續下列CPU缺口 |
 | P2-GH-PAGES-001 DONE有界契約 | 頁數/bytes/deadline共享、repo mapping、after/page安全、partial/304保護 | 公開既有來源；無token/設定改動 | 22 fixtures、201項整合、真兩頁smoke＋mapping；05完整要求未達但partial正確 | 不為洗綠再加cap；完整來源freshness另依實抓 |
 | P2-IDLE-CPU-003／30M DONE自身範圍 | observer成本修正及>=1800秒真idle樣本窗 | synthetic私有Job/無模型/掃描 | 12/12；1900秒總wall、末段1802.49秒CPU0.3433%、private峰增72KiB、handles增0，獨立32/32 | 非整Job/production/24h，不再重跑短profile |
-| P2-OS-001 READY／實跑待人類批准 | 一次native listeners baseline-only，query5秒/30秒工作預算 | 明確root/hash/scope/時效人類授權；無socket/registry/model | gate15/15，實際root僅prepare/query0；loopback陽性不符產品，計畫已改負向 | 回覆已提出的單次scope後才execute，不自動擴來源 |
+| P2-OS-001 BLOCKED／已批准並實跑不完整 | 一次native listeners baseline-only，query5秒/30秒工作預算 | 10/27人類具名批准已使用；無socket/registry/model，不能重用或自行重跑 | 四表ok共235列，identity缺111列/error21，partial／baseline_incomplete；query .739012秒，內Job自然0／外Job自然2，均remaining0／無強停；同root acceptance-crosscheck13/13只是回條一致 | 保留真實partial；固定計數無法定位身分根因，後續精確native診斷／重驗另批准，不放寬或擴來源 |
 | P3-24H／DESKTOP／PUBLISH 暫緩/外部條件 | 分別真24h、既有聊天喚醒、正式發布 | 固定長時窗/受支援入口/明確push部署批准 | 尚未驗，不能由短測或新App顯示升格 | 條件具備才執行，不自行排程或承諾會話外喚醒 |
 
 最新命令、時間、失敗恢復、證據、限制見STATUS/EVIDENCE頂部；所有reports/SQLite/native輸出留本機，保留其他Agent與既有未追蹤目錄。

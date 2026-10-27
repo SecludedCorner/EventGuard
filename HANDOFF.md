@@ -1,5 +1,15 @@
 # EventGuard 接手
 
+## 2026-10-27 已執行原單次 listeners：不完整結果與退出均已保存（最新）
+
+本案已收到人類「同意1、2、3」原問答轉達（03:00 UTC），只使用第3項；下方「原批准未答」已是歷史。執行前由 edc088c／乾淨追蹤工作樹接續，核對原 root/run/manifest 及11檔 source hash，human-approval.json 先落盤，03:04 UTC只執行一次既有 run-owned.py --root reports/windows-listener-baseline-20261026-01。沒有另起競爭 runner；此單次授權已用，不可重跑或自行換目錄。
+
+結果 source partial／驗收 blocked:baseline_incomplete：TCP4=28、TCP6=13、UDP4=132、UDP6=62，四表成功共235列、無截斷；必要程序身分缺111列、21錯誤，query elapsed0.739012秒。內 query 原Job自然0、外 validator 原Job自然2，兩者 remaining0／無強停，無逾時／取消；命令返回1不是PASS。13/13只證明原回條及scope一致，不是完整基線通過。
+
+原 result／intent／outer-start／outer-exit／acceptance-crosscheck 都在同一baseline目錄；不保存端點或其他程序原始事實、不啟模型、不改系統。產品程式未變，受測CI版本仍1e8f7e0，真04／soak原scope沿用。此次文件checkpoint依原規則提交／push並另存remote回條。
+
+DOING：保存本次真實不完整結果；NEXT：原生身分缺口需另訂精確且另批准的診斷／重驗，不能沿用這次授權補查。必要人類：只有後續 native 操作的新範圍；本次批准不必重問。固定計數無法判斷是權限、程序退出競態或其他錯誤，根因UNKNOWN；離線讀既有實作未定位到可證明的程式缺陷，不加fixture或放寬標準洗綠。其他既定離線切片已完成，24h/reboot／桌面喚醒／跨來源因果與競品同環境比較仍未驗，不擴scope。
+
 ## 2026-10-27 原收據時區與待批關卡（最新）
 
 從 d922f48 增量接續；產品仍為受測 1e8f7e0，既有 CI success 不重跑。本次只修正 soak 時間標示：原 summary UTC 2026-10-25 17:12:21.291029–17:44:01.298238，等於台北 2026-10-26 01:12:21.291029–01:44:01.298238+08:00；原 wall／資源結論與原收據不變。核對回條在 reports/soak-time-correction-20261027-01，文件 checkpoint 依既有規則 commit/push 並另留遠端回條。

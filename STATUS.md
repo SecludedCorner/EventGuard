@@ -1,5 +1,15 @@
 # EventGuard 現況
 
+## 2026-10-27 P2-OS-001 已批准並實跑：partial，未通過完整基線（最新）
+
+收到 dot 轉達的人類原問答：2026-10-27 03:00 UTC「同意1、2、3」，本案僅第3項單次 native listeners baseline。於原 reports/windows-listener-baseline-20261026-01 寫 human-approval.json，保守以 03:00:00–03:30:00 UTC 綁定原 root/run/manifest hash/scope；執行前確認 HEAD edc088c、原11檔 source hash 相符、無 intent/result/outer 回條，沒有重複執行。此新具名批准已取代下方歷史「尚未答覆」，一次授權現已使用。
+
+實際命令：py -3.13 -B reports/windows-listener-preparation-20261026-01/run-owned.py --root reports/windows-listener-baseline-20261026-01。查核 UTC 03:04:36.844483–03:04:37.668540（台北 11:04:36.844483–11:04:37.668540+08:00），query elapsed 0.739012 秒，無逾時／取消。TCP IPv4／IPv6 分別28／13列，UDP IPv4／IPv6分別132／62列，四項 status=ok，共235列、未截斷；必要程序身分缺111列、error_count=21，process_identity_status=unknown。因此 source partial、complete=false，驗收 status=blocked／reason=baseline_incomplete；不能把四表成功當完整 native 驗收通過，更不能判主機安全。
+
+原 HANDLE／Job 回條：內層 query 自然 exit 0、外層 validator 自然 exit 2，兩者 remaining_owned_processes=0、forcibly_terminated=false；外層 wrapper_error=false／deadline=false，命令返回1如實保留。只落盤固定狀態計數與自有 Job 回條，raw facts／socket／registry／system change／model 均無。本次未改產品碼或重跑 CI／全庫／真04；受測產品仍1e8f7e0。
+
+獨立收據一致性核對13/13（不是 baseline PASS）：原 run/批准時窗/scope、四表計數守恆、退出與原11檔 hash 均相符。證據為同目錄 result.json、execution-intent.json、outer-start.json、outer-exit.json、acceptance-crosscheck.json。只憑固定計數無法區分拒讀、程序退出競態或其他身分讀取失敗，根因維持未知；沒有再查、提權或降低完整標準。P2-OS-001 現為已執行但不完整，不再等待這次批准，也不自動換目錄重跑；後續 native 診斷／重驗須另有精確必要範圍。既定離線切片已完成，未辨識出可直接修復的新離線 regression；先按 checkpoint commit/push 保存，不新增 fixture 代替真來源。
+
 ## 2026-10-27 接續核對與 soak 時區修正（最新）
 
 接續 HEAD d922f48，分支 feat/local-codex-acceptance、upstream origin 同名；接手時追蹤檔案乾淨、ahead/behind 0/0，原兩個未追蹤目錄保留。受測產品仍為 1e8f7e0；既有 CI success、真04及調查證據沿用原 scope，不重跑全套。
