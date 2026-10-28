@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：Web修正普通整合與來源包
+
+直接ls-remote核對main及feat/local-codex-acceptance=87f7575915a9f0fed0d53ad788b256e1fc44b909，普通ff-only merge／push，未提交及對main差異0。`reports/release-prep-web-read-state-20261029-01`：350檔可重現，archive SHA256 9ec057a1c8404f9758e93d6977f391a575824ef498eca213ddcc536bc621e5bd。`reports/build-web-javascript-20261029-02`完整served JS以Node --check通過，Job自然退出0／remaining0／無強停；01自寫驗證回條使用不支援reason，未列通過，02改用既有test_teardown為最終。相關41與44項重疊，不相加；真瀏覽器、CI、真人及原生結果均不由此推定。
+
 ## 2026-10-29：Web來源卡片讀取失敗離線行為
 
 `reports/verify-web-source-read-state-20261029-02` UTC 2026-10-28 19:52:57：44/44、0skip、source_unchanged、Job自然退出0／remaining0。實際JS sources／node／時間函式以synthetic DOM/API驗拒讀後歷史成功、過期、未知／缺失／無效／未來時間、零列、HTML樣式文字；缺來源／重複／空資料及HTTP錯誤不留舊成功，慢成功／失敗不覆蓋新資料。01本地化日期斷言錯誤為43/44，02修正fixture比較後通過。`reports/build-web-source-read-state-20261029-01`：270檔受測hash相符、248檔編譯成功。這不是瀏覽器／人類可用性／原生驗收；既有待驗不變。

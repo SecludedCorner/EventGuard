@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 Web讀取故障修正已同步main
+
+f8ec035（fix(web): mark failed detail reads unknown and gate writes，+124/−5）與87f7575（fix(web): clear unconfirmed source cards and ignore stale replies，+101/−3）已逐單元普通push開發ref，再ff-only merge／普通push main，直接ls-remote核對兩ref=87f7575915a9f0fed0d53ad788b256e1fc44b909；相對main累積由233行清零，工作樹乾淨。41項與44項為重疊定向，不能相加；最終來源與詳情JS合成驗證見下節。`reports/release-prep-web-read-state-20261029-01`：綁定該SHA、350檔可重現。`reports/build-web-javascript-20261029-02`：完整served JS以既有Node --check通過、私有Job自然退出0／remaining0／未強停；01回條reason不合法失敗未冒稱通過，改用既有test_teardown後02為最終。純文件沿用來源build及測試，diff／引用路徑檢查通過。真瀏覽器／200%／真人／原生／完整恢復仍未驗，CI亦未確認。
+
 ## 2026-10-29 Web來源卡片失敗與舊回覆防護
 
 來源讀取中清除舊卡片並明示未知；HTTP／格式錯誤不沿用先前成功，七個唯一來源驗證完成後才依固定順序一次呈現。新請求序號阻擋晚到成功／失敗覆蓋新結果，保持歷史成功、原結果、目前狀態與新鮮度分列。`py -3.13 -B scripts/verify.py --run-dir reports/verify-web-source-read-state-20261029-02 --timeout-seconds 180 --module test_web_source_read_state --module test_web_detail_read_state --module test_application_ui_state --module test_source_success_history --module test_product_sources`：2026-10-29 03:52（UTC+8）44/44、0skip、source_unchanged、Job自然退出0／remaining0。Node執行實際renderer／node／時間函式，六情境及缺失／重複／空集合／晚到回覆合成已驗，非瀏覽器。01為43通過1失敗（fixture把本地化日期當ISO），改與實際when函式輸出比較後02通過；不更動產品日期語意。`reports/build-web-source-read-state-20261029-01`：270檔hash相符、248檔編譯成功。Web／200%／真人／原生維持待驗。
