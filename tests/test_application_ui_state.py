@@ -318,6 +318,7 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertNotIn("innerHTML", renderer)
         self.assertIn("investigationGapLabels[gap.reason]", renderer)
         self.assertIn("revision.diagnostic_evidence_status", renderer)
+        self.assertIn("診斷：'+diagnosticLabel", renderer)
         self.assertIn("診斷狀態未知", renderer)
         self.assertIn("diagnosis.observations", renderer)
         self.assertIn("observed:'已觀測，非安全判定'", renderer)

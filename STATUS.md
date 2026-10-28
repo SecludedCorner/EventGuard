@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 修訂收合摘要診斷狀態 WIP
+
+修訂收合摘要現在同時顯示事件成員與診斷證據狀態，避免成員相符掩蓋診斷變更或缺失。`reports/verify-revision-diagnostic-summary-20261028-01` UTC 11:27:37：26/26、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。`reports/revision-diagnostic-summary-dom-20261028-01` 實際 renderer 合成 DOM 五種診斷狀態通過，不是真瀏覽器；Work 設定仍禁用本機瀏覽器，UI 待驗。
+
 ## 2026-10-28 前版診斷結果語意 WIP
 
 前版診斷 observed 顯示「已觀測，非安全判定」，partial 顯示「部分觀測，資料不完整」，不認得的結果顯示未知。`reports/verify-revision-diagnostic-result-20261028-01` UTC 11:26:05：28/28、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。`reports/revision-diagnostic-result-dom-20261028-01` 直接執行實際 renderer 的三組 synthetic DOM，非瀏覽器；Work 設定仍禁用本機瀏覽器，UI 待驗。

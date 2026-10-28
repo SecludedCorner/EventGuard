@@ -76,12 +76,13 @@ function renderInvestigationRevisions(value,preserve=false){
   target.append(node('p','功能啟用前的版本未知。這些快照不代表目前主機安全；雜湊不驗證操作者身分。'));
   if(!value.revisions.length)target.append(node('p','尚無可顯示的先前版本。'));
   for(const revision of value.revisions){
-    const c=revision.case,box=node('details'),summary=node('summary','保存於 '+(typeof revision.saved_at==='number'?when(revision.saved_at*1000):'時間未知')+' / '+(revision.evidence_status==='saved_snapshot'?'保存成員相符':'證據未知'));
+    const diagnosticLabels={matched:'目前保存診斷與當時雜湊相符',changed:'目前診斷已變更',missing:'目前沒有保存診斷',not_bound:'此舊版本未綁定診斷',unknown:'診斷狀態未知'};
+    const diagnosticLabel=diagnosticLabels[revision.diagnostic_evidence_status]||'診斷狀態未知';
+    const c=revision.case,box=node('details'),summary=node('summary','保存於 '+(typeof revision.saved_at==='number'?when(revision.saved_at*1000):'時間未知')+' / '+(revision.evidence_status==='saved_snapshot'?'保存成員相符':'證據未知')+' / 診斷：'+diagnosticLabel);
     box.dataset.revisionId=String(revision.revision_id);box.open=open.has(box.dataset.revisionId);
     box.append(summary,node('p','快照時間：'+when(c.as_of)+'。案件：'+c.case_id+'。內容雜湊：'+revision.case_hash+'。'));
     if(revision.evidence_status!=='saved_snapshot')box.append(node('p','原事件缺失或內容已變，證據未知：'+[...revision.missing_event_ids,...revision.changed_event_ids].join(', '),'result-unknown'));
-    const diagnosticLabels={matched:'目前保存診斷與當時雜湊相符',changed:'目前診斷已變更',missing:'目前沒有保存診斷',not_bound:'此舊版本未綁定診斷',unknown:'診斷狀態未知'};
-    box.append(node('p','診斷證據：'+(diagnosticLabels[revision.diagnostic_evidence_status]||'診斷狀態未知')+'；這不代表目前主機安全。'));
+    box.append(node('p','診斷證據：'+diagnosticLabel+'；這不代表目前主機安全。'));
     const diagnosis=c.diagnostic_context;if(diagnosis&&diagnosis.state==='saved'){
       const diagnosticResultLabels={observed:'已觀測，非安全判定',partial:'部分觀測，資料不完整'};
       box.append(node('p','當時診斷時間：'+when(diagnosis.observed_at)+'，結果：'+(diagnosticResultLabels[diagnosis.result_status]||'未知')+'。'));

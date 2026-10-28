@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：修訂摘要診斷狀態合成測試
+
+`reports/verify-revision-diagnostic-summary-20261028-01` UTC 11:27:37，26/26、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。`reports/revision-diagnostic-summary-dom-20261028-01/run.js` node exit 0，五種診斷狀態均出現在實際 renderer 的合成 summary 中；非瀏覽器、無版面或鍵盤證據。
+
 ## 2026-10-28：前版診斷結果語意合成測試
 
 `reports/verify-revision-diagnostic-result-20261028-01` UTC 11:26:05，28/28、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。`reports/revision-diagnostic-result-dom-20261028-01/run.js` node exit 0：實際 renderer 的 observed／partial／未知三組 synthetic DOM；不是瀏覽器或真實診斷。
