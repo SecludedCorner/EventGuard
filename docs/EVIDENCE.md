@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：事件清單失敗／提示隔離
+
+`reports/verify-web-list-read-state-20261029-03` UTC 2026-10-28 19:59:51：42/42、0skip、source_unchanged、Job自然退出0／remaining0。Node執行實際events／invalidateEventList／refresh，合成驗失敗未知、停用分頁／隱藏詳情、錯誤／重複ID、計數不符、零列非安全、慢回覆不覆蓋，以及notice失敗仍能更新清單。01為原程式重現失敗；02fixture缺實際helper為41/42，03補入後通過。`reports/build-web-list-read-state-20261029-01`：271檔受測hash相符、249檔編譯成功。未新增採集／模型／ACK，非瀏覽器、人類或原生驗收。
+
 ## 2026-10-29：Web修正普通整合與來源包
 
 直接ls-remote核對main及feat/local-codex-acceptance=87f7575915a9f0fed0d53ad788b256e1fc44b909，普通ff-only merge／push，未提交及對main差異0。`reports/release-prep-web-read-state-20261029-01`：350檔可重現，archive SHA256 9ec057a1c8404f9758e93d6977f391a575824ef498eca213ddcc536bc621e5bd。`reports/build-web-javascript-20261029-02`完整served JS以Node --check通過，Job自然退出0／remaining0／無強停；01自寫驗證回條使用不支援reason，未列通過，02改用既有test_teardown為最終。相關41與44項重疊，不相加；真瀏覽器、CI、真人及原生結果均不由此推定。

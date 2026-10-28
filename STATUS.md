@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 Web事件清單失敗與獨立刷新
+
+清單重新確認時筆數標示尚未確認、分頁暫停；HTTP／格式錯誤清除舊列，筆數未知並停用分頁，隱藏未確認詳情。比對筆數／分頁一致性與唯一合法ID，晚到成功／失敗不覆蓋新清單。高嚴重度提示失敗只顯示未知，不再阻止事件清單獨立刷新；恢復前清除舊提示cache以重建內容。`py -3.13 -B scripts/verify.py --run-dir reports/verify-web-list-read-state-20261029-03 --timeout-seconds 180 --module test_web_event_list_read_state --module test_application_ui_state --module test_event_catalog --module test_web_detail_read_state --module test_web_source_read_state`：2026-10-29 03:59（UTC+8）42/42、0skip、source_unchanged、Job自然退出0／remaining0，實際JS＋synthetic DOM/API，非瀏覽器。01原程式重現失敗；02測試未載入實際invalidate helper而1失敗，補入後03通過。`reports/build-web-list-read-state-20261029-01`：271檔hash相符、249檔編譯成功。Web真瀏覽器／200%／真人／原生仍待驗。
+
 ## 2026-10-29 Web讀取故障修正已同步main
 
 f8ec035（fix(web): mark failed detail reads unknown and gate writes，+124/−5）與87f7575（fix(web): clear unconfirmed source cards and ignore stale replies，+101/−3）已逐單元普通push開發ref，再ff-only merge／普通push main，直接ls-remote核對兩ref=87f7575915a9f0fed0d53ad788b256e1fc44b909；相對main累積由233行清零，工作樹乾淨。41項與44項為重疊定向，不能相加；最終來源與詳情JS合成驗證見下節。`reports/release-prep-web-read-state-20261029-01`：綁定該SHA、350檔可重現。`reports/build-web-javascript-20261029-02`：完整served JS以既有Node --check通過、私有Job自然退出0／remaining0／未強停；01回條reason不合法失敗未冒稱通過，改用既有test_teardown後02為最終。純文件沿用來源build及測試，diff／引用路徑檢查通過。真瀏覽器／200%／真人／原生／完整恢復仍未驗，CI亦未確認。
