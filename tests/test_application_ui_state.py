@@ -285,6 +285,18 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertIn("item.dataset.eventId===id", delivery)
         self.assertEqual(self.calls, [])
 
+    def test_saved_investigation_summary_preserves_uncertainty_and_bounds(self):
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        renderer = script.split("function renderInvestigation(value){", 1)[1].split("function isStatusSnapshot(", 1)[0]
+        for required in ("保存的調查快照", "c.anchor_event_id", "value.evidence_status==='saved_snapshot'",
+                         "未知，原事件缺失或已變更", "value.snapshot_freshness", "c.timeline.length",
+                         "correlation.examined", "c.gaps.length", "correlation.truncated===true",
+                         "correlation.truncated===false", "主機安全與入侵狀態未判定"):
+            self.assertIn(required, renderer)
+        self.assertNotIn("innerHTML", renderer)
+        self.assertEqual(self.calls, [])
+
     def test_served_script_exposes_pure_state_functions_and_bounded_timeouts(self):
         code, _, script = self.request("/app.js")
         self.assertEqual(code, 200)

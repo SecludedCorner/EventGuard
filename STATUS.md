@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-28 P1-INVEST-004A 保存調查摘要
+
+Web 已保存調查增加快照概況：錨定事件、保存時間、成員 hash 狀態、快照新鮮度、保存成員／候選／缺口數及截斷；未知與過期明示，不判安全或因果。既有關聯與資料儲存規則未改。
+
+`reports/gui-investigation-summary-20261028-02` 真瀏覽器合成案例：16 成員／26 候選／截斷、過期及缺口可見，重新開啟內容一致；改變獨立 synthetic 成員後證據變未知，該狀態讀取前後 SQLite SHA256 不變。Job 自然 0／remaining 0／無強停，0 POST／native／model。定向 `reports/verify-gui-investigation-summary-20261028-01` UTC 08:38:09、62/62、0 skip、218 AST、source_unchanged、Job 自然退出。來源 build 是工作樹 320 檔 ZIP 自檢，非 commit 候選。下一步 P1-INVEST-004B，關聯理由與缺口靠近觀測。
+
 ## 2026-10-28 修正網址分頁 regex 的 Python 載入警告
 
 P1-INVEST-004A 的合成 fixture 建立時發現 Web 內嵌 JavaScript `\d` 讓 Python 3.13 發出 SyntaxWarning；改為等價 `[0-9]`，頁碼語意不變。`py -3.13 -B -W error::SyntaxWarning -c "import sys; sys.path.insert(0, 'src'); import eventguard.web"` 通過；`reports/verify-gui-url-regex-20261028-01` UTC 08:35:31、33/33、0 skip、218 AST、Job 自然退出。工作樹來源 ZIP build 320 檔自檢，非 commit 候選。下一步接續已保存調查摘要；尚未驗收。

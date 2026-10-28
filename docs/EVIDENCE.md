@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-28：P1-INVEST-004A 合成保存調查
+
+獨立 synthetic fixture 根據既有 investigation metadata 建立保存案件，含 16 成員、26 候選、truncated=true；真瀏覽器 `#investigation-view` 顯示錨定事件、hash 相符、快照過期、缺口及截斷，重開文字一致。原始資料庫 hash `2bf9ea39710c5db4d3a02b86346657d108b80e574aa65fd8d04abfe2a10d018f` 在第一次瀏覽前後一致。測試另在隔離 SQLite 更改一個 synthetic 成員內容及其自洽 hash；已保存案件改顯示證據未知，讀取前後 SQLite hash 同為 `1bf0d18fa9b18e7cf136974866bb11deedb1d87785104b39c144b7a1db78367e`。初次只改 payload 造成 local_storage_unavailable，之後改為一致的合成記錄才進行未知狀態驗收，沒有改產品資料或略過錯誤。
+
+`reports/gui-investigation-summary-20261028-02` 原 Job 自然 0／remaining 0／無強停，worker 0 POST／native／model；shutdown_requested_reason 為 harness 預設，實際合作停止。`reports/verify-gui-investigation-summary-20261028-01` 62/62、0 skip、218 AST、source_unchanged；既有負控制測試含 PID 重用、異來源與缺身分，不以合成測試聲稱真實偵測效能。
+
 ## 2026-10-28：網址 regex Python 警告
 
 準備調查合成 fixture 時 Python 3.13 對 Web 字串內 `\d` 發出 SyntaxWarning；等價 `[0-9]` 修正後以 `-W error::SyntaxWarning` 匯入通過。`reports/verify-gui-url-regex-20261028-01` 為 33/33、0 skip、218 AST／source_unchanged、Job 自然 0／remaining 0／無強停；不代表新調查介面已完成。

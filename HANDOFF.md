@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-28 P1-INVEST-004A 保存調查摘要
+
+合成瀏覽器核對快照身分、過期、16 成員／26 候選／截斷與重開一致；成員變更顯示證據未知、只讀 hash 未變；62/62 定向，原 Job 自然退出。下一步 P1-INVEST-004B 觀測旁呈現關聯理由／缺口，不變更關聯算法；詳 STATUS／EVIDENCE。
+
 ## 2026-10-28 網址 regex 載入警告修正
 
 分頁 JS regex 改用等價數字字元範圍，Python `-W error::SyntaxWarning` 匯入及定向 33/33 通過。下一步接續 P1-INVEST-004A；先前合成 fixture／未完成呈現草稿保存在 `reports/gui-investigation-summary-20261028-01`，未視為完成。
