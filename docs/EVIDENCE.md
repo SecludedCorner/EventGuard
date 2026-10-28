@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-28：GUI 合成固定版本前後比較
+
+`reports/release-prep-ux-before-20261028-01` 與 `-after-20261028-01` 各兩份可重現 archive，固定 ad1f127／338cdc5；`reports/ux-compare-20261028-01/comparison.json` 記相同 synthetic DB hash `a40645cbbb8777cadf0f8e857cebafcbda71541ad0f8f3a9636cdc2d74ea8a09` 與真瀏覽器操作。嚴重／new 篩選：舊版 3 次選擇／提交、516ms，新版按提示 1 次、293ms，皆 2 件／首列嚴重；拒讀後最後成功：舊卡 1 操作／434ms 未呈現，新卡 1 操作／398ms 可見且拒讀仍在。觀察錯誤結果與誤判安全均 0，但樣本僅兩項單次自動化操作，不能推論人類或產品優越性。
+
+兩個私有 Job 自然 0／remaining 0／無強停、0 POST／native／model，來源 GET 各 7；shutdown_requested_reason 為 harness 預設，實際合作停止。新版來源頁 800／1280 viewport 無橫向溢位；未測 200% zoom、完整六情境或競品租戶。`reports/verify-ux-comparison-20261028-01` 26/26、0 skip／224 AST／Job 自然退出。
+
 ## 2026-10-28：P2-HISTORY-001C 合成瀏覽器
 
 `reports/gui-handling-history-20261028-01` 四 synthetic 事件：三筆 GUI／MCP／CLI 轉換與 no-op；沒有記錄；刻意損壞後未知；32 筆滿載提示。畫面明示來源非已驗證身分與處置非 ACK。SQLite SHA256 前後皆 `0cb758f6764eeedcef8c36a7abd9ef218f1d7e9bfcb3067731d71f9c78166e90`，4 pending／0 receipt；worker 0 POST／native／model、Job 自然 0／remaining 0／無強停，shutdown_requested_reason 為 harness 預設且實際合作停止。
