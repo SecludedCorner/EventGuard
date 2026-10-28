@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 事件詳情切換安全修正
+
+切換到不同事件時立即隱藏舊詳情，避免新事件還在載入時，畫面顯示舊事件卻操作新事件；同事件輪詢仍保留詳情。`reports/gui-detail-switch-safety-20261028-01` 合成瀏覽器延遲第二事件，確認舊詳情隱藏／可見處置按鈕 0，放行後顯示第二事件及其 delivery；0 POST／native／model、Job 自然 0／remaining 0／無強停。`reports/verify-detail-switch-safety-20261028-01` UTC 09:17:08、49/49、0 skip、224 AST、source_unchanged、Job 自然退出；來源工作樹 ZIP 自檢。歷程容量恢復仍未完成。
+
 ## 2026-10-28 處置歷程事件身分綁定
 
 發現事件 ID 可在保留期後重用，舊歷程若只靠 ID 可能誤歸屬；新紀錄與重播綁定驗證過的 payload hash。舊表未綁定資料不自動回填，讀取與重播顯示未知／衝突；新寫入時同交易惰性加欄、保留舊列，不以目前內容倒推舊身分。

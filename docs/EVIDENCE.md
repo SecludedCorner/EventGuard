@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：詳情切換安全合成驗收
+
+`reports/gui-detail-switch-safety-20261028-01`：先開合成事件 A，延遲 B 的詳情並點 B；載入中 `#detail` hidden、可見處置按鈕 0；放行後詳情及 delivery 均為 B。worker 0 POST／native／model，原 Job 自然 0／remaining 0／無強停；shutdown_requested_reason 為 harness 預設，實際合作停止。`reports/verify-detail-switch-safety-20261028-01` 49/49／0 skip／224 AST／source_unchanged，Job 自然退出。
+
 ## 2026-10-28：處置歷程身分綁定
 
 新操作與事件 payload hash 同交易保存；同操作 ID 重新使用於不同內容或舊版未綁定紀錄時衝突。舊 schema 只在明確寫入時惰性加欄，舊列 hash 仍 NULL，不偽造歸屬；讀取不遷移，任何未綁定或不同 hash 的該事件歷程顯示 unknown。

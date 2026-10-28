@@ -277,6 +277,8 @@ class ApplicationUIContractTests(unittest.TestCase):
         code, _, script = self.request("/app.js")
         self.assertEqual(code, 200)
         event_renderer = script.split("async function events(){", 1)[1].split("async function detail(", 1)[0]
+        detail_renderer = script.split("async function detail(id){", 1)[1].split("async function sources(){", 1)[0]
+        self.assertIn("if(selected!==id)$('detail').hidden=true;selected=id", detail_renderer)
         self.assertIn("b.dataset.eventId=e.event_id", event_renderer)
         self.assertIn("item.dataset.eventId===focused", event_renderer)
         delivery = script.split("const showDetail=detail;", 1)[1].split("$('investigate')", 1)[0]
