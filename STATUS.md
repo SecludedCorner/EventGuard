@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 歷程備份身分唯讀預檢核心
+
+新增未接操作入口的唯讀預檢：核對備份完整性與 namespace、事件實際 payload hash、未綁定記錄、缺事件及 operation 衝突，只輸出計數，不執行或授權還原。`reports/verify-history-backup-preview-20261028-01`：19/19、0 skip、229 AST、source_unchanged、Job 自然 0／remaining 0／無強停；synthetic 驗證相同、缺少、衝突、範圍錯誤、舊格式 unknown、來源不改。這不檢查容量、歷程順序、來源真實性或能否恢復；完整還原及釋放容量仍未實作。
+
 ## 2026-10-28 歷程備份 CLI 與來源範圍
 
 明確執行 `events backup-history --namespace test|live --name history-backup-<名稱>.json` 才會寫入 reports；讀取使用 query-only，輸出僅為摘要，來源不刪除、不 ACK。快照 1.1 綁定 namespace，1.0 回報 unknown；SHA256 非簽章。`reports/verify-history-backup-cli-20261028-03`：42/42、0 skip、228 AST、source_unchanged、Job 自然退出 0／remaining 0／無強停，僅 synthetic。實際 junction、斷電後目錄項持久性、完整 DB 備份、還原與容量釋放尚未驗證。下一步建立不修改資料的還原前檢查；不得刪除歷程。

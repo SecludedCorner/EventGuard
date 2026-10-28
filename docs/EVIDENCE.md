@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：歷程備份身分預檢合成測試
+
+`reports/verify-history-backup-preview-20261028-01` UTC 09:44:42，19/19、0 skip、229 AST、source_unchanged；Job 自然退出 0／remaining 0／無強停。比對合成 SQLite 實際事件內容與備份、缺失／未綁定／衝突／舊範圍 unknown；來源 DB／pending／ACK 未變。預檢不驗證容量、順序、來源真實性，不能宣稱已完成還原。
+
 ## 2026-10-28：明確歷程備份 CLI 與 namespace
 
 `reports/verify-history-backup-cli-20261028-03` UTC 09:42:38，42/42、0 skip、228 AST、source_unchanged；Job 自然退出 0、remaining 0、無強停；synthetic 驗證 CLI 明確呼叫、摘要不洩識別、缺庫不建立、既有檔不覆寫、原 DB 不變，以及 1.1 namespace 綁定／1.0 unknown。先前 `--module test_presentation` 指定不存在的模組，參數檢查即失敗，未啟動測試 worker；已改為實際模組重驗。真 junction／斷電持久性、還原和容量釋放均未驗，hash 非簽章。

@@ -85,3 +85,51 @@ def verify_snapshot(value):
         raise ValueError("history_backup_integrity_failed")
     return {"records": len(data["records"]), "sha256": digest, "bytes": len(encoded),
             "namespace": data["namespace"] if scoped else "unknown"}
+
+
+def preview_identity(db, value, *, namespace):
+    """Compare identities only; never authorize or perform a restore.
+
+    Counts do not prove archive authenticity, capacity, transition ordering,
+    target provenance or recoverability. Both snapshots use one read transaction.
+    """
+    from .schema import validate_event
+    from .store import event_payload_hash
+
+    verified = verify_snapshot(value)
+    if namespace not in ("live", "test") or verified["namespace"] != namespace:
+        raise ValueError("history_backup_namespace_unverified")
+    current = snapshot(db, namespace=namespace)
+    operations = {item["operation_id"]: item for item in current["data"]["records"]}
+    counts = {"unbound": 0, "event_missing": 0, "event_mismatch": 0,
+              "operation_conflict": 0, "already_present": 0, "absent_operation": 0}
+    event_checks = {}
+    for item in value["data"]["records"]:
+        event_id = item["event_id"]
+        if item["payload_hash"] is None:
+            counts["unbound"] += 1
+            continue
+        if event_id not in event_checks:
+            row = db.execute("SELECT payload,payload_hash FROM events WHERE event_id=?", (event_id,)).fetchone()
+            if row is None:
+                event_checks[event_id] = ("event_missing", None)
+            else:
+                try:
+                    event = validate_event(json.loads(row[0]))
+                    digest = event_payload_hash(event)
+                    valid = event["event_id"] == event_id and row[1] == digest
+                except (TypeError, ValueError, KeyError, OverflowError):
+                    valid, digest = False, None
+                event_checks[event_id] = (None if valid else "event_mismatch", digest)
+        failure, digest = event_checks[event_id]
+        if failure or digest != item["payload_hash"]:
+            counts[failure or "event_mismatch"] += 1
+        elif item["operation_id"] not in operations:
+            counts["absent_operation"] += 1
+        elif item == operations[item["operation_id"]]:
+            counts["already_present"] += 1
+        else:
+            counts["operation_conflict"] += 1
+    return {"counts": counts, "identity_conflicts": sum(counts[k] for k in
+            ("unbound", "event_missing", "event_mismatch", "operation_conflict")),
+            "restore_performed": False, "restore_authorized": False}
