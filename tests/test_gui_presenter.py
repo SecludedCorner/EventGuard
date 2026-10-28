@@ -12,6 +12,27 @@ def item(event_id="fixture-event", **changes):
 
 
 class GuiPresenterTests(unittest.TestCase):
+    def test_saved_timeline_retains_order_missing_members_and_bounded_gap_reasons(self):
+        rows = [item('later', observed_at='later', source='listeners', coverage_status='denied'),
+                item('earlier', observed_at='earlier', transition='resolved', coverage_status='partial')]
+        document = {"event": item(), "investigation": {"evidence_status": "unknown",
+            "missing_event_ids": ['later'], "changed_event_ids": ['earlier'],
+            "case": {"anchor_event_id": 'fixture-event', "timeline": rows,
+                     "gaps": [{"reason": 'stable_entity_missing'}] * 9}}}
+        before = copy.deepcopy(document)
+        summary = event_summary(document)
+        self.assertLess(summary.index('later | later'), summary.index('earlier | earlier'))
+        for text in ('原事件缺失，未知', '事件內容已變更，未知', '快照保存順序，非因果鏈', '已記錄恢復轉換', '僅顯示前8項缺口'):
+            self.assertIn(text, summary)
+        self.assertEqual(summary.count('證據缺口：缺少穩定實體身分'), 8)
+        self.assertIn('保存可見性：拒讀', summary)
+        self.assertIn('保存可見性：部分可讀', summary)
+        self.assertNotIn('與保存雜湊相符', summary)
+        self.assertEqual(before, document)
+        document['investigation']['case']['timeline'] = rows * 9
+        self.assertIn('時間線格式或上限無法核對', event_summary(document))
+        self.assertNotIn('later | later', event_summary(document))
+
     def test_handled_is_independent_of_pending_ack_and_history_is_bounded(self):
         rows = [{"previous_status": "new", "status": "handled", "source": "cli",
                  "at": f"fixture-time-{i}", "changed": True} for i in range(10)]

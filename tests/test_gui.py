@@ -306,6 +306,30 @@ class GuiOwnTkWidgetTests(unittest.TestCase):
         self.assertEqual(self.ui.activities.item(row["id"], "values")[3], "已完成")
         self.assertIn("執行中 0", self.ui.activity_status.get())
 
+    def test_real_detail_widget_renders_catalog_saved_timeline_without_creating_new_work(self):
+        import tempfile
+        from pathlib import Path
+        from eventguard.events.catalog import EventCatalog
+        from eventguard.events.store import EventStore
+        from eventguard.synthetic import make_synthetic
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            event = make_synthetic()
+            EventStore(root/'data/test').enqueue(event)
+            catalog = EventCatalog(root, 'test')
+            catalog.investigate(event['event_id'])
+            document = catalog.detail(event['event_id'])
+            self.ui._show_detail(document)
+            self.window.update_idletasks()
+            text = self.ui.detail.get('1.0', 'end')
+            self.assertIn(event['event_id'], text)
+            self.assertIn('保存時間線（最多16項', text)
+            self.assertIn('非因果鏈', text)
+            self.assertIn('與保存雜湊相符', text)
+            self.assertEqual(self.ui.detail.cget('state'), 'disabled')
+            self.assertEqual(catalog.detail(event['event_id'])['event']['delivery_status'], 'pending')
+        self.assertFalse(any(action != 'snapshot' for action, _ in self.controller.calls))
+
     def test_real_detail_widget_shows_handled_while_delivery_remains_pending(self):
         document = {"event": copy.deepcopy(self.controller.value["events"][0]), "status": "handled",
                     "handling_history": {"state": "available", "count_capacity": "available", "entries": [

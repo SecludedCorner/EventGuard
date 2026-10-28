@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面保存時間線與證據缺口
+
+桌面調查詳情加入最多16項保存時間線，保留快照順序而不重排／推導關係；每項列出保存來源可見性，缺失／內容改變維持未知，恢復轉換不當目前修復證明。最多8項中文缺口，未知原因不補造。前兩個摘要單元已普通同步main與開發ref至c3d34fa，對main差異曾清零。本次 `py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-saved-timeline-20261029-02 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop --module test_event_investigation`：2026-10-29 03:12（UTC+8）91/91、0skip、source_unchanged、Job自然退出／remaining0；包含真EventCatalog合成資料到實際Tk元件、拒讀／partial、順序與界限測試。`reports/build-desktop-saved-timeline-20261029-02`：266檔受測hash相符、244檔編譯成功，含未提交變更。人工版面／鍵盤、Web與實機仍待驗。
+
 ## 2026-10-29 桌面人工處置與操作歷程摘要
 
 桌面事件詳情新增人工處置狀態與最後8筆保存操作，來源標為通道而非已驗證操作者；已處理不當ACK或修復，無紀錄／損壞維持未知，容量滿載與更早歷程未知分列。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-handling-summary-20261029-01 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop --module test_disposition_history_read --module test_disposition_history_integration`：2026-10-29 03:07（UTC+8）84/84、0 skip、source_unchanged，真Tk＋fixture核對handled仍pending、舊歷程清除、唯讀元件；Job自然退出0／remaining0。`reports/build-desktop-handling-summary-20261029-01`：266檔受測hash相符、244檔編譯通過。未採集／模型／ACK；人工UI與Web待驗不升格。

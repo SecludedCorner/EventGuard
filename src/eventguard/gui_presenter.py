@@ -167,6 +167,43 @@ def event_list_view(document, *, severity="all", delivery="all"):
             "events_loaded": loaded, "events_total": total, "events_truncated": truncated}
 
 
+def investigation_timeline(value, case):
+    """Keep saved order and per-member uncertainty; never derive new edges."""
+    rows = case.get("timeline")
+    if not isinstance(rows, list) or len(rows) > 16 or any(not isinstance(row, dict) for row in rows):
+        return ["保存時間線格式或上限無法核對，保持未知。"]
+    lines = ["保存時間線（最多16項，快照保存順序，非因果鏈）"]
+    sources = {"listeners": "監聽端點", "processes": "程序", "defender": "Defender", "startup": "啟動項",
+               "services": "服務", "tasks": "排程工作", "versions": "版本", "monitor": "監看", "advisories": "安全公告"}
+    missing, changed = value.get("missing_event_ids"), value.get("changed_event_ids")
+    identities_known = isinstance(missing, list) and isinstance(changed, list)
+    coverage = {"ok": "可讀（非安全判定）", "partial": "部分可讀", "denied": "拒讀", "error": "讀取失敗"}
+    for row in rows:
+        identity = row.get("event_id")
+        state = ("原事件缺失，未知" if identities_known and identity in missing else
+                 "事件內容已變更，未知" if identities_known and identity in changed else
+                 "與保存雜湊相符" if identities_known and value.get("evidence_status") == "saved_snapshot" else "成員證據未知")
+        lines.append(safe_text(row.get("observed_at"), 80) + " | " + safe_text(identity, 160) + " | "
+                     + sources.get(safe_text(row.get("source")), "未知來源") + " | " + event_title(row)
+                     + " | " + TRANSITIONS.get(safe_text(row.get("transition")), "轉換未知") + " | " + state
+                     + " | 保存可見性：" + coverage.get(safe_text(row.get("coverage_status")), "未知"))
+    if not rows:
+        lines.append("尚無可顯示的保存項目，不代表沒有事件。")
+    gaps = case.get("gaps")
+    if not isinstance(gaps, list):
+        return [*lines, "證據缺口格式未知。"]
+    reasons = {"stable_entity_missing": "缺少穩定實體身分", "source_unknown": "來源未知",
+               "source_incomplete": "來源資料不完整", "saved_observation_stale": "保存觀測已過期",
+               "observation_in_future": "觀測時間在未來", "simultaneous_metadata_conflict": "同時觀測內容衝突",
+               "sequence_time_conflict": "序號與時間順序衝突", "candidate_or_member_limit": "候選或成員數達上限"}
+    for gap in gaps[:8]:
+        reason = gap.get("reason") if isinstance(gap, dict) else None
+        lines.append("證據缺口：" + reasons.get(safe_text(reason), "未分類或格式未知，請核對原始資料"))
+    if len(gaps) > 8:
+        lines.append("僅顯示前8項缺口，完整資料可展開原始結構化檢視。")
+    return lines
+
+
 def investigation_summary(value, event_id):
     """Summarize only the shared catalog's saved case, without constructing one."""
     if value is None:
@@ -186,7 +223,8 @@ def investigation_summary(value, event_id):
             "保存時間：" + safe_text(case.get("as_of"), 80), "調查狀態：" + state,
             "成員證據：" + evidence, "診斷證據：" + diagnostic, "快照新鮮度：" + freshness,
             f"保存關聯項目 {count}；證據缺口 {gap_count}。完整資料可展開原始結構化檢視。",
-            "關聯不等於因果；未推定程序樹或攻擊鏈，未判定安全／入侵；作業系統帳戶身分仍未知。"]
+            "關聯不等於因果；未推定程序樹或攻擊鏈，未判定安全／入侵；作業系統帳戶身分仍未知。",
+            *investigation_timeline(value, case)]
 
 
 def handling_summary(value):
