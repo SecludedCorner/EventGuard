@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 Web詳情失敗與身分核對
+
+詳情新增讀取狀態；同事件刷新失敗時清除舊內容、處置／調查／投遞資料維持未知並停用寫入，重試成功才恢復。回覆event_id須符合請求，晚到失敗／成功不串到其他案件，失敗不續查delivery；按鈕處理函式亦拒絕未確認詳情。`py -3.13 -B scripts/verify.py --run-dir reports/verify-web-detail-read-state-20261029-03 --timeout-seconds 180 --module test_web_detail_read_state --module test_application_ui_state --module test_event_catalog --module test_investigation_revision_renderer`：2026-10-29 03:49（UTC+8）41/41、0skip、source_unchanged、Job自然退出0／remaining0；Node執行實際JS函式與處理器＋synthetic DOM/API，非瀏覽器驗收。`reports/build-web-detail-read-state-20261029-02`：269檔hash相符、247檔編譯通過。01／02各41/41；修復寫檔造成的換行雜訊後03重驗，diff-check通過，不提交無關換行修改。Web真瀏覽器／200%／真人／原生仍待驗。
+
 ## 2026-10-29 桌面與歷程增量已整合main
 
 56786b4（+162/−10）、534d0f1（+122/−6）、1518062（+35/−1）、dd4deeb（+87/−6）均已審查、build／相關測試通過、逐單元普通push開發ref，再以ff-only merge普通push main。直接ls-remote核對兩ref=dd4deebaa9846b61f29974d64436c3c83563b589，工作樹及對origin/main差異0；未改寫歷史、刪分支或release。最終跨受影響模組整合：`py -3.13 -B scripts/verify.py --run-dir reports/verify-main-desktop-history-20261029-01 --timeout-seconds 180`加該目錄verification-summary所列13個`--module`，2026-10-29 03:42（UTC+8）131/131、0skip、source_unchanged、Job自然退出0／remaining0，246檔語法檢查通過。`reports/release-prep-history-transition-preview-20261029-01`綁定該40碼SHA，348檔來源包可重現；未確認CI，不等於真人／瀏覽器／原生或完整恢復驗收。本節純文件沿用上述來源build／測試並檢查diff與既有路徑。

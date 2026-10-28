@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：Web詳情失敗離線行為
+
+`reports/verify-web-detail-read-state-20261029-03` UTC 2026-10-28 19:49:34：41/41、0skip、source_unchanged、Job自然退出0／remaining0。實際JS詳情／delivery與按鈕處理器在Node＋synthetic DOM/API驗同案失敗清除、未知／停用、重試、錯案ID、晚到結果及未確認時不送保存請求；非瀏覽器。`reports/build-web-detail-read-state-20261029-02` 269檔hash相符、247檔編譯。01／02通過後發現混合換行被寫檔正規化，保存原未改行bytes移除無關diff，03為最終；blocker回條留reports，未放寬diff檢查或UI驗收。
+
 ## 2026-10-29：main同版本桌面／歷程整合
 
 已普通ff-only merge／push並直接核對main與開發ref=dd4deebaa9846b61f29974d64436c3c83563b589；未提交及對origin/main差異皆0。`reports/verify-main-desktop-history-20261029-01` UTC 2026-10-28 19:42:14：13個受影響模組131/131、0skip、source_unchanged、246檔語法無誤，Job自然退出0／remaining0／無強停，未原生採集／模型／ACK。`reports/release-prep-history-transition-preview-20261029-01`：348檔可重現，source-commit.json保存直接遠端核對與各次來源差異，較早單元後續受其他提交改動的hash未冒稱仍相同。本節純文件沿用來源build，Web／真人／原生與完整恢復仍未驗。
