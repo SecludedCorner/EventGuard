@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：歷程完全前綴合成測試
+
+`reports/verify-history-restore-prefix-20261028-01` UTC 11:10:51，15/15、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 一筆前綴後只追加缺失尾段，重開重播不增列；已有不同後續操作的目標拒絕，bytes／pending／ACK 保留。沒有真實資料操作、來源認證或容量釋放。
+
 ## 2026-10-28：歷程還原 EventStore 合成交易
 
 `reports/verify-history-restore-integration-20261028-01` UTC 11:08:45，42/42、0 skip、242 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 內部交易核對初始／寫後容量不足回滾、重開操作識別重播、原來源與 pending／ACK 不變；無入口、來源認證或真實還原，不能用它宣稱滿載已恢復。

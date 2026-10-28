@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 歷程完全前綴追加與分歧拒絕
+
+`reports/verify-history-restore-prefix-20261028-01` UTC 11:10:51：15/15、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 實測先還原一筆後再追加尾段，順序不變、重開重播不增列；目標後續已有不同操作時整筆拒絕，DB／pending／ACK 不變。仍無使用者入口、來源認證、真實還原與容量釋放。
+
 ## 2026-10-28 歷程還原內部交易與容量回滾
 
 EventStore 新增僅內部使用的追加還原交易：先預留 ACK 空間，再以實際 DB 使用量複核；容量不足整筆回滾。`reports/verify-history-restore-integration-20261028-01` UTC 11:08:45：42/42、0 skip、242 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 核對前後容量失敗、重開與操作重播、pending／ACK／來源不變。沒有 CLI／UI 還原入口、備份來源認證、真實還原或容量釋放；歷程追加不改目前處置狀態。
