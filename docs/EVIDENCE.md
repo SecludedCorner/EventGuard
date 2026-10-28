@@ -1,5 +1,14 @@
 # 證據與時間日誌
 
+## 2026-10-28：P1-GUI-001 合成來源卡片
+
+目標 `#source-cards` 實際瀏覽器觀察七張卡片：歷史成功後拒讀保留原因、舊成功顯示目前過期、未知／無效／未來時間顯示未知、零列顯示 0、HTML 樣式名稱與原因為文字且無 img／b 節點。800px 寬 `scrollWidth=785`、鍵盤 Enter 切事件與來源頁；沒有保存截圖。合成 API fixture 非真主機資料；before／after 人類操作時間與競品比較未取得。
+
+`reports/gui-source-cards-20261028-01/guardian-exit.json` 原 Job 自然 exit 0、remaining 0、無強停；worker-exit.json 記 5 次來源讀取、0 POST、model/native 0、web thread 已退出。guardian 的 shutdown_requested_reason 記為 timeout 是 harness 傳入的預設理由，實際 stop.request 為合作停止、reason 為 natural_exit，不能把它讀成 timeout 發生。
+
+`reports/verify-gui-source-cards-20261028-02`：18/18、無 skip、218 AST，含三次實際來源 HTTP GET 前後持久檔 byte 相等及 synthetic pending／stats 不變；0 native／model；測試 Job 自然退出。瀏覽器 fixture 狀態為合成注入，與後端持久化只讀測試分開，不能稱完成真實來源覆蓋。
+
+
 ## 2026-10-28：競品研究工程規格與來源界線核對
 
 第一證據單元已普通 push f1ed1e07f884e961e96aaffa3cbf9cf51544578d／feat/local-codex-acceptance，+113/-0；遠端同 SHA，status／shortstat 無輸出。第二單元只補 [規格](research/competitor-gui/ENGINEERING_PLAN.md) 與既有管理入口；所有產品項目是未實作提案。新增重要發現：source_status 1.0 的最後成功／新鮮度尚未接到七來源卡片，不能以公告卡片或 API 測試冒充 GUI 已完成；Tk activity 已存在，也不能誤報產品全無操作歷程。

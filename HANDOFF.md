@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-28 P1-GUI-001 已實作與合成瀏覽器驗證
+
+七來源卡片已分列歷史成功、目前狀態、新鮮度與列數；18/18 定向、三次來源 HTTP 只讀、七卡真瀏覽器及 800px／鍵盤切換已驗。Job 與測試證據見 STATUS／EVIDENCE 及 `reports/gui-source-cards-20261028-01`。下一個可執行切片 P1-GUI-002A：事件頁來源缺口摘要；錯誤、缺項及重複不得當健康。恢復先核對 Git 狀態。人類測時、競品租戶及原生／24h／重啟／桌面喚醒均未驗證。
+
 ## 2026-10-28 競品研究完成，下一工程切片為 P1-GUI-001
 
 先讀 [公開研究](docs/research/competitor-gui/README.md) 與 [工程規格](docs/research/competitor-gui/ENGINEERING_PLAN.md)，順序已進既有 MAINTENANCE_GOAL。研究任務只交付來源／對照／驗收規格，沒有完成產品切片。第一個可直接開工項：Web 七來源卡片補最後成功／新鮮度；既有 API 不需擴充。規格列六個 synthetic 驗收，務必核對七來源 DOM，不能拿公告卡片文字假通過。

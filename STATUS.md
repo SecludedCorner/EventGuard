@@ -1,5 +1,15 @@
 # EventGuard 現況
 
+## 2026-10-28 P1-GUI-001 七來源卡片
+
+Web 卡片分列最後採集、原結果、目前狀態、最後成功、新鮮度與觀測列數；缺失／無效／未來成功時間顯示未知，拒讀或過期不被歷史成功覆蓋。合成零列不表示安全；來源文字以 textContent 顯示。
+
+定向：`py -3.13 -B scripts/verify.py --run-dir reports/verify-gui-source-cards-20261028-02 --timeout-seconds 180 --module test_source_success_history --module test_application_ui_state`，UTC 08:11:37，18/18、0 skip、218 AST、source_unchanged，Job 自然退出／剩餘 0／無強停。三次 HTTP GET 比較資料檔 bytes 與合成 pending／stats 未變。
+
+未提交工作樹來源 build：`reports/gui-source-cards-20261028-01/working-tree-build.zip`，320 個已追蹤檔案逐檔 hash／ZIP 自檢；含本切片，並非既有以 commit 建置的正式候選包。
+
+隔離真瀏覽器實際核對 `#source-cards` 七卡：拒讀、過期、未知、無效及未來時間、零列與 HTML 樣式文字；800px 無水平溢位、Enter 切換頁面，合成 worker 退出 0／剩餘 0／無強停。證據 `reports/gui-source-cards-20261028-01`；來源 build 與限制見 EVIDENCE。非實機採集或使用者研究；後續 P1-GUI-002A。
+
 ## 2026-10-28 競品研究與工程開工規格完成（未實作產品）
 
 [公開研究](docs/research/competitor-gui/README.md) 與 [工程規格](docs/research/competitor-gui/ENGINEERING_PLAN.md) 已連回 MAINTENANCE_GOAL。核對現有 Web／Tk、API、事件／調查／活動資料與測試後，第一切片定為 P1-GUI-001：補 Web 七來源卡片的最後成功／新鮮度；API 已具備、畫面尚缺。六驗收案例、觸點、後續排序及原生／偵測／真環境前置均已列明，全部產品切片仍未實作。正式主控台未測，不能稱優於競品。

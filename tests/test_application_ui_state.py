@@ -179,6 +179,43 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertIn("尚未確認", table["closing"]["label"])
         self.assertEqual(headers["Cache-Control"], "no-store")
 
+    def test_source_cards_use_separate_history_freshness_and_current_status(self):
+        code, _, page = self.request("/")
+        self.assertEqual(code, 200)
+        self.assertIn('id="source-cards"', page)
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        match = re.search(r"async function sources\(\)\{([^\n]+)", script)
+        self.assertIsNotNone(match)
+        source_renderer = match.group(1)
+        for required in ("$('source-cards')", "s.last_collected_at", "s.saved_status", "s.status",
+                         "sourceSuccess(s)", "sourceFreshness(s)", "s.row_count", "s.reasons"):
+            self.assertIn(required, source_renderer)
+        self.assertNotIn("innerHTML", source_renderer)
+        self.assertIn("s.last_success_state!=='known'", script)
+        self.assertIn("time<=Date.now()", script)
+        self.assertEqual(self.calls, [])
+
+    def test_three_source_http_reads_preserve_synthetic_event_and_saved_files(self):
+        from eventguard.events.store import EventStore
+        from eventguard.runtime import Runtime
+        from eventguard.synthetic import make_synthetic
+        store = EventStore(self.root / "data" / "test")
+        store.enqueue(make_synthetic("listener"))
+        Runtime(self.root).save_observation({"id": "defender", "status": "ok", "rows": [],
+            "observed_at": "2026-10-24T00:00:00+00:00", "coverage": {"status": "ok", "errors": []}}, "test")
+        files = lambda: {p.relative_to(self.root): p.read_bytes() for p in
+                         (self.root / "data").rglob("*") if p.is_file()}
+        before_files, before_stats = files(), store.stats()
+        for _ in range(3):
+            code, _, raw = self.request("/api/sources")
+            self.assertEqual(code, 200)
+            self.assertEqual(len(json.loads(raw)["sources"]), 7)
+        self.assertEqual(files(), before_files)
+        self.assertEqual(store.stats(), before_stats)
+        self.assertEqual(before_stats["pending"], 1)
+        self.assertEqual(self.calls, [])
+
     def test_served_script_exposes_pure_state_functions_and_bounded_timeouts(self):
         code, _, script = self.request("/app.js")
         self.assertEqual(code, 200)
