@@ -574,6 +574,27 @@ class EventStore:
         except sqlite3.Error as exc:
             raise self._sqlite_error(exc) from exc
 
+    def _restore_history(self, value, *, namespace):
+        """Internal restore building block; caller must independently verify provenance.
+
+        No CLI/UI endpoint calls this. It never deletes or ACKs events, and a
+        failure rolls back the full SQLite transaction including imported rows.
+        """
+        from .disposition_history_restore import restore_suffix
+        from .disposition_history_store import HistoryCapacityError
+        try:
+            with self._lock, self._connect() as db:
+                db.execute("BEGIN IMMEDIATE")
+                available = max(0, self.max_bytes - self._used_bytes(db) - self.ack_reserve_bytes)
+                result = restore_suffix(db, value, namespace=namespace, available_bytes=available)
+                if result["appended"] and self._used_bytes(db) + self.ack_reserve_bytes > self.max_bytes:
+                    raise CapacityError("history_restore_capacity_pending_preserved")
+                return {**result, "caller_commit_required": False}
+        except HistoryCapacityError as exc:
+            raise CapacityError("history_restore_capacity_pending_preserved") from exc
+        except sqlite3.Error as exc:
+            raise self._sqlite_error(exc) from exc
+
     def set_disposition(self, event_id, status, *, source="unknown", operation_id=None):
         """Save a person's handling state without altering receipt or evidence.
 

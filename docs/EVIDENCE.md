@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：歷程還原 EventStore 合成交易
+
+`reports/verify-history-restore-integration-20261028-01` UTC 11:08:45，42/42、0 skip、242 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 內部交易核對初始／寫後容量不足回滾、重開操作識別重播、原來源與 pending／ACK 不變；無入口、來源認證或真實還原，不能用它宣稱滿載已恢復。
+
 ## 2026-10-28：歷程追加還原原件合成測試
 
 `reports/verify-history-restore-primitive-20261028-02` UTC 11:05:31，18/18、0 skip、241 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 兩資料庫核對原事件身分、完整前綴、無綁定／scope／hash 拒絕、容量不足、中途失敗 savepoint 回滾、呼叫端 rollback／commit、重播及 pending／ACK。未接產品入口；未認證備份來源、未檢驗實際 DB 容量／長期恢复、未釋放容量。
