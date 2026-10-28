@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面前版調查只讀摘要
+
+桌面詳情新增最多最近3版保存摘要，保持後端讀取順序，成員與診斷狀態獨立；錨點身分缺失／不符不顯其他案件，時間異常保持未知，舊資料不補造前版，容量滿載明示。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-revision-summary-20261029-02 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop --module test_investigation_revision_read --module test_investigation_revision_integration`：2026-10-29 03:15（UTC+8）85/85、0skip、source_unchanged；真Tk＋合成EventCatalog驗真保存前版到文字元件與未知時清除，pending不變，Job自然退出／remaining0。`reports/build-desktop-revision-summary-20261029-01`：266檔hash相符、244檔編譯，含未提交修改。01為補強缺失身分前的85/85，最終證據以02為準。人工／Web／原生仍各自待驗。
+
 ## 2026-10-29 桌面保存時間線與證據缺口
 
 桌面調查詳情加入最多16項保存時間線，保留快照順序而不重排／推導關係；每項列出保存來源可見性，缺失／內容改變維持未知，恢復轉換不當目前修復證明。最多8項中文缺口，未知原因不補造。前兩個摘要單元已普通同步main與開發ref至c3d34fa，對main差異曾清零。本次 `py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-saved-timeline-20261029-02 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop --module test_event_investigation`：2026-10-29 03:12（UTC+8）91/91、0skip、source_unchanged、Job自然退出／remaining0；包含真EventCatalog合成資料到實際Tk元件、拒讀／partial、順序與界限測試。`reports/build-desktop-saved-timeline-20261029-02`：266檔受測hash相符、244檔編譯成功，含未提交變更。人工版面／鍵盤、Web與實機仍待驗。

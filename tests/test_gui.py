@@ -330,6 +330,32 @@ class GuiOwnTkWidgetTests(unittest.TestCase):
             self.assertEqual(catalog.detail(event['event_id'])['event']['delivery_status'], 'pending')
         self.assertFalse(any(action != 'snapshot' for action, _ in self.controller.calls))
 
+    def test_real_detail_widget_renders_actual_saved_case_revision_and_clears_unknown(self):
+        import tempfile
+        from pathlib import Path
+        from datetime import datetime, timedelta
+        from eventguard.events.catalog import EventCatalog
+        from eventguard.events.store import EventStore
+        from eventguard.synthetic import make_synthetic
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            event = make_synthetic()
+            EventStore(root/'data/test').enqueue(event)
+            catalog = EventCatalog(root, 'test')
+            catalog.investigate(event['event_id'], now=event['observed_at'])
+            catalog.investigate(event['event_id'], now=(datetime.fromisoformat(event['observed_at']) + timedelta(seconds=1)).isoformat())
+            document = catalog.detail(event['event_id'])
+            self.ui._show_detail(document)
+            text = self.ui.detail.get('1.0', 'end')
+            self.assertIn('保存前版 1', text)
+            self.assertIn('保存成員相符', text)
+            self.ui._show_detail({'event': document['event'], 'investigation_revisions': {'state': 'unknown'}})
+            text = self.ui.detail.get('1.0', 'end')
+            self.assertIn('前版調查歷程未知', text)
+            self.assertNotIn('前版保存時間：', text)
+            self.assertEqual(catalog.detail(event['event_id'])['event']['delivery_status'], 'pending')
+        self.assertFalse(any(action != 'snapshot' for action, _ in self.controller.calls))
+
     def test_real_detail_widget_shows_handled_while_delivery_remains_pending(self):
         document = {"event": copy.deepcopy(self.controller.value["events"][0]), "status": "handled",
                     "handling_history": {"state": "available", "count_capacity": "available", "entries": [

@@ -227,6 +227,36 @@ def investigation_summary(value, event_id):
             *investigation_timeline(value, case)]
 
 
+def revision_summary(value, event_id):
+    """Show at most three saved prior cases; absent history stays unknown."""
+    if not isinstance(event_id, str) or not isinstance(value, dict) or value.get("state") not in ("available", "not_recorded"):
+        return ["前版調查歷程未知，不能推論沒有舊版本。"]
+    rows = value.get("revisions")
+    if not isinstance(rows, list) or len(rows) > 16 or any(not isinstance(row, dict) for row in rows):
+        return ["前版調查格式或上限無法核對，保持未知。"]
+    lines = [f"保存前版 {len(rows)}；最多顯示最近3版，依保存讀取順序。更早歷程仍未知。"]
+    if not rows:
+        lines.append("尚無可驗的保存前版；不補造歷史。")
+    for row in rows[:3]:
+        case = row.get("case")
+        if not isinstance(case, dict) or case.get("anchor_event_id") != event_id:
+            lines.append("前版事件身分無法核對，內容不顯示。")
+            continue
+        stamp = row.get("saved_at")
+        try:
+            time = datetime.fromtimestamp(stamp, timezone.utc).isoformat(timespec="seconds") if type(stamp) in (int, float) and 0 <= stamp <= 253402300799 else "未知"
+        except (OverflowError, OSError, ValueError):
+            time = "未知"
+        member = "保存成員相符" if row.get("evidence_status") == "saved_snapshot" else "成員證據未知"
+        diagnostic = {"matched": "保存診斷相符", "changed": "診斷已變更，未知", "missing": "診斷缺失，未知",
+                      "not_bound": "未綁定診斷"}.get(safe_text(row.get("diagnostic_evidence_status")), "診斷未知")
+        lines.append("前版保存時間：" + time + "；調查 ID：" + safe_text(case.get("case_id"), 80)
+                     + "；" + member + "；" + diagnostic + "。歷史相符不代表目前主機安全。")
+    if value.get("count_capacity") == "full":
+        lines.append("修訂筆數已滿；更新可能被拒絕，不會在此清除前版。")
+    return lines
+
+
 def handling_summary(value):
     """Read-only human handling history, independent of delivery receipts."""
     states = {"new": "新增", "read": "已讀", "handled": "已處理", "ignored": "忽略"}
@@ -294,6 +324,8 @@ def event_summary(value):
         lines.append("有另存的查證結果（歷史觀察）時間：" + safe_text(diagnosis.get("observed_at"), 80))
     lines.extend(["", "保存調查（只讀，不建立或更新）",
                   *investigation_summary(value.get("investigation"), event.get("event_id"))])
+    lines.extend(["", "保存前版調查（只讀）",
+                  *revision_summary(value.get("investigation_revisions"), event.get("event_id"))])
     lines.extend(["", "人工處置與操作歷程（只讀）", *handling_summary(value)])
     lines.extend(["", "建議的唯讀查證（僅文字，不會執行）"])
     steps = guidance.get("next_steps")

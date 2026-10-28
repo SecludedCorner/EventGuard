@@ -12,6 +12,27 @@ def item(event_id="fixture-event", **changes):
 
 
 class GuiPresenterTests(unittest.TestCase):
+    def test_prior_cases_are_bounded_identity_checked_and_diagnostic_state_is_separate(self):
+        rows = [{"case": {"anchor_event_id": 'fixture-event', "case_id": f'case-{i}'}, "saved_at": 1767225600,
+                 "evidence_status": 'saved_snapshot', "diagnostic_evidence_status": 'changed'} for i in range(4)]
+        document = {"event": item(), "investigation_revisions": {"state": 'available', 'revisions': rows, 'count_capacity': 'full'}}
+        before = copy.deepcopy(document)
+        summary = event_summary(document)
+        for text in ('保存前版 4', '最近3版', 'case-2', '保存成員相符', '診斷已變更，未知', '修訂筆數已滿', '更早歷程仍未知'):
+            self.assertIn(text, summary)
+        self.assertNotIn('case-3', summary)
+        self.assertEqual(document, before)
+        rows[0]['case']['anchor_event_id'] = 'other-event'
+        rows[1]['saved_at'] = True
+        self.assertNotIn('case-0', event_summary(document))
+        self.assertIn('前版保存時間：未知', event_summary(document))
+        document['investigation_revisions'] = {'state': 'not_recorded', 'revisions': []}
+        self.assertIn('不補造歷史', event_summary(document))
+        rows[0]['case']['anchor_event_id'] = None
+        missing_identity = {'event': {}, 'investigation_revisions': {'state': 'available', 'revisions': rows}}
+        self.assertNotIn('case-0', event_summary(missing_identity))
+        self.assertIn('前版調查歷程未知', event_summary(missing_identity))
+
     def test_saved_timeline_retains_order_missing_members_and_bounded_gap_reasons(self):
         rows = [item('later', observed_at='later', source='listeners', coverage_status='denied'),
                 item('earlier', observed_at='earlier', transition='resolved', coverage_status='partial')]

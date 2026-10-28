@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面前版調查元件驗證
+
+`reports/verify-desktop-revision-summary-20261029-02`：85/85、0skip、source_unchanged，Job自然退出／remaining0。真Tk＋合成EventCatalog建立兩版後驗保存前版呈現、未知時清除與pending保留；純呈現驗4版只顯示3版、成員相符與診斷變更分列、缺失／不符身分不顯錯案及時間未知。`reports/build-desktop-revision-summary-20261029-01` 266檔受測hash相符、244檔編譯通過；非真人／Web驗收。
+
 ## 2026-10-29：桌面保存時間線元件驗證
 
 `reports/verify-desktop-saved-timeline-20261029-02`：91/91、0skip、source_unchanged，Job自然退出／remaining0。實際Tk配合合成EventCatalog驗保存項目，純呈現驗快照順序、不推因果、缺失／變更未知、拒讀／partial，以及16項時間線／8項缺口限制；不改輸入、不ACK。`reports/build-desktop-saved-timeline-20261029-02` 266檔hash相符、244檔編譯。原01為新增來源可見性前的91/91，最終來源以02為準。Web／真人／原生待驗不變。
