@@ -1,5 +1,15 @@
 # 證據與時間日誌
 
+## 2026-10-28：main整併實證、完整本機SDK回歸及隱私附件排除
+
+使用者直接授權推main後，git fetch --all --prune／ls-remote核實origin/main與feat/local-codex-acceptance均a4e13fa75ea0d2d8b455281811114de3efe91844，git diff --quiet與rev-list為0差異／0/0；逐支merge-base --is-ancestor確認handoff、quota、research、publication及開發分支全部包含，私人本機main與其他worktree保留。gh api PR1為closed／mergedtrue、2026-10-22T09:09:47Z／615f77f，依要求remove_artifact後list_artifacts為空，不刪GitHub合併紀錄。git diff 4a1a95b a4e13fa精確為58files／5368新增／39刪除；這是已提交歷史區間，UI基準只作推論。main-consolidation-20261028-01/state-before.json保留核對，review開啟請求queued未宣稱已呈現或歸零。
+
+py -3.13 -B scripts/verify.py --run-dir reports/verify-main-integration-20261028-01 --timeout-seconds 1800：UTC06:33:14–06:40:24（台北14:33:14–14:40:24），428.735秒；1636run=expected1636／1633pass／3skip／0fail/error，兩skip因symlink建立不可用、一項notification icon不可用；218AST無錯、source_unchanged、stopped_early/stop_requested皆false、原guardian自然0／remaining0／無強停／逐測試殘留0。source-commit.json比對240來源與b534包零差異；本機既有SDK路徑實跑，無native inventory／新模型／真agent重驗。未把環境skip算通過。
+
+新隱私要求只核對四個已知圖片的檔名／存在與Git紀錄，經絕對路徑範圍及無reparse確認後刪除，四原檔皆不存在並移除空附件目錄；不讀內容、不掃其他私人目錄。git ls-files／git log --all相關路徑無紀錄，GitHub main recursive tree未截斷且無相關路徑；完整回條只留ignored reports，不提交私人檔名／圖片。新增.gitignore附件及剪貼簿排除，check-ignore兩正向／一般產品圖片一反向皆如預期。平台聊天附件未移除，不宣稱法證安全抹除；原生及產品未驗限制不變。
+
+本checkpoint只含.gitignore與既有結果文件，普通push開發分支及快轉main，另核對同SHA與tracked clean；不以多餘merge／reset／clean／force消除歷史統計，不打tag／發布／刪分支／建排程。
+
 ## 2026-10-28：b53479a新候選的固定來源、完整CI與實際交付
 
 工程checkpoint b53479a28ea030a92ae23ba50ed24d6aca2be679，明列七檔審查／無固定秘密模式、git diff --cached --check通過，普通push既有feat/local-codex-acceptance，直接ls-remote相同。相對8b9cf27為7檔460新增；沒有src/config/playbooks/contrib/.github或啟動cmd改動。定向03的240來源hash逐一等於新ZIP檔案，source-binding.json與source-commit.json保存零差異；31/31只作本機定向，舊b57完整1624不移植。

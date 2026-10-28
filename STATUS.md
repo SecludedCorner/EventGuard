@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-10-28 main整併終核、完整本機回歸與附件排除（最新）
+
+使用者已明確授權推main並要求整併／測試。fetch後origin/main與開發分支同為a4e13fa75ea0d2d8b455281811114de3efe91844、ahead/behind0/0、tree差異0；五個可分享分支均為main祖先，沒有待合併產品碼。PR #1早於2026-10-22T09:09:47Z合併615f77f，本次依要求移除聊天PR附件，保留GitHub合併歷史。截圖+5368/-39與git diff 4a1a95bced234d75b744537f7507bd9f86235b11 a4e13fa完全相符（58檔已提交歷史），不是未提交數；UI實際基準未直接讀取，不能宣稱畫面已歸零。
+
+依使用者要求實跑當前主線完整驗證：py -3.13 -B scripts/verify.py --run-dir reports/verify-main-integration-20261028-01 --timeout-seconds 1800，UTC06:33:14–06:40:24（台北14:33:14–14:40:24），428.735秒；1636run=expected1636、1633pass／3環境skip（兩symlink建立不可用、一notification icon不可用）、0fail/error，218AST無錯、source_unchanged、stop flags false、原guardian自然0／remaining0／無強停／逐測試殘留0。240來源hash與b534候選包全符；涵蓋本機已安裝SDK，非僅沿用CI47skip，不啟真模型／native掃描。
+
+依最新隱私要求刪除四張已知本機圖片及其空附件目錄，不讀內容；已核對索引／全部已知Git歷史無相關檔案，GitHub main完整tree無相關路徑。圖片與含私人檔名的回條皆不提交；只新增.gitignore對附件／剪貼簿截圖的排除，git check-ignore兩項通過且一般產品圖片不被全面排除。平台聊天附件不在本機刪除範圍，未宣稱已移除。這個checkpoint僅排除規則與結果文件，沿開發分支保存後普通快轉main；產品來源未改，不重跑回歸、不打tag／發布／刪分支，私人main及其他worktree保留。
+
 ## 2026-10-28 新候選交付驗收閉合：b53479a（最新）
 
 固定候選b53479a28ea030a92ae23ba50ed24d6aca2be679已普通push／直接核對遠端；來源切片相對8b9cf27為7檔460新增，非未保存修改。新增受版控verify_candidate.py及12個測試，外部commit／ZIP hash必填、完整逐檔manifest比對、純離線預設與可選有界私有Job合成smoke；CHANGELOG與操作命令已保存。

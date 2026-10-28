@@ -1,5 +1,13 @@
 # EventGuard 接手
 
+## 2026-10-28 main整併與本機全庫已核實（最新）
+
+最新使用者已授權推main／整併與私人圖片刪除。原a4e13fa已在origin/main，五個可分享分支均包含、main與開發branch產品tree差異0。PR #1已合併且聊天附件已移除；+5368/-39精確對應4a1a95b→a4e13fa的58檔歷史差異，不是未提交工作；未直接確認UI顯示基準，不操作內部sessions或偽造歸零。
+
+新完整本機reports/verify-main-integration-20261028-01為1636run／1633pass／3環境skip、0fail/error、428.735秒、218AST、source_unchanged、原Job自然0／remaining0／無強停；240來源hash仍等於b534包，沒有在跑的runner。四張已知本機圖片已刪除、原索引／歷史及GitHub main tree皆無相關路徑，新增.gitignore保護；不讀／提交圖片或私人回條，不聲稱雲端聊天附件已刪。
+
+只保存排除規則與結果文件，普通push開發分支後快轉main並核對同SHA；後續恢復先看Git與最新回條，不用舊本機私人main當公開基準。無tag／release／部署／刪分支或排程，原生partial與24h/reboot／桌面喚醒未升格。
+
 ## 2026-10-28 新候選驗包／smoke已交付，無進行中runner（最新）
 
 候選b53479a28ea030a92ae23ba50ed24d6aca2be679已推；repo現在有verify_candidate.py及12個新測試，不再用舊臨時smoke。最新定向31/31、240來源hash與318檔新包全符；兩ZIP hash均d755a8d85a9fec15343a88b7b0adeb24b003f7d21d6e3322b127df73b3e10605。實際外部pins驗包＋13/13合成smoke、兩負向CLI拒絕在child前、來源回復5/5皆通過，各原Job自然退出／remaining0／無強停。

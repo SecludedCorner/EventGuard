@@ -1,5 +1,9 @@
 # 發布前準備
 
+## 2026-10-28 主線已整併（最新）
+
+使用者已另授權推main：a4e13fa的公開內容已在origin/main，與開發分支同SHA／tree差異0，五個可分享分支均已包含；PR #1合併歷史核實後移除聊天連結。主線本機完整回歸另取得1636run／1633pass／3環境skip、0fail/error、原guardian自然退出的證據（reports/verify-main-integration-20261028-01），240來源hash與下述b534交付包相符。其後僅補附件排除及結果文件，不另稱新產品測試。正式tag／release／部署及分支刪除仍未執行；下方「未push main」只屬先前準備階段的歷史範圍。
+
 ## 目前交付候選：b53479a（2026-10-28 最新結果）
 
 固定受測／打包commit為`b53479a28ea030a92ae23ba50ed24d6aca2be679`，已普通推到既有開發分支。此次相對8b9cf27為7檔／460新增，含新的驗包工具與12個測試；產品src/config/playbooks等未變。後續純結果文件checkpoint不改產品來源，不另冒稱產品測試。
