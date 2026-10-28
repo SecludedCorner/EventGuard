@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：修訂儲存原件合成測試
+
+`reports/verify-investigation-revision-store-20261028-01` UTC 10:13:48、29/29、0 skip、233 AST、source_unchanged；私有 Job 自然 0／remaining 0／無強停。SQLite 合成測驗證必須由呼叫端交易控制、不自行提交、回滾、不可信快照拒絕、16 筆容量與位元組上限。全域滿載、實際 DB 增量／ACK 保留與產品接線尚未驗。
+
 ## 2026-10-28：有界案件修訂純契約
 
 `reports/verify-investigation-revision-contract-20261028-02` UTC 09:53:30、33/33、0 skip、231 AST、source_unchanged；私有 Job 自然退出 0／remaining 0／無強停。合成測試涵蓋 1.0／1.1 case、錨定事件與 hash、偽造／超限／非法時間及筆數上限。純函式無資料庫讀寫；未測版本實際保存、競態、容量故障、歷史讀取或瀏覽器。SHA256 非簽章。完整缺口與下一步見 `docs/MAINTENANCE_GOAL.md`。

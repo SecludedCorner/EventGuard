@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 案件修訂交易儲存原件
+
+新增受呼叫端交易控制的有界 append 原件；不自行 commit 或淘汰，容量／位元組不足拒絕，回滾可撤銷建表與插入。`reports/verify-investigation-revision-store-20261028-01` UTC 10:13:48：29/29、0 skip、233 AST、source_unchanged；Job 自然 0／remaining 0／無強停。尚未接產品寫入、核實實際 DB 成長、讀取或 UI；此原件不代表能回看調查。
+
 ## 2026-10-28 案件修訂有界契約前置
 
 純契約定義每事件 16、全域 256 上限與 64 KiB case，綁定錨定事件／內容 hash、實際保存時間；相容 1.0／1.1 case，拒絕偽造狀態、身分及超限。不寫資料、不補造歷史，也未提供使用者功能。`reports/verify-investigation-revision-contract-20261028-02` UTC 09:53:30：33/33、0 skip、231 AST、source_unchanged、Job 自然 0／remaining 0／無強停。交易保存、讀取、瀏覽器及容量故障驗收尚未實作；完整清單見 MAINTENANCE_GOAL。指定競品研究任務原目標已完成，後續市場比較未視為已實測。當前 Codex 工程目標達使用額度限制，保存後不承諾自動續跑。
