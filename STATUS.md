@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-10-28 競品 GUI／GitHub 研究：公開證據完成，工程切片待落地
+
+從乾淨 f86254bb0393b606b1202b370efa18b35f649e8e／origin 同 SHA 接續；原聊天僅等待研究，未觀察到其他寫入。新增 [競品研究](docs/research/competitor-gui/README.md)，核對兩家官方展示、目前文件與四倉庫固定 SHA／授權／封存。修正 Lightweight Console：固定目錄只有佔位 README，不能稱有 GUI 實作。正式主控台、兩家偵測／回應成效與同環境比較未測。
+
+來源 build：`py -3.13 -B scripts/package_candidate.py --root reports/release-prep-gui-research-20261028-01 --commit f86254bb0393b606b1202b370efa18b35f649e8e`，318 檔、兩 ZIP 一致、原 Git Job 自然退出。定向：`py -3.13 -B scripts/verify.py --run-dir reports/verify-gui-research-20261028-01 --timeout-seconds 180 --module test_event_catalog --module test_event_investigation --module test_investigation_diagnostics --module test_source_success_history --module test_application_ui_state --module test_package_candidate`；台北 15:33:12–15:33:20，74/74、0 fail/error/skip、218 AST、source_unchanged、原 Job 自然 0／remaining 0／無強停。這是既有來源驗證，未包含新文件的候選包，也不代表新版 GUI 實測。
+
+首次 build 使用不符合 `release-prep-` 限制的目錄而受阻，未建立輸出或啟動 Git child；改合法新目錄後成功，未改 builder 或繞過閘道。文件連結／差異與來源紀錄留 reports/research-gui-20261028-01；runtime／圖片不提交。下一單元是現有實作缺口、優先順序及第一個可直接開工的小切片；本任務不實作產品、不連帳戶、不啟模型／native／排程。
+
 ## 2026-10-28 乾淨工作區與原子提交規則（最新）
 
 本單元只落實最新Git工作規則：AGENTS／CLAUDE明定單一目的、約200行先拆、提交前build與相關測試全過、type(scope): summary、明列stage、禁amend／force／no-verify、單元後輸出hash／message／行數／status／shortstat並立即push；取代原「最多累積3個」的節奏。開始時工作樹乾淨，HEAD/upstream/main皆c80a4be。

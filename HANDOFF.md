@@ -1,5 +1,11 @@
 # EventGuard 接手
 
+## 2026-10-28 競品研究進度（本任務範圍）
+
+公開來源／GUI 與四個固定 GitHub SHA 已整理至 [研究](docs/research/competitor-gui/README.md)。重要修正：SentinelOne Lightweight Console 只有佔位 README；封存示例不是正式 Singularity。沒有兩家主控台實測。研究目標是文件與開工準備，不延伸為本輪產品實作。
+
+既有 f86254b 來源 build 318 檔可重現；定向 74/74，原 Job 自然退出／remaining 0，證據與命令見 STATUS／EVIDENCE 頂部。首次 build 目錄名稱不符已修正呼叫；不修改安全閘道。下一個單元：對照真實檔案與契約，落地排序切片／驗收／授權，更新既有 MAINTENANCE_GOAL；不重做原生掃描或真 agent 驗收。恢復先核對工作樹／HEAD，保留他人變更。
+
 ## 2026-10-28 main整併與本機全庫已核實（最新）
 
 最新使用者已授權推main／整併與私人圖片刪除。原a4e13fa已在origin/main，五個可分享分支均包含、main與開發branch產品tree差異0。PR #1已合併且聊天附件已移除；+5368/-39精確對應4a1a95b→a4e13fa的58檔歷史差異，不是未提交工作；未直接確認UI顯示基準，不操作內部sessions或偽造歸零。

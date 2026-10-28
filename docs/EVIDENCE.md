@@ -1,5 +1,13 @@
 # 證據與時間日誌
 
+## 2026-10-28：競品公開證據與 EventGuard 對照來源驗證
+
+研究基準 f86254bb0393b606b1202b370efa18b35f649e8e，查閱日期台北 2026-10-28。官方來源／四個固定 GitHub SHA／角色與授權／封存列於 [研究](research/competitor-gui/README.md)。實際只看公開頁面及四張官方圖片，不保存圖、不登入主控台、不執行廠商程式。GitHub REST 一般 shell 請求失敗（HttpRequestException，未記原始例外），web 部分固定連結 cache miss，改以公開 GitHub 瀏覽器頁面核對；沒有提權。Falcon PDF 僅文字／圖說成功，內嵌像素未顯示，保留限制。
+
+命令見 STATUS 本節。build 首次目錄名稱錯誤在 child 前拒絕；合法 reports/release-prep-gui-research-20261028-01：318 檔、reproducible=true、ZIP SHA256 af17e147165a16b67a1ea6ab90c584da44c2f94cb5142ef22f8ef197db7a4c5e、兩原 Job 自然 0／remaining 0／無強停。reports/verify-gui-research-20261028-01：UTC 07:33:12–07:33:20（台北 15:33:12–15:33:20）、6.872 秒、74 run=expected／74 pass、0 fail/error/skip、218 AST、source_unchanged、原 Job 自然 0／remaining 0／逐測試殘留 0。六定向模組涵蓋 catalog、調查／診斷、來源成功歷史、served UI 契約及打包器；UI 測試不等於 JS 互動／競態或原生覆蓋驗收。
+
+本單元純文件；原生 partial、24h/reboot 與正式競品效果仍未驗。build 綁既有來源，不能稱新文件已打包或目前產品已改善。文件／相對連結檢查與 Git 保存回條在 reports/research-gui-20261028-01（ignored，本機證據，不隨 repo 提供）；只 stage 已審查文件，普通 push feat/local-codex-acceptance 並核對遠端，不推 main/tag/release。
+
 ## 2026-10-28：原子checkpoint政策單元的提交前驗證
 
 工作樹原乾淨／c80a4be與upstream相同；此單元只改AGENTS、CLAUDE與必要狀態／證據，整合新規則並撤除3個未推commit的累積節奏。build命令py -3.13 -B scripts/package_candidate.py --root reports/release-prep-policy-check-20261028-01 --commit c80a4be90c7e9893544e72fab04c12e7653b33cc：318檔、reproducibletrue、兩原Git Job自然退出；只驗既有產品來源，不稱未提交文件已打入包。
