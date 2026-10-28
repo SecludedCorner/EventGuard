@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：有修訂錨點保留合成測試
+
+`reports/verify-investigation-revision-retention-20261028-03` UTC 10:24:57，61/61、0 skip、236 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成 DB 核對 ACK 錨點期限、空間輪替、數量輪替不刪及版本／當前案件／事件不變，無修訂事件既有到期測試仍過；不代表永久歸檔或無損容量恢復。首次 `...-01` 使用不存在的 test_event_store 模組，參數檢查拒絕且未起 worker；換成實際模組後 `...-02`／`...-03` 各 61/61。
+
 ## 2026-10-28：案件修訂 Web WIP 與瀏覽器阻擋
 
 `reports/verify-investigation-revision-web-20261028-01` UTC 10:21:28，46/46、0 skip、236 AST、source_unchanged；Job 自然 0／remaining 0／無強停；僅元件靜態契約與合成 API，非 JavaScript／瀏覽器驗收。`reports/investigation-revision-browser-20261028-01` 合成 DB 準備好後本機瀏覽器因 Work settings 禁用，未進頁；伺服器合作退出、Job 自然 0／remaining 0／無強停、0 POST／native／model、DB SHA256 前後 9565ba61b68544acb447b85f98c3ce7f0473e6007a0c7ae663f45b125a1355ee。不得視為瀏覽器通過。

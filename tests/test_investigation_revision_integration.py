@@ -71,6 +71,22 @@ class RevisionIntegrationTests(unittest.TestCase):
             self.catalog.investigate("evt-anchor", now=(datetime.fromisoformat(NOW) + timedelta(seconds=17)).isoformat())
         self.assertEqual(self.rows(), before)
 
+    def test_ack_rotation_preserves_anchor_with_revision_and_current_case(self):
+        self.catalog.investigate("evt-anchor", now=self.second_time)
+        self.store.acknowledge("evt-anchor", {"ack_type": "receiver_persisted", "event_id": "evt-anchor", "receipt_id": "synthetic-receipt"})
+        before = self.rows()
+        self.store.maintain(now=datetime.now().timestamp() + 60 * 60 * 24 * 40)
+        current, revisions, delivery = self.rows()
+        self.assertEqual(current, before[0])
+        self.assertEqual(revisions, before[1])
+        self.assertEqual(delivery, before[2])
+        with self.store._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            self.assertEqual(self.store._rotate_completed(db, datetime.now().timestamp()), 0)
+            self.store._prune(db, datetime.now().timestamp(), slots=self.store.max_events)
+        self.assertEqual(self.rows(), before)
+        self.assertEqual(self.catalog.detail("evt-anchor")["investigation_revisions"]["state"], "available")
+
     def test_invalid_previous_case_fails_without_overwriting(self):
         with closing(sqlite3.connect(self.store.path)) as db:
             db.execute("UPDATE event_investigations SET result='{}'")

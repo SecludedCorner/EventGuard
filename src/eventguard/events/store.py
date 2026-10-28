@@ -267,14 +267,20 @@ class EventStore:
         count = int(previous[0]) if previous else 0
         db.execute("INSERT OR REPLACE INTO meta(key,value) VALUES(?,?)", (key, str(count + amount)))
 
+    @staticmethod
+    def _rotation_guard(db):
+        # Keep anchors and latest cases reachable while saved revisions exist.
+        has_revisions = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='investigation_revisions'").fetchone()
+        return (" AND NOT EXISTS (SELECT 1 FROM investigation_revisions r WHERE r.event_id=events.event_id)"
+                if has_revisions else "")
+
     def _prune(self, db, now, slots=1):
         self._expire(db, now)
         count = db.execute("SELECT COUNT(*) FROM events").fetchone()[0]
         needed = max(0, count + slots - self.max_events)
         if needed:
-            rows = db.execute("""SELECT event_id,delivery_status FROM events
-                WHERE delivery_status='ack'
-                ORDER BY updated_at,event_id LIMIT ?""", (needed,)).fetchall()
+            rows = db.execute("SELECT event_id,delivery_status FROM events WHERE delivery_status='ack'"
+                              + self._rotation_guard(db) + " ORDER BY updated_at,event_id LIMIT ?", (needed,)).fetchall()
             has_reviews = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_reviews'").fetchone()
             has_dispositions = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_dispositions'").fetchone()
             has_investigations = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_investigations'").fetchone()
@@ -289,8 +295,8 @@ class EventStore:
                 self._increment(db, "rotated_" + row["delivery_status"], 1)
 
     def _expire(self, db, now):
-        rows = db.execute("SELECT event_id,delivery_status FROM events WHERE delivery_status='ack' AND updated_at<?",
-                          (now-self.policy["acked_retention_seconds"],)).fetchall()
+        rows = db.execute("SELECT event_id,delivery_status FROM events WHERE delivery_status='ack' AND updated_at<?"
+                          + self._rotation_guard(db), (now-self.policy["acked_retention_seconds"],)).fetchall()
         self._delete_completed(db, rows)
         removed = db.execute("DELETE FROM receipts WHERE pending_finalization=0 AND acked_at<?", (now-self.policy["receipt_retention_seconds"],)).rowcount
         pinned = db.execute("SELECT COUNT(*) FROM receipts WHERE pending_finalization=1").fetchone()[0]
@@ -345,7 +351,8 @@ class EventStore:
         return (db.execute("PRAGMA page_count").fetchone()[0]-db.execute("PRAGMA freelist_count").fetchone()[0])*db.execute("PRAGMA page_size").fetchone()[0]
 
     def _rotate_completed(self,db,now):
-        rows=db.execute("SELECT event_id,delivery_status FROM events WHERE delivery_status='ack' ORDER BY updated_at,event_id LIMIT 100").fetchall()
+        rows=db.execute("SELECT event_id,delivery_status FROM events WHERE delivery_status='ack'"
+                        + self._rotation_guard(db) + " ORDER BY updated_at,event_id LIMIT 100").fetchall()
         self._delete_completed(db, rows)
         return len(rows)
 

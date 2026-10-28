@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 保護有修訂的事件錨點
+
+自動期限、筆數與空間輪替排除有已保存修訂的 ACK 事件，避免原事件和最新案件被清除後版本無法回看；其他 ACK 事件沿用既有政策。`reports/verify-investigation-revision-retention-20261028-03` UTC 10:24:57：61/61、0 skip、236 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成測試涵蓋過期、空間輪替與筆數壓力，原案／修訂／pending 保留。保留錨點可能使容量先滿，尚無安全歸檔／釋放方案；不可自行刪除。瀏覽器 WIP 仍未驗。
+
 ## 2026-10-28 調查修訂 Web 呈現 WIP（瀏覽器待驗）
 
 事件詳情新增前版展開、觀測、缺口、證據未知與容量說明；`reports/verify-investigation-revision-web-20261028-01` UTC 10:21:28：46/46、0 skip、236 AST、source_unchanged，僅契約／合成測試，非瀏覽器驗收。`reports/investigation-revision-browser-20261028-01` 隔離合成伺服器已準備，但 IAB 回報 Local browser use is disabled in Work settings，沒有實際操作／渲染證據；Job 合作退出 0／remaining 0／無強停、0 POST／native／model，DB SHA256 前後 9565ba61b68544acb447b85f98c3ce7f0473e6007a0c7ae663f45b125a1355ee。此切片是 WIP，須恢復允許的瀏覽器後依規格驗收，不能標 UI DONE。
