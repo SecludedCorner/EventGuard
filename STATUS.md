@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-28 乾淨工作區與原子提交規則（最新）
+
+本單元只落實最新Git工作規則：AGENTS／CLAUDE明定單一目的、約200行先拆、提交前build與相關測試全過、type(scope): summary、明列stage、禁amend／force／no-verify、單元後輸出hash／message／行數／status／shortstat並立即push；取代原「最多累積3個」的節奏。開始時工作樹乾淨，HEAD/upstream/main皆c80a4be。
+
+提交前實跑c80a4be既有來源build於reports/release-prep-policy-check-20261028-01，318檔／兩次ZIP一致／兩Git Job自然退出；這不是包含尚未提交政策文件的新候選。當前來源定向verify-checkpoint-policy-20261028-01：UTC06:53:13–06:53:16（台北14:53:13–14:53:16），31/31、1.388秒、0fail/error/skip、218AST無錯、source_unchanged、原Job自然0／remaining0／無強停。新增文件換行混用曾被diff-check攔下，未commit該狀態，修正後重查；政策內容／連結與變更量另驗。僅四份文件以單一docs(workflow) checkpoint普通push既有開發分支，輸出實際SHA與乾淨狀態，不重寫舊commit、不重新宣稱產品／原生驗收。
+
 ## 2026-10-28 main整併終核、完整本機回歸與附件排除（最新）
 
 使用者已明確授權推main並要求整併／測試。fetch後origin/main與開發分支同為a4e13fa75ea0d2d8b455281811114de3efe91844、ahead/behind0/0、tree差異0；五個可分享分支均為main祖先，沒有待合併產品碼。PR #1早於2026-10-22T09:09:47Z合併615f77f，本次依要求移除聊天PR附件，保留GitHub合併歷史。截圖+5368/-39與git diff 4a1a95bced234d75b744537f7507bd9f86235b11 a4e13fa完全相符（58檔已提交歷史），不是未提交數；UI實際基準未直接讀取，不能宣稱畫面已歸零。

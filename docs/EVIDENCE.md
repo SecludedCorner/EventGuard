@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-28：原子checkpoint政策單元的提交前驗證
+
+工作樹原乾淨／c80a4be與upstream相同；此單元只改AGENTS、CLAUDE與必要狀態／證據，整合新規則並撤除3個未推commit的累積節奏。build命令py -3.13 -B scripts/package_candidate.py --root reports/release-prep-policy-check-20261028-01 --commit c80a4be90c7e9893544e72fab04c12e7653b33cc：318檔、reproducibletrue、兩原Git Job自然退出；只驗既有產品來源，不稱未提交文件已打入包。
+
+py -3.13 -B scripts/verify.py --run-dir reports/verify-checkpoint-policy-20261028-01 --timeout-seconds 180 --module test_package_candidate --module test_verify_candidate --module test_verify_completion --module test_verify_portability：UTC06:53:13–06:53:16（台北14:53:13–14:53:16），1.388秒、31run=expected31／31pass／0skip/fail/error、218AST無錯、source_unchanged、原Job自然0／remaining0／無強停／逐測試殘留0。最初文件diff-check偵測新增行CRLF混用，修正新增行換行後才通過；沒有在失敗狀態commit。政策／文件連結／提交量及明列四檔另核對，最後單一docs(workflow) commit普通push開發分支並記錄hash、message、父commit差異與status／shortstat。無圖片／runtime／秘密／模型／原生查詢，不修改既有歷史。
+
 ## 2026-10-28：main整併實證、完整本機SDK回歸及隱私附件排除
 
 使用者直接授權推main後，git fetch --all --prune／ls-remote核實origin/main與feat/local-codex-acceptance均a4e13fa75ea0d2d8b455281811114de3efe91844，git diff --quiet與rev-list為0差異／0/0；逐支merge-base --is-ancestor確認handoff、quota、research、publication及開發分支全部包含，私人本機main與其他worktree保留。gh api PR1為closed／mergedtrue、2026-10-22T09:09:47Z／615f77f，依要求remove_artifact後list_artifacts為空，不刪GitHub合併紀錄。git diff 4a1a95b a4e13fa精確為58files／5368新增／39刪除；這是已提交歷史區間，UI基準只作推論。main-consolidation-20261028-01/state-before.json保留核對，review開啟請求queued未宣稱已呈現或歸零。
