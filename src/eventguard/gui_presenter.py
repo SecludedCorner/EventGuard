@@ -189,6 +189,31 @@ def investigation_summary(value, event_id):
             "關聯不等於因果；未推定程序樹或攻擊鏈，未判定安全／入侵；作業系統帳戶身分仍未知。"]
 
 
+def handling_summary(value):
+    """Read-only human handling history, independent of delivery receipts."""
+    states = {"new": "新增", "read": "已讀", "handled": "已處理", "ignored": "忽略"}
+    label = lambda key: states.get(safe_text(key), "未知")
+    lines = ["人工處置狀態：" + label(value.get("status")) + "。這不是投遞 ACK，也不代表已修復。"]
+    history = value.get("handling_history")
+    if not isinstance(history, dict) or history.get("state") not in ("available", "not_recorded"):
+        return [*lines, "處置歷程未知；無法確認不等於沒有操作。"]
+    capacity = {"full": "已滿，新變更可能被拒絕", "available": "未達筆數上限，仍需位元組空間"}.get(safe_text(history.get("count_capacity")), "未知")
+    lines.append("歷程容量：" + capacity + "。更早歷程仍未知；來源通道不是已驗證操作者。")
+    entries = history.get("entries")
+    if not isinstance(entries, list) or len(entries) > 256 or any(not isinstance(row, dict) for row in entries):
+        return [*lines, "處置歷程格式無法核對，保持未知。"]
+    if not entries:
+        return [*lines, "尚無可驗的保存歷程；不能推論從未操作。"]
+    lines.append(f"顯示最後 {min(len(entries), 8)}／{len(entries)} 筆保存操作；完整資料可展開原始結構化檢視。")
+    sources = {"gui": "桌面／網頁", "mcp": "MCP", "cli": "CLI", "startup": "啟動流程", "system": "系統通道", "unknown": "未知通道"}
+    for row in entries[-8:]:
+        source = sources.get(safe_text(row.get("source")), "未知通道")
+        change = "狀態轉換" if row.get("changed") is True else "無狀態變更" if row.get("changed") is False else "變更未知"
+        lines.append(safe_text(row.get("at"), 80) + "：" + label(row.get("previous_status")) + " → "
+                     + label(row.get("status")) + "；" + change + "；來源通道：" + source)
+    return lines
+
+
 def event_summary(value):
     """Human headings over the existing saved guidance, never a new diagnosis."""
     value = value if isinstance(value, dict) else {}
@@ -231,6 +256,7 @@ def event_summary(value):
         lines.append("有另存的查證結果（歷史觀察）時間：" + safe_text(diagnosis.get("observed_at"), 80))
     lines.extend(["", "保存調查（只讀，不建立或更新）",
                   *investigation_summary(value.get("investigation"), event.get("event_id"))])
+    lines.extend(["", "人工處置與操作歷程（只讀）", *handling_summary(value)])
     lines.extend(["", "建議的唯讀查證（僅文字，不會執行）"])
     steps = guidance.get("next_steps")
     if isinstance(steps, list) and any(isinstance(item, str) for item in steps[:6]):

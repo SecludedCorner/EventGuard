@@ -12,6 +12,26 @@ def item(event_id="fixture-event", **changes):
 
 
 class GuiPresenterTests(unittest.TestCase):
+    def test_handled_is_independent_of_pending_ack_and_history_is_bounded(self):
+        rows = [{"previous_status": "new", "status": "handled", "source": "cli",
+                 "at": f"fixture-time-{i}", "changed": True} for i in range(10)]
+        document = {"event": item(), "status": "handled", "handling_history": {
+            "state": "available", "entries": rows, "count_capacity": "full"}}
+        before = copy.deepcopy(document)
+        summary = event_summary(document)
+        for text in ("接收狀態：待接手", "人工處置狀態：已處理", "這不是投遞 ACK", "顯示最後 8／10",
+                     "來源通道：CLI", "不是已驗證操作者", "歷程容量：已滿", "更早歷程仍未知"):
+            self.assertIn(text, summary)
+        self.assertNotIn('fixture-time-0', summary)
+        self.assertIn('fixture-time-9', summary)
+        self.assertEqual(document, before)
+        document["handling_history"]["entries"] = []
+        document["handling_history"]["state"] = "not_recorded"
+        self.assertIn("不能推論從未操作", event_summary(document))
+        for history in (None, {"state": "unknown"}, {"state": "available", "entries": [None]}):
+            document["handling_history"] = history
+            self.assertIn("未知", event_summary(document))
+
     def test_saved_investigation_preserves_independent_unknown_and_stale_evidence(self):
         document = {"event": item(), "investigation": {"case": {
             "anchor_event_id": "fixture-event", "case_id": "case-fixture", "as_of": "saved-time",

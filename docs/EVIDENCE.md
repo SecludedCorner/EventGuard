@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面處置與歷程只讀呈現
+
+`reports/verify-desktop-handling-summary-20261029-01` UTC 2026-10-28 19:07:52：84/84、0skip、source_unchanged，Job自然退出／remaining0；真Tk＋fixture驗handled與pending並存、歷程未知清除舊內容、唯讀顯示，純呈現驗10筆只顯示最後8筆及容量／未知語意。`reports/build-desktop-handling-summary-20261029-01` 266檔hash相符、244檔編譯；不提供真人／Web驗收。前單元e4ecad7已推開發ref並核對，工作樹曾清空、對main差異85行。
+
 ## 2026-10-29：桌面保存調查摘要元件驗證
 
 `reports/verify-desktop-investigation-summary-20261029-02` UTC 2026-10-28 19:05:37：87/87、0 skip、source_unchanged，Job自然退出／remaining0。實際 Tk 唯讀文字元件＋fixture 驗保存案、成員未知／診斷缺失／過期分列，以及切換至無案時清除舊案；純呈現另驗錨點身分與異常欄位。`reports/build-desktop-investigation-summary-20261029-01`：266檔受測hash相符、244檔編譯。未採集／模型／ACK；非瀏覽器、人工桌面版面或鍵盤驗收。

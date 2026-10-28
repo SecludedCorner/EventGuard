@@ -306,6 +306,23 @@ class GuiOwnTkWidgetTests(unittest.TestCase):
         self.assertEqual(self.ui.activities.item(row["id"], "values")[3], "已完成")
         self.assertIn("執行中 0", self.ui.activity_status.get())
 
+    def test_real_detail_widget_shows_handled_while_delivery_remains_pending(self):
+        document = {"event": copy.deepcopy(self.controller.value["events"][0]), "status": "handled",
+                    "handling_history": {"state": "available", "count_capacity": "available", "entries": [
+                        {"previous_status": "new", "status": "handled", "source": "gui",
+                         "at": "2026-01-01T00:00:00Z", "changed": True}]}}
+        self.ui._show_detail(document)
+        self.window.update_idletasks()
+        text = self.ui.detail.get('1.0', 'end')
+        for expected in ('人工處置狀態：已處理', '接收狀態：待接手', '新增 → 已處理', '這不是投遞 ACK'):
+            self.assertIn(expected, text)
+        self.ui._show_detail({"event": document["event"], "handling_history": {"state": "unknown"}})
+        text = self.ui.detail.get('1.0', 'end')
+        self.assertIn('處置歷程未知', text)
+        self.assertNotIn('新增 → 已處理', text)
+        self.assertEqual(self.ui.detail.cget('state'), 'disabled')
+        self.assertFalse(any(action != 'snapshot' for action, _ in self.controller.calls))
+
     def test_real_source_widgets_separate_history_from_denial_staleness_and_missing(self):
         at = "2026-01-01T00:00:00+00:00"
         document = copy.deepcopy(self.controller.value)

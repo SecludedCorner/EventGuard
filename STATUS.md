@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面人工處置與操作歷程摘要
+
+桌面事件詳情新增人工處置狀態與最後8筆保存操作，來源標為通道而非已驗證操作者；已處理不當ACK或修復，無紀錄／損壞維持未知，容量滿載與更早歷程未知分列。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-handling-summary-20261029-01 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop --module test_disposition_history_read --module test_disposition_history_integration`：2026-10-29 03:07（UTC+8）84/84、0 skip、source_unchanged，真Tk＋fixture核對handled仍pending、舊歷程清除、唯讀元件；Job自然退出0／remaining0。`reports/build-desktop-handling-summary-20261029-01`：266檔受測hash相符、244檔編譯通過。未採集／模型／ACK；人工UI與Web待驗不升格。
+
 ## 2026-10-29 桌面保存調查友善摘要
 
 事件詳情在既有唯讀 Tk 文字元件新增保存調查摘要，分列成員雜湊／診斷證據、新鮮度、關聯項目與缺口。缺少調查不補造，錨點身分不符不顯示其他案件，格式異常維持未知；歷史相符不等於來源認證或目前安全，未推定程序樹／攻擊鏈。2026-10-29 03:05（UTC+8）`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-investigation-summary-20261029-02 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop --module test_event_investigation`：87/87、0 skip、source_unchanged，含真 Tk 元件＋fixture、只讀刷新與舊案清除，Job 自然退出 0／remaining 0。`reports/build-desktop-investigation-summary-20261029-01`：266檔hash與受測來源相符、244檔編譯成功，含未提交變更。人工桌面版面／鍵盤與 Web 瀏覽器驗收仍待驗。本次在已附加的整合工作樹從572bb49增量接續，HEAD原為detached，保存仍推指定開發遠端ref，不覆寫其他checkout。
