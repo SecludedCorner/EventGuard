@@ -287,6 +287,15 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertIn("item.dataset.eventId===id", delivery)
         self.assertEqual(self.calls, [])
 
+    def test_investigation_control_explains_snapshot_replacement(self):
+        code, _, page = self.request("/")
+        self.assertEqual(code, 200)
+        detail = page.split('<article id="detail"', 1)[1].split('</article>', 1)[0]
+        self.assertIn('id="investigation-retention"', detail)
+        self.assertIn('更新會取代先前快照，舊版本無法回看', detail)
+        self.assertLess(detail.index('id="investigation-retention"'), detail.index('id="investigate"'))
+        self.assertEqual(self.calls, [])
+
     def test_saved_investigation_summary_preserves_uncertainty_and_bounds(self):
         code, _, script = self.request("/app.js")
         self.assertEqual(code, 200)

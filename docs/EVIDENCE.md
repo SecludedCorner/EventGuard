@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-28：調查更新限制瀏覽器驗收
+
+`reports/verify-investigation-retention-warning-20261028-03` UTC 09:51:31，35/35、0 skip、229 AST、source_unchanged，Job 自然 0／remaining 0／無強停。`reports/investigation-retention-ui-20261028-01`：合成事件「查看」後，事件調查區域的提示與建立／更新按鈕皆可見，提示位於按鈕前；只做 GET，SQLite SHA256 前後 ED790B81DE89B668DE32121DB789F2E8CE72D64A1C688689574743B5A5B697E0，0 POST／native／model；私有 Job 自然 0／remaining 0／無強停。一次瀏覽器 DOM 屬性查詢因控制介面不支援 `compareDocumentPosition` 失敗，改用實際可見性及頁面快照核對順序。
+
+`reports/ux-zoom-20261028-01`：IAB 執行縮放快捷鍵及還原基準後，innerWidth 均 1280、devicePixelRatio 均 1.5，無法證明 200% 縮放；故未通過該關卡。合成 DB hash 前後相同，0 POST／native／model，私有 Job 自然 0／remaining 0／無強停。
+
 ## 2026-10-28：歷程備份身分預檢合成測試
 
 `reports/verify-history-backup-preview-20261028-01` UTC 09:44:42，19/19、0 skip、229 AST、source_unchanged；Job 自然退出 0／remaining 0／無強停。比對合成 SQLite 實際事件內容與備份、缺失／未綁定／衝突／舊範圍 unknown；來源 DB／pending／ACK 未變。預檢不驗證容量、順序、來源真實性，不能宣稱已完成還原。

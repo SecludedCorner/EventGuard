@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-28 調查更新的覆蓋提示
+
+事件詳情在建立／更新按鈕前明示僅保留最新快照、更新取代舊版且不能回看。`reports/verify-investigation-retention-warning-20261028-03` UTC 09:51:31：35/35、0 skip、229 AST、source_unchanged、Job 自然 0／remaining 0／無強停。`reports/investigation-retention-ui-20261028-01` 隔離真瀏覽器打開合成事件詳情，提示與按鈕可見且順序正確；SQLite SHA256 前後 ED790B81…B697E0、0 POST／native／model，Job 自然 0。此提示未提供版本保存。
+
+200% 縮放嘗試見 `reports/ux-zoom-20261028-01`：IAB 快捷鍵後 CSS viewport／devicePixelRatio 未改變，未達驗收，無法用窄視窗代稱真縮放；合成 DB hash 不變、0 POST／native／model，Job 自然 0。
+
 ## 2026-10-28 歷程備份身分唯讀預檢核心
 
 新增未接操作入口的唯讀預檢：核對備份完整性與 namespace、事件實際 payload hash、未綁定記錄、缺事件及 operation 衝突，只輸出計數，不執行或授權還原。`reports/verify-history-backup-preview-20261028-01`：19/19、0 skip、229 AST、source_unchanged、Job 自然 0／remaining 0／無強停；synthetic 驗證相同、缺少、衝突、範圍錯誤、舊格式 unknown、來源不改。這不檢查容量、歷程順序、來源真實性或能否恢復；完整還原及釋放容量仍未實作。
