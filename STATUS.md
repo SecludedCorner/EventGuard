@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-10-29 main 整合已推送（最新）
+
+已以普通 merge commit `93910625f509b43a4aae7ee22abe58c3e1e9e5b8` 合併開發成果至 origin/main，推送後直接 ls-remote 核對一致；父 main=c80a4be、開發來源=66638ae。相對第一父 commit：50 檔 +3971/−72，為本次已批准清理的既有 backlog，非新的未提交修改。原開發分支已 ff 同步此 main；相對 origin/main 待整併 diff 已為 0。本地舊 main 無共同祖先，原樣保留，未改寫歷史或建立 tag／release。
+
+本次整合回報純文件：`reports/release-prep-main-checkpoint-20261029-01` 綁定父9391062，346檔build可重現；`py -3.13 -B scripts/verify.py --run-dir reports/verify-main-checkpoint-20261029-01 --timeout-seconds 180 --module test_package_candidate`，2026-10-29 03:01（UTC+8）8/8、0 skip、Job自然退出／remaining0；diff／本地連結檢查通過，不重跑未受影響的完整產品測試。
+
+完整證據保存在 `reports/main-integration-20261029-01`：首輪 1738 執行、1735 通過、1 失敗、2 skip；修正公開 fixture 的 checkout 路徑假設後，第二輪 1738 執行、1736 通過、0 失敗、2 symlink 環境 skip，source_unchanged、Job 自然退出 0／remaining 0／無強停。第二輪 `verify-main-integration-20261029-02` UTC 2026-10-28 18:59:49；346 檔來源包可重現、244 檔 Python 編譯成功。這些是 fixture／受管程序與 Tk 元件測試，不是 Web 瀏覽器、真人、原生覆蓋、24h／reboot／桌面喚醒驗收。後續兩個 500 行比較基準及主線整合流程見 CLAUDE；CI 狀態獨立，不以 push 成功當 CI 通過。
+
 ## 2026-10-29 整合測試的受保護 checkout 路徑修正
 
 隔離整合工作樹在 `.codex` 下，首次完整回歸的 shipped facts example 測試直接把該路徑交給 inventory，觸發既有 private_or_build_path_refused 保護。main 整合暫停；測試改將已知公開範例複製至專用臨時目錄再驗證，沒有修改產品拒讀規則。`reports/verify-inventory-fixture-location-20261029-01` 因指定不存在模組而未執行測試，保留此命令失敗；正確命令 `py -3.13 -B scripts/verify.py --run-dir reports/verify-inventory-fixture-location-20261029-02 --timeout-seconds 180 --module test_intelligence_integration --module test_adversarial_intelligence`，2026-10-29 02:50（UTC+8）：16/16、0 skip、source_unchanged，Job 自然退出／remaining 0。`reports/build-inventory-fixture-location-20261029-01`：266 檔 hash 相符、244 檔 Python 編譯通過。尚需在隔離整合樹重跑完整回歸，未將首輪失敗改記通過。

@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：完整回歸通過並普通推送 main
+
+遠端 main 直接核對為 `93910625f509b43a4aae7ee22abe58c3e1e9e5b8`，普通 merge 父 c80a4be／66638ae，50 檔 +3971/−72。已將隔離工作樹回條複製至原專案 `reports/main-integration-20261029-01`，包含首輪1失敗、第二輪1736通過／2 symlink skip／0失敗、兩組來源包與build結果；第二輪Job自然退出0／remaining0／未強停，來源266檔hash相符、244檔編譯、346檔來源包可重現。開發分支ff同步main後對origin/main diff為0；無force push／tag／release。後續純文件保存不改變受測產品來源，CI與所有真人／原生關卡另驗。
+
 ## 2026-10-29：修正合成範例的 checkout 路徑假設
 
 首輪 `reports/verify-main-integration-20261029-01` 位於隔離工作樹，shipped facts example 被 `.codex` 路徑保護拒讀，整合暫停。測試把同一公開範例複製到測試臨時目錄；產品路徑限制未變。`reports/verify-inventory-fixture-location-20261029-02` UTC 18:50:36：16/16、0 skip、source_unchanged，Job 自然退出／remaining 0；01 命令因不存在模組被 parser 拒絕，未執行測試。`reports/build-inventory-fixture-location-20261029-01` 當前266檔hash相符、244檔編譯成功。完整整合待修正後重驗。
