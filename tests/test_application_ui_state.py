@@ -236,6 +236,18 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertNotIn("innerHTML", renderer)
         self.assertEqual(self.calls, [])
 
+    def test_notice_exposes_distinct_new_severity_filter_entry_points(self):
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        notice = script.split("function openNoticeSeverity(value){", 1)[1].split("async function refresh(){", 1)[0]
+        for required in ("form.elements.severity.value=value", "form.elements.source.value=''",
+                         "form.elements.status.value='new'", "offset=0", "$('detail').hidden=true",
+                         "severity=high&status=new", "severity=critical&status=new",
+                         "兩次獨立讀取", "openNoticeSeverity(key)"):
+            self.assertIn(required, notice)
+        self.assertNotIn("innerHTML", notice)
+        self.assertEqual(self.calls, [])
+
     def test_served_script_exposes_pure_state_functions_and_bounded_timeouts(self):
         code, _, script = self.request("/app.js")
         self.assertEqual(code, 200)

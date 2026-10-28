@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-28：P1-GUI-002B 合成高嚴重度入口
+
+`reports/gui-high-links-20261028-01`：隔離伺服器以合成 pending 事件建立高 55、嚴重 2、資訊 1。實際瀏覽器點高後為 severity=high／status=new、總數 55／首屏 50、首列高；下一頁 5 筆後點嚴重，severity=critical／status=new、總數及本頁均 2、首列嚴重、上一頁停用。從來源頁以 Enter 回高首頁成功；數字分別查詢，不是共同快照。worker 0 POST／native／model，原 Job 自然 0／remaining 0／無強停；shutdown_requested_reason 為 harness 預設，實際合作停止。
+
+`reports/verify-gui-high-links-20261028-01`：30/30、0 skip、218 AST、source_unchanged，Job 自然退出；含 UI 靜態契約與 catalog fixture，非完整瀏覽器競態驗收。未測人類時長、真主機或競品。
+
 ## 2026-10-28：來源摘要延遲切頁競態
 
 `reports/gui-source-gap-race-20261028-01`：舊合成成功回覆延遲、切往來源頁再回事件頁，切換 fixture 為錯誤後，舊版仍短暫顯示七來源觀測成功，構成重現；原 Job 自然 0／remaining 0／無強停。
