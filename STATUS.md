@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-28 P2-HISTORY-001B 交易核心（尚未接產品）
+
+新增 SQLite transaction helper：要求由呼叫方開交易、延遲建表、同操作識別重播／衝突、無變更請求也保存有界冪等識別但不算狀態轉換；以 32／4096 筆與呼叫方提供的 ACK 預留後可用位元組拒絕滿載，不自行 commit 或 ACK。這是獨立核心，未接 EventStore／Application／Web，尚不能回看或持久記錄實際處置。
+
+`reports/verify-history-transaction-core-20261028-01` UTC 08:46:57、57/57、0 skip、222 AST、source_unchanged，Job 自然 0／remaining 0／無強停。synthetic SQLite 測交易回滾、相同 ID 重播、衝突、無變更、容量拒絕及 pending／receipt 未變；不代表產品已整合。工作樹來源 ZIP build 包含兩個新檔，非 commit 候選。下一步把同一操作識別及來源傳入真寫入交易，測故障回滾與重啟。
+
 ## 2026-10-28 歷程契約換行修正
 
 前一 checkpoint 的 staged `git diff --check` 對新檔 CRLF 報尾隨空白，但 PowerShell 未自動停止後續 commit；該 checkpoint 已推送，不改寫歷史。本單元將兩個新檔統一 LF，內容語意不變；重新 diff-check 無輸出。`reports/verify-history-line-endings-20261028-01` UTC 08:45:06、27/27、0 skip、220 AST、source_unchanged、Job 自然退出。來源 build 為工作樹 ZIP 自檢。後續提交改成獨立檢查退出碼，再執行 commit。下一步 P2-HISTORY-001B。

@@ -12,7 +12,7 @@ IDENTIFIER = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
 OPERATION = re.compile(r"[A-Za-z0-9_.:-]{1,128}\Z")
 
 
-def validate_record(value):
+def validate_record(value, *, allow_unchanged=False):
     """Validate a single transition without asserting who operated it.
 
     Operation identifiers are opaque idempotency keys, not authenticated user
@@ -27,7 +27,7 @@ def validate_record(value):
         raise ValueError("invalid_history_identity")
     if (type(value["previous_status"]) is not str or value["previous_status"] not in STATUSES or
             type(value["status"]) is not str or value["status"] not in STATUSES or
-            value["previous_status"] == value["status"]):
+            (not allow_unchanged and value["previous_status"] == value["status"])):
         raise ValueError("invalid_history_transition")
     if type(value["source"]) is not str or value["source"] not in SOURCES:
         raise ValueError("invalid_history_source")

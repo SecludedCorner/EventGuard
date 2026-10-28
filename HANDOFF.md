@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-28 P2-HISTORY-001B 交易核心未接線
+
+新增需既有 SQLite transaction 的有界操作記錄 helper，synthetic rollback／重播／衝突／無變更／容量及 pending 證據通過；定向 57/57。它尚未接 EventStore、Application 或 UI；下一步接線並驗證跨重啟／原子回滾／ACK reserve，詳 STATUS／EVIDENCE。
+
 ## 2026-10-28 歷程契約換行
 
 前次 staged diff-check 發現 CRLF 卻因命令未檢查退出碼而繼續提交；本次改 LF 並重驗 27/27。往後將 stage、diff-check 與 commit 分開並核對退出碼。下一步 P2-HISTORY-001B；純契約仍未接 DB。
