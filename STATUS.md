@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 案件修訂完整合成回歸
+
+產品來源 `d0faaf1b156d7344e0571696eebc5c728e9dcf62`：`reports/verify-full-revision-20261028-01` UTC 10:41:02，1715 執行／1712 通過／3 跳過／0 失敗錯誤，237 AST、source_unchanged；2 skip 為 symlink 不可建立、1 skip 為 notification_icon_unavailable。Job 自然 0／remaining 0／無強停，無 native 掃描／模型。`reports/release-prep-revision-20261028-01` 來源 commit 339 檔、兩 ZIP 可重現 SHA256 887d7e8b758e455bcb68fb16bacba162acd0ad002660dbf43b3f0ca47c71a299；僅候選來源封裝，非發布。瀏覽器 Work 設定禁用，修訂 UI 仍待真瀏覽器驗收；容量無損釋放、200%／人類／原生／24h／重啟／桌面喚醒各自未達。
+
 ## 2026-10-28 調查容量不足錯誤回報
 
 調查更新遇容量不足時 loopback API 明確回報 investigation_capacity，Web 顯示容量不足與原調查／事件未變更。`reports/verify-investigation-revision-capacity-error-20261028-02` UTC 10:29:30：49/49、0 skip、237 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成 HTTP 注入容量錯誤、核對回碼與 DB 不變；交易滿載回滾見先前 integration 證據。Web JS 僅靜態測，因 Work 禁用本機瀏覽器尚未驗實際顯示。

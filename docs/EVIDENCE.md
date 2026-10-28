@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：修訂後完整合成回歸
+
+`reports/verify-full-revision-20261028-01/verification-summary.json`，來源 `d0faaf1b156d7344e0571696eebc5c728e9dcf62`，UTC 10:41:02，1715 run／1712 pass／3 skip／0 fail/error，237 AST、source_unchanged、636.987 秒；2 symlink unavailable、1 notification_icon_unavailable。Job 自然 0／remaining 0／無強停，machine_scan_executed=false、model_calls=0。`reports/release-prep-revision-20261028-01` 精確來源 339 檔、可重現 archive SHA256 887d7e8b758e455bcb68fb16bacba162acd0ad002660dbf43b3f0ca47c71a299。此證據不驗修訂 UI、原生覆蓋、24h、重啟、桌面喚醒或競品。
+
 ## 2026-10-28：調查容量錯誤回報測試
 
 `reports/verify-investigation-revision-capacity-error-20261028-02` UTC 10:29:30，49/49、0 skip、237 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成 loopback POST 注入容量錯誤取得 HTTP 503／investigation_capacity，DB bytes 不變；中文提示只檢查目標腳本，尚未在真瀏覽器執行。
