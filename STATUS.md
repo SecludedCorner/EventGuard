@@ -1,5 +1,17 @@
 # EventGuard 現況
 
+## 2026-10-28 發布前準備全數完成；尚未發布（最新）
+
+使用者指定「不用release，做完所有準備」。固定候選b57b43be8333327584ef05af4e71740b5b80d621已普通推到origin/feat/local-codex-acceptance；公開main及所有可分享分支皆為候選祖先，無語意衝突，私人本機main祖先不可達。其他worktree及兩張未追蹤圖片保留。候選對公開main615f77f的285檔／55340新增／1961刪除是已提交歷史合計，不是未保存修改；此後僅四份結果文件補記。
+
+修後完整guardian02已自然退出：UTC05:43:35–05:50:36（台北13:43:35–13:50:36），419.655秒，1624run=expected1624、1621pass、3環境skip、0fail/error，stopped_early與stop_requested皆false；216檔AST無錯、238來源hash與候選ZIP全符、source_unchanged，原Job自然0／remaining0／無強停／逐測試殘留0。三skip是兩項symlink建立不可用、一項notification icon不可用；不是略過失敗。原01的提前停止假綠已修且原回條保留、不作完整驗收。
+
+實際candidate02包316檔，兩次build位元組一致，SHA256為2d5ae6a55a24aebd344a630a53b61abc075cfb9af3b62664afb1d9582a8f62d5；包內CLI合成smoke14/14、五個Job自然0／無殘留。獨立index回復5/5、九個Git Job自然0，反向patch所得tree等於公開main、真index／checkout不變。精確候選CI run40639767342 completed/success：Windows1577pass／47可選SDKskip，Linux fixture104/104；本機SDK範圍則如上1621pass。全部native scan/model0，runtime不提交。
+
+入口docs/RELEASE_PREPARATION.md／CHANGELOG.md；本機證據reports/release-prep-candidate-20261028-02與reports/verify-release-preparation-full-20261028-02。PREP-1–5已完成，最後純文件checkpoint依原分支commit/push並另存遠端SHA核對；本聊天15分鐘接續在保存核對後暫停，原跨專案暫停排程不動。未push main、打正式tag、發布、部署或刪分支。真04歷史交付已通過；native111缺列／21error仍partial，24h/reboot、既有桌面聊天喚醒未驗，須依原界線另授權／驗收，不將準備完成冒充產品所有環境完成。
+
+下一個人類決策是何時正式發布及tag/changelog，或另批准原生診斷；兩者均不屬本次「只做準備」。不新增無關工程以延長執行。
+
 ## 2026-10-28 發布準備實跑修復與固定來源重驗（最新）
 
 整合checkpoint3ed82a8已推；首次實際ZIP build在新01目錄失敗，私有Job launcher不替applicationName短名稱git查PATH。改先解析並驗證既有完整git.exe路徑，不執行wrapper／不下載；新增兩個fixture。原失敗目錄與固定原因保留，未將其稱build成功。

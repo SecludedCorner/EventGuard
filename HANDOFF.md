@@ -1,5 +1,13 @@
 # EventGuard 接手
 
+## 2026-10-28 發布前準備完成，沒有執行中的runner（最新）
+
+PREP-1–5已完成，入口docs/RELEASE_PREPARATION.md。固定受測／打包候選b57b43be8333327584ef05af4e71740b5b80d621已推現有開發分支，公開分支全包含、私人main歷史不可達。唯一完整02已自然退出，不依舊PID操作、不另起runner：1624run=expected1624，1621pass／3環境skip，216檔AST、238來源hash與316檔候選包相符，source_unchanged／自然0／remaining0／無強停；精確CI run40639767342 success（Windows47可選SDKskip，Linux fixture104pass）。完整01提前停止假綠不接受、原件保留，驗證器雙閘道已修。
+
+實際兩ZIP相同，hash2d5ae6a55a24aebd344a630a53b61abc075cfb9af3b62664afb1d9582a8f62d5；解壓合成CLI14/14，來源反向patch臨時index5/5，真checkout／index不變；原Git短名稱build失敗、smoke輔助SQL錯欄、演練輸出上限不足皆保留分類與修後證據。見reports/release-prep-candidate-20261028-02及reports/verify-release-preparation-full-20261028-02；runtime不提交。此後只有結果文件checkpoint，不能把其SHA冒充新產品測試。
+
+本次已授權準備沒有剩餘工程；完成最後文件普通push／遠端SHA核對後暫停本聊天接續，原跨專案排程不動。恢復時先核對目前HEAD/upstream與上述原證據，產品位元組未變不重跑。正式release／tag/main push／刪分支尚未執行；需要相應新決策。native一次批准已消耗，111缺列／21error仍partial；舊diagnostics包source過期，不執行，不用fixture或打包結果洗綠。其他worktree、兩張圖片及私人本機main保留。
+
 ## 2026-10-28 當前worker已換為修後完整02（最新）
 
 3ed82a8整合已保存。實際build01因短名稱git未由owned launcher解析PATH失敗，已改既有完整git.exe與wrapper拒絕；原目錄保留。完整01已由合作stop自然退出，1533項部分結果不可當完整PASS；驗證器原passed_checks=true是已重現bug，原回條與取消分類分開保留。修非空expected/run計數、提前停止及stop flag雙閘道，定向19/19。

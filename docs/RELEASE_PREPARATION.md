@@ -1,6 +1,6 @@
 # 發布前準備
 
-## 範圍與目前狀態
+## 範圍與目前狀態（2026-10-28 已完成準備）
 
 2026-10-28 使用者要求完成所有發布準備、連續接續，但不執行 release。本文件是本次唯一準備佇列；現況／證據沿用 STATUS、HANDOFF、EVIDENCE，不建立另一套產品目標。
 
@@ -8,13 +8,34 @@
 
 | 工作 | 完成條件 | 狀態 |
 | --- | --- | --- |
-| PREP-1 分支整合 | 所有可分享分支是候選祖先；無語意衝突；私人歷史不可達 | 公開main已無衝突合入，待checkpoint與祖先終核 |
-| PREP-2 build／測試 | AST與完整guardian回歸；失敗保留後修正，原Job自然退出／remaining0 | 原01已取消、不接受其假綠；驗證器完整性修復後02進行中，來源凍結 |
-| PREP-3 候選包 | 指定commit的source ZIP；逐檔hash／必要檔案／容量／路徑檢查；兩次build位元組一致 | 首輪01短名稱Git啟動失敗已修，原失敗保留，待新commit實際build02 |
-| PREP-4 包內操作 | 解壓到新reports副本，以原Job執行合成CLI操作與保存／重開；無native／模型 | 待PREP-3 |
-| PREP-5 保存與恢復 | changelog、未驗範圍、可回復程序、遠端SHA／CI及交付包hash均可核對 | changelog草稿已備，等待實測結果 |
+| PREP-1 分支整合 | 所有可分享分支是候選祖先；無語意衝突；私人歷史不可達 | DONE：公開main、handoff、quota、research、publication皆已包含；無衝突 |
+| PREP-2 build／測試 | AST與完整guardian回歸；失敗保留後修正，原Job自然退出／remaining0 | DONE：修後完整02為1624/1624 executed，1621pass／3環境skip；216檔AST、精確SHA CI成功 |
+| PREP-3 候選包 | 指定commit的source ZIP；逐檔hash／必要檔案／容量／路徑檢查；兩次build位元組一致 | DONE：b57b43b，316檔，兩份ZIP完全相同，兩個Git Job自然0／remaining0 |
+| PREP-4 包內操作 | 解壓到新reports副本，以原Job執行合成CLI操作與保存／重開；無native／模型 | DONE：14/14，五個CLI Job自然0／remaining0，僅一件合成事件／一份調查／零ACK |
+| PREP-5 保存與恢復 | changelog、未驗範圍、可回復程序、遠端SHA／CI及交付包hash均可核對 | DONE：反向patch恢復公開main tree，真index／checkout不變；changelog及本頁已保存於開發分支 |
 
 這裡的「準備完成」不代表正式環境驗收全過；已知native partial與其他未驗事項必須隨包揭露，不能以測試數或打包成功取代。
+
+## 本次交付與可核對結果
+
+固定受測／打包候選為`b57b43be8333327584ef05af4e71740b5b80d621`，不是之後的純文件checkpoint。238個驗證來源檔案hash全數等於ZIP內該commit檔案；完整回歸來源未變，沒有用舊CI替代。候選相對公開main615f77f的差異是285檔、55340新增／1961刪除，屬已提交歷史合計，不是尚未保存的修改。
+
+本機交付目錄為`reports/release-prep-candidate-20261028-02`，runtime／ZIP／回條不提交、不隨Git提供：
+
+- `candidate.zip`與`reproducibility.zip`：316檔，SHA256均為`2d5ae6a55a24aebd344a630a53b61abc075cfb9af3b62664afb1d9582a8f62d5`。
+- `release-manifest.json`／`package-result.json`：來源SHA、逐檔hash、版本0.1.0及兩個原Job退出回條。
+- `source-binding.json`及完整回歸目錄的`source-commit.json`：238個受測來源與候選包相同，mismatches為空。
+- `smoke-result.json`：14/14；發出、查列、保存調查、原重開與額外唯讀重開。DB仍一件pending、一份調查、零ACK，讀取前後hash相同，五個私有Job皆自然退出／無殘留／無強停。首輪輔助SQL誤用status欄位，已保留分類，改用delivery_status；未重複發事件或保存。
+- `rollback-02/rollback-result.json`與`baseline-to-candidate.patch`：5/5；9個私有Git Job自然退出。以獨立index反向套用，tree精確等於公開main的`810eca95236e0e5955446e1689c0c6aca9fdfdc9`；未更動真index／checkout／refs。原演練的2MiB輔助輸出上限不足4.3MiB diff，失敗輸出保留；只把輔助上限改8MiB後完成。這不是runtime／資料庫還原驗收。
+- `branch-integration.json`／`ci-result.json`／`ci-windows-summary.json`／`ci-fixture-summary.json`：祖先與遠端精確SHA、CI及skip分類；公開分支均包含，私人main祖先不可達，其他worktree不變。
+
+完整命令`py -3.13 -B scripts/verify.py --run-dir reports/verify-release-preparation-full-20261028-02 --timeout-seconds 1800`於UTC05:43:35啟動guardian、05:50:36產生summary（台北13:43:35–13:50:36），worker419.655秒；1624run=expected1624、1621pass、0fail/error、3skip（兩項無symlink建立能力、一項notification icon不可用），stopped_early/stop_requested皆false，216檔AST無錯、原Job自然0／remaining0／無強停／逐測試殘留0。無native inventory/model。
+
+[精確候選CI run40639767342](https://github.com/SecludedCorner/EventGuard/actions/runs/40639767342)為completed/success：Windows1624run／1577pass／47項既有可選SDK不可用skip；Linux fixture104/104，沒有Linux原生支援。沒有安裝依賴、手動dispatch或rerun。原完整01合作停止後的1533項部分結果與假綠保留並明示不接受；修worker及parent完整性閘道後才產生本次完整02。
+
+本次修正包括四表count不能誤洗綠、owned launcher須解析既有完整git.exe、空suite／提前停止不能被驗證器判通過。正式發布仍有已知接受前置：native listener身分111缺列／21error仍partial，24h/reboot、既有桌面聊天喚醒及同環境競品比較未驗；真04歷史receive→query→保存→ACK證據沿用，這次沒有再啟模型或新native查詢。詳見[CHANGELOG](../CHANGELOG.md)與[最新證據](EVIDENCE.md)。
+
+後續純文件checkpoint僅補記以上結果；固定包內是當時已提交的文件，最新本頁與changelog作為包外候選說明，不把文件補記冒充另一輪產品測試。準備完成後不憑持續執行政策擴大native／模型或發布授權。
 
 ## 可重現 source candidate
 

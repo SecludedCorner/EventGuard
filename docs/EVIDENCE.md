@@ -1,5 +1,21 @@
 # 證據與時間日誌
 
+## 2026-10-28：固定候選全部發布前準備通過；沒有發布
+
+固定來源b57b43be8333327584ef05af4e71740b5b80d621（修owned Git完整路徑與提前停止假綠），整合父checkpoint3ed82a8。公開main615f77f／handoff、quota、research、publication全部包含，private main不可達；其tip tree與公開sanitized root相同，不需要上傳私人祖先。branch-integration.json保存祖先與基準；候選相對origin/main615f77f為285檔、55340新增／1961刪除，是已提交範圍，不是工作樹累積。無衝突／main push／正式tag／release／部署／分支刪除。
+
+py -3.13 -B scripts/verify.py --run-dir reports/verify-release-preparation-full-20261028-02 --timeout-seconds 1800：guardian UTC05:43:35啟動、summary05:50:36（台北13:43:35–13:50:36），worker419.655秒；1624run=expected1624、1621pass、3skip、0fail/error、stopped_early=false/stop_requested=false、216檔AST無錯、source_unchanged、原Job自然0／remaining0／無強停／逐測試殘留0。skip為兩symlink建立不可用、一notification icon不可用。238驗證來源hash逐項等於候選ZIP內同commit檔案，source-commit.json／source-binding.json保存零差異；不把原01部分1533項假綠或新文件checkpoint當受測產品。
+
+py -3.13 -B scripts/package_candidate.py --root reports/release-prep-candidate-20261028-02 --commit b57b43be8333327584ef05af4e71740b5b80d621：實際兩次git archive，316檔／同commit，兩ZIP SHA256均2d5ae6a55a24aebd344a630a53b61abc075cfb9af3b62664afb1d9582a8f62d5；兩個原私有Job自然0／remaining0／無強停。release-manifest.json逐檔hash、package-result.json原回條。初01失敗保留，沒有宣稱失敗launch有退出證據。
+
+同candidate02/smoke_package.py實際解壓後執行包內emit/list/investigate/detail，原四CLI均自然0。最後輔助SQL誤用status而非delivery_status，smoke-check-failure.json標harness非產品；resume_smoke.py讀原回條／輸出，不重發或重存，僅額外一次唯讀detail；smoke-result.json共14/14、五個原Job自然0／remaining0／無強停，DB一件合成pending／一份保存case／零ACK，重開case相等、唯讀DB hash未變、316檔hash相符。模型／native0，不是真agent重驗。
+
+rehearse_rollback.py於獨立GIT_INDEX_FILE中read-tree候選、git apply --reverse --cached --check與實際apply、write-tree；rollback-02/rollback-result.json為5/5，所得tree810eca95236e0e5955446e1689c0c6aca9fdfdc9精確等於公開main，真index hash／tracked checkout未變、九個原私有Git Job自然0／remaining0／無強停。完整binary diff SHA256c4dfe62e6fd35d274df8af92db5e37e8c592ee0952bded1a9be05c7cb3d45faf。原rollback目錄因輔助2MiB上限不足4297994 bytes而在建立alternate index前停止，四原回條／原diff保留；只改輔助8MiB上限到新目錄02完成。不是runtime或DB恢復測試。
+
+gh api及gh run view唯讀核實[run40639767342](https://github.com/SecludedCorner/EventGuard/actions/runs/40639767342)精確head b57，completed/success（UTC05:49:21更新）；Windows job122654933138為1624run=expected、1577pass／47既有可選SDK不可用skip，完整閘道false-stop／true-source與原Job自然0／remaining0／無強停；fixture job122654933375為104/104、0skip，無Linux native支援。不下載、手動dispatch或rerun。固定欄位及skip分類保存candidate02/ci-*.json，沒有保存完整logs。
+
+CHANGELOG與RELEASE_PREPARATION完成候選說明／hash／來源回復／未驗限制；原native111缺列／21error仍partial，24h/reboot、桌面聊天喚醒及競品比較未驗。真04歷史收件通過沿用，不新增模型或native批准。最後純文件checkpoint普通push現有開發分支並另存遠端核對，完成後暫停本聊天15分鐘接續；原跨專案暫停任務未動。runtime、ZIP、原授權／回條、未追蹤圖片均不提交。
+
 ## 2026-10-28：實際build與中斷驗證器的兩個修復
 
 3ed82a8的package_candidate首輪01只回candidate_build_failed；該root與build-failure-analysis.json保留。JobPopen以applicationName原值呼叫CreateProcessW，不為git短名稱查PATH；改shutil.which後只接受現有absolute .exe，再交私有Job，不下載或使用cmd wrapper。新增兩個注入測試，沒有真Git child。
