@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：修訂診斷呈現合成驗證
+
+`reports/verify-revision-diagnostics-web-20261028-01` UTC 10:55:18，25/25、0 skip、238 AST、source_unchanged；Job 自然 0／remaining 0／無強停。`reports/revision-diagnostics-dom-20261028-01/run.js` node exit 0：5 種診斷狀態與保存摘要、未知及非安全聲明；合成 DOM 不是瀏覽器或原生資料。
+
 ## 2026-10-28：修訂診斷狀態合成測試
 
 `reports/verify-revision-diagnostics-20261028-02` UTC 10:53:47，22/22、0 skip、238 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 以已保存診斷核對匹配、變動、缺失、舊 schema 未綁定，以及未提供診斷時 unknown；DB／pending／ACK 不變。未重新採集或執行模型；Web 尚未顯示。

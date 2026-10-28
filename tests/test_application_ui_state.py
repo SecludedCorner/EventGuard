@@ -315,6 +315,9 @@ class ApplicationUIContractTests(unittest.TestCase):
             self.assertIn(field, renderer)
         self.assertNotIn("innerHTML", renderer)
         self.assertIn("investigationGapLabels[gap.reason]", renderer)
+        self.assertIn("revision.diagnostic_evidence_status", renderer)
+        self.assertIn("診斷狀態未知", renderer)
+        self.assertIn("diagnosis.observations", renderer)
         self.assertIn("renderInvestigationRevisions(d.investigation_revisions,sameEvent)", script)
         self.assertEqual(self.calls, [])
 

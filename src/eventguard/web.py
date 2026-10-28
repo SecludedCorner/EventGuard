@@ -80,6 +80,12 @@ function renderInvestigationRevisions(value,preserve=false){
     box.dataset.revisionId=String(revision.revision_id);box.open=open.has(box.dataset.revisionId);
     box.append(summary,node('p','快照時間：'+when(c.as_of)+'。案件：'+c.case_id+'。內容雜湊：'+revision.case_hash+'。'));
     if(revision.evidence_status!=='saved_snapshot')box.append(node('p','原事件缺失或內容已變，證據未知：'+[...revision.missing_event_ids,...revision.changed_event_ids].join(', '),'result-unknown'));
+    const diagnosticLabels={matched:'目前保存診斷與當時雜湊相符',changed:'目前診斷已變更',missing:'目前沒有保存診斷',not_bound:'此舊版本未綁定診斷',unknown:'診斷狀態未知'};
+    box.append(node('p','診斷證據：'+(diagnosticLabels[revision.diagnostic_evidence_status]||'診斷狀態未知')+'；這不代表目前主機安全。'));
+    const diagnosis=c.diagnostic_context;if(diagnosis&&diagnosis.state==='saved'){
+      box.append(node('p','當時診斷時間：'+when(diagnosis.observed_at)+'，結果：'+(states[diagnosis.result_status]||diagnosis.result_status)+'。'));
+      for(const observed of diagnosis.observations)box.append(node('p',(sourceNames[observed.source]||observed.source)+' / '+(states[observed.status]||observed.status)+' / 保存列數 '+observed.row_count+' / '+when(observed.observed_at)));
+    }
     box.append(node('p','觀測 '+c.timeline.length+' 筆；證據缺口 '+c.gaps.length+' 筆。時間接近不代表因果。'));
     const list=node('ol');for(const item of c.timeline){const li=node('li',when(item.observed_at)+' / '+item.event_id+' / '+(eventNames[item.event_type]||item.event_type));li.append(node('pre',JSON.stringify(item.facts,null,2)));list.append(li);}box.append(list);
     const gaps=node('ul');for(const gap of c.gaps)gaps.append(node('li',(investigationGapLabels[gap.reason]||gap.reason)+' / '+gap.event_id));box.append(gaps);target.append(box);
