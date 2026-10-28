@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 歷程預檢實際 CLI 合成驗證
+
+`reports/history-preview-real-cli-20261028-03` 使用既有 PowerShell 7 管線與真正 `EventGuard.cmd`／CLI、專用 synthetic event-source；預檢 exact_prefix、1 筆已存在且可還原性 unknown，無 ID 輸出。合成 DB SHA256 前後 57e5bb4065816cb369753eae5efb19c75ee52efcd91bb5b5968b2abf5914b8a8、pending 1／ACK 0／native 0／model 0；Job 自然退出 0／remaining 0／無強停。`...-02` 另驗直接 stdin 檔案 handle，亦自然 0；`...-01` 輔助程式退出原因無效而未保存原 Job 回條，殘留狀態未確認，不列為通過。均非真實資料還原或容量釋放。
+
 ## 2026-10-28 歷程預檢機器輸出未知狀態
 
 JSON 明確將來源真實性、歷程是否完整、容量與可還原性標為 unknown，即使身分零衝突也不升格為可還原。`reports/verify-history-preview-unknown-20261028-01` UTC 11:18:26：10/10、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic CLI／前綴定向；無真實還原或容量釋放。

@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-28 歷程預檢 CLI 合成管線
+
+真 EventGuard.cmd／PowerShell 7 管線與合成 source 在 `reports/history-preview-real-cli-20261028-03` 通過，DB 不變、Job 自然 0／remaining 0。首次 `...-01` 輔助程式退出原因無效，原 Job 回條未保存、殘留未確認；`...-02`／`...-03` 分別完整退出。預檢仍不代表可還原或釋放容量。
+
 ## 2026-10-28 預檢 JSON 未知狀態
 
 預檢機器輸出明示 provenance／完整性／容量／可還原性 unknown，10/10 synthetic；不要用零衝突當還原授權。使用者入口、來源認證及容量釋放仍缺。
