@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 修訂診斷 loopback GET
+
+`reports/verify-revision-diagnostics-http-20261028-01` UTC 10:56:47：17/17、0 skip、238 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 真 loopback GET 核對同一前版事件成員相符時，診斷變更仍另回 changed；DB bytes／pending／ACK 不變，model 0。這不是真瀏覽器驗收。
+
 ## 2026-10-28 前版診斷證據呈現 WIP
 
 前版畫面分開顯示診斷相符、變更、缺失、未綁定或未知，並顯示當時保存診斷摘要；不把事件成員雜湊相符解讀為診斷相符或主機安全。`reports/verify-revision-diagnostics-web-20261028-01` UTC 10:55:18：25/25、0 skip、238 AST、source_unchanged；Job 自然 0／remaining 0／無強停。`reports/revision-diagnostics-dom-20261028-01` 實際 renderer 五種合成 DOM 狀態通過；非瀏覽器，Work 禁用本機瀏覽器，頁面驗收仍 WIP。

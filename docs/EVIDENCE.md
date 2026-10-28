@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：修訂診斷 HTTP GET 合成測試
+
+`reports/verify-revision-diagnostics-http-20261028-01` UTC 10:56:47，17/17、0 skip、238 AST、source_unchanged、Job 自然 0／remaining 0／無強停。synthetic loopback GET 驗證 prior evidence_status=saved_snapshot 與 diagnostic_evidence_status=changed 分開，DB bytes 相同、pending 2／ACK 0／model 0；非瀏覽器。
+
 ## 2026-10-28：修訂診斷呈現合成驗證
 
 `reports/verify-revision-diagnostics-web-20261028-01` UTC 10:55:18，25/25、0 skip、238 AST、source_unchanged；Job 自然 0／remaining 0／無強停。`reports/revision-diagnostics-dom-20261028-01/run.js` node exit 0：5 種診斷狀態與保存摘要、未知及非安全聲明；合成 DOM 不是瀏覽器或原生資料。
