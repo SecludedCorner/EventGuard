@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 調查容量不足錯誤回報
+
+調查更新遇容量不足時 loopback API 明確回報 investigation_capacity，Web 顯示容量不足與原調查／事件未變更。`reports/verify-investigation-revision-capacity-error-20261028-02` UTC 10:29:30：49/49、0 skip、237 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成 HTTP 注入容量錯誤、核對回碼與 DB 不變；交易滿載回滾見先前 integration 證據。Web JS 僅靜態測，因 Work 禁用本機瀏覽器尚未驗實際顯示。
+
 ## 2026-10-28 修訂全域上限與並行合成測試
 
 `reports/verify-investigation-revision-concurrency-20261028-02` UTC 10:26:43：17/17、0 skip、237 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成記憶體 SQLite 實際塞入 256 版本並拒絕第 257 筆；兩執行緒同事件更新後前版與兩個新快照均可讀、pending 2／ACK 0。全域滿載只測儲存原件，尚未驗整體產品流量或跨程序壓力；瀏覽器與容量恢復仍未完成。

@@ -296,6 +296,14 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertLess(detail.index('id="investigation-retention"'), detail.index('id="investigate"'))
         self.assertEqual(self.calls, [])
 
+    def test_investigation_capacity_has_user_facing_error(self):
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        action = script.split("$('investigate').addEventListener", 1)[1].split("$('filters')", 1)[0]
+        self.assertIn("investigation_capacity", action)
+        self.assertIn("原調查與事件未變更", action)
+        self.assertEqual(self.calls, [])
+
     def test_revision_renderer_is_bound_to_detail_and_preserves_unknown(self):
         code, _, page = self.request("/")
         self.assertEqual(code, 200)

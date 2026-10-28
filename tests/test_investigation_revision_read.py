@@ -7,10 +7,11 @@ import http.client
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from eventguard.events.catalog import EventCatalog
 from eventguard.events.investigation_revision_read import read_revisions
-from eventguard.events.store import EventStore
+from eventguard.events.store import CapacityError, EventStore
 from eventguard.web import LocalWeb
 from test_event_investigation import fixture_events, NOW
 
@@ -89,6 +90,23 @@ class RevisionReadTests(unittest.TestCase):
             self.assertEqual(result["investigation_revisions"], expected)
             self.assertEqual(result["investigation_revisions"]["revisions"][0]["case"], self.first)
             self.assertEqual(result["model_calls"], 0)
+            self.assertEqual(self.store.path.read_bytes(), before)
+        finally:
+            self.assertTrue(web.close()["web_thread_exited"])
+
+    def test_http_capacity_error_explains_preserved_investigation(self):
+        self.update()
+        before = self.store.path.read_bytes()
+        web = LocalWeb(self.root, "test", port=0, status_provider=lambda: {})
+        web.start()
+        try:
+            with patch.object(web.catalog, "investigate", side_effect=CapacityError("synthetic")):
+                with closing(http.client.HTTPConnection("127.0.0.1", web.server.server_port, timeout=5)) as client:
+                    client.request("POST", "/api/events/evt-anchor/investigation", "{}", {
+                        "Content-Type": "application/json", "Origin": web.url, "X-EventGuard-CSRF": web.token})
+                    response = client.getresponse()
+                    self.assertEqual(response.status, 503)
+                    self.assertEqual(json.loads(response.read())["error_code"], "investigation_capacity")
             self.assertEqual(self.store.path.read_bytes(), before)
         finally:
             self.assertTrue(web.close()["web_thread_exited"])

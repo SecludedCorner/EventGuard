@@ -236,7 +236,7 @@ function mcpExitSummary(value){const m=value&&typeof value==='object'?value:{},v
 async function agent(){const d=await api('/api/agent'),task=d.dispatcher||{},failed=Number.isInteger(task.codex_exit_code)&&task.codex_exit_code!==0;$('agent-summary').textContent='程序：'+(d.host_liveness||'未知')+'。狀態：'+(d.state||d.host_state||'未知')+'。待收：'+(d.pending_events??'未知')+'。最後進度：'+(d.last_progress||d.heartbeat_at||'未知')+'。原因：'+(d.reason||d.blocked_reason||'無')+'。'+mcpExitSummary(d.mcp_lifecycle)+(failed?' 上次 CLI 任務失敗。退出碼：'+task.codex_exit_code+'。事件：'+(task.pending_event_id||'未知')+'。Attempt：'+(task.active_attempt_id||'未知')+'。接收／查證／ACK 請核對下方 delivery_progress；程序已退出不代表事件已收到。':'');$('agent-json').textContent=JSON.stringify(d,null,2);}
 const showDetail=detail;detail=async function(id){const sequence=++deliverySequence;await showDetail(id);if(selected!==id||sequence!==deliverySequence)return;$('delivery-json').textContent='正在讀取保存證據…';try{const d=await api('/api/events/'+encodeURIComponent(id)+'/delivery');if(selected===id&&sequence===deliverySequence)$('delivery-json').textContent=JSON.stringify(d,null,2);}catch(e){if(selected===id&&sequence===deliverySequence)$('delivery-json').textContent='投遞證據不可用：'+e.message;}};
 $('return-to-list').addEventListener('click',()=>{const id=selected;selected=null;detailSequence++;deliverySequence++;$('detail').hidden=true;const button=[...$('event-rows').querySelectorAll('button')].find(item=>item.dataset.eventId===id);(button||$('filters').querySelector('button')).focus();});
-$('investigate').addEventListener('click',async()=>{if(!selected)return;const id=selected;$('investigate').disabled=true;try{const value=await api('/api/events/'+encodeURIComponent(id)+'/investigation',{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:'{}'});if(selected===id){renderInvestigation(value);await detail(id);}}catch(error){fail(error);}finally{$('investigate').disabled=false;}});
+$('investigate').addEventListener('click',async()=>{if(!selected)return;const id=selected;$('investigate').disabled=true;try{const value=await api('/api/events/'+encodeURIComponent(id)+'/investigation',{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:'{}'});if(selected===id){renderInvestigation(value);await detail(id);}}catch(error){fail(error.code==='investigation_capacity'?Error('調查保存空間或版本容量不足，原調查與事件未變更'):error);}finally{$('investigate').disabled=false;}});
 function openNoticeSeverity(value){
   const form=$('filters');form.elements.severity.value=value;form.elements.source.value='';form.elements.status.value='new';offset=0;filterUrlValid=true;$('filter-url-error').hidden=true;invalidateEventList();writeFilterUrl();
   document.querySelector('nav button[data-tab="events"]').click();
@@ -441,7 +441,12 @@ class LocalWeb:
                     if len(parts) == 5 and parts[:3] == ["", "api", "events"] and parts[4] == "investigation":
                         if self.json_body(size) != {}:
                             raise ValueError("invalid_investigation_request")
-                        return self.reply(200, app.catalog.investigate(parts[3]))
+                        from .events.store import CapacityError
+                        try:
+                            result = app.catalog.investigate(parts[3])
+                        except CapacityError:
+                            return self.error(503, "investigation_capacity")
+                        return self.reply(200, result)
                     if len(parts) != 5 or parts[:3] != ["", "api", "events"] or parts[4] != "status":
                         return self.error(404, "route_not_found")
                     data = self.json_body(size)

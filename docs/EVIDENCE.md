@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：調查容量錯誤回報測試
+
+`reports/verify-investigation-revision-capacity-error-20261028-02` UTC 10:29:30，49/49、0 skip、237 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成 loopback POST 注入容量錯誤取得 HTTP 503／investigation_capacity，DB bytes 不變；中文提示只檢查目標腳本，尚未在真瀏覽器執行。
+
 ## 2026-10-28：全域上限與並行更新合成測試
 
 `reports/verify-investigation-revision-concurrency-20261028-02` UTC 10:26:43，17/17、0 skip、237 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 原件建立 16 個事件各 16 筆，全球第 257 筆拒絕且原數不變；兩執行緒更新保留原始及兩新版快照，pending／ACK 不變。首次 `...-01` 一測試失敗，原因是預期時間缺少保存格式的微秒；修正測試格式後重驗通過。未測跨程序／長時負載，無容量釋放。
