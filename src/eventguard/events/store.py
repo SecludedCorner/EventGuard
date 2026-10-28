@@ -538,13 +538,32 @@ class EventStore:
                         raise StoreError("investigation_diagnostic_changed")
                 db.execute("""CREATE TABLE IF NOT EXISTS event_investigations(event_id TEXT PRIMARY KEY,
                     payload_hash TEXT NOT NULL,result TEXT NOT NULL,updated_at REAL NOT NULL)""")
-                previous = db.execute("SELECT length(CAST(result AS BLOB)) FROM event_investigations WHERE event_id=?", (event_id,)).fetchone()
-                growth = max(0, len(encoded)-(previous[0] if previous else 0))
+                previous = db.execute("SELECT payload_hash,result,updated_at FROM event_investigations WHERE event_id=?", (event_id,)).fetchone()
+                if previous is not None:
+                    from .investigation_revision import make_revision
+                    from .investigation_revision_store import append_revision, RevisionCapacityError
+                    if previous[0] != payload_hash or type(previous[1]) is not str or len(previous[1].encode("utf-8")) > 65536:
+                        raise StoreError("investigation_previous_identity_conflict")
+                    try:
+                        old_case = json.loads(previous[1])
+                        revision = make_revision(old_case, self._row(row), saved_at=previous[2])
+                    except (TypeError, ValueError, KeyError, OverflowError):
+                        raise StoreError("investigation_previous_invalid") from None
+                    if old_case == result:
+                        return
+                    available = max(0, self.max_bytes - self._used_bytes(db) - self.ack_reserve_bytes)
+                    try:
+                        append_revision(db, revision, self._row(row), available_bytes=available)
+                    except RevisionCapacityError as exc:
+                        raise CapacityError("investigation_revision_capacity_pending_preserved") from exc
+                growth = max(0, len(encoded)-(len(previous[1].encode("utf-8")) if previous else 0))
                 page = db.execute("PRAGMA page_size").fetchone()[0]
                 if self._used_bytes(db)+growth+page+self.ack_reserve_bytes > self.max_bytes:
                     raise CapacityError("investigation_capacity_pending_and_ack_space_preserved")
                 db.execute("INSERT OR REPLACE INTO event_investigations VALUES(?,?,?,?)",
                            (event_id, payload_hash, encoded, time.time()))
+                if self._used_bytes(db)+self.ack_reserve_bytes > self.max_bytes:
+                    raise CapacityError("investigation_revision_capacity_pending_preserved")
         except sqlite3.Error as exc:
             raise self._sqlite_error(exc) from exc
 

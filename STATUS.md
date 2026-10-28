@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 案件修訂原子保存
+
+明確更新已保存調查時，在同一 SQLite 交易先驗並保存上一版，再寫最新案；相同快照重送不新增版本。容量不足或舊快照損壞直接失敗，回滾保留先前資料與 pending／ACK。`reports/verify-investigation-revision-integration-20261028-03` UTC 10:16:28：56/56、0 skip、234 AST、source_unchanged；Job 自然 0／remaining 0／無強停，均 synthetic。每事件 16、全域 256 上限後不自動清理；版本讀取／瀏覽器、全域滿載和併發尚未驗。已有舊版之前的歷史不能重建；到期 anchor 的歷史保留與回看方案仍需處理。
+
 ## 2026-10-28 案件修訂交易儲存原件
 
 新增受呼叫端交易控制的有界 append 原件；不自行 commit 或淘汰，容量／位元組不足拒絕，回滾可撤銷建表與插入。`reports/verify-investigation-revision-store-20261028-01` UTC 10:13:48：29/29、0 skip、233 AST、source_unchanged；Job 自然 0／remaining 0／無強停。尚未接產品寫入、核實實際 DB 成長、讀取或 UI；此原件不代表能回看調查。

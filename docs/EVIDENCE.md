@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：案件修訂交易保存合成回歸
+
+`reports/verify-investigation-revision-integration-20261028-03` UTC 10:16:28、56/56、0 skip、234 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成 SQLite 核對前版內容與保存時間、重複快照不增列、16 筆滿載、容量前後回滾、損壞舊案拒絕及 pending／ACK 不變。首次 `...-01` 有 2 errors：測試重新產生 synthetic event 導致 payload 身分不同；固定使用原 fixture 後 `...-02` 36/36、`...-03` 56/56。未測全域滿載、並行、舊 anchor 過期修訂讀取或 UI。
+
 ## 2026-10-28：修訂儲存原件合成測試
 
 `reports/verify-investigation-revision-store-20261028-01` UTC 10:13:48、29/29、0 skip、233 AST、source_unchanged；私有 Job 自然 0／remaining 0／無強停。SQLite 合成測驗證必須由呼叫端交易控制、不自行提交、回滾、不可信快照拒絕、16 筆容量與位元組上限。全域滿載、實際 DB 增量／ACK 保留與產品接線尚未驗。
