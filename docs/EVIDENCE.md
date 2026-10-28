@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：歷程追加還原原件合成測試
+
+`reports/verify-history-restore-primitive-20261028-02` UTC 11:05:31，18/18、0 skip、241 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 兩資料庫核對原事件身分、完整前綴、無綁定／scope／hash 拒絕、容量不足、中途失敗 savepoint 回滾、呼叫端 rollback／commit、重播及 pending／ACK。未接產品入口；未認證備份來源、未檢驗實際 DB 容量／長期恢复、未釋放容量。
+
 ## 2026-10-28：歷程備份 stdin 預檢合成測試
 
 `reports/verify-history-preview-cli-20261028-02` UTC 11:01:42，38/38、0 skip、239 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic CLI 測合法彙總、錯 scope／修改 hash／超限拒絕、互動 stdin 不等待、無識別輸出、DB／pending／ACK 不變；非還原、容量或真實使用者資料驗收。

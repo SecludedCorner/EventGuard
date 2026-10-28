@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 歷程備份追加還原交易原件
+
+新增未接產品入口的交易原件：僅在目標現存歷程與備份是完全一致前綴、scope 及每個事件 payload 身分吻合時追加缺失尾段，保留順序；不刪源、不改處置狀態、不 ACK、不自行 commit。savepoint 失敗回滾；呼叫端仍須獨立驗證來源真實性、ACK 保留及實際 bytes，才能決定交易。`reports/verify-history-restore-primitive-20261028-02` UTC 11:05:31：18/18、0 skip、241 AST、source_unchanged，Job 自然 0／remaining 0／無強停。synthetic 測空目標、重播、錯 scope／hash／未綁定／改事件、容量拒絕與中途失敗；這不等於已完成還原產品、容量釋放或授權真實資料操作。
+
 ## 2026-10-28 處置歷程備份唯讀預檢 CLI
 
 新增 `events preview-history`，從標準輸入有界接收已保存備份，對指定 namespace／事件庫唯讀核對身分，只輸出彙總計數；交互式 stdin、超大內容、錯誤／未綁定 scope 拒絕。沒有還原、清理或 ACK，零衝突也不證明來源真實性、容量或可還原性。`reports/verify-history-preview-cli-20261028-02` UTC 11:01:42：38/38、0 skip、239 AST、source_unchanged；Job 自然 0／remaining 0／無強停。僅 synthetic；無損釋放容量尚未實作。
