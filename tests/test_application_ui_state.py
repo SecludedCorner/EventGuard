@@ -269,6 +269,22 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertIn("window.addEventListener('popstate'", script)
         self.assertEqual(self.calls, [])
 
+    def test_detail_return_exposes_focus_target_and_guards_delivery_sequence(self):
+        code, _, page = self.request("/")
+        self.assertEqual(code, 200)
+        detail = page.split('<article id="detail"', 1)[1].split('</article>', 1)[0]
+        self.assertIn('id="return-to-list"', detail)
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        event_renderer = script.split("async function events(){", 1)[1].split("async function detail(", 1)[0]
+        self.assertIn("b.dataset.eventId=e.event_id", event_renderer)
+        self.assertIn("item.dataset.eventId===focused", event_renderer)
+        delivery = script.split("const showDetail=detail;", 1)[1].split("$('investigate')", 1)[0]
+        self.assertIn("sequence!==deliverySequence", delivery)
+        self.assertIn("sequence===deliverySequence", delivery)
+        self.assertIn("item.dataset.eventId===id", delivery)
+        self.assertEqual(self.calls, [])
+
     def test_served_script_exposes_pure_state_functions_and_bounded_timeouts(self):
         code, _, script = self.request("/app.js")
         self.assertEqual(code, 200)

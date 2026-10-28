@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-28：P1-GUI-003B 詳情返回與延遲詳情
+
+合成真瀏覽器於 high/new 第二頁開啟 `evt-url-high-4`，焦點到返回按鈕；按 Enter 回原列、網址仍 page=1。延遲該詳情、立即開啟 `evt-url-high-3`，放行舊回覆後畫面與 delivery event_id 仍為後者，返回焦點亦為後者。另等待一個五秒週期後，同一合成列按鈕焦點未變。沒有執行人工處置或 ACK；不代表所有競態已排除。慢事件清單回覆及原列消失後焦點尚待注入。
+
+`reports/gui-detail-return-20261028-01` 來源 GET 10、POST 0、native/model 0，原 Job 自然 0／remaining 0／無強停；shutdown_requested_reason 為 harness 預設，實際合作停止。`reports/verify-gui-detail-return-20261028-01` 61/61、0 skip、218 AST、source_unchanged；UI 靜態契約不代替瀏覽器證據。
+
 ## 2026-10-28：P1-GUI-003A 合成網址導航
 
 合成瀏覽器高 55／嚴重 2／資訊 1，直接載入 high/new/page=1 顯示 5 筆；reload 保持，上一頁顯示 50，back 回 5、forward 回 50，嚴重提示進 critical/new 2 筆。無效嚴重度、重複參數、page=10001、未知參數均顯示固定錯誤與空列表；選 high/listeners/new 後恢復 55 筆，網址只包含列舉。未對慢事件回覆做瀏覽器注入。
