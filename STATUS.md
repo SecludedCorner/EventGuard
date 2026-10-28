@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-28 GUI／歷程整合完整回歸
+
+來源 commit `7de39b3cec4c99308783afb3dc7f0c6240e47b25`：`py -3.13 -B scripts/verify.py --run-dir reports/verify-full-gui-history-20261028-01 --timeout-seconds 1800`，UTC 09:23:05–09:31:17、1670 run／1667 pass／3 skip、0 fail/error、224 AST、source_unchanged；兩項 symlink 建立不可用、一項 notification_icon_unavailable。原 Job 自然 0／remaining 0／無強停／逐測殘留 0；native scan／model 0。synthetic／fixture 全回歸不等於原生覆蓋或真 agent 收件。
+
+`reports/release-prep-gui-history-20261028-01` 精確 7de39b3 候選 326 檔、兩 ZIP 一致；文件 checkpoint 另以 `reports/verify-full-checkpoint-docs-20261028-01` 19/19、0 skip 及工作樹 ZIP 自檢。全庫／byte 歷程滿載無損恢復、人類 UX／200% zoom、真機 24h／重啟／喚醒仍未完成。
+
 ## 2026-10-28 處置歷程單事件容量局部恢復
 
 每事件上限從 32 調整為 256，全庫仍 4096 且受既有 byte／ACK reserve 限制；不刪或覆寫舊歷程。`reports/gui-history-capacity-recovery-20261028-01` 合成真瀏覽器驗舊版 32 筆滿載後可完成新處置、舊 32 列逐筆相同、32 筆未綁定仍未知、pending／receipt null；`-02` 驗新 256 筆滿載明示拒絕、狀態與 pending 不變。兩 Job 自然 0／remaining 0／無強停、各 1 合成 POST、native／model 0。

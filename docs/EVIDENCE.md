@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-28：GUI／歷程整合完整回歸
+
+`reports/verify-full-gui-history-20261028-01` 綁 7de39b3：1670 run／1667 pass／3 skip（2 symlink creation unavailable、1 notification_icon_unavailable）、0 fail/error，491.239 秒、224 AST、source_unchanged，Job 自然 0／remaining 0／無強停、逐測殘留 0、0 native scan／model。`reports/release-prep-gui-history-20261028-01` 以同 commit 建置，326 檔、兩 ZIP SHA256 `450706127a89381ebd34d252c1b4e7c8d5474271fa680a10b4b445ce9c4b6510` 一致；候選並非發布。
+
+文件保存前 `reports/verify-full-checkpoint-docs-20261028-01` 19/19、0 skip、224 AST、Job 自然退出；工作樹 ZIP 含文件。本完整回歸不證明人類 UX、真原生覆蓋、24h、重啟、真 agent 或容量耗盡恢復。
+
 ## 2026-10-28：處置歷程容量局部恢復
 
 `reports/gui-history-capacity-recovery-20261028-01`：從舊 32 筆滿載 synthetic DB 出發，真瀏覽器新處置成功；舊 32 列逐筆保留、未綁定仍未知，總 33、pending／receipt null。`-02`：256 筆 synthetic no-op 顯示滿載，嘗試新處置顯示容量不足且狀態／pending 不變。兩 Job 自然 0／remaining 0／無強停、各 1 合成 POST、native／model 0；shutdown_requested_reason 是 harness 預設，實際合作停止。

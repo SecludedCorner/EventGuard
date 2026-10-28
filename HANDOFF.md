@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-28 GUI／歷程完整回歸
+
+7de39b3 完整 synthetic／fixture 1670 run／1667 pass／3 環境 skip、0 fail/error；原 Job 自然退出／remaining 0／無強停。精確來源候選 326 檔可重現；詳 STATUS／EVIDENCE。下一步為全庫／byte 滿載的無損恢復前置；不要以完整 fixture 回歸代替原生、24h、重啟或真 agent 驗收。
+
 ## 2026-10-28 歷程容量局部恢復
 
 每事件 32→256；舊 32 合成紀錄全部保留且可新處置，256 滿載仍明示拒絕；72/72 定向、兩合成瀏覽器 Job 自然退出。全庫 4096／byte 滿載仍無無損恢復，不能宣稱已解決；下一步繼續安全恢復與未完成驗收，詳 STATUS／EVIDENCE。
