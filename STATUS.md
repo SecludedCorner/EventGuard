@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 案件修訂有界契約前置
+
+純契約定義每事件 16、全域 256 上限與 64 KiB case，綁定錨定事件／內容 hash、實際保存時間；相容 1.0／1.1 case，拒絕偽造狀態、身分及超限。不寫資料、不補造歷史，也未提供使用者功能。`reports/verify-investigation-revision-contract-20261028-02` UTC 09:53:30：33/33、0 skip、231 AST、source_unchanged、Job 自然 0／remaining 0／無強停。交易保存、讀取、瀏覽器及容量故障驗收尚未實作；完整清單見 MAINTENANCE_GOAL。指定競品研究任務原目標已完成，後續市場比較未視為已實測。當前 Codex 工程目標達使用額度限制，保存後不承諾自動續跑。
+
 ## 2026-10-28 調查更新的覆蓋提示
 
 事件詳情在建立／更新按鈕前明示僅保留最新快照、更新取代舊版且不能回看。`reports/verify-investigation-retention-warning-20261028-03` UTC 09:51:31：35/35、0 skip、229 AST、source_unchanged、Job 自然 0／remaining 0／無強停。`reports/investigation-retention-ui-20261028-01` 隔離真瀏覽器打開合成事件詳情，提示與按鈕可見且順序正確；SQLite SHA256 前後 ED790B81…B697E0、0 POST／native／model，Job 自然 0。此提示未提供版本保存。

@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：有界案件修訂純契約
+
+`reports/verify-investigation-revision-contract-20261028-02` UTC 09:53:30、33/33、0 skip、231 AST、source_unchanged；私有 Job 自然退出 0／remaining 0／無強停。合成測試涵蓋 1.0／1.1 case、錨定事件與 hash、偽造／超限／非法時間及筆數上限。純函式無資料庫讀寫；未測版本實際保存、競態、容量故障、歷史讀取或瀏覽器。SHA256 非簽章。完整缺口與下一步見 `docs/MAINTENANCE_GOAL.md`。
+
 ## 2026-10-28：調查更新限制瀏覽器驗收
 
 `reports/verify-investigation-retention-warning-20261028-03` UTC 09:51:31，35/35、0 skip、229 AST、source_unchanged，Job 自然 0／remaining 0／無強停。`reports/investigation-retention-ui-20261028-01`：合成事件「查看」後，事件調查區域的提示與建立／更新按鈕皆可見，提示位於按鈕前；只做 GET，SQLite SHA256 前後 ED790B81DE89B668DE32121DB789F2E8CE72D64A1C688689574743B5A5B697E0，0 POST／native／model；私有 Job 自然 0／remaining 0／無強停。一次瀏覽器 DOM 屬性查詢因控制介面不支援 `compareDocumentPosition` 失敗，改用實際可見性及頁面快照核對順序。
