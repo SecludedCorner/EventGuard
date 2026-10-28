@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：P2-HISTORY-001C 合成唯讀後端
+
+`reports/verify-history-read-20261028-01` 53/53／0 skip／224 AST／source_unchanged，Job 自然 0／remaining 0／無強停。合成 SQLite 證實舊 DB 讀取不建表、歷程讀取前後 bytes 不變、轉換與 no-op 分開、損壞來源顯示 unknown、32 筆顯示數量上限、pending 1／receipt 0。這是 API 讀取切片，不是 Web 呈現或容量恢復驗收。
+
 ## 2026-10-28：P2-HISTORY-001B 合成整合
 
 `reports/verify-history-integration-20261028-05` 99/99／0 skip／223 AST／source_unchanged，Job 自然 0／remaining 0／無強停；合成 SQLite 測跨新 Application 重播、無變更重播、識別衝突、插入後失敗與 reserve 檢查回滾、滿載不變。`reports/history-integration-20261028-03` 合成瀏覽器操作 new→read，DB 保存同交易紀錄、事件仍 pending／receipt null；`-04` 滿載時顯示容量不足且狀態不變。各 worker 一次授權合成 POST、native／model 0、Job 自然 0／remaining 0／無強停；非真主機／真 agent 驗收。容量恢復、UI 歷程與斷電實測未完成。

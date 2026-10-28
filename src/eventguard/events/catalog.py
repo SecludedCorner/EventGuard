@@ -171,12 +171,41 @@ class EventCatalog:
                     "interpretation": review(event), "guidance": event_guidance(event),
                     "latest_diagnosis": self._saved_diagnosis(db, event), "latest_diagnosis_is_saved": True,
                     "data_trust": "untrusted_data", "incident_conclusion": "not_assessed", "model_calls": 0,
+                    "handling_history": self._saved_handling_history(db, event_id),
                     "investigation": self._saved_investigation(db, event, row["catalog_source"])}
             if event["event_type"] == "advisory.changed":
                 from ..intelligence.views import public_advisories
                 result["advisory_context"] = public_advisories(self.runtime.root, self.namespace,
                                                                limit=1, event_id=event_id)
             return result
+
+    @staticmethod
+    def _saved_handling_history(db, event_id):
+        """Read bounded operation metadata without creating or repairing tables."""
+        from .disposition_history import MAX_HISTORY_ENTRIES, MAX_HISTORY_PER_EVENT, validate_record
+        unknown = {"state": "unknown", "entries": [], "count_capacity": "unknown", "prior_history": "unknown"}
+        try:
+            exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_disposition_operations'").fetchone()
+            if not exists:
+                return {"state": "not_recorded", "entries": [], "count_capacity": "available", "prior_history": "unknown"}
+            total = db.execute("SELECT COUNT(*) FROM event_disposition_operations").fetchone()[0]
+            rows = db.execute("SELECT event_id,operation_id,previous_status,status,source,at,changed FROM event_disposition_operations WHERE event_id=? ORDER BY rowid LIMIT ?",
+                              (event_id, MAX_HISTORY_PER_EVENT + 1)).fetchall()
+            if total > MAX_HISTORY_ENTRIES or len(rows) > MAX_HISTORY_PER_EVENT:
+                return unknown
+            entries = []
+            for row in rows:
+                value = dict(zip(("event_id", "operation_id", "previous_status", "status", "source", "at"), row[:6]))
+                validate_record(value, allow_unchanged=True)
+                if row[6] not in (0, 1) or bool(row[6]) != (value["previous_status"] != value["status"]):
+                    return unknown
+                entries.append({"previous_status": value["previous_status"], "status": value["status"],
+                                "source": value["source"], "at": _disposition_timestamp(value["at"]), "changed": bool(row[6])})
+            full = total >= MAX_HISTORY_ENTRIES or len(rows) >= MAX_HISTORY_PER_EVENT
+            return {"state": "available" if entries else "not_recorded", "entries": entries,
+                    "count_capacity": "full" if full else "available", "prior_history": "unknown"}
+        except (sqlite3.Error, ValueError, TypeError, StoreError):
+            return unknown
 
     @staticmethod
     def _saved_investigation(db, event, source):

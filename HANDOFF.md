@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-28 P2-HISTORY-001C 唯讀後端
+
+事件詳情已提供 `handling_history`，舊 DB 不建表／不補造、損壞顯示 unknown；合成 SQLite 定向 53/53。下一步 Web 明示時間、前後狀態、來源非身分、此前未知與數量容量；容量恢復尚未做。
+
 ## 2026-10-28 P2-HISTORY-001B 原子寫入
 
 已接 EventStore／catalog／Application／CLI／Web；合成 SQLite 含回滾、重播、衝突、容量與 ACK reserve，最終來源瀏覽器驗成功及滿載拒絕；99/99 定向。每事件 32／全庫 4096 冪等槽滿載後拒絕新操作，尚無容量恢復；下一步 001C 只讀歷程／UI，詳 STATUS／EVIDENCE。

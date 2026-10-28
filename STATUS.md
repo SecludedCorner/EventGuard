@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-28 P2-HISTORY-001C 唯讀後端
+
+事件詳情新增有界 `handling_history`：包含狀態轉換、無變更請求、時間與來源；不暴露操作識別、不宣稱操作者身分。舊 DB 顯示未記錄且此前未知；損壞／超限顯示 unknown，不在讀取時建表或修補；數量容量不代表剩餘位元組。
+
+`reports/verify-history-read-20261028-01` UTC 09:00:59、53/53、0 skip、224 AST、source_unchanged、原 Job 自然 0／remaining 0／無強停；合成 SQLite 檢查前後 bytes、pending／ACK、舊 schema、無變更及損壞。工作樹 326 檔來源 ZIP 自檢，非 commit 候選。Web 顯示與容量恢復尚未完成，下一步 UI。
+
 ## 2026-10-28 P2-HISTORY-001B 原子寫入已接線
 
 事件處置狀態與有界操作紀錄同 SQLite 交易；同 ID 跨 Application 重建可重播、不回退後來狀態，衝突及容量不足明示；滿載仍可重播，寫入前後保留 ACK 空間。無變更請求也占冪等槽，32／4096 滿載會阻擋新操作，恢復方式尚未提供；舊歷程不能補造，畫面尚未顯示歷程。
