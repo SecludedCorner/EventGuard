@@ -1,5 +1,13 @@
 # EventGuard 接手
 
+## 2026-10-28 既有研究已納入安全保存範圍（最新）
+
+最新直接使用者要求保存既有研究；從本機／upstream／遠端一致的0ea26cb接續。已逐一審查並最小遮蔽agent-event-ingress五份及major-vulnerability-response六份：聊天來源改不含私人識別的敘述，cached health原始runtime值改成歷史限制，保留未獨立驗證程序存活。每份有歷史保存註，reports連結明示本機證據、不隨repo提供；原日期、基準、來源、失敗、unknown與未驗收限制不升格。
+
+本checkpoint僅上述11份研究＋STATUS/HANDOFF；驗證／原後hash／推送回條在reports/research-checkpoint-20261028-01，runtime不提交，純文件[skip ci]普通push現有開發分支並核對完整SHA／0/0／tracked clean。既有兩張.codex-remote-attachments圖片仍保留未追蹤，不讀圖或提交。不要再把這11份當永遠不能保存的他人檔案，也不要把其歷史提案當當前功能或新授權。
+
+NEXT沿用已準備的P2-OS-DIAG-002精確決策包，仍缺新批准；本次只保存研究，未採集、啟模型、重跑全庫、部署或合併主線。無需為此文件保存再發重複批准問題。
+
 ## 2026-10-28 分類計數離線切片已完成（最新）
 
 P2-OS-DIAG-002補回baseline保存時遺失的既有typed原因／階段／操作計數；沒有新增native lookup、PID關聯或放寬complete。新6測試＋原gate/identity共27/27，reports/verify-listener-error-summary-20261028-01／source_unchanged／原Job自然0／remaining0／無強停／native0/model0。舊P2-OS-001 partial及原六回條保留，舊111缺列根因仍UNKNOWN，不重新分類舊資料。

@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-10-28 既有11份研究文件保存 checkpoint（最新）
+
+依最新使用者明確授權，接續0ea26cb；本機／upstream／直接ls-remote均相同，ahead/behind0/0、追蹤檔案原乾淨，未見其他協作writer或index.lock。本次範圍為docs/research/agent-event-ingress五份與major-vulnerability-response六份既有10/23–24研究，逐檔審查後保存；不是新待推產品碼、PR發布或新研究。
+
+最小處理：移除OpenOctopus來源的聊天識別／deep link及標題，重大漏洞README不公開cached health原始時間／狀態，保留「未獨立驗證程序存活」。11份均標明歷史基準優先／不當現況，所有reports連結逐一標明本機證據、不隨repo提供；公開來源與當時失敗／unknown／未驗證語義保留，不讀取或提交原reports。舊「未單獨commit」與每日五次等段落只保留為當時歷史，不改寫成現行要求或已驗收能力。
+
+檢查只限檔名／內容／相對連結／歷史語義／固定秘密及私人ID模式、git diff --cached --check；命令、原／後文件hash與結果在reports/research-checkpoint-20261028-01，不是產品回歸或原生驗收。只暫存明列11份研究＋STATUS/HANDOFF，純文件checkpoint以[skip ci]普通push原origin/feat/local-codex-acceptance並直接核對遠端，實際SHA見Git及本機remote回條。兩張.codex-remote-attachments圖片保留未追蹤，不讀取、不提交；P2-OS-DIAG-002仍未批准，無新模型／native診斷／部署／主線合併或tag。
+
 ## 2026-10-28 P2-OS-DIAG-002：身分錯誤分類保存已完成，原生未重跑（最新）
 
 接續a7bdfc0、原開發分支；追蹤工作樹原乾淨，兩個他人未追蹤目錄保留。窄讀發現NativeBackend／WindowsCollectors已有typed原因碼／階段／操作，但原baseline投影只保存總數。只改scripts/validate_windows_listener.py，加入有上限的error_summary及winapi.py來源hash綁定；不改native採集、規則或complete標準。分組只允許固定碼，未知維持unknown，保留／未保留／分類數分列；沒有新增PID、命令列、路徑、帳戶、端點或身分一致性資料。舊111缺列／21錯誤仍不可回推根因。
