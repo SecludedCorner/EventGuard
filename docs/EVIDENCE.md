@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：分支差異上限與 main 整合授權
+
+直接核對遠端 main=c80a4be90c7e9893544e72fab04c12e7653b33cc、開發分支=c83ff950e59646c0de48fce907b43bee2a89ecfa；本機與遠端 SHA 相符。`git diff origin/main...HEAD --shortstat`：49 檔 +3936/−71，工作樹／index 相對 HEAD 無差異。使用者明確批准測試通過後普通 merge／push main；本次先保存規則，完整整合與測試另記。
+
 ## 2026-10-29：桌面保存詳情資料接線
 
 `reports/verify-desktop-saved-detail-20261029-01` UTC 2026-10-28 18:35:58：75/75、0 skip、source_unchanged，Job 自然退出 0／remaining 0。合成臨時資料驗保存調查／修訂／歷程返回及讀前後 SQLite hash 不變、pending 保留；非實機採集或真人桌面測量。`reports/build-desktop-saved-detail-20261029-01`：266 檔 hash 相符、244 Python 編譯通過，含當前修改；友善調查摘要尚未實作。

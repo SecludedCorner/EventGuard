@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 500 行範圍更正與 main 整合
+
+使用者澄清上限包含開發分支相對 main 待整併差異，並明確授權測試通過後普通 merge／push main。CLAUDE 已更新兩個比較基準與整合流程；不再以開發分支已 push 代替整合。開始時工作樹乾淨、開發分支 c83ff95 遠端一致；origin/main=c80a4be，相對差異 49 檔 +3936/−71。這是既有 backlog，先完成整合，暫不增加產品功能。本地 main 為保留的不同歷史，無共同祖先；不覆寫，從 origin/main 準備隔離整合 checkout。整合結果另記，尚未宣稱 main 更新或產品驗收完成。
+
+2026-10-29 02:41（UTC+8）父版本來源 build：`py -3.13 -B scripts/package_candidate.py --root reports/release-prep-branch-limit-20261029-01 --commit c83ff950e59646c0de48fce907b43bee2a89ecfa`，346 檔可重現；`py -3.13 -B scripts/verify.py --run-dir reports/verify-branch-limit-20261029-01 --timeout-seconds 180 --module test_package_candidate`，8/8、0 skip、Job 自然退出／remaining 0。純文件另做 diff／連結檢查，不含新產品驗收。
+
 ## 2026-10-29 桌面詳情共用保存資料入口
 
 DesktopController.inspect 改用既有 EventCatalog.detail，帶回已保存調查、修訂與處置歷程；仍明示 system_query_executed=false，不執行 diagnose／採集／模型／ACK。合成事件在臨時 live 目錄建立保存調查後，讀取保持 SQLite hash 與 pending 不變。2026-10-29 02:35（UTC+8）`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-saved-detail-20261029-01 --timeout-seconds 180 --module test_desktop --module test_gui --module test_event_investigation`：75/75、0 skip、source_unchanged、Job 自然退出 0／remaining 0。`reports/build-desktop-saved-detail-20261029-01`：受測 manifest 266 檔相符、244 Python 編譯成功，包含未提交變更。此切片接通資料與原始結構化檢視，友善摘要下一單元；人工桌面與瀏覽器仍待驗。
