@@ -185,7 +185,7 @@ function restoreFilterUrl(){
   const params=new URLSearchParams(location.search),form=$('filters'),names=['severity','source','status'];
   let valid=[...params.keys()].every(name=>[...names,'page'].includes(name)&&params.getAll(name).length===1);
   for(const name of names){const value=params.get(name)||'';if(![...form.elements[name].options].some(option=>option.value===value))valid=false;}
-  const page=params.get('page')||'0';if(!/^(0|[1-9]\d{0,4})$/.test(page)||Number(page)>10000)valid=false;
+  const page=params.get('page')||'0';if(!/^(0|[1-9][0-9]{0,4})$/.test(page)||Number(page)>10000)valid=false;
   for(const name of names)form.elements[name].value=valid?(params.get(name)||''):'';
   offset=valid?Number(page)*50:0;filterUrlValid=valid;$('filter-url-error').hidden=valid;invalidateEventList();
 }

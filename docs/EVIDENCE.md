@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：網址 regex Python 警告
+
+準備調查合成 fixture 時 Python 3.13 對 Web 字串內 `\d` 發出 SyntaxWarning；等價 `[0-9]` 修正後以 `-W error::SyntaxWarning` 匯入通過。`reports/verify-gui-url-regex-20261028-01` 為 33/33、0 skip、218 AST／source_unchanged、Job 自然 0／remaining 0／無強停；不代表新調查介面已完成。
+
 ## 2026-10-28：P1-GUI-003B 慢清單與消失列補驗
 
 `reports/gui-detail-edge-20261028-01` 合成真瀏覽器：延遲 high 列表、切換 critical/new、放行舊回覆後仍為 critical／2 筆、首列嚴重；選 `evt-url-critical-1` 後由測試程式在獨立 SQLite 設 handled、明示 ack_performed=false，週期更新使該列不再符合 new；按返回後焦點回篩選按鈕、篩選網址保留。這是合成故障注入，非真主機事件。Job 自然 0／remaining 0／無強停，worker 0 POST／native／model；shutdown_requested_reason 是 harness 預設，實際合作停止。

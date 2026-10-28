@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 修正網址分頁 regex 的 Python 載入警告
+
+P1-INVEST-004A 的合成 fixture 建立時發現 Web 內嵌 JavaScript `\d` 讓 Python 3.13 發出 SyntaxWarning；改為等價 `[0-9]`，頁碼語意不變。`py -3.13 -B -W error::SyntaxWarning -c "import sys; sys.path.insert(0, 'src'); import eventguard.web"` 通過；`reports/verify-gui-url-regex-20261028-01` UTC 08:35:31、33/33、0 skip、218 AST、Job 自然退出。工作樹來源 ZIP build 320 檔自檢，非 commit 候選。下一步接續已保存調查摘要；尚未驗收。
+
 ## 2026-10-28 P1-GUI-003B 補驗完成
 
 `reports/gui-detail-edge-20261028-01` 使用隔離 synthetic 事件與真瀏覽器：延遲 high 清單回覆時切到 critical，放行後畫面仍是 critical 2 筆；在獨立 synthetic SQLite 將所選事件設 handled（無 ACK），使它離開 new 清單，返回焦點正確落在篩選按鈕。原 Job 自然 0／remaining 0／無強停、0 POST／native／model。定向 `reports/verify-gui-detail-edge-20261028-01`：UTC 08:32:43，33/33、0 skip、218 AST、source_unchanged、Job 自然退出。工作樹來源 ZIP build 320 檔 hash 自檢；非 commit 候選。下一步 P1-INVEST-004A。
