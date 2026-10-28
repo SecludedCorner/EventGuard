@@ -338,7 +338,8 @@ class DesktopController:
     @recorded("gui_inspect")
     def inspect(self, event_id):
         with self._lock:
-            return self.api.call("inspect_event", event_id, namespace="live")
+            from .events.catalog import EventCatalog
+            return dict(EventCatalog(self.root, "live").detail(event_id), system_query_executed=False)
 
     def snapshot(self):
         """Read one saved overview; no collector, model or scheduling operation."""

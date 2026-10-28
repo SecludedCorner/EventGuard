@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面保存詳情資料接線
+
+`reports/verify-desktop-saved-detail-20261029-01` UTC 2026-10-28 18:35:58：75/75、0 skip、source_unchanged，Job 自然退出 0／remaining 0。合成臨時資料驗保存調查／修訂／歷程返回及讀前後 SQLite hash 不變、pending 保留；非實機採集或真人桌面測量。`reports/build-desktop-saved-detail-20261029-01`：266 檔 hash 相符、244 Python 編譯通過，含當前修改；友善調查摘要尚未實作。
+
 ## 2026-10-29：持續執行佇列更新
 
 MAINTENANCE_GOAL、CLAUDE 更新持續推進順序，原目標與所有待驗關卡保留；平台目標卡片編輯未成功，仍 blocked。`reports/release-prep-continuous-goal-20261029-01` 父來源 5208415，346 檔 build 可重現；`reports/verify-continuous-goal-20261029-01` UTC 18:33:16（台灣 10/29 02:33），8/8、0 skip、Job 自然退出／remaining 0。文件 diff 與連結另檢，非產品新驗收。

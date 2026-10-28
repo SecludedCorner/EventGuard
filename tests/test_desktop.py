@@ -174,10 +174,36 @@ class DesktopTests(unittest.TestCase):
         self.controller.api.call.assert_called_once()
 
     def test_inspect_only_calls_saved_read_operation(self):
-        self.controller.api.call.return_value = {"event_id": "event-1", "system_query_executed": False}
-        value = self.controller.inspect("event-1")
-        self.controller.api.call.assert_called_once_with("inspect_event", "event-1", namespace="live")
+        with patch("eventguard.events.catalog.EventCatalog") as catalog:
+            catalog.return_value.detail.return_value = {"event_id": "event-1", "investigation": None}
+            value = self.controller.inspect("event-1")
+            catalog.assert_called_once_with(self.root, "live")
+            catalog.return_value.detail.assert_called_once_with("event-1")
+        self.controller.api.call.assert_not_called()
         self.assertFalse(value["system_query_executed"])
+
+    def test_inspect_reads_saved_case_without_changing_events_or_ack(self):
+        import hashlib
+        from eventguard.events.catalog import EventCatalog
+        from eventguard.events.store import EventStore
+        from eventguard.synthetic import make_synthetic
+        event = make_synthetic()
+        directory = self.root / 'data/live'
+        store = EventStore(directory)
+        store.enqueue(event)
+        catalog = EventCatalog(self.root, 'live')
+        catalog.investigate(event['event_id'])
+        path = directory / 'eventguard.sqlite3'
+        before = hashlib.sha256(path.read_bytes()).hexdigest()
+        with patch('eventguard.collectors.windows.WindowsCollectors.collect', side_effect=AssertionError('no scan')):
+            value = self.controller.inspect(event['event_id'])
+        self.assertIsInstance(value['investigation'], dict)
+        self.assertIsInstance(value['investigation_revisions'], dict)
+        self.assertIn('handling_history', value)
+        self.assertEqual(value['event']['delivery_status'], 'pending')
+        self.assertFalse(value['system_query_executed'])
+        self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), before)
+        self.controller.api.call.assert_not_called()
 
     def test_snapshot_preserves_saved_success_after_denial_without_collecting(self):
         import hashlib
