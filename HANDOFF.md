@@ -1,5 +1,11 @@
 # EventGuard 接手
 
+## 2026-10-28 當前原子工作：完成發布前準備，不發布（最新）
+
+最新人類授權自主完成所有release準備，沿用feat/local-codex-acceptance。已無衝突合入origin/main既有公開紀錄（原產品tree不變），不接私人本機main歷史。新增有界source candidate打包器／安全測試，CHANGELOG與docs/RELEASE_PREPARATION.md是本次準備入口。原native診斷未批准仍不執行；不動main/tag／部署／分支刪除。
+
+DOING：原完整guardian在reports/verify-release-preparation-full-20261028-01，先讀guardian-start／verification-summary及既有執行狀態，不能另起同一測試。測試啟動後src/scripts/tests/config/playbooks固定，僅編輯狀態文件。NEXT：完整結果→修正必要失敗→checkpoint→實際同commit兩次打包／解壓合成CLI煙測→臨時index恢復演練→精確來源／遠端CI／SHA／包hash終核。都完成才暫停本次15分鐘接續；原跨專案暫停排程保持不動。
+
 ## 2026-10-28 真缺陷已修：baseline四表計數須守恆（最新）
 
 P0-LISTENER-COUNTS-003：先重現缺列／多報／錯protocol／錯IP family及乾淨exit仍誤PASS的5個failure entries，01原件保留；再逐表核對實際列數，加入table_counts_consistent，修正原正向fixture。02定向52/52、原Job自然0／remaining0／無強停／native0/model0，不是全產品release驗收。證據reports/verify-listener-count-regression-20261028-01與02，產品修復commit/push沿用開發分支，不能用舊CI或新fixture說原111身分缺口已解。

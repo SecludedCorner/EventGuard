@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-10-28 全部發布前準備已啟動（最新）
+
+最新使用者明確改為「不用release，但完成全部release準備、安排連續任務」。不再以分支／版本未選阻擋準備：沿用現有開發候選、納入所有可分享分支及公開main既有紀錄，私人本機main祖先、其他worktree與圖片保留；不push main／tag／正式發布或刪分支，語意衝突仍停止。
+
+同聊天15分鐘接續已建立，原跨專案暫停排程未動；完成後暫停，不並啟runner。新增scripts/package_candidate.py與6個合成ZIP安全測試，使用已安裝Git與Python、私有Job建立兩份同commit ZIP、檔案hash／路徑／容量／必要檔案檢查。初版5/5定向通過；追加Windows別名與私人檔案邊界後，完整guardian已執行於reports/verify-release-preparation-full-20261028-01，來源固定，結果未出前不記PASS。
+
+CHANGELOG為Unreleased草稿；完整佇列、build、包內smoke、恢復演練及未來發布閘道在docs/RELEASE_PREPARATION.md。本checkpoint先保存整合／打包前置，再接實際候選包與結果，不將準備成功冒充native coverage、24h/reboot或正式發布。
+
 ## 2026-10-28 P0-LISTENER-COUNTS-003：修正baseline可誤判完整的缺陷（最新）
 
 依使用者要求實際修bug、不能只隱藏UI或解除PR連結，從47af11f接續。發現project_baseline只查四項table status/count欄位存在，沒有核對返回列數；缺列／多報、TCP與UDP或IPv4與IPv6錯表，即使自有query自然exit0也可能判完整。先以guardian新回歸重現5個failure entries（18方法／13pass，無error），保留reports/verify-listener-count-regression-20261028-01；原正向fixture四表各1但只有1列，亦修正為TCP4=1、其他=0。

@@ -1,5 +1,13 @@
 # 證據與時間日誌
 
+## 2026-10-28：發布前整合與source candidate build前置
+
+最新人類要求全部release準備、不執行release，從98d507d接續。fetch後公開origin/main仍615f77f；git merge --no-ff --no-commit origin/main無衝突／原產品tree無變更。候選已含其他可分享開發分支；私人本機main與原worktree保留，不推main／tag或刪分支。新CHANGELOG明示Unreleased，工作佇列見RELEASE_PREPARATION。
+
+新增package_candidate.py，只以指定commit git archive建立source ZIP；Git child執行前進私有Job，有界wait／原退出回條，兩次archive與逐檔SHA／來源版本／必要檔案／容量／路徑／symlink／私人檔案閘道。初5個合成ZIP安全測試於verify-release-package-20261028-01為5/5、.366秒、AST215無錯、source_unchanged、原Job自然0／remaining0／無強停。補Windows別名／非canonical路徑與私人副檔名後，6個測試納入完整guardian：py -3.13 -B scripts/verify.py --run-dir reports/verify-release-preparation-full-20261028-01 --timeout-seconds 1800；結果仍待回條，不提前稱通過。native/model均不啟動。
+
+已建立本聊天15分鐘接續，原跨專案暫停排程未改；同一runner先核對原作業，完成準備後暫停。此階段先checkpoint保存，再續同commit實際ZIPbuild、解壓副本合成CLI、臨時index反向diff及完整驗證。runtime、ZIP與自有程序回條只存reports，不提交；正式release及原native身份缺口不由此升格。
+
 ## 2026-10-28：baseline四表計數誤PASS重現與修復
 
 從47af11f接續，先新增3個有辨識力回歸並修正正向fixture的原不一致count。01命令py -3.13 -B scripts/verify.py --run-dir reports/verify-listener-count-regression-20261028-01 --timeout-seconds 180 --module test_windows_listener_validation，UTC05:11:16–05:11:25、7.971秒；18方法／13pass，5個failure entries含同方法4個subcase，0error/skip，原Job自然exit1／remaining0／無強停，原source_unchanged。證明原驗證器未核對四表count與返回列數，並非未知環境失敗；原回條不改寫。
