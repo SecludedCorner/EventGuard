@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：歷程唯讀快照前置
+
+`reports/verify-history-backup-payload-20261028-01` 45/45／0 skip／226 AST／source_unchanged，Job 自然 0／remaining 0／無強停；合成 SQLite 測明確 query-only 交易、舊表無資料、操作順序／no-op／未綁定 hash、canonical hash、損壞拒絕、原 DB bytes 與 pending／ACK 不變。此版本僅產生記憶體 payload，尚無備份檔、還原或安全釋放容量，不能稱恢復完成。
+
 ## 2026-10-28：GUI／歷程整合完整回歸
 
 `reports/verify-full-gui-history-20261028-01` 綁 7de39b3：1670 run／1667 pass／3 skip（2 symlink creation unavailable、1 notification_icon_unavailable）、0 fail/error，491.239 秒、224 AST、source_unchanged，Job 自然 0／remaining 0／無強停、逐測殘留 0、0 native scan／model。`reports/release-prep-gui-history-20261028-01` 以同 commit 建置，326 檔、兩 ZIP SHA256 `450706127a89381ebd34d252c1b4e7c8d5474271fa680a10b4b445ce9c4b6510` 一致；候選並非發布。

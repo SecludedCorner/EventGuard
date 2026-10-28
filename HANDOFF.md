@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-28 歷程唯讀快照核心
+
+新增有界 query-only 歷程 payload／canonical hash，含未綁定資料且拒絕損壞；45/45 合成定向。尚未落盤、還原、釋放容量或證明跨重啟冪等；下一步先做安全不覆寫的本機備份與驗證。不可把 payload 當全庫備份或刪除授權。
+
 ## 2026-10-28 GUI／歷程完整回歸
 
 7de39b3 完整 synthetic／fixture 1670 run／1667 pass／3 環境 skip、0 fail/error；原 Job 自然退出／remaining 0／無強停。精確來源候選 326 檔可重現；詳 STATUS／EVIDENCE。下一步為全庫／byte 滿載的無損恢復前置；不要以完整 fixture 回歸代替原生、24h、重啟或真 agent 驗收。

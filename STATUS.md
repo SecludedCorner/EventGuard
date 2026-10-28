@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-28 歷程無損恢復前置：唯讀快照
+
+新增有界 query-only SQLite 快照核心，保留操作識別、前後狀態、來源及已綁定／未綁定 hash，計算 canonical SHA256；拒絕損壞資料，不修補或改寫來源。這只是記憶體中的歷程 payload，含敏感 metadata，尚未接 CLI／檔案保存、全庫備份、還原或容量釋放，不能當作已完成恢復或防竄改證據。
+
+`reports/verify-history-backup-payload-20261028-01` UTC 09:33:28、45/45、0 skip、226 AST、source_unchanged、Job 自然 0／remaining 0／無強停；合成 SQLite 核對唯讀交易、舊表、不綁定保留、hash、損壞拒絕及 pending／ACK 未變。工作樹 ZIP 含兩個新檔。下一步安全落盤與驗證，不能自行刪除或宣稱已釋放容量。
+
 ## 2026-10-28 GUI／歷程整合完整回歸
 
 來源 commit `7de39b3cec4c99308783afb3dc7f0c6240e47b25`：`py -3.13 -B scripts/verify.py --run-dir reports/verify-full-gui-history-20261028-01 --timeout-seconds 1800`，UTC 09:23:05–09:31:17、1670 run／1667 pass／3 skip、0 fail/error、224 AST、source_unchanged；兩項 symlink 建立不可用、一項 notification_icon_unavailable。原 Job 自然 0／remaining 0／無強停／逐測殘留 0；native scan／model 0。synthetic／fixture 全回歸不等於原生覆蓋或真 agent 收件。
