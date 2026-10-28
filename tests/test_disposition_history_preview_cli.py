@@ -56,6 +56,18 @@ class HistoryPreviewCliTests(unittest.TestCase):
         self.assertIn("目標為備份的完全前綴", output)
         self.assertIn("不驗證來源真實性、容量或可還原性", output)
 
+    def test_duplicate_json_fields_are_rejected_even_if_hash_matches(self):
+        before = self.store.path.read_bytes()
+        encoded = json.dumps(self.value, separators=(",", ":"))
+        duplicate_root = encoded.replace('{"data":', '{"bytes":0,"data":', 1)
+        duplicate_nested = encoded.replace('"namespace":"test"', '"namespace":"live","namespace":"test"', 1)
+        self.assertNotEqual(duplicate_root, encoded)
+        self.assertNotEqual(duplicate_nested, encoded)
+        self.assertNotEqual(self.invoke(duplicate_root)[0], 0)
+        self.assertNotEqual(self.invoke(duplicate_nested)[0], 0)
+        self.assertEqual(self.store.path.read_bytes(), before)
+        self.assertEqual((self.store.stats()["pending"], self.store.stats()["receipt_count"]), (1, 0))
+
     def test_interactive_stdin_is_rejected_without_waiting(self):
         class Terminal(io.StringIO):
             def isatty(self):

@@ -9,6 +9,16 @@ from .runtime import Runtime, read_json
 from .operations import OperatorAPI, store as _store, status, export_report
 
 
+def _unique_json_object(pairs):
+    """Reject ambiguous JSON objects before validating an untrusted backup."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("history_backup_duplicate_field")
+        result[key] = value
+    return result
+
+
 def parser():
     p=argparse.ArgumentParser(prog="eventguard",description="EventGuard 本機資安監看。run 啟動採集、事件頁與通知。")
     p.add_argument("--format",choices=("auto","json","text"),default="auto",
@@ -320,7 +330,7 @@ def execute(args,runtime,progress=None):
                 content=stream.read(MAX_EXPORT_BYTES+1025)
                 if len(content)>MAX_EXPORT_BYTES+1024:
                     raise ValueError("history_backup_bytes_limit")
-                return catalog.preview_handling_history(json.loads(content))
+                return catalog.preview_handling_history(json.loads(content,object_pairs_hook=_unique_json_object))
             return catalog.set_status(args.event_id,args.status,source="cli")
         if args.event_command=="receive":
             return operator.call("receive_event",args.event_id,args.namespace)

@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 歷程預檢拒絕重複 JSON 欄位
+
+標準輸入的備份 JSON 在所有物件層拒絕重複欄位，避免解析器對來源或完整性欄位採不同值；不改既有備份格式。`reports/verify-history-preview-duplicate-20261028-01` UTC 11:23:39：35/35、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 測頂層及巢狀重複、正常預檢、DB／pending／ACK 不變；此檢查不認證來源或證明可還原。
+
 ## 2026-10-28 歷程預檢實際 CLI 合成驗證
 
 `reports/history-preview-real-cli-20261028-03` 使用既有 PowerShell 7 管線與真正 `EventGuard.cmd`／CLI、專用 synthetic event-source；預檢 exact_prefix、1 筆已存在且可還原性 unknown，無 ID 輸出。合成 DB SHA256 前後 57e5bb4065816cb369753eae5efb19c75ee52efcd91bb5b5968b2abf5914b8a8、pending 1／ACK 0／native 0／model 0；Job 自然退出 0／remaining 0／無強停。`...-02` 另驗直接 stdin 檔案 handle，亦自然 0；`...-01` 輔助程式退出原因無效而未保存原 Job 回條，殘留狀態未確認，不列為通過。均非真實資料還原或容量釋放。

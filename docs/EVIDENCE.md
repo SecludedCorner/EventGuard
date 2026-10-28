@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：歷程預檢 JSON 歧義測試
+
+`reports/verify-history-preview-duplicate-20261028-01` UTC 11:23:39，35/35、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic CLI 驗證頂層及 namespace 巢狀重複欄位拒絕，正常備份仍通過，DB／pending／ACK 不變；不代表來源認證或可還原性。
+
 ## 2026-10-28：歷程預檢實際 CLI 合成路徑
 
 `reports/history-preview-real-cli-20261028-03/summary.json`：PowerShell 7 `Get-Content -Raw` 管線 → EventGuard.cmd → 真 CLI，在專用 synthetic source 顯示 exact_prefix／1 已存在／recoverability unknown、不輸出 event／operation ID；DB SHA256 前後 57e5bb4065816cb369753eae5efb19c75ee52efcd91bb5b5968b2abf5914b8a8，pending 1／ACK 0／model 0／native 0，原私有 Job 自然 0／remaining 0／無強停。`...-02` 直接 stdin 檔案 handle 亦通過。首次 `...-01` CLI 已輸出結果，但驗收輔助程式傳入無效 Job 退出原因導致回條未保存，原 Job 殘留狀態未確認；不列為完整通過。無真實資料驗收。

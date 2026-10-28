@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-28 歷程預檢重複欄位
+
+stdin 備份的頂層／巢狀重複 JSON 欄位均拒絕，35/35 synthetic；不認證來源或釋放容量。真瀏覽器仍受 Work 設定限制，還原未接使用者入口。
+
 ## 2026-10-28 歷程預檢 CLI 合成管線
 
 真 EventGuard.cmd／PowerShell 7 管線與合成 source 在 `reports/history-preview-real-cli-20261028-03` 通過，DB 不變、Job 自然 0／remaining 0。首次 `...-01` 輔助程式退出原因無效，原 Job 回條未保存、殘留未確認；`...-02`／`...-03` 分別完整退出。預檢仍不代表可還原或釋放容量。
