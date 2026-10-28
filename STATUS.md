@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-10-28 候選交付增量：驗包／smoke已固化（最新）
+
+接續8b9cf27，追蹤工作樹原乾淨／upstream0/0，未追蹤附件保留。使用者明確續做準備；排程已刪除，本次不建立／恢復。實際缺口是repo只有打包器，解壓smoke依賴reports臨時腳本；新增scripts/verify_candidate.py及tests/test_verify_candidate.py，必填外部commit與ZIP SHA256、有界輸入快照、完整manifest／逐檔比對、重複key／型別／路徑與舊目錄拒絕；預設離線不啟子程序，--smoke才在新reports副本跑合成CLI，事先私有Job與原退出回條，無模型／native／ACK／系統變更。
+
+py -3.13 -B scripts/verify.py --run-dir reports/verify-candidate-tool-20261028-03 --timeout-seconds 180 --module test_verify_candidate --module test_package_candidate --module test_verify_completion --module test_verify_portability：UTC06:07:49–06:07:51（台北14:07:49–14:07:51），31/31、1.193秒、0fail/error/skip、218檔AST無錯、source_unchanged、原Job自然0／remaining0／無強停／逐測試殘留0。01/02亦31/31；02移除不必要os.name mock並確認拒絕原因，03再拒絕remaining的bool假零，才是最後來源。新工具先前已對原b57 ZIP實跑reports/candidate-verify-historical-20261028-01，完整manifest與13/13 smoke、四個CLI原Job皆自然0／remaining0／無強停；最後來源接續新候選實跑。
+
+此切片先commit／普通push原開發分支，再實際建新commit候選、外部pins驗包／smoke、來源綁定及精確CI。舊本機1624回歸仍只屬b57，不套用新SHA；其餘native partial／24h/reboot等限制不變。界線與可重現命令見docs/RELEASE_PREPARATION.md；runtime不提交，無main/tag/release／分支刪除。
+
 ## 2026-10-28 發布前準備全數完成；尚未發布（最新）
 
 使用者指定「不用release，做完所有準備」。固定候選b57b43be8333327584ef05af4e71740b5b80d621已普通推到origin/feat/local-codex-acceptance；公開main及所有可分享分支皆為候選祖先，無語意衝突，私人本機main祖先不可達。其他worktree及兩張未追蹤圖片保留。候選對公開main615f77f的285檔／55340新增／1961刪除是已提交歷史合計，不是未保存修改；此後僅四份結果文件補記。

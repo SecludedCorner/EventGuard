@@ -1,5 +1,15 @@
 # 證據與時間日誌
 
+## 2026-10-28：驗包／包內 smoke 自臨時腳本固化
+
+8b9cf27後核對repo只有package_candidate，既有smoke與resume只在reports；新增scripts/verify_candidate.py與tests/test_verify_candidate.py。明確外部40hex commit／64hex ZIP hash，輸入快照後核對原archive audit與完整逐檔manifest，JSON型別精確且拒重複key；篡改者即使更新ZIP及自述manifest仍不能替代外部pin。拒缺必要檔、來源不符、逃逸／私人路徑／碰撞、大小超限、redirect及覆寫舊輸出；smoke前拒絕不啟child。工具預設離線；可選合成CLI在Windows私有Job下有界執行，原退出不明／強停／殘留／逾時均不能過。
+
+guardian命令見STATUS頂部，reports/verify-candidate-tool-20261028-03：UTC06:07:49–06:07:51／1.193秒、31run=expected31／31pass／0skip/fail/error、218AST無錯、source_unchanged、原Job自然0／remaining0／無強停／逐測試殘留0，native/model0。01/02亦31/31；02改掉跨平台不必要os.name mock且assert固定拒絕原因，03收緊remaining必須int0，拒絕False假零；保留三輪，不把數量累加。
+
+新工具實際命令使用原candidate02/candidate.zip／release-manifest.json，外部--expected-commit b57b43be8333327584ef05af4e71740b5b80d621、--expected-sha256 2d5ae6a55a24aebd344a630a53b61abc075cfb9af3b62664afb1d9582a8f62d5、--root reports/candidate-verify-historical-20261028-01 --smoke；verification-result為passedtrue／manifest_verifiedtrue，13/13 checks，一件synthetic pending／一份case／零ACK／無live namespace，唯讀重開DB hash不變，四個原CLI Job自然0／remaining0／無強停。沒有啟真模型／native query，也不把此操作稱新候選完整測試。
+
+此checkpoint先保存工具、測試、CHANGELOG與既有狀態；下一步實際新SHA打包／驗包，另核精確CI。舊b57完整1624、舊CI、歷史真04與native partial各維持原scope；排程已刪除，本輪不恢復，runtime及原回條不提交。
+
 ## 2026-10-28：固定候選全部發布前準備通過；沒有發布
 
 固定來源b57b43be8333327584ef05af4e71740b5b80d621（修owned Git完整路徑與提前停止假綠），整合父checkpoint3ed82a8。公開main615f77f／handoff、quota、research、publication全部包含，private main不可達；其tip tree與公開sanitized root相同，不需要上傳私人祖先。branch-integration.json保存祖先與基準；候選相對origin/main615f77f為285檔、55340新增／1961刪除，是已提交範圍，不是工作樹累積。無衝突／main push／正式tag／release／部署／分支刪除。

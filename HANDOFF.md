@@ -1,5 +1,11 @@
 # EventGuard 接手
 
+## 2026-10-28 正在完成候選驗包工具增量（最新）
+
+已由8b9cf27接續並補實際缺口：repo新增verify_candidate.py及12個篡改／路徑／完整性／退出測試，外部pins必填，離線預設、可選Windows私有Job合成smoke，舊輸出不覆寫。定向31/31（verify-candidate-tool-20261028-03，含remaining必須int0），新工具先前對原b57 ZIP的13/13 smoke已實跑通過／四子程序自然退出。沒有完整guardian在跑，舊1624完整測試只屬b57。
+
+NEXT：本切片審查後commit/push→以實際新SHA package_candidate新目錄→verify_candidate外部pins與--smoke→核對本次來源／精確CI並保存結果checkpoint。不要再執行舊reports臨時smoke，不重跑來源未受影響的舊完整回歸；不建立排程、模型／native／main/tag/release或分支刪除。兩張附件與其他worktree保留，原生111缺列／21error仍partial，真agent沿用歷史證據。
+
 ## 2026-10-28 發布前準備完成，沒有執行中的runner（最新）
 
 PREP-1–5已完成，入口docs/RELEASE_PREPARATION.md。固定受測／打包候選b57b43be8333327584ef05af4e71740b5b80d621已推現有開發分支，公開分支全包含、私人main歷史不可達。唯一完整02已自然退出，不依舊PID操作、不另起runner：1624run=expected1624，1621pass／3環境skip，216檔AST、238來源hash與316檔候選包相符，source_unchanged／自然0／remaining0／無強停；精確CI run40639767342 success（Windows47可選SDKskip，Linux fixture104pass）。完整01提前停止假綠不接受、原件保留，驗證器雙閘道已修。

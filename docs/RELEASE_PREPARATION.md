@@ -1,5 +1,21 @@
 # 發布前準備
 
+## 2026-10-28：repo 內可重現驗包／隔離 smoke（最新增量）
+
+使用者要求繼續補實際交付缺口；不建立／恢復接續排程。原候選的解壓smoke僅在reports臨時腳本，現新增受版控`scripts/verify_candidate.py`與篡改／退出測試。外部必填expected commit與ZIP SHA256，先把輸入有界快照保存到全新目錄，再核對commit comment、逐檔hash／size、必要檔案、版本及完整manifest；manifest不能自行充當信任來源。拒絕重複JSON keys與數字型別替換，不複寫舊結果。
+
+來源ZIP與manifest須放本專案reports內；輸出限全新`reports/candidate-verify-*`，拒絕父路徑逃逸／symlink／junction。離線模式只檢查完整性，不啟子程序、不解壓；`--smoke`另明確執行已核准雜湊的包內CLI，僅Windows私有Job，四個子程序各15秒上限與2秒收尾，保存原退出回條。這是已審查候選的合成操作，不是執行任意外來ZIP的沙箱，雜湊亦不是簽章或來源授權。
+
+```powershell
+py -3.13 -B scripts/verify_candidate.py --archive reports/DELIVERY/candidate.zip --manifest reports/DELIVERY/release-manifest.json --expected-commit <TRUSTED_40_HEX_COMMIT> --expected-sha256 <TRUSTED_64_HEX_ZIP_SHA256> --root reports/candidate-verify-NEW --smoke
+```
+
+expected值須由已審查checkpoint／可信交付紀錄取得，不能直接照抄待驗manifest。移除`--smoke`即為純離線檢查。成功產生`verification-result.json`、`verified-manifest.json`、輸入快照及（smoke時）逐步合成CLI／原Job回條；失敗留下固定原因，不序列化原始例外。smoke查一件合成事件、一份保存case、重開相等、唯讀DB hash不變、仍pending／零ACK／無live namespace，並核對包內來源未變。
+
+初版定向`reports/verify-candidate-tool-20261028-02`為31/31、0skip/fail/error，1.244秒、218檔AST無錯、source_unchanged、原Job自然0／remaining0／無強停。新工具另實跑原b57候選於`reports/candidate-verify-historical-20261028-01`：manifest核對及13/13 smoke通過，四個私有CLI Job自然0／remaining0／無強停。這只是新驗收工具對原包的操作；下一個候選須以新commit實際重建／驗包並另綁本次範圍，不把下面舊完整1624項或舊CI升格。
+
+最後來源再收緊remaining必須int0，避免False被當零；`reports/verify-candidate-tool-20261028-03`定向31/31、1.193秒、0skip/fail/error與原Job自然退出，才是本切片受測來源。保存後以同commit新包實跑，不重用原b57 smoke當新來源證據。
+
 ## 範圍與目前狀態（2026-10-28 已完成準備）
 
 2026-10-28 使用者要求完成所有發布準備、連續接續，但不執行 release。本文件是本次唯一準備佇列；現況／證據沿用 STATUS、HANDOFF、EVIDENCE，不建立另一套產品目標。
