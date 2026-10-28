@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 歷程預檢順序比對
+
+唯讀預檢增加目標與備份的完全前綴／分歧及筆數，避免僅看身分衝突誤認順序一致。`reports/verify-history-preview-order-20261028-01` UTC 11:14:43：13/13、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 核對短前綴及已分歧目標，與內部追加原件的接受／拒絕一致。完全前綴仍不證明來源真實性、備份是否涵蓋全部歷程、容量或可還原性；無真實還原或容量釋放。
+
 ## 2026-10-28 歷程完全前綴追加與分歧拒絕
 
 `reports/verify-history-restore-prefix-20261028-01` UTC 11:10:51：15/15、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 實測先還原一筆後再追加尾段，順序不變、重開重播不增列；目標後續已有不同操作時整筆拒絕，DB／pending／ACK 不變。仍無使用者入口、來源認證、真實還原與容量釋放。

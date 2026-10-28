@@ -46,6 +46,7 @@ class HistoryBackupPreviewTests(unittest.TestCase):
         result = self.preview()
         self.assertEqual(result["counts"]["already_present"], 1)
         self.assertEqual(result["identity_conflicts"], 0)
+        self.assertEqual((result["history_order"], result["target_records"], result["backup_records"]), ("exact_prefix", 1, 1))
         self.assertFalse(result["restore_performed"])
         self.assertFalse(result["restore_authorized"])
         self.assertEqual(before, self.store.path.read_bytes())
@@ -86,6 +87,7 @@ class HistoryBackupPreviewTests(unittest.TestCase):
         other = deepcopy(self.backup)
         other["data"]["records"][0]["source"] = "gui"
         result = self.preview(resign(other))
+        self.assertEqual(result["history_order"], "diverged")
         self.assertEqual(result["counts"]["operation_conflict"], 1)
         self.assertEqual(result["identity_conflicts"], 1)
 

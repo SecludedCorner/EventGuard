@@ -130,6 +130,11 @@ def preview_identity(db, value, *, namespace):
             counts["already_present"] += 1
         else:
             counts["operation_conflict"] += 1
+    existing = current["data"]["records"]
+    backed_up = value["data"]["records"]
+    exact_prefix = len(existing) <= len(backed_up) and existing == backed_up[:len(existing)]
     return {"counts": counts, "identity_conflicts": sum(counts[k] for k in
             ("unbound", "event_missing", "event_mismatch", "operation_conflict")),
+            "history_order": "exact_prefix" if exact_prefix else "diverged",
+            "target_records": len(existing), "backup_records": len(backed_up),
             "restore_performed": False, "restore_authorized": False}

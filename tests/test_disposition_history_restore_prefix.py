@@ -6,7 +6,7 @@ import sqlite3
 import tempfile
 import unittest
 
-from eventguard.events.disposition_history_backup import snapshot
+from eventguard.events.disposition_history_backup import preview_identity, snapshot
 from eventguard.events.store import EventStore
 from eventguard.synthetic import make_synthetic
 from test_disposition_history_backup_preview import resign
@@ -39,6 +39,11 @@ class HistoryRestorePrefixTests(unittest.TestCase):
 
     def test_exact_prefix_appends_only_missing_tail_and_replays(self):
         self.assertEqual(self.target._restore_history(self.prefix, namespace="test")["appended"], 1)
+        with closing(sqlite3.connect(self.target.path.as_uri() + "?mode=ro", uri=True)) as db:
+            db.execute("PRAGMA query_only=ON")
+            db.execute("BEGIN")
+            preview = preview_identity(db, self.backup, namespace="test")
+        self.assertEqual((preview["history_order"], preview["target_records"], preview["backup_records"]), ("exact_prefix", 1, 2))
         result = self.target._restore_history(self.backup, namespace="test")
         self.assertEqual((result["already_present"], result["appended"]), (1, 1))
         self.assertEqual(self.history(), [("op-prefix-one", "new", "read"), ("op-prefix-two", "read", "handled")])
@@ -50,6 +55,10 @@ class HistoryRestorePrefixTests(unittest.TestCase):
         self.target._restore_history(self.prefix, namespace="test")
         self.target.set_disposition("evt-restore-prefix", "ignored", operation_id="op-newer-target")
         before = self.target.path.read_bytes()
+        with closing(sqlite3.connect(self.target.path.as_uri() + "?mode=ro", uri=True)) as db:
+            db.execute("PRAGMA query_only=ON")
+            db.execute("BEGIN")
+            self.assertEqual(preview_identity(db, self.backup, namespace="test")["history_order"], "diverged")
         with self.assertRaisesRegex(ValueError, "not_exact_prefix"):
             self.target._restore_history(self.backup, namespace="test")
         self.assertEqual(self.target.path.read_bytes(), before)

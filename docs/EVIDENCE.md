@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：歷程預檢與還原前綴一致性
+
+`reports/verify-history-preview-order-20261028-01` UTC 11:14:43，13/13、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 目標短前綴回 exact_prefix、分歧回 diverged 並與內部 restore 接受／拒絕一致；CLI 不輸出識別資料。不是來源認證、歷程涵蓋完整性或可還原性驗證。
+
 ## 2026-10-28：歷程完全前綴合成測試
 
 `reports/verify-history-restore-prefix-20261028-01` UTC 11:10:51，15/15、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 一筆前綴後只追加缺失尾段，重開重播不增列；已有不同後續操作的目標拒絕，bytes／pending／ACK 保留。沒有真實資料操作、來源認證或容量釋放。

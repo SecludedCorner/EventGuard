@@ -51,6 +51,7 @@ class HistoryPreviewCliTests(unittest.TestCase):
         self.assertEqual((self.store.stats()["pending"], self.store.stats()["receipt_count"]), (1, 0))
         code, output = self.invoke(json.dumps(self.value), fmt="text")
         self.assertEqual(code, 0)
+        self.assertIn("目標為備份的完全前綴", output)
         self.assertIn("不驗證來源真實性、容量或可還原性", output)
 
     def test_interactive_stdin_is_rejected_without_waiting(self):

@@ -309,6 +309,7 @@ def render(result, command="", operation=""):
         counts=result.get("counts",{})
         return "\n".join(["歷程身分唯讀預檢：", "未綁定="+text(counts.get("unbound"))+"；事件缺失="+text(counts.get("event_missing"))+"；事件不符="+text(counts.get("event_mismatch")),
                           "操作衝突="+text(counts.get("operation_conflict"))+"；已存在="+text(counts.get("already_present"))+"；未存在="+text(counts.get("absent_operation")),
+                          "歷程順序："+({"exact_prefix":"目標為備份的完全前綴","diverged":"目標與備份順序或內容分歧"}.get(result.get("history_order"),"未知")),
                           "未還原、未刪除。此預檢不驗證來源真實性、容量或可還原性。"])
     if command=="events" and operation=="detail":
         return "\n".join(["事件詳情："+text(result.get("event_id")),
