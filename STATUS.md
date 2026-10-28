@@ -1,5 +1,15 @@
 # EventGuard 現況
 
+## 2026-10-28 競品研究與工程開工規格完成（未實作產品）
+
+[公開研究](docs/research/competitor-gui/README.md) 與 [工程規格](docs/research/competitor-gui/ENGINEERING_PLAN.md) 已連回 MAINTENANCE_GOAL。核對現有 Web／Tk、API、事件／調查／活動資料與測試後，第一切片定為 P1-GUI-001：補 Web 七來源卡片的最後成功／新鮮度；API 已具備、畫面尚缺。六驗收案例、觸點、後續排序及原生／偵測／真環境前置均已列明，全部產品切片仍未實作。正式主控台未測，不能稱優於競品。
+
+第一單元 f1ed1e07f884e961e96aaffa3cbf9cf51544578d：`docs(research): verify competitor GUI and GitHub evidence [skip ci]`，+113/-0；普通 push origin/feat/local-codex-acceptance 後 ls-remote 同 SHA、ahead/behind 0/0，status／shortstat 無輸出。第二單元開始亦確認乾淨，僅改本研究的規格／既有現況文件。
+
+本單元來源 build：`py -3.13 -B scripts/package_candidate.py --root reports/release-prep-gui-research-20261028-02 --commit f1ed1e07f884e961e96aaffa3cbf9cf51544578d`，319 檔、兩 ZIP 一致。定向：`py -3.13 -B scripts/verify.py --run-dir reports/verify-gui-research-20261028-02 --timeout-seconds 180 --module test_source_success_history --module test_application_ui_state --module test_activity`；台北 15:47:52–15:47:55，29/29、0 fail/error/skip、218 AST、source_unchanged、原 Job 自然 0／remaining 0／無強停。與先前 74 項有重疊，不相加；只驗既有來源，不是提案或新 GUI 的實作驗收。
+
+文件／連結、240 來源 hash 與本次保存結果在 reports/research-gui-20261028-01；不提交 runtime／截圖。本輪只做兩個單一目的文件 checkpoint；推送不等於 CI／發布，未推 main/tag。研究目標完成後交由後續工程從 G01 接續，不在此研究任務擴張產品修改。
+
 ## 2026-10-28 競品 GUI／GitHub 研究：公開證據完成，工程切片待落地
 
 從乾淨 f86254bb0393b606b1202b370efa18b35f649e8e／origin 同 SHA 接續；原聊天僅等待研究，未觀察到其他寫入。新增 [競品研究](docs/research/competitor-gui/README.md)，核對兩家官方展示、目前文件與四倉庫固定 SHA／授權／封存。修正 Lightweight Console：固定目錄只有佔位 README，不能稱有 GUI 實作。正式主控台、兩家偵測／回應成效與同環境比較未測。

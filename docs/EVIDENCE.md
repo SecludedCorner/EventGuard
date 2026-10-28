@@ -1,5 +1,13 @@
 # 證據與時間日誌
 
+## 2026-10-28：競品研究工程規格與來源界線核對
+
+第一證據單元已普通 push f1ed1e07f884e961e96aaffa3cbf9cf51544578d／feat/local-codex-acceptance，+113/-0；遠端同 SHA，status／shortstat 無輸出。第二單元只補 [規格](research/competitor-gui/ENGINEERING_PLAN.md) 與既有管理入口；所有產品項目是未實作提案。新增重要發現：source_status 1.0 的最後成功／新鮮度尚未接到七來源卡片，不能以公告卡片或 API 測試冒充 GUI 已完成；Tk activity 已存在，也不能誤報產品全無操作歷程。
+
+本次命令見 STATUS 頂部。build02 綁 f1ed1e0，319 檔／兩 ZIP SHA256 1dc7c1220b379e9ed14538fc6a324bdb8fefde3025e62e1df5014d84514e7b16 相同、兩原 Git Job 自然退出。verify02：UTC 07:47:52–07:47:55（台北 15:47:52–15:47:55）、2.142 秒、29 run=expected／29 pass／0 fail/error/skip、218 AST、source_unchanged、原 Job 自然 0／remaining 0／逐測試殘留 0。來源 hash 240 項對照，沒有改產品碼／測試。既有 74/74 與此 29/29 不相加，不是全庫或提案驗收。
+
+第二單元文件路徑／引用／未知限制及差異檢查、source binding 與 commit／push 回條留 reports/research-gui-20261028-01；build02 不包含未提交規格。研究未讀私人圖片／事件內容、未採集／啟模型／連競品帳戶。原生 partial、24h/reboot 與正式競品實測仍缺，第一切片驗收需後續實作再做。
+
 ## 2026-10-28：競品公開證據與 EventGuard 對照來源驗證
 
 研究基準 f86254bb0393b606b1202b370efa18b35f649e8e，查閱日期台北 2026-10-28。官方來源／四個固定 GitHub SHA／角色與授權／封存列於 [研究](research/competitor-gui/README.md)。實際只看公開頁面及四張官方圖片，不保存圖、不登入主控台、不執行廠商程式。GitHub REST 一般 shell 請求失敗（HttpRequestException，未記原始例外），web 部分固定連結 cache miss，改以公開 GitHub 瀏覽器頁面核對；沒有提權。Falcon PDF 僅文字／圖說成功，內嵌像素未顯示，保留限制。

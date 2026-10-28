@@ -1,5 +1,19 @@
 # EventGuard 目前目標
 
+## 2026-10-28 競品 GUI 研究已落地，工程準備完成
+
+本輪明確範圍為研究／文件／準備，沒有產品實作。公開來源、固定 GitHub SHA、授權與封存見 [研究](research/competitor-gui/README.md)，現況證據、每項依賴／風險／授權及驗收見 [規格](research/competitor-gui/ENGINEERING_PLAN.md)。它們是本佇列附件，不另建管理系統。
+
+| 順序 | 工作與狀態 | 下一個具體動作 |
+| --- | --- | --- |
+| 1 | P1-GUI-001 READY，未實作 | Web 七來源卡片補 last_success_at/state 與 freshness；只沿用 source_status 1.0，完成六情境合成／真瀏覽器驗收。 |
+| 2–3 | P1-GUI-002／003 PLANNED | 來源缺口摘要、可點的新增高嚴重度提示；再做篩選／頁碼及返回焦點保存，按規格拆 A/B。 |
+| 4–6 | P1-INVEST-004、P2-HISTORY-001、P2-INVEST-REV-001 PLANNED | 已保存調查易讀化 → 有界處置歷史 → 有界案件修訂；不新增推論攻擊鏈或敏感回應。 |
+| 7 | P2-UX-001 PLANNED | 在以上切片後做合成任務可用性驗收；跨產品比較待合法帳戶／可比資料及另行授權。 |
+
+優先修正一個已確認落差：七來源 API 有最後成功／新鮮度，Web `sources()` 尚未呈現；公告卡片的相同文字不算七來源驗收。原生 coverage／偵測率／GUI 體驗／真環境可靠性分開量測，不宣稱超越兩家 EDR。
+原生工作仍看 [WINDOWS_VALIDATION_PLAN](WINDOWS_VALIDATION_PLAN.md) 最新段：舊診斷包已 superseded，需當前 source/hash 新準備與另一次精確批准；下方「已 prepare」文字是歷史，不能直接執行。離線 GUI 工程不受此局部關卡阻擋。
+
 ## 2026-10-28 下一身分診斷的離線前置完成
 
 P2-OS-DIAG-002已補baseline固定錯誤分類／階段／操作計數、未知與截斷守恆，27/27定向、原Job自然0／remaining0；沒有native重跑。下一次同範圍baseline方案僅prepare於reports/windows-listener-diagnostics-20261028-01，精確run/hash與唯一後續決策見WINDOWS_VALIDATION_PLAN頂部。舊P2-OS-001 partial不變、舊批准已用；新方案需另外精確批准，現在不另問或執行。可追溯調查仍以未知保留、真實覆蓋／誤報與可靠性為方向；無同條件實測不宣稱超越CrowdStrike／SentinelOne。

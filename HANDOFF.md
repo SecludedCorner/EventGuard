@@ -1,5 +1,13 @@
 # EventGuard 接手
 
+## 2026-10-28 競品研究完成，下一工程切片為 P1-GUI-001
+
+先讀 [公開研究](docs/research/competitor-gui/README.md) 與 [工程規格](docs/research/competitor-gui/ENGINEERING_PLAN.md)，順序已進既有 MAINTENANCE_GOAL。研究任務只交付來源／對照／驗收規格，沒有完成產品切片。第一個可直接開工項：Web 七來源卡片補最後成功／新鮮度；既有 API 不需擴充。規格列六個 synthetic 驗收，務必核對七來源 DOM，不能拿公告卡片文字假通過。
+
+來源第一單元 f1ed1e0 已普通 push／遠端同 SHA／+113/-0／乾淨；第二單元來源 build02 319 檔可重現、定向 29/29、原 Job 自然 0／remaining 0；此前 74/74 是重疊定向。完整 SHA、命令／時間及保存回條見 STATUS／EVIDENCE 與 reports/research-gui-20261028-01；runtime 不提交。恢復先核對目前 branch／HEAD／upstream／status，不用研究檔案當原生或模型授權。
+
+Lightweight Console 固定目錄只有 README、且倉庫封存；官方 demo／SDK 不等於產品實測。既有 Tk activity 有功能，事件處置／案件則仍只有最新快照。原生診斷舊包 superseded，重準備與執行批准另走 WINDOWS_VALIDATION_PLAN；不啟排程／帳戶／敏感回應。
+
 ## 2026-10-28 競品研究進度（本任務範圍）
 
 公開來源／GUI 與四個固定 GitHub SHA 已整理至 [研究](docs/research/competitor-gui/README.md)。重要修正：SentinelOne Lightweight Console 只有佔位 README；封存示例不是正式 Singularity。沒有兩家主控台實測。研究目標是文件與開工準備，不延伸為本輪產品實作。

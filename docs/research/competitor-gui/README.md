@@ -2,6 +2,7 @@
 
 查閱日期：2026-10-28（台北）。EventGuard 比對基準：`f86254bb0393b606b1202b370efa18b35f649e8e`。
 本頁是公開資料研究；工程入口仍為 [MAINTENANCE_GOAL](../../MAINTENANCE_GOAL.md)，驗證紀錄為 [EVIDENCE](../../EVIDENCE.md)。
+現有實作逐項核對、排序切片與第一個開工規格見 [ENGINEERING_PLAN](ENGINEERING_PLAN.md)；全部產品切片仍未實作。
 
 ## 結論與證據分級
 
