@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 持續執行順序更新
+
+MAINTENANCE_GOAL 與 CLAUDE 已明定瀏覽器待驗不阻塞桌面／離線產品工程、每單元驗證後立即保存並接續，保留所有原 Web／實機驗收條件。平台目標卡片仍為 blocked；嘗試其「編輯目標」介面兩次均遇座標幾何不可用，未宣稱卡片已更新或恢復。磁碟佇列可繼續執行，不建立排程。2026-10-29 02:33（UTC+8）父 SHA 5208415 的來源 build 346 檔可重現（reports/release-prep-continuous-goal-20261029-01）；`py -3.13 -B scripts/verify.py --run-dir reports/verify-continuous-goal-20261029-01 --timeout-seconds 180 --module test_package_candidate`：8/8、0 skip、source_unchanged，Job 自然退出／remaining 0。本次純文件，不提供新產品驗收。
+
 ## 2026-10-29 桌面來源缺口摘要
 
 Tk 七來源頁新增只讀摘要，分列可讀且新鮮、拒讀、部分可讀、讀取失敗、過期、未知／尚無觀察及不適用；明示分類可重疊、均非安全判定。歷史成功不增加目前可讀計數，未出現的來源仍列未知。2026-10-29 02:28（UTC+8）`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-source-gaps-20261029-01 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop --module test_source_success_history`：75/75、0 skip、source_unchanged，含真 Tk 元件刷新摘要與 fixture，Job 自然退出 0／remaining 0。`reports/build-desktop-source-gaps-20261029-01`：當前工作樹 266 檔 hash 與受測來源相符、244 檔 Python 編譯成功。未採集／模型／ACK；人工版面與瀏覽器關卡仍待驗。

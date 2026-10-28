@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：持續執行佇列更新
+
+MAINTENANCE_GOAL、CLAUDE 更新持續推進順序，原目標與所有待驗關卡保留；平台目標卡片編輯未成功，仍 blocked。`reports/release-prep-continuous-goal-20261029-01` 父來源 5208415，346 檔 build 可重現；`reports/verify-continuous-goal-20261029-01` UTC 18:33:16（台灣 10/29 02:33），8/8、0 skip、Job 自然退出／remaining 0。文件 diff 與連結另檢，非產品新驗收。
+
 ## 2026-10-29：桌面來源缺口摘要
 
 `reports/verify-desktop-source-gaps-20261029-01` UTC 2026-10-28 18:28:05：75/75、0 skip、source_unchanged；真 Tk＋fixture 核對摘要刷新、拒讀／過期重疊、缺失來源與不可信狀態維持未知，沒有新採集或模型，Job 自然退出／remaining 0。`reports/build-desktop-source-gaps-20261029-01` 綁定當前受測 manifest 266 檔、編譯 244 檔；非 exe 或真人 UI 驗收。前單元 e72c494 已推送且遠端一致（+105/−5）。
