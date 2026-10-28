@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：調查保留政策提示合成回歸
+
+`reports/verify-investigation-retention-copy-20261028-01` UTC 10:59:13，62/62、0 skip、238 AST、source_unchanged；Job 自然 0／remaining 0／無強停。核對目標元件文字與既有有／無修訂的保留測試，不代表已在瀏覽器顯示，也不代表容量恢復已實作。
+
 ## 2026-10-28：修訂診斷 HTTP GET 合成測試
 
 `reports/verify-revision-diagnostics-http-20261028-01` UTC 10:56:47，17/17、0 skip、238 AST、source_unchanged、Job 自然 0／remaining 0／無強停。synthetic loopback GET 驗證 prior evidence_status=saved_snapshot 與 diagnostic_evidence_status=changed 分開，DB bytes 相同、pending 2／ACK 0／model 0；非瀏覽器。

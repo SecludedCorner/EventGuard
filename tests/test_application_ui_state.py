@@ -293,6 +293,8 @@ class ApplicationUIContractTests(unittest.TestCase):
         detail = page.split('<article id="detail"', 1)[1].split('</article>', 1)[0]
         self.assertIn('id="investigation-retention"', detail)
         self.assertIn('此功能啟用前的版本未知，版本滿載時更新會失敗', detail)
+        self.assertIn('沒有前版的已 ACK 事件與調查可能依保留期限或容量規則被移除', detail)
+        self.assertIn('有前版時事件錨點受保護，但空間仍可能不足', detail)
         self.assertLess(detail.index('id="investigation-retention"'), detail.index('id="investigate"'))
         self.assertEqual(self.calls, [])
 

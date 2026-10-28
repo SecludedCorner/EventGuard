@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 調查保留政策明示 WIP
+
+事件詳情說明：沒有前版的已 ACK 事件／調查可能依期限或容量輪替，有前版時錨點受保護但空間可能不足；同步修正 MAINTENANCE_GOAL 過時的修訂進度。`reports/verify-investigation-retention-copy-20261028-01` UTC 10:59:13：62/62、0 skip、238 AST、source_unchanged；Job 自然 0／remaining 0／無強停。靜態元件與保留策略合成回歸通過；Work 禁用本機瀏覽器，實際畫面仍未驗。
+
 ## 2026-10-28 修訂診斷 loopback GET
 
 `reports/verify-revision-diagnostics-http-20261028-01` UTC 10:56:47：17/17、0 skip、238 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 真 loopback GET 核對同一前版事件成員相符時，診斷變更仍另回 changed；DB bytes／pending／ACK 不變，model 0。這不是真瀏覽器驗收。
