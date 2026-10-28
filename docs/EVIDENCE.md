@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：前版診斷結果語意合成測試
+
+`reports/verify-revision-diagnostic-result-20261028-01` UTC 11:26:05，28/28、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。`reports/revision-diagnostic-result-dom-20261028-01/run.js` node exit 0：實際 renderer 的 observed／partial／未知三組 synthetic DOM；不是瀏覽器或真實診斷。
+
 ## 2026-10-28：歷程預檢 JSON 歧義測試
 
 `reports/verify-history-preview-duplicate-20261028-01` UTC 11:23:39，35/35、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic CLI 驗證頂層及 namespace 巢狀重複欄位拒絕，正常備份仍通過，DB／pending／ACK 不變；不代表來源認證或可還原性。

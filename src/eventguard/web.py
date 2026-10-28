@@ -83,7 +83,8 @@ function renderInvestigationRevisions(value,preserve=false){
     const diagnosticLabels={matched:'目前保存診斷與當時雜湊相符',changed:'目前診斷已變更',missing:'目前沒有保存診斷',not_bound:'此舊版本未綁定診斷',unknown:'診斷狀態未知'};
     box.append(node('p','診斷證據：'+(diagnosticLabels[revision.diagnostic_evidence_status]||'診斷狀態未知')+'；這不代表目前主機安全。'));
     const diagnosis=c.diagnostic_context;if(diagnosis&&diagnosis.state==='saved'){
-      box.append(node('p','當時診斷時間：'+when(diagnosis.observed_at)+'，結果：'+(states[diagnosis.result_status]||diagnosis.result_status)+'。'));
+      const diagnosticResultLabels={observed:'已觀測，非安全判定',partial:'部分觀測，資料不完整'};
+      box.append(node('p','當時診斷時間：'+when(diagnosis.observed_at)+'，結果：'+(diagnosticResultLabels[diagnosis.result_status]||'未知')+'。'));
       for(const observed of diagnosis.observations)box.append(node('p',(sourceNames[observed.source]||observed.source)+' / '+(states[observed.status]||observed.status)+' / 保存列數 '+observed.row_count+' / '+when(observed.observed_at)));
     }
     box.append(node('p','觀測 '+c.timeline.length+' 筆；證據缺口 '+c.gaps.length+' 筆。時間接近不代表因果。'));

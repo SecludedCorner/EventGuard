@@ -320,6 +320,9 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertIn("revision.diagnostic_evidence_status", renderer)
         self.assertIn("診斷狀態未知", renderer)
         self.assertIn("diagnosis.observations", renderer)
+        self.assertIn("observed:'已觀測，非安全判定'", renderer)
+        self.assertIn("partial:'部分觀測，資料不完整'", renderer)
+        self.assertIn("diagnosticResultLabels[diagnosis.result_status]||'未知'", renderer)
         self.assertIn("renderInvestigationRevisions(d.investigation_revisions,sameEvent)", script)
         self.assertEqual(self.calls, [])
 
