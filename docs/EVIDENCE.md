@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面來源缺口摘要
+
+`reports/verify-desktop-source-gaps-20261029-01` UTC 2026-10-28 18:28:05：75/75、0 skip、source_unchanged；真 Tk＋fixture 核對摘要刷新、拒讀／過期重疊、缺失來源與不可信狀態維持未知，沒有新採集或模型，Job 自然退出／remaining 0。`reports/build-desktop-source-gaps-20261029-01` 綁定當前受測 manifest 266 檔、編譯 244 檔；非 exe 或真人 UI 驗收。前單元 e72c494 已推送且遠端一致（+105/−5）。
+
 ## 2026-10-29：桌面七來源歷史成功時間
 
 `reports/verify-desktop-source-history-20261029-01` UTC 2026-10-28 18:25:19：74/74、0 skip、source_unchanged，Job 自然退出 0、remaining 0、無強停。控制器測試以保存的成功後拒讀資料核對歷史不丟、唯讀 hash 不變，採集入口設失敗哨兵；真 Tk 元件＋fixture 驗六情境與七來源欄位，不是主機採集或真人操作。`reports/build-desktop-source-history-20261029-01`：受測 manifest 266 檔 hash 相符，244 Python 檔編譯成功，包含本次未提交產品／測試變更。瀏覽器與 200% 未驗；未提交私人圖片或 runtime。

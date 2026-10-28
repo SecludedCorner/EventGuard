@@ -74,6 +74,26 @@ def source_success_text(item, *, now=None):
         return "未知／尚無成功紀錄"
 
 
+def source_gap_text(sources):
+    """Count saved source gaps; categories may overlap, never infer safety."""
+    counts = dict(fresh=0, denied=0, partial=0, failed=0, stale=0, unknown=0, na=0)
+    known = {"ok", "success", "denied", "partial", "error", "timeout", "cancelled", "stale", "not_applicable", "n-a"}
+    for item in sources:
+        status = item.get("status")
+        status = status if isinstance(status, str) else "unknown"
+        freshness = item.get("freshness")
+        fresh = freshness.get("state") if isinstance(freshness, dict) else freshness
+        counts["fresh"] += status in {"ok", "success"} and fresh == "fresh"
+        counts["denied"] += status == "denied"
+        counts["partial"] += status == "partial"
+        counts["failed"] += status in {"error", "timeout", "cancelled"}
+        counts["stale"] += fresh == "stale" or status == "stale"
+        counts["unknown"] += status not in known or fresh not in ("fresh", "stale")
+        counts["na"] += status in {"not_applicable", "n-a"}
+    return ("來源觀測：可讀且新鮮 {fresh}；拒讀 {denied}；部分可讀 {partial}；讀取失敗 {failed}；"
+            "過期 {stale}；未知／尚無觀察 {unknown}；不適用 {na}。分類可重疊，均非安全判定。").format(**counts)
+
+
 def detail_text(value, limit=60000):
     """Inert JSON disclosure; existing evidence is never rewritten."""
     try:

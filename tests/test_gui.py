@@ -101,6 +101,16 @@ class GuiPresentationTests(unittest.TestCase):
         self.assertEqual({row[0] for row in view["sources"]}, set(SOURCE_NAMES))
         self.assertIn("未知", view["counts"])
         self.assertFalse(view["agent_enabled"])
+        self.assertIn("未知／尚無觀察 7", view["source_gaps"])
+
+    def test_source_gaps_count_overlap_without_promoting_history_to_current_success(self):
+        rows = [{"source_id": key, "status": state, "freshness": {"state": fresh},
+                 "last_success_state": "known", "last_success_at": "2026-01-01T00:00:00Z"}
+                for key, (state, fresh) in zip(SOURCE_NAMES, [("denied", "stale"), ("partial", "fresh"),
+                    ("error", "fresh"), ("ok", "fresh"), ("ok", "unknown"), ("not_applicable", "fresh"), ([], [])])]
+        view = view_snapshot({"sources": rows})
+        for text in ("可讀且新鮮 1", "拒讀 1", "部分可讀 1", "讀取失敗 1", "過期 1", "未知／尚無觀察 2", "不適用 1", "非安全判定"):
+            self.assertIn(text, view["source_gaps"])
 
     def test_enabled_or_old_running_flag_is_not_proof_of_collection(self):
         view = view_snapshot({"state": "running", "monitoring": False, "desired_enabled": True})
@@ -261,6 +271,8 @@ class GuiOwnTkWidgetTests(unittest.TestCase):
         self.assertFalse(any(action in {"start", "pause", "close"} for action, _ in self.controller.calls))
         self.assertEqual(self.ui.detail.cget("state"), "disabled")
         self.assertIn("暫停", self.ui.headline.get())
+        self.assertIn("部分可讀 1", self.ui.source_gaps.get())
+        self.assertIn("未知／尚無觀察 6", self.ui.source_gaps.get())
         self.evidence = {"scope": "real own Tk widgets + fixture controller; no collector/model",
                          "source_rows": 7, "model_calls": 0}
 
@@ -296,6 +308,9 @@ class GuiOwnTkWidgetTests(unittest.TestCase):
                 self.assertEqual(row[1], "拒讀")
             if fresh == "stale":
                 self.assertEqual(row[3], "過期")
+                self.assertIn("過期 1", self.ui.source_gaps.get())
+            if status == "denied":
+                self.assertIn("拒讀 1", self.ui.source_gaps.get())
         self.assertEqual(self.ui.sources.heading("success", "text"), "最後成功時間（歷史）")
         self.assertEqual(len(self.ui.sources.get_children()), 7)
         self.assertFalse(any(action != "snapshot" for action, _ in self.controller.calls))

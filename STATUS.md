@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面來源缺口摘要
+
+Tk 七來源頁新增只讀摘要，分列可讀且新鮮、拒讀、部分可讀、讀取失敗、過期、未知／尚無觀察及不適用；明示分類可重疊、均非安全判定。歷史成功不增加目前可讀計數，未出現的來源仍列未知。2026-10-29 02:28（UTC+8）`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-source-gaps-20261029-01 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop --module test_source_success_history`：75/75、0 skip、source_unchanged，含真 Tk 元件刷新摘要與 fixture，Job 自然退出 0／remaining 0。`reports/build-desktop-source-gaps-20261029-01`：當前工作樹 266 檔 hash 與受測來源相符、244 檔 Python 編譯成功。未採集／模型／ACK；人工版面與瀏覽器關卡仍待驗。
+
 ## 2026-10-29 桌面版七來源歷史成功時間
 
 既有 Tk 桌面版沿用 DesktopController；快照從 source_status 只讀保存的 live 成功紀錄，七來源表格新增「最後成功時間（歷史）」。目前可見性／新鮮度獨立顯示；未知、無效、無時區及未來時間保持未知，零列不抹除歷史成功。未啟動監看、原生採集、模型或 ACK。
