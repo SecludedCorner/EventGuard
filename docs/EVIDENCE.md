@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-28：P1-GUI-003B 慢清單與消失列補驗
+
+`reports/gui-detail-edge-20261028-01` 合成真瀏覽器：延遲 high 列表、切換 critical/new、放行舊回覆後仍為 critical／2 筆、首列嚴重；選 `evt-url-critical-1` 後由測試程式在獨立 SQLite 設 handled、明示 ack_performed=false，週期更新使該列不再符合 new；按返回後焦點回篩選按鈕、篩選網址保留。這是合成故障注入，非真主機事件。Job 自然 0／remaining 0／無強停，worker 0 POST／native／model；shutdown_requested_reason 是 harness 預設，實際合作停止。
+
+`reports/verify-gui-detail-edge-20261028-01` 33/33／0 skip／218 AST／source_unchanged，Job 自然退出；本次沒改產品程式。僅涵蓋所述情境，不保證所有競態。
+
 ## 2026-10-28：P1-GUI-003B 詳情返回與延遲詳情
 
 合成真瀏覽器於 high/new 第二頁開啟 `evt-url-high-4`，焦點到返回按鈕；按 Enter 回原列、網址仍 page=1。延遲該詳情、立即開啟 `evt-url-high-3`，放行舊回覆後畫面與 delivery event_id 仍為後者，返回焦點亦為後者。另等待一個五秒週期後，同一合成列按鈕焦點未變。沒有執行人工處置或 ACK；不代表所有競態已排除。慢事件清單回覆及原列消失後焦點尚待注入。

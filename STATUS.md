@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 P1-GUI-003B 補驗完成
+
+`reports/gui-detail-edge-20261028-01` 使用隔離 synthetic 事件與真瀏覽器：延遲 high 清單回覆時切到 critical，放行後畫面仍是 critical 2 筆；在獨立 synthetic SQLite 將所選事件設 handled（無 ACK），使它離開 new 清單，返回焦點正確落在篩選按鈕。原 Job 自然 0／remaining 0／無強停、0 POST／native／model。定向 `reports/verify-gui-detail-edge-20261028-01`：UTC 08:32:43，33/33、0 skip、218 AST、source_unchanged、Job 自然退出。工作樹來源 ZIP build 320 檔 hash 自檢；非 commit 候選。下一步 P1-INVEST-004A。
+
 ## 2026-10-28 P1-GUI-003B 詳情返回與延遲回覆
 
 事件詳情新增鍵盤可用的返回清單按鈕，回到原事件焦點，清單週期重繪保留事件按鈕焦點；失去原列時回篩選按鈕。切換／返回使在途詳情與 delivery 回覆失效，避免舊事件證據覆蓋新選取。
