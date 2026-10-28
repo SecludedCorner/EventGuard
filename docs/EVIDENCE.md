@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-28：處置歷程身分綁定
+
+新操作與事件 payload hash 同交易保存；同操作 ID 重新使用於不同內容或舊版未綁定紀錄時衝突。舊 schema 只在明確寫入時惰性加欄，舊列 hash 仍 NULL，不偽造歸屬；讀取不遷移，任何未綁定或不同 hash 的該事件歷程顯示 unknown。
+
+`reports/verify-history-identity-20261028-02` 96/96／0 skip／224 AST／source_unchanged、Job 自然 0／remaining 0／無強停。`reports/gui-history-identity-20261028-01` 合成真瀏覽器：相符顯示歷程、內容變更與未綁定顯示未知，SQLite SHA256 前後均 `dfc40af88be1da77ae80c6d95b2f1899a96fb6a96659b10116ddab52c3920240`；worker 0 POST／native／model，Job 自然退出。非真主機或攻擊測試。
+
 ## 2026-10-28：六情境合成比較補全
 
 `reports/ux-compare-20261028-02/comparison.json` 延續 `-01` 的嚴重清單與最後成功，補拒讀、保存關聯、診斷缺口、handled／pending：拒讀舊 1 操作／446ms、新 0／45ms；關聯各 1，舊 848ms／新 775ms；缺口各 1，舊 838ms 顯示原始代碼／新 789ms 顯示中文；handled／pending 各 1，舊 758ms／新 850ms，兩者皆可見。這是單次自動化 wall time，舊版錨定列索引以 fixture API 先核對，不計人類尋找或閱讀時間；不能據此推論完成率、統計效果或超越競品。

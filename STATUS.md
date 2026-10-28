@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-28 處置歷程事件身分綁定
+
+發現事件 ID 可在保留期後重用，舊歷程若只靠 ID 可能誤歸屬；新紀錄與重播綁定驗證過的 payload hash。舊表未綁定資料不自動回填，讀取與重播顯示未知／衝突；新寫入時同交易惰性加欄、保留舊列，不以目前內容倒推舊身分。
+
+`reports/verify-history-identity-20261028-02` UTC 09:14:14、96/96、0 skip、224 AST、source_unchanged、Job 自然 0／remaining 0／無強停；合成測試含內容改變、舊表遷移、重播衝突、回滾與 pending。`reports/gui-history-identity-20261028-01` 合成真瀏覽器核對相符／變更／未綁定，讀取前後 SQLite hash 一致、0 POST／native／model、Job 自然退出。工作樹 326 檔 ZIP 來源自檢，非 commit 候選。容量恢復仍未完成。
+
 ## 2026-10-28 六情境合成前後觀察
 
 固定 ad1f127／338cdc5 完成六種 synthetic 自動化觀察：新增嚴重清單 3→1 操作；拒讀 1→0 操作；最後成功舊版卡片不可見、新版可見；保存關聯、診斷缺口及 handled／pending 各自 1→1 操作。舊版缺口顯示代碼，新版有中文；各案例未觀察錯誤結果或誤判安全。各次自動化耗時見 `reports/ux-compare-20261028-01/comparison.json` 與 `-02/comparison.json`，非人類測量；舊版錨定列以合成 API 定位，非使用者尋找時間。

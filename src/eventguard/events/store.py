@@ -584,7 +584,7 @@ class EventStore:
                 try:
                     attempt = record_attempt(db, {"event_id": event_id, "operation_id": operation_id,
                         "previous_status": previous_status, "status": status, "source": source, "at": now},
-                        available_bytes=available)
+                        available_bytes=available, payload_hash=event_row["payload_hash"])
                 except HistoryCapacityError:
                     reason = ("event_status_capacity_pending_and_ack_space_preserved" if status_over_capacity
                               else "event_history_capacity_pending_and_ack_space_preserved")
