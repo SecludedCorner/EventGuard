@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-28 P1-GUI-003A 網址篩選與頁碼
+
+Web 網址只保存嚴重度／來源／處置狀態的既有列舉及 0–10000 頁碼，不含事件內容；重新載入、返回／前進可恢復。無效／重複／未知／超限參數顯示固定錯誤並不顯示事件；重新選取可恢復。篩選或頁碼變化使在途舊事件清單回覆失效。根路由現在提供固定頁面給含查詢網址，仍驗 Host／長度，不反射 query。
+
+合成真瀏覽器核對高 55 件第二頁、reload／back／forward、嚴重入口、四種無效網址和三篩選恢復。`reports/gui-url-filters-20261028-01` 首測重現根路由 route_not_found，修正後 `-02` 通過；兩個原 Job 自然 0／remaining 0／無強停，無 POST／native／model。定向 `reports/verify-gui-url-filters-20261028-01` 31/32：舊靜態測試切段含新 helper，修正後 `-02` 32/32、0 skip、218 AST、source_unchanged、原 Job 自然退出。另擴充路由／控制測試 `reports/verify-gui-url-filters-20261028-03`：68 run、67 pass、1 skip（notification_icon_unavailable）、0 fail/error，218 AST，Job 自然退出。來源 build 為工作樹 320 檔 ZIP 自檢，不是 commit 候選。慢事件回覆與詳情／焦點仍待 003B。
+
 ## 2026-10-28 P1-GUI-002B 新增事件入口
 
 高／嚴重事件分開顯示可點按數字，進入對應嚴重度＋新增狀態，清除來源篩選與詳情、回第一頁；兩次獨立計數明示時間可能不同。相同數字不重建按鈕以保留焦點。

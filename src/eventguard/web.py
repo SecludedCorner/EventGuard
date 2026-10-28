@@ -19,7 +19,7 @@ HTML = """<!doctype html>
 <p id="monitor-summary" role="status">正在取得後端狀態。控制暫不可用。</p><div id="monitor-buttons"><button id="monitor-start" disabled>開始採集</button><button id="monitor-pause" disabled>暫停採集</button><button id="monitor-resume" disabled>恢復採集</button><button id="monitor-stop" disabled>停止採集</button></div>
 <p id="monitor-last-action">最近動作：尚無紀錄。</p><p id="monitor-revision" class="reason">狀態版本尚未確認。</p><p id="monitor-result" role="status">尚未送出操作。</p><div id="shutdown-controls"><button id="monitor-shutdown" class="danger" disabled>關閉程式</button><span>提出關閉要求不代表已退出。回條與連線狀態會分開顯示。</span></div></section>
 <nav aria-label="頁面"><button data-tab="events" aria-pressed="true">事件</button><button data-tab="sources">來源狀態</button><button data-tab="advisories">資安公告</button><button data-tab="rules">規則</button><button data-tab="agent">Agent 派送</button></nav>
-<section id="events"><h2>事件</h2><p id="source-gap-summary" role="status">來源狀態尚未確認。這不代表主機安全。</p><form id="filters">
+<section id="events"><h2>事件</h2><p id="source-gap-summary" role="status">來源狀態尚未確認。這不代表主機安全。</p><p id="filter-url-error" role="alert" hidden>網址篩選無效。請重新選擇篩選條件。</p><form id="filters">
 <label>嚴重度<select name="severity"><option value="">全部</option><option value="critical">嚴重</option><option value="high">高</option><option value="warning">警告</option><option value="info">資訊</option></select></label>
 <label>來源<select name="source"><option value="">全部</option><option value="defender">Defender</option><option value="listeners">監聽端點</option><option value="processes">程序</option><option value="startup">啟動項</option><option value="services">服務</option><option value="tasks">排程工作</option><option value="versions">版本</option><option value="monitor">監看程式</option><option value="advisories">資安公告</option><option value="unknown">未知</option></select></label>
 <label>處置狀態<select name="status"><option value="">全部</option><option value="new">新增</option><option value="read">已讀</option><option value="handled">已處理</option><option value="ignored">忽略</option></select></label><button type="submit">篩選</button></form>
@@ -45,7 +45,7 @@ const APP_STATE_PRESENTATION = {"running":{"tone":"green","icon":"●","label":"
 const MONITOR_ACTIONS=['start','pause','resume','stop','shutdown'], CAPABILITY_FIELDS=['available','paused','stopped','can_start','can_pause','can_resume','can_stop','can_shutdown'];
 const actionLabels={start:'開始採集',pause:'暫停採集',resume:'恢復採集',stop:'停止採集',shutdown:'關閉程式',set_event_status:'變更事件處置狀態'}, sourceLabels={cli:'CLI',gui:'GUI',mcp:'MCP',startup:'啟動流程',system:'系統'}, actionStates={processing:'處理中',succeeded:'成功',busy:'忙碌，要求未執行',failed:'失敗',unknown:'未確認',running:'採集運作中',paused:'採集已暫停',stopped:'採集已停止',event_status_updated:'事件處置已保存',shutdown_requested:'關閉要求已接受，退出待確認',shutdown_unconfirmed:'退出未確認',blocked:'操作受阻',conflict:'操作識別衝突'};
 const STATUS_TIMEOUT_MS=4000, CONTROL_TIMEOUT_MS=30000, STATUS_POLL_MS=1000, STATUS_STALE_MS=5000;
-let offset=0, selected=null, tab='events', busy=false, refreshQueued=false, sourceGapSequence=0, controlFlight=null, statusFlight=null, clientSeq=0, statusTimer=null, detailSequence=0;
+let offset=0, selected=null, tab='events', busy=false, refreshQueued=false, sourceGapSequence=0, eventSequence=0, filterUrlValid=true, controlFlight=null, statusFlight=null, clientSeq=0, statusTimer=null, detailSequence=0;
 let currentStatus=null, instanceId=null, stateRevision=-1, lastAppliedSeq=-1, lastPollSuccessAt=0, connectionHealthy=false, reloadPending=false;
 function node(tag,text,cls){const e=document.createElement(tag);e.textContent=text??'';if(cls)e.className=cls;return e;}
 function when(s){if(!s)return '尚無紀錄';const d=new Date(s);return Number.isNaN(+d)?'時間未知':d.toLocaleString('zh-TW',{hour12:false});}
@@ -176,7 +176,20 @@ async function sourceGap(){
     target.textContent=gaps.length?'來源缺口 '+gaps.length+'／7：'+gaps.map(id=>sourceNames[id]+'（'+(states[indexed.get(id).status]||'未知')+'，'+sourceFreshness(indexed.get(id))+'）').join('、')+'。請查看來源狀態；不代表主機安全。':'七個來源最近觀測成功且未過期；不代表主機安全。';
   }catch(error){if(sequence===sourceGapSequence)target.textContent='來源狀態無法確認，請查看來源狀態；不代表主機安全。';}
 }
-async function events(){const q=new URLSearchParams(new FormData($('filters')));for(const [k,v] of [...q])if(!v)q.delete(k);q.set('limit','50');q.set('offset',offset);const data=await api('/api/events?'+q);$('event-rows').replaceChildren();for(const e of data.events){const tr=node('tr');tr.append(node('td',severity[e.severity]||e.severity,e.severity),node('td',eventNames[e.event_type]||e.event_type),node('td',sourceNames[e.source]||e.source),node('td',when(e.observed_at)),node('td',handling[e.status]||e.status));const td=node('td'),b=node('button','查看');b.addEventListener('click',()=>detail(e.event_id).catch(fail));td.append(b);tr.append(td);$('event-rows').append(tr);}if(!data.events.length){const tr=node('tr'),td=node('td','沒有符合條件的事件。這不代表主機安全。');td.colSpan=6;tr.append(td);$('event-rows').append(tr);}$('count').textContent='符合條件 '+data.total+' 件。本頁 '+data.events.length+' 件。';$('prev').disabled=offset===0;$('next').disabled=!data.has_more;}
+function invalidateEventList(){eventSequence++;selected=null;$('detail').hidden=true;$('event-rows').replaceChildren();$('count').textContent='正在讀取事件。';$('prev').disabled=true;$('next').disabled=true;}
+function writeFilterUrl(){
+  const params=new URLSearchParams(),form=$('filters');for(const name of ['severity','source','status'])if(form.elements[name].value)params.set(name,form.elements[name].value);
+  if(offset)params.set('page',String(offset/50));const query=params.toString();history.pushState(null,'',location.pathname+(query?'?'+query:''));
+}
+function restoreFilterUrl(){
+  const params=new URLSearchParams(location.search),form=$('filters'),names=['severity','source','status'];
+  let valid=[...params.keys()].every(name=>[...names,'page'].includes(name)&&params.getAll(name).length===1);
+  for(const name of names){const value=params.get(name)||'';if(![...form.elements[name].options].some(option=>option.value===value))valid=false;}
+  const page=params.get('page')||'0';if(!/^(0|[1-9]\d{0,4})$/.test(page)||Number(page)>10000)valid=false;
+  for(const name of names)form.elements[name].value=valid?(params.get(name)||''):'';
+  offset=valid?Number(page)*50:0;filterUrlValid=valid;$('filter-url-error').hidden=valid;invalidateEventList();
+}
+async function events(){const sequence=++eventSequence;if(!filterUrlValid){$('count').textContent='網址篩選無效，無法顯示事件。';return;}const q=new URLSearchParams(new FormData($('filters')));for(const [k,v] of [...q])if(!v)q.delete(k);q.set('limit','50');q.set('offset',offset);const data=await api('/api/events?'+q);if(sequence!==eventSequence)return;$('event-rows').replaceChildren();for(const e of data.events){const tr=node('tr');tr.append(node('td',severity[e.severity]||e.severity,e.severity),node('td',eventNames[e.event_type]||e.event_type),node('td',sourceNames[e.source]||e.source),node('td',when(e.observed_at)),node('td',handling[e.status]||e.status));const td=node('td'),b=node('button','查看');b.addEventListener('click',()=>detail(e.event_id).catch(fail));td.append(b);tr.append(td);$('event-rows').append(tr);}if(!data.events.length){const tr=node('tr'),td=node('td','沒有符合條件的事件。這不代表主機安全。');td.colSpan=6;tr.append(td);$('event-rows').append(tr);}$('count').textContent='符合條件 '+data.total+' 件。本頁 '+data.events.length+' 件。';$('prev').disabled=offset===0;$('next').disabled=!data.has_more||offset>=500000;}
 async function detail(id){selected=id;const sequence=++detailSequence;const d=await api('/api/events/'+encodeURIComponent(id));if(sequence!==detailSequence||selected!==id)return;$('detail').hidden=false;$('detail-summary').textContent=(severity[d.severity]||d.severity)+' / '+(sourceNames[d.source]||d.source)+' / '+(handling[d.status]||d.status)+' / '+when(d.observed_at);$('detail-id').textContent=id;$('detail-json').textContent=JSON.stringify(d,null,2);renderInvestigation(d.investigation);$('guidance').replaceChildren();if(d.guidance){$('guidance').append(node('p',d.guidance.observation));for(const step of d.guidance.next_steps||[])$('guidance').append(node('p',typeof step==='string'?step:JSON.stringify(step)));}for(const b of $('status-buttons').querySelectorAll('button'))b.disabled=b.dataset.status===d.status;}
 async function sources(){const d=await api('/api/sources');$('source-cards').replaceChildren();for(const s of d.sources){const a=node('article',null,'source-card');a.append(node('h3',s.name||sourceNames[s.source_id]||s.source_id),node('p','最後採集：'+when(s.last_collected_at)+'。結果：'+(states[s.saved_status]||s.saved_status)+'。目前：'+(states[s.status]||s.status)+'。'),node('p','最後成功：'+sourceSuccess(s)+'。新鮮度：'+sourceFreshness(s)+'。'),node('p','觀測列數：'+(Number.isSafeInteger(s.row_count)&&s.row_count>=0?s.row_count:'未知')+'。'));for(const reason of s.reasons||[])a.append(node('p',JSON.stringify(reason),'reason'));a.append(node('p',s.suggestion));$('source-cards').append(a);}}
 async function rules(){const d=await api('/api/rules');$('rule-cards').replaceChildren();for(const r of d.rules){const a=node('article',null,'rule-card');a.append(node('h3',r.name),node('p','嚴重度：'+(severity[r.severity]||r.severity)+'。'+(r.enabled===false?'已停用':'已啟用')+'。'),node('pre',JSON.stringify(r.conditions,null,2)));$('rule-cards').append(a);}}
@@ -188,7 +201,7 @@ async function agent(){const d=await api('/api/agent'),task=d.dispatcher||{},fai
 const showDetail=detail;detail=async function(id){await showDetail(id);$('delivery-json').textContent='正在讀取保存證據…';try{const d=await api('/api/events/'+encodeURIComponent(id)+'/delivery');if(selected===id)$('delivery-json').textContent=JSON.stringify(d,null,2);}catch(e){if(selected===id)$('delivery-json').textContent='投遞證據不可用：'+e.message;}};
 $('investigate').addEventListener('click',async()=>{if(!selected)return;const id=selected;$('investigate').disabled=true;try{const value=await api('/api/events/'+encodeURIComponent(id)+'/investigation',{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:'{}'});if(selected===id){renderInvestigation(value);await detail(id);}}catch(error){fail(error);}finally{$('investigate').disabled=false;}});
 function openNoticeSeverity(value){
-  const form=$('filters');form.elements.severity.value=value;form.elements.source.value='';form.elements.status.value='new';offset=0;selected=null;$('detail').hidden=true;
+  const form=$('filters');form.elements.severity.value=value;form.elements.source.value='';form.elements.status.value='new';offset=0;filterUrlValid=true;$('filter-url-error').hidden=true;invalidateEventList();writeFilterUrl();
   document.querySelector('nav button[data-tab="events"]').click();
 }
 async function refreshNotice(){
@@ -200,12 +213,12 @@ async function refreshNotice(){
   for(const [key,count] of [['high',high.total],['critical',critical.total]])if(count){const button=node('button',severity[key]+' '+count+' 件');button.type='button';button.addEventListener('click',()=>openNoticeSeverity(key));target.append(button,node('span',' '));}
 }
 async function refresh(){if(reloadPending)return;if(busy){refreshQueued=true;return;}busy=true;try{if(tab==='events')await sourceGap();await refreshNotice();if(tab==='events'){await events();if(selected)await detail(selected);}if(tab==='sources')await sources();if(tab==='advisories')await advisories();if(tab==='rules')await rules();if(tab==='agent')await agent();}catch(error){fail(error);}finally{busy=false;if(refreshQueued){refreshQueued=false;queueMicrotask(refresh);}}}
-$('filters').addEventListener('submit',event=>{event.preventDefault();offset=0;refresh();});$('prev').addEventListener('click',()=>{offset=Math.max(0,offset-50);refresh();});$('next').addEventListener('click',()=>{offset+=50;refresh();});
+$('filters').addEventListener('submit',event=>{event.preventDefault();offset=0;filterUrlValid=true;$('filter-url-error').hidden=true;invalidateEventList();writeFilterUrl();refresh();});$('prev').addEventListener('click',()=>{offset=Math.max(0,offset-50);invalidateEventList();writeFilterUrl();refresh();});$('next').addEventListener('click',()=>{if(offset>=500000)return;offset+=50;invalidateEventList();writeFilterUrl();refresh();});window.addEventListener('popstate',()=>{restoreFilterUrl();refresh();});
 for(const button of document.querySelectorAll('nav button'))button.addEventListener('click',()=>{sourceGapSequence++;$('source-gap-summary').textContent='來源狀態尚未確認。這不代表主機安全。';tab=button.dataset.tab;for(const name of ['events','sources','advisories','rules','agent'])$(name).hidden=name!==tab;for(const item of document.querySelectorAll('nav button'))item.setAttribute('aria-pressed',String(item===button));refresh();});
 for(const action of ['pause','stop'])$('agent-'+action).addEventListener('click',async()=>{const button=$('agent-'+action);button.disabled=true;try{await api('/api/agent/'+action,{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:'{}'});await agent();}catch(error){fail(error);}finally{button.disabled=false;}});
 for(const action of MONITOR_ACTIONS)$('monitor-'+action).addEventListener('click',()=>monitorAction(action));
 for(const button of $('status-buttons').querySelectorAll('button'))button.addEventListener('click',async()=>{if(!selected)return;button.disabled=true;try{await api('/api/events/'+encodeURIComponent(selected)+'/status',{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:JSON.stringify({status:button.dataset.status})});await detail(selected);await refresh();}catch(error){fail(error);button.disabled=false;}});
-renderApplication();pollStatus();scheduleStatusPoll();refresh();setInterval(refresh,5000);setInterval(renderApplication,500);
+restoreFilterUrl();renderApplication();pollStatus();scheduleStatusPoll();refresh();setInterval(refresh,5000);setInterval(renderApplication,500);
 """
 
 
@@ -295,11 +308,11 @@ class LocalWeb:
                     return self.error(403, "local_host_required")
                 try:
                     route = urlsplit(self.path)
+                    if route.path == "/":
+                        return self.reply(200, HTML.replace("__TOKEN__", app.token).replace("__SCOPE_NOTICE__", app.scope_notice()), "text/html; charset=utf-8")
                     query = parse_qs(route.query, max_num_fields=8, strict_parsing=True) if route.query else {}
                     if any(len(v) != 1 for v in query.values()):
                         raise ValueError("duplicate_filter")
-                    if route.path == "/" and not query:
-                        return self.reply(200, HTML.replace("__TOKEN__", app.token).replace("__SCOPE_NOTICE__", app.scope_notice()), "text/html; charset=utf-8")
                     if route.path in {"/app.js", "/app.css"} and not query:
                         return self.reply(200, JS if route.path.endswith(".js") else CSS,
                                           "text/javascript; charset=utf-8" if route.path.endswith(".js") else "text/css; charset=utf-8")

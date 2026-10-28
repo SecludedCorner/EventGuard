@@ -224,7 +224,7 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertIn("不代表主機安全", event_section)
         code, _, script = self.request("/app.js")
         self.assertEqual(code, 200)
-        renderer = script.split("async function sourceGap(){", 1)[1].split("async function events(){", 1)[0]
+        renderer = script.split("async function sourceGap(){", 1)[1].split("function invalidateEventList(){", 1)[0]
         for required in ("/api/sources", "SOURCE_IDS.length", "indexed.has(row.source_id)",
                          "status!=='ok'", "freshness!=='fresh'", "來源狀態無法確認"):
             self.assertIn(required, renderer)
@@ -241,11 +241,32 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertEqual(code, 200)
         notice = script.split("function openNoticeSeverity(value){", 1)[1].split("async function refresh(){", 1)[0]
         for required in ("form.elements.severity.value=value", "form.elements.source.value=''",
-                         "form.elements.status.value='new'", "offset=0", "$('detail').hidden=true",
+                         "form.elements.status.value='new'", "offset=0", "invalidateEventList()",
                          "severity=high&status=new", "severity=critical&status=new",
                          "兩次獨立讀取", "openNoticeSeverity(key)"):
             self.assertIn(required, notice)
         self.assertNotIn("innerHTML", notice)
+        self.assertEqual(self.calls, [])
+
+    def test_root_serves_constant_page_for_filter_urls_without_reflecting_query(self):
+        _, baseline_headers, baseline = self.request("/")
+        for query in ("?severity=high&status=new&page=1", "?severity=high&severity=critical",
+                      "?page=10001", "?payload=synthetic-marker"):
+            code, headers, page = self.request("/" + query)
+            self.assertEqual(code, 200)
+            self.assertEqual(page, baseline)
+            self.assertNotIn("synthetic-marker", page)
+            self.assertEqual(headers["Content-Security-Policy"], baseline_headers["Content-Security-Policy"])
+        self.assertEqual(self.calls, [])
+
+    def test_filter_url_contract_has_bounded_page_and_stale_event_guard(self):
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        contract = script.split("function invalidateEventList(){", 1)[1].split("async function detail(", 1)[0]
+        for required in ("URLSearchParams(location.search)", "params.getAll(name).length===1",
+                         "Number(page)>10000", "網址篩選無效", "sequence!==eventSequence"):
+            self.assertIn(required, contract)
+        self.assertIn("window.addEventListener('popstate'", script)
         self.assertEqual(self.calls, [])
 
     def test_served_script_exposes_pure_state_functions_and_bounded_timeouts(self):

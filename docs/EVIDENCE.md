@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-28：P1-GUI-003A 合成網址導航
+
+合成瀏覽器高 55／嚴重 2／資訊 1，直接載入 high/new/page=1 顯示 5 筆；reload 保持，上一頁顯示 50，back 回 5、forward 回 50，嚴重提示進 critical/new 2 筆。無效嚴重度、重複參數、page=10001、未知參數均顯示固定錯誤與空列表；選 high/listeners/new 後恢復 55 筆，網址只包含列舉。未對慢事件回覆做瀏覽器注入。
+
+首輪 `reports/gui-url-filters-20261028-01` 原根路由返回 route_not_found；修正根路由後 `-02` 成功。兩 worker 原 Job 均自然 0／remaining 0／無強停，後者 15 來源 GET／0 POST／0 native／0 model；shutdown_requested_reason 為 harness 預設，實際合作停止。首輪 verify 31/32 是靜態切段失敗，修正測試範圍後 `reports/verify-gui-url-filters-20261028-02` 32/32／0 skip／218 AST／source_unchanged；非人類或真主機驗收。
+
 ## 2026-10-28：P1-GUI-002B 合成高嚴重度入口
 
 `reports/gui-high-links-20261028-01`：隔離伺服器以合成 pending 事件建立高 55、嚴重 2、資訊 1。實際瀏覽器點高後為 severity=high／status=new、總數 55／首屏 50、首列高；下一頁 5 筆後點嚴重，severity=critical／status=new、總數及本頁均 2、首列嚴重、上一頁停用。從來源頁以 Enter 回高首頁成功；數字分別查詢，不是共同快照。worker 0 POST／native／model，原 Job 自然 0／remaining 0／無強停；shutdown_requested_reason 為 harness 預設，實際合作停止。
