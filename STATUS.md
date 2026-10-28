@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 可重跑修訂元件合成行為測試
+
+新增專案測試直接執行實際修訂 renderer，合成 DOM 核對診斷變更與成員相符分列、部分診斷、重繪展開／摘要焦點、外部焦點不搶及切事件不沿用。使用既有 Node 與 Windows 私有 Job；缺少任一條件明示 skip、不下載。`reports/verify-revision-renderer-reusable-20261028-01` UTC 11:29:27：21/21、0 skip、244 AST、source_unchanged；受管 Job 自然 0／remaining 0／無強停。合成 DOM 非瀏覽器，不提供版面、200% 或真實鍵盤證據；Work 設定仍禁用本機瀏覽器。
+
 ## 2026-10-28 修訂收合摘要診斷狀態 WIP
 
 修訂收合摘要現在同時顯示事件成員與診斷證據狀態，避免成員相符掩蓋診斷變更或缺失。`reports/verify-revision-diagnostic-summary-20261028-01` UTC 11:27:37：26/26、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。`reports/revision-diagnostic-summary-dom-20261028-01` 實際 renderer 合成 DOM 五種診斷狀態通過，不是真瀏覽器；Work 設定仍禁用本機瀏覽器，UI 待驗。

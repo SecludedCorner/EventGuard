@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：修訂元件可重跑 synthetic 行為測試
+
+`reports/verify-revision-renderer-reusable-20261028-01` UTC 11:29:27，21/21、0 skip、244 AST、source_unchanged；Job 自然 0／remaining 0／無強停。測試直接擷取實際 renderer 於合成 DOM 執行，驗證診斷變更與成員相符分列、partial、同事件重繪焦點／展開、外部焦點與切事件；既有 Node 受私有 Job 管理。這不是瀏覽器、版面、可及性或真實使用者驗收。
+
 ## 2026-10-28：修訂摘要診斷狀態合成測試
 
 `reports/verify-revision-diagnostic-summary-20261028-01` UTC 11:27:37，26/26、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。`reports/revision-diagnostic-summary-dom-20261028-01/run.js` node exit 0，五種診斷狀態均出現在實際 renderer 的合成 summary 中；非瀏覽器、無版面或鍵盤證據。
