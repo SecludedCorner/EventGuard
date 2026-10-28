@@ -1,5 +1,11 @@
 # Phase 7：Windows 可逆狀態與故障恢復驗證計畫
 
+## 2026-10-28 計數完整性修復與舊準備包失效（最新）
+
+P0-LISTENER-COUNTS-003已修正四表status=ok但返回列數不足／錯protocol／錯IP family仍可能complete的缺陷。新增逐表table_counts_consistent，不降低身分或退出要求；原重現5failure entries保留，修後52/52定向通過，無native/model。這不解釋或消除舊111列身分缺失。
+
+因script來源改變，下節reports/windows-listener-diagnostics-20261028-01及其舊hash現在已superseded，不能再按其指令執行。原manifest／template／NEXT_DIAGNOSTIC保留作歷史，未獲批准也未執行。後續若有必要真診斷，須先依當時版本另prepare、核對source/hash再取得一次精確批准；本輪不另問或採集。
+
 ## 2026-10-28：最小身分錯誤診斷切片與唯一後續決策（尚未實跑）
 
 P2-OS-DIAG-002 沿用 collector 已有的 typed evidence；只補 baseline 保存時的 `error_summary`，不新增採集或身分關聯層。固定 stage／operation／reason_code／status 分組計數，最多保留64筆既有 error prefix，任意文字／未知值正規化為 unknown；不保存 exception、PID、名稱、命令列、路徑、位址、port、建立時間或帳戶。新增 winapi.py 到準備 manifest 的來源 hash，將既有身分讀取依賴一併綁定。沒有改 NativeBackend、完整性標準或 query/scope。

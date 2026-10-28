@@ -1,5 +1,15 @@
 # 證據與時間日誌
 
+## 2026-10-28：baseline四表計數誤PASS重現與修復
+
+從47af11f接續，先新增3個有辨識力回歸並修正正向fixture的原不一致count。01命令py -3.13 -B scripts/verify.py --run-dir reports/verify-listener-count-regression-20261028-01 --timeout-seconds 180 --module test_windows_listener_validation，UTC05:11:16–05:11:25、7.971秒；18方法／13pass，5個failure entries含同方法4個subcase，0error/skip，原Job自然exit1／remaining0／無強停，原source_unchanged。證明原驗證器未核對四表count與返回列數，並非未知環境失敗；原回條不改寫。
+
+只改project_baseline：有界1000列依TCP/UDP及ipaddress.version分四組，與原四表count逐項相符才complete；不以grand total掩蓋錯表，保存table_counts_consistent。原native API、身分查核、error分類、授權與Job退出門檻不變。02命令py -3.13 -B scripts/verify.py --run-dir reports/verify-listener-count-regression-20261028-02 --timeout-seconds 180 --module test_windows_listener_validation --module test_listener_error_summary --module test_listener_identity --module test_collector_contract，UTC05:11:45–05:11:55／8.699秒，52/52、0fail/error/skip、213檔AST無錯、source_unchanged，原Job自然0／remaining0／無強停／逐測試殘留0，machine_scan_executed=false/model0。涵蓋匹配四表與完整空表仍可通過；不重跑長測試或原生。
+
+另用gh api repos/SecludedCorner/EventGuard/pulls/1 --jq固定metadata唯讀核對圖中PR：number1／title Publish bounded Codex event delivery with MIT license／closed／mergedtrue／merged_at2026-10-22T09:09:47Z／merge_commit_sha615f77f55a29f856b2305fc54a5225b5ed58bc65。一般網路沙箱拒絕後經既有讀取例外成功；未讀登入檔、未改PR／附件或帳戶。新release merge/tag流程仍等人類指定，不以既有已合併PR冒充新版本發布。
+
+原235列／111身分缺口／21錯誤六份runtime hash保留；本次計數guard不是舊身分根因修復。既有diagnostics-20261028-01因script hash變更標superseded，不執行／不覆寫原manifest。此次只保存程式／測試與必要現況文件；runtime不提交，普通push原開發分支並核對遠端，受測位元組另以source-commit.json綁定。沒有主線合併、tag、分支刪除或新native/model授權。
+
 ## 2026-10-28：保留既有listener錯誤分類，僅離線驗證
 
 從a7bdfc0增量接續。現有contract/native/winapi已提供access_denied、object_unavailable、listener_pid_reused、api_unavailable、query_failed及stage/operation/status，WindowsCollectors亦保留；缺口只在project_baseline丟掉原因。新增固定allowlist分組與64筆prefix上限，不複製任意文字、錯誤數字、PID、路徑或端點。reported/retained/classified/unknown/unretained與count_consistent/truncated分列；無法核對總數時unretained=null，分類完整不改原baseline完整性判斷。來源manifest另納入既有winapi.py，未改原native backend。

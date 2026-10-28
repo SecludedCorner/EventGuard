@@ -1,5 +1,13 @@
 # EventGuard 接手
 
+## 2026-10-28 真缺陷已修：baseline四表計數須守恆（最新）
+
+P0-LISTENER-COUNTS-003：先重現缺列／多報／錯protocol／錯IP family及乾淨exit仍誤PASS的5個failure entries，01原件保留；再逐表核對實際列數，加入table_counts_consistent，修正原正向fixture。02定向52/52、原Job自然0／remaining0／無強停／native0/model0，不是全產品release驗收。證據reports/verify-listener-count-regression-20261028-01與02，產品修復commit/push沿用開發分支，不能用舊CI或新fixture說原111身分缺口已解。
+
+PR #1已由GitHub API核實closed/merged於615f77f，本輪保留附件，未只做畫面清理。使用者已指定release流程：fetch與分支清單已交付，等本人選納入分支／merge方式／tag版本與changelog後才併main，每條build/test失敗或語意衝突即停；tag／推main在全部通過後，刪分支另列計畫再確認。先前本工具未提交、無內容差異的origin/main merge已安全abort。沒有競爭writer、其他worktree未動。
+
+舊本機main為私人驗收祖先，與origin/main不同源；其tip整棵tree已等於公開root，不能為收攏而上傳私人祖先。當前release候選feat/local-codex-acceptance包含其他開發分支及本修復，但仍需使用者選擇。原diagnostics-20261028-01現在source hash已過期，source-superseded.json標明不能執行，原包不覆寫；新真診斷另prepare／另批准，沒有自動重跑。
+
 ## 2026-10-28 既有研究已納入安全保存範圍（最新）
 
 最新直接使用者要求保存既有研究；從本機／upstream／遠端一致的0ea26cb接續。已逐一審查並最小遮蔽agent-event-ingress五份及major-vulnerability-response六份：聊天來源改不含私人識別的敘述，cached health原始runtime值改成歷史限制，保留未獨立驗證程序存活。每份有歷史保存註，reports連結明示本機證據、不隨repo提供；原日期、基準、來源、失敗、unknown與未驗收限制不升格。

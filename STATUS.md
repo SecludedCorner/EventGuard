@@ -1,5 +1,15 @@
 # EventGuard 現況
 
+## 2026-10-28 P0-LISTENER-COUNTS-003：修正baseline可誤判完整的缺陷（最新）
+
+依使用者要求實際修bug、不能只隱藏UI或解除PR連結，從47af11f接續。發現project_baseline只查四項table status/count欄位存在，沒有核對返回列數；缺列／多報、TCP與UDP或IPv4與IPv6錯表，即使自有query自然exit0也可能判完整。先以guardian新回歸重現5個failure entries（18方法／13pass，無error），保留reports/verify-listener-count-regression-20261028-01；原正向fixture四表各1但只有1列，亦修正為TCP4=1、其他=0。
+
+修復按每列protocol及實際IP family分組，逐表核對固定四項count，新增table_counts_consistent；不只查總和，不放寬零錯誤／身分／退出標準。三個新測試含缺列與錯表拒絕、乾淨exit不能洗綠，以及四表／完整空表仍有效。命令 py -3.13 -B scripts/verify.py --run-dir reports/verify-listener-count-regression-20261028-02 --timeout-seconds 180 --module test_windows_listener_validation --module test_listener_error_summary --module test_listener_identity --module test_collector_contract：UTC05:11:45–05:11:55（台北13:11:45–13:11:55+08:00），52/52、8.699秒、0fail/error/skip、source_unchanged、原Job自然0／remaining0／無強停／無逐測試殘留，native scan/model均0。不是release合併後完整回歸或原生重驗，原235列／缺111列／error21的partial不變。
+
+gh api唯讀核實PR #1 title為Publish bounded Codex event delivery with MIT license，closed／merged=true、merge SHA615f77f、2026-10-22T09:09:47Z已合併；它是舊PR，未以解除附件代替處理。新release依使用者流程仍待指定分支、merge方式、版本號與changelog，沒有合入main／打tag／刪分支。修復按原checkpoint規則commit/push現有開發分支並另存回條。
+
+本次script變更使既有windows-listener-diagnostics-20261028-01的source hash過期；保留原manifest／未批准template與NEXT_DIAGNOSTIC，標記superseded，不覆寫或執行。後續若要真診斷須依當時版本重新prepare及取得新精確批准；本輪不新增批准問項或native查詢。
+
 ## 2026-10-28 既有11份研究文件保存 checkpoint（最新）
 
 依最新使用者明確授權，接續0ea26cb；本機／upstream／直接ls-remote均相同，ahead/behind0/0、追蹤檔案原乾淨，未見其他協作writer或index.lock。本次範圍為docs/research/agent-event-ingress五份與major-vulnerability-response六份既有10/23–24研究，逐檔審查後保存；不是新待推產品碼、PR發布或新研究。

@@ -30,7 +30,8 @@ def complete_section():
         "coverage": {"status": "ok", "backend": "native", "truncated": False,
                      "errors": [], "error_count": 0, "errors_truncated": False,
                      "process_identity_status": "ok", "process_identity_missing_count": 0,
-                     "checks": [{"operation": operation, "status": "ok", "count": 1}
+                     "checks": [{"operation": operation, "status": "ok",
+                                 "count": 1 if operation == "GetExtendedTcpTableIPv4" else 0}
                                 for operation in validation.OPERATIONS]}}
 
 
@@ -243,6 +244,42 @@ class ListenerBaselineValidationTests(unittest.TestCase):
                 self.assertFalse(result["injection_performed"])
                 self.assertFalse(result["host_safety_assessed"])
                 self.assertEqual(collector.calls, ["listeners"])
+
+    def test_table_counts_must_reconcile_per_protocol_and_address_family(self):
+        for index in range(4):
+            with self.subTest(case=index):
+                section = complete_section()
+                checks = section["coverage"]["checks"]
+                if index < 2:
+                    checks[0]["count"] = 0 if index == 0 else 2
+                else:
+                    checks[0]["count"] = 0
+                    checks[1 if index == 2 else 2]["count"] = 1
+                self.assertFalse(validation.project_baseline(section)["complete"])
+
+    def test_count_mismatch_never_passes_even_when_owned_query_exits_cleanly(self):
+        self.prepare()
+        self.approve()
+        section = complete_section()
+        section["coverage"]["checks"][0]["count"] = 2
+        result = self.run_fixture(FixtureCollector(section))
+        self.assertEqual(result["status"], "blocked")
+        self.assertEqual(result["reason"], "baseline_incomplete")
+        self.assertEqual(result["owned_query"]["exit_code"], 0)
+
+    def test_matching_four_family_counts_and_complete_empty_tables_remain_valid(self):
+        section = complete_section()
+        sample = section["rows"][0]
+        section["rows"] = [dict(sample, protocol=protocol, address=address)
+                           for protocol in ("TCP", "UDP")
+                           for address in ("192.0.2.73", "2001:db8::73")]
+        for item in section["coverage"]["checks"]:
+            item["count"] = 1
+        self.assertTrue(validation.project_baseline(section)["complete"])
+        section["rows"] = []
+        for item in section["coverage"]["checks"]:
+            item["count"] = 0
+        self.assertTrue(validation.project_baseline(section)["complete"])
 
     def test_unconfirmed_forced_or_nonzero_job_never_pass(self):
         for index, (field, value) in enumerate((("child_exited", False), ("forcibly_terminated", True),

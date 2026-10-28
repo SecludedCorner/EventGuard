@@ -277,18 +277,26 @@ def project_baseline(section):
         valid_checks &= len(matching) == 1 and item_status == "ok" and count is not None
         checks.append({"operation": operation, "status": item_status, "count": count})
     valid_rows = isinstance(section.get("rows"), list) and len(rows) <= 1000
+    families = (("TCP", 4), ("TCP", 6), ("UDP", 4), ("UDP", 6))
+    observed_counts = dict.fromkeys(families, 0)
     for row in rows[:1000]:
         if not isinstance(row, dict):
             valid_rows = False
             continue
         try:
-            ipaddress.ip_address(str(row.get("address", "")).split("%", 1)[0])
+            address = ipaddress.ip_address(str(row.get("address", "")).split("%", 1)[0])
+            if row.get("protocol") in ("TCP", "UDP"):
+                observed_counts[(row["protocol"], address.version)] += 1
             valid_rows &= (row.get("status") == "ok" and row.get("protocol") in ("TCP", "UDP")
                            and type(row.get("port")) is int and 0 <= row["port"] <= 65535
                            and row.get("process_identity_status") == "ok"
                            and bool(row.get("process_instance_ref")))
         except (ValueError, TypeError):
             valid_rows = False
+    # An ok table status alone cannot prove every row survived the envelope.
+    # Reconcile each family, not just the grand total (which can hide swaps).
+    table_counts_consistent = valid_checks and all(
+        check["count"] == observed_counts[family] for check, family in zip(checks, families))
     errors = coverage.get("errors")
     error_count = max(_count(coverage.get("error_count")) or 0, len(errors) if isinstance(errors, list) else 1)
     complete = (section.get("id") == "listeners" and status == "ok" and coverage.get("status") == "ok"
@@ -296,11 +304,13 @@ def project_baseline(section):
                 and coverage.get("errors_truncated") is False and error_count == 0
                 and type(coverage.get("error_count")) is int and coverage["error_count"] == 0
                 and coverage.get("gaps", []) == [] and len(raw_checks) == 4 and valid_checks and valid_rows
+                and table_counts_consistent
                 and coverage.get("process_identity_status") == "ok"
                 and type(coverage.get("process_identity_missing_count")) is int
                 and coverage["process_identity_missing_count"] == 0)
     return {"source": "listeners", "status": status, "complete": bool(complete),
             "row_count": len(rows), "error_count": error_count,
+            "table_counts_consistent": bool(table_counts_consistent),
             "error_summary": summarize_errors(coverage),
             "truncated": coverage.get("truncated") is True, "checks": checks,
             "process_identity_status": "ok" if coverage.get("process_identity_status") == "ok" else "unknown",
