@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：歷程快照驗證核心
+
+`reports/verify-history-backup-validation-20261028-02` 20/20／0 skip／226 AST／source_unchanged、Job 自然 0／remaining 0／無強停；synthetic 測合法快照、內容竄改、重複 operation ID、狀態錯誤、非 ASCII hash、損壞來源及唯讀。資料完整性 hash 不提供認證或防竄改；尚無可持久保存的檔案或恢復流程。
+
 ## 2026-10-28：歷程唯讀快照前置
 
 `reports/verify-history-backup-payload-20261028-01` 45/45／0 skip／226 AST／source_unchanged，Job 自然 0／remaining 0／無強停；合成 SQLite 測明確 query-only 交易、舊表無資料、操作順序／no-op／未綁定 hash、canonical hash、損壞拒絕、原 DB bytes 與 pending／ACK 不變。此版本僅產生記憶體 payload，尚無備份檔、還原或安全釋放容量，不能稱恢復完成。

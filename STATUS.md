@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 歷程快照驗證核心
+
+新增有界快照完整性驗證，核對 schema、事件／操作識別、狀態、來源、時間、重複、256／4096 上限、長度與 canonical SHA256；輸出快照也先驗證。SHA256 不是簽章，不證明操作者身分或防竄改。`reports/verify-history-backup-validation-20261028-02` UTC 09:36:09、20/20、0 skip、226 AST、source_unchanged、Job 自然 0／remaining 0／無強停。仍僅記憶體，沒有持久檔、還原或容量釋放；下一步不覆寫落盤。工作樹來源 ZIP 自檢。
+
 ## 2026-10-28 歷程無損恢復前置：唯讀快照
 
 新增有界 query-only SQLite 快照核心，保留操作識別、前後狀態、來源及已綁定／未綁定 hash，計算 canonical SHA256；拒絕損壞資料，不修補或改寫來源。這只是記憶體中的歷程 payload，含敏感 metadata，尚未接 CLI／檔案保存、全庫備份、還原或容量釋放，不能當作已完成恢復或防竄改證據。

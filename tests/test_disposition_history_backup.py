@@ -2,12 +2,13 @@
 from contextlib import closing
 from pathlib import Path
 import hashlib
+from copy import deepcopy
 import json
 import sqlite3
 import tempfile
 import unittest
 
-from eventguard.events.disposition_history_backup import snapshot
+from eventguard.events.disposition_history_backup import snapshot, verify_snapshot
 from eventguard.events.store import EventStore
 from eventguard.synthetic import make_synthetic
 
@@ -59,6 +60,31 @@ class DispositionHistoryBackupTests(unittest.TestCase):
         self.assertEqual(result["sha256"], hashlib.sha256(encoded).hexdigest())
         self.assertEqual(self.store.path.read_bytes(), before)
         self.assertEqual((self.store.stats()["pending"], self.store.stats()["receipt_count"]), (1, 0))
+
+    def test_verified_snapshot_rejects_tampering_and_duplicate_operations(self):
+        self.store.set_disposition("evt-backup-fixture", "read", operation_id="op-first")
+        value = self.read_snapshot()
+        self.assertEqual(verify_snapshot(value)["records"], 1)
+        changed = deepcopy(value)
+        changed["data"]["records"][0]["status"] = "handled"
+        with self.assertRaisesRegex(ValueError, "history_backup_integrity_failed"):
+            verify_snapshot(changed)
+        duplicate = deepcopy(value)
+        duplicate["data"]["records"].append(deepcopy(duplicate["data"]["records"][0]))
+        with self.assertRaisesRegex(ValueError, "history_backup_invalid"):
+            verify_snapshot(duplicate)
+        invalid_state = deepcopy(value)
+        invalid_state["data"]["state"] = []
+        with self.assertRaisesRegex(ValueError, "history_backup_invalid"):
+            verify_snapshot(invalid_state)
+        invalid_hash = deepcopy(value)
+        invalid_hash["sha256"] = "非英文"
+        with self.assertRaisesRegex(ValueError, "history_backup_integrity_failed"):
+            verify_snapshot(invalid_hash)
+        altered = deepcopy(value)
+        altered["data"]["records"][0]["changed"] = False
+        with self.assertRaisesRegex(ValueError, "history_backup_invalid"):
+            verify_snapshot(altered)
 
     def test_corrupt_metadata_is_rejected_without_repair(self):
         self.store.set_disposition("evt-backup-fixture", "read", operation_id="op-first")

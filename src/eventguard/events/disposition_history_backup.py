@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import re
 
-from .disposition_history import MAX_HISTORY_ENTRIES, validate_record
+from .disposition_history import MAX_HISTORY_ENTRIES, MAX_HISTORY_PER_EVENT, validate_record
 
 MAX_EXPORT_BYTES = 4 * 1024 * 1024
 
@@ -41,4 +42,39 @@ def snapshot(db):
     encoded = json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False).encode("ascii")
     if len(encoded) > MAX_EXPORT_BYTES:
         raise ValueError("history_snapshot_bytes_limit")
-    return {"data": data, "sha256": hashlib.sha256(encoded).hexdigest(), "bytes": len(encoded)}
+    result = {"data": data, "sha256": hashlib.sha256(encoded).hexdigest(), "bytes": len(encoded)}
+    verify_snapshot(result)
+    return result
+
+
+def verify_snapshot(value):
+    """Verify bounded metadata and content hash; a hash is not a signature."""
+    if type(value) is not dict or set(value) != {"data", "sha256", "bytes"}:
+        raise ValueError("history_backup_invalid")
+    data = value["data"]
+    if (type(data) is not dict or set(data) != {"schema_version", "state", "records"} or
+            data["schema_version"] != "1.0" or type(data["state"]) is not str or data["state"] not in {"available", "not_recorded"} or
+            type(data["records"]) is not list or len(data["records"]) > MAX_HISTORY_ENTRIES or
+            data["state"] == "not_recorded" and data["records"]):
+        raise ValueError("history_backup_invalid")
+    seen, counts = set(), {}
+    for item in data["records"]:
+        if type(item) is not dict or set(item) != {"event_id", "operation_id", "previous_status", "status", "source", "at", "changed", "payload_hash"}:
+            raise ValueError("history_backup_invalid")
+        record = {key: item[key] for key in ("event_id", "operation_id", "previous_status", "status", "source", "at")}
+        validate_record(record, allow_unchanged=True)
+        if (item["operation_id"] in seen or type(item["changed"]) is not bool or
+                item["changed"] != (item["previous_status"] != item["status"]) or
+                item["payload_hash"] is not None and (type(item["payload_hash"]) is not str or re.fullmatch(r"[a-f0-9]{64}", item["payload_hash"]) is None)):
+            raise ValueError("history_backup_invalid")
+        seen.add(item["operation_id"])
+        counts[item["event_id"]] = counts.get(item["event_id"], 0) + 1
+        if counts[item["event_id"]] > MAX_HISTORY_PER_EVENT:
+            raise ValueError("history_backup_invalid")
+    encoded = json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False).encode("ascii")
+    digest = hashlib.sha256(encoded).hexdigest()
+    if (len(encoded) > MAX_EXPORT_BYTES or type(value["bytes"]) is not int or value["bytes"] != len(encoded) or
+            type(value["sha256"]) is not str or re.fullmatch(r"[a-f0-9]{64}", value["sha256"]) is None or
+            not hmac.compare_digest(value["sha256"], digest)):
+        raise ValueError("history_backup_integrity_failed")
+    return {"records": len(data["records"]), "sha256": digest, "bytes": len(encoded)}
