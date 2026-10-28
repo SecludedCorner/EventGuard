@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面來源欄位統一保存資料入口
+
+修正桌面來源列混用舊overview與新保存成功紀錄：狀態、筆數、時間、原因及歷史成功改由同次source_status結果投影。最後結果與新鮮度分列，未知／讀取失敗不回退舊成功；stale保留歷史拒讀但current_coverage未知，test成功不供live使用。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-source-consistency-20261029-05 --timeout-seconds 180 --module test_desktop_source_consistency --module test_desktop --module test_gui --module test_source_success_history`：2026-10-29 03:27（UTC+8）77/77、0skip、source_unchanged，Job自然退出／remaining0；含實際Tk＋保存合成觀察、讀前後hash不變與採集哨兵。`reports/build-desktop-source-consistency-20261029-01`：268檔hash相符、246檔編譯成功。01的2失敗與03的1失敗是固定fixture時間晚於wallclock，改固定過去epoch後時間保護保留；02為75/75、04為76/76，最終以05為準。人工／Web／原生仍待驗。
+
 ## 2026-10-29 保存證據變更到桌面元件的整合核對
 
 新增測試以合成SQLite建立最新與前版調查，再移除／變更關聯事件，經真EventCatalog讀取到實際Tk元件；最新與前版都顯未知，不沿用「保存成員相符」。每次讀取前後SQLite hash相同、anchor仍pending、未採集／模型／ACK。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-evidence-changes-20261029-01 --timeout-seconds 180 --module test_gui_saved_evidence --module test_gui --module test_gui_presenter --module test_investigation_revision_read --module test_investigation_revision_integration --module test_event_investigation`：79/79、0skip；補正缺display的TclError明示skip路徑後，`--run-dir reports/verify-desktop-evidence-changes-20261029-02 --timeout-seconds 180 --module test_gui_saved_evidence` 於2026-10-29 03:19（UTC+8）2/2、0skip、source_unchanged，兩次Job自然退出／remaining0。`reports/build-desktop-evidence-changes-20261029-01`：267檔hash相符、245檔編譯成功。此為實際元件＋合成資料，不是人類操作或實機驗收。

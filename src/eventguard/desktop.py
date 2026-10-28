@@ -355,7 +355,6 @@ class DesktopController:
                          "model_calls": 0}
             bg = document.get("background") or {}
             monitor = document.get("current_monitor") or {}
-            coverage = document.get("source_coverage") or {}
             storage = document.get("event_storage") or {}
             counts = storage.get("counts") or {}
             known = storage.get("state") in {"available", "not_created"}
@@ -363,20 +362,24 @@ class DesktopController:
             from .source_status import source_status
             saved_sources = {row["source_id"]: row for row in source_status(self.root, "live")["sources"]}
             for source in SOURCES:
-                item = coverage.get(source) or {}
-                errors = item.get("errors") or []
+                item = saved_sources[source]
+                errors = item.get("reasons") or []
                 error = errors[0] if isinstance(errors, list) and errors and isinstance(errors[0], dict) else {}
                 evidence = {"reason": _code(item.get("reason")) or _code(error.get("reason_code")),
                             "stage": error.get("stage") if error.get("stage") in {"launch", "provider", "object", "field", "policy"} else None}
                 for name in ("hresult", "win32_error"):
                     value = error.get(name)
                     evidence[name] = value if type(value) is int and -(2**31) <= value <= 2**32-1 else None
-                sources.append({"source_id": source, "status": item.get("status", "not_observed"),
-                    "row_count": item.get("row_count"), "observed_at": item.get("observed_at"),
-                    "freshness": item.get("freshness") or {"state": "unknown"},
-                    "last_success_at": saved_sources[source]["last_success_at"],
-                    "last_success_state": saved_sources[source]["last_success_state"],
-                    **evidence, "current_coverage": item.get("current_coverage", "unknown")})
+                state = item["status"]
+                # Keep the last result separate from freshness, but never use a
+                # formerly successful result when the saved observation is unknown.
+                observed_state = ("not_observed" if state == "not_collected" else
+                                  item["saved_status"] if state == "stale" else state)
+                sources.append({"source_id": source, "status": observed_state,
+                    "row_count": item["row_count"], "observed_at": item["last_collected_at"],
+                    "freshness": {"state": item["freshness"]},
+                    "last_success_at": item["last_success_at"], "last_success_state": item["last_success_state"],
+                    **evidence, "current_coverage": observed_state if item["freshness"] == "fresh" else "unknown"})
             scope_matches = (monitor.get("scope_matches") is not False
                              and monitor.get("namespace") in (None, "live"))
             monitoring = True if scope_matches and monitor.get("state") == "running_verified" else (

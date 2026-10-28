@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面來源一致性
+
+`reports/verify-desktop-source-consistency-20261029-05` UTC 2026-10-28 19:27:20：77/77、0skip、source_unchanged、Job自然退出／remaining0。新拒讀取代舊overview成功、過期拒讀歷史、損壞／test不供live、保存失敗不當ok，並在真Tk表格核對狀態／零筆／成功時間／原因與摘要；讀前後保存檔hash相同，採集入口哨兵未觸發。`reports/build-desktop-source-consistency-20261029-01`：268檔hash相符、246檔編譯。01／03固定fixture在wallclock未來造成2／1失敗，02／04及最終05通過；未放寬產品時間保護，原失敗保留。
+
 ## 2026-10-29：缺失／變更證據到桌面元件
 
 `reports/verify-desktop-evidence-changes-20261029-01` 79/79；02於UTC 2026-10-28 19:19:01為最終新增模組2/2，0skip、source_unchanged、Job自然退出／remaining0。真SQLite＋EventCatalog＋Tk驗關聯member刪除／payload變更後最新案與前版皆未知，讀前後hash及pending不變。`reports/build-desktop-evidence-changes-20261029-01`：267檔受測hash相符、245檔編譯成功。未把component／合成測試當Web、真人或實機驗收。

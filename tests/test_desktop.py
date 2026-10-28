@@ -158,7 +158,17 @@ class DesktopTests(unittest.TestCase):
             "source_coverage": {"listeners": {"status": "partial", "row_count": 8,
                 "observed_at": "2026-10-23T00:00:00+00:00", "freshness": {"state": "stale"},
                 "errors": [{"reason_code": "access_denied", "stage": "field", "win32_error": 5, "hresult": -2147024891}]}}}
-        value = self.controller.snapshot()
+        # The overview still owns event counts; saved source evidence owns the
+        # source row, including its reasons and historical collection result.
+        source_row = {"source_id": "listeners", "status": "stale", "saved_status": "partial", "row_count": 8,
+            "last_collected_at": "2026-10-23T00:00:00+00:00", "freshness": "stale",
+            "last_success_at": None, "last_success_state": "unknown",
+            "reasons": self.controller.api.call.return_value["source_coverage"]["listeners"]["errors"]}
+        from eventguard.source_status import source_status
+        saved = source_status(self.root, "live")
+        saved['sources'] = [source_row if row['source_id'] == 'listeners' else row for row in saved['sources']]
+        with patch('eventguard.source_status.source_status', return_value=saved):
+            value = self.controller.snapshot()
         self.assertEqual(value["counts"], {"pending": 5, "acked": 4, "failed": 1})
         self.assertEqual(value["events"], [event])
         self.assertTrue(value["monitoring"])
@@ -207,7 +217,10 @@ class DesktopTests(unittest.TestCase):
 
     def test_snapshot_preserves_saved_success_after_denial_without_collecting(self):
         import hashlib
+        import shutil
         from eventguard.runtime import Runtime
+        (self.root/'config').mkdir()
+        shutil.copyfile(Path(__file__).resolve().parents[1]/'config/default.json', self.root/'config/default.json')
         runtime = Runtime(self.root)
         for status, at in (("ok", "2026-01-01T00:00:00+00:00"), ("denied", "2026-01-02T00:00:00+00:00")):
             runtime.save_observation({"id": "defender", "status": status, "observed_at": at,
