@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：案件修訂唯讀合成回歸
+
+`reports/verify-investigation-revision-read-20261028-01` UTC 10:17:54，34/34、0 skip、236 AST、source_unchanged，Job 自然 0／remaining 0／無強停。synthetic 驗證舊表缺失不建立、前版重讀及來源 bytes 不變、成員消失或更改 unknown、損壞 hash unknown、pending／ACK 未變。尚未接 API／Web、真機及 anchor 過期恢復。
+
 ## 2026-10-28：案件修訂交易保存合成回歸
 
 `reports/verify-investigation-revision-integration-20261028-03` UTC 10:16:28、56/56、0 skip、234 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成 SQLite 核對前版內容與保存時間、重複快照不增列、16 筆滿載、容量前後回滾、損壞舊案拒絕及 pending／ACK 不變。首次 `...-01` 有 2 errors：測試重新產生 synthetic event 導致 payload 身分不同；固定使用原 fixture 後 `...-02` 36/36、`...-03` 56/56。未測全域滿載、並行、舊 anchor 過期修訂讀取或 UI。

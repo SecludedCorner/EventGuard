@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 案件修訂唯讀核心
+
+有界唯讀交易核對快照與事件身分、hash；舊庫無表明示未記錄，此前歷史 unknown；成員缺失／變更為 unknown，不修改來源。`reports/verify-investigation-revision-read-20261028-01` UTC 10:17:54：34/34、0 skip、236 AST、source_unchanged，Job 自然 0／remaining 0／無強停。只完成讀取核心，尚未接 API／Web；hash 非認證，anchor 過期後的回看仍未實作。
+
 ## 2026-10-28 案件修訂原子保存
 
 明確更新已保存調查時，在同一 SQLite 交易先驗並保存上一版，再寫最新案；相同快照重送不新增版本。容量不足或舊快照損壞直接失敗，回滾保留先前資料與 pending／ACK。`reports/verify-investigation-revision-integration-20261028-03` UTC 10:16:28：56/56、0 skip、234 AST、source_unchanged；Job 自然 0／remaining 0／無強停，均 synthetic。每事件 16、全域 256 上限後不自動清理；版本讀取／瀏覽器、全域滿載和併發尚未驗。已有舊版之前的歷史不能重建；到期 anchor 的歷史保留與回看方案仍需處理。
