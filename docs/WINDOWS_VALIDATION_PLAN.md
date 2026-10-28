@@ -1,5 +1,25 @@
 # Phase 7：Windows 可逆狀態與故障恢復驗證計畫
 
+## 2026-10-28：最小身分錯誤診斷切片與唯一後續決策（尚未實跑）
+
+P2-OS-DIAG-002 沿用 collector 已有的 typed evidence；只補 baseline 保存時的 `error_summary`，不新增採集或身分關聯層。固定 stage／operation／reason_code／status 分組計數，最多保留64筆既有 error prefix，任意文字／未知值正規化為 unknown；不保存 exception、PID、名稱、命令列、路徑、位址、port、建立時間或帳戶。新增 winapi.py 到準備 manifest 的來源 hash，將既有身分讀取依賴一併綁定。沒有改 NativeBackend、完整性標準或 query/scope。
+
+| 下次真查詢可分辨的既有碼 | 最多能支持的結論 | 仍不能支持的結論 |
+| --- | --- | --- |
+| access_denied＋stage／operation | 該 API／階段回報拒讀類別 | 不證明必需管理員、sandbox根因或哪個owner；不授權提權 |
+| object_unavailable | 物件／欄位當下不可用 | 不證明程序已退出、PID重用或競態 |
+| listener_pid_reused／ListenerProcessIdentity | 既有檢查觀察到建立時間晚於捕捉時點（或無時區） | 不證明完整程序生命史或已觀察到退出→重用 |
+| api_unavailable、query_failed／其他固定碼 | 原始分類、階段及操作的聚合數量 | 不把一般失敗補成具體根因 |
+| unknown、unretained_count或count_consistent=false | 分類／保留／計數證據缺口 | 不按已知樣本比例外推缺失原因，不把缺資料填成0或安全 |
+
+計數單位是 error records，不是端點列數或唯一owner；`retained_count=classified_count+unknown_count`，只在報告總數可核對時給 `unretained_count=reported_count-retained_count`，否則null。`error_summary.complete`只代表分類證據完整；`baseline.complete`仍要求零錯誤、零身分缺口、四表完整及原自有退出標準。舊235列／缺111列／21錯誤收據沒有原因碼，不能用這次fixture或新函式回填舊根因。沒有新增任何PID一致性或跨輪關聯資訊。
+
+下一次方案僅prepare於 `reports/windows-listener-diagnostics-20261028-01`，run `6dd82da8fcd84d72ace2fd6689bc20e7`，manifest SHA256 `a0a3d93cebe3c71b874dd638d7dfb9e79e9b74fda16fec29b030ec88e9282477`；12檔hash、未批准template及 `NEXT_DIAGNOSTIC.json` 綁定現行切片。唯一後續人類決策是是否另批准這一目錄的一次同範圍 native baseline：TCP/UDP、IPv4/IPv6與原必要程序建立時間，query5秒／總工作預算30秒；只保存固定分類計數及自有Job回條，無其他來源、socket、registry、模型、系統變更、持久存取或額外身分資訊。本輪不提出新批准問項、不執行；舊批准已用完。
+
+若之後有新的精確批准，先核對HEAD／12檔來源與manifest、runner hash `a895b8f4518a4efd944ac6368aa5cd1dd4388512cb76711b458eb594dc8612d9`、同root/run/scope及無任何執行回條，將當次原文與時間寫入human-approval.json（最長30分鐘）。只用既有 `reports/windows-listener-preparation-20261026-01/run-owned.py --root reports/windows-listener-diagnostics-20261028-01` 一次；私有Job在執行前加入，20秒合作stop／3秒grace，保留內外原HANDLE退出／remaining／force／deadline。partial/denied/unknown/truncated／逾時／強停均如實不通過，不換目錄重試。若已存在intent或result先讀結果，不重跑。
+
+驗證僅新分類、計數守恆、隱私與原閘道：`reports/verify-listener-error-summary-20261028-01` 定向27/27，source_unchanged、原Job自然0／remaining0／無強停，native scan/model均0；不是這份新方案的原生驗收。取得新結果後才依聚合原因決定必要最小下一步；沒有原因變化就不追加掃描或反覆fixture。
+
 ## 2026-10-27：單次 baseline 已執行，完整驗收仍不通過（最新）
 
 P2-OS-001 已獲原具名單次批准，並在 reports/windows-listener-baseline-20261026-01 執行一次。四表ok共235列，但必要程序身分缺111列／error21，source partial、baseline_incomplete；query elapsed0.739012秒，內query原Job自然exit0、外validator原Job自然exit2，兩者remaining0／無強停。13/13是收據一致性，不是完整baseline PASS；result與原回條保留。沒有注入、模型、系統修改或額外查詢，一次批准現已用完。

@@ -32,11 +32,24 @@ OPERATIONS = (
     "GetExtendedTcpTableIPv4", "GetExtendedTcpTableIPv6",
     "GetExtendedUdpTableIPv4", "GetExtendedUdpTableIPv6",
 )
+# These are existing collector evidence codes, not inferred root causes. Never
+# copy an arbitrary reason/operation/exception string into a saved baseline.
+ERROR_STAGES = frozenset({"launch", "provider", "object", "field", "policy"})
+ERROR_STATUSES = frozenset({"ok", "partial", "denied", "unknown", "timeout", "error",
+                            "cancelled", "not_applicable", "busy", "not_requested"})
+ERROR_OPERATIONS = frozenset({"ListenerOpenProcess", "ListenerGetProcessTimes", "ListenerProcessIdentity",
+                             "OpenProcess", "GetProcessTimes", "GetExtendedTcpTable", "GetExtendedUdpTable",
+                             "listeners", "collect"})
+ERROR_REASONS = frozenset({"access_denied", "object_unavailable", "api_unavailable", "listener_pid_reused",
+                          "query_failed", "native_budget_exceeded", "cancelled_before_query",
+                          "backend_reason_unavailable", "invalid_collector_output"})
+MAX_ERROR_RECORDS = 64  # Same retained-prefix limit as collectors.contract.MAX_ERRORS.
 SOURCE_FILES = (
     "scripts/validate_windows_listener.py", "scripts/eventguard_collect.py",
     "src/eventguard/collectors/windows.py", "src/eventguard/collectors/worker.py",
     "src/eventguard/collectors/runner.py", "src/eventguard/collectors/native.py",
     "src/eventguard/collectors/contract.py", "src/eventguard/processes.py",
+    "src/eventguard/collectors/winapi.py",
     "src/eventguard/rules/detector.py", "src/eventguard/local_paths.py", "src/eventguard/runtime.py",
 )
 SCOPE = {
@@ -209,6 +222,43 @@ def _count(value):
     return value if type(value) is int and 0 <= value <= 2**31 - 1 else None
 
 
+def summarize_errors(coverage):
+    """Aggregate the existing bounded evidence prefix; no owner or row linkage.
+
+    Missing/truncated evidence stays missing. In particular, object_unavailable
+    does not prove process exit, and listener_pid_reused records only the
+    collector's creation-after-capture check, not an observed process history.
+    """
+    coverage = coverage if isinstance(coverage, dict) else {}
+    records = coverage.get("errors")
+    available = isinstance(records, list)
+    records = records if available else []
+    reported = _count(coverage.get("error_count"))
+    groups, unknown = {}, 0
+    dimensions = (("stage", ERROR_STAGES), ("operation", ERROR_OPERATIONS),
+                  ("reason_code", ERROR_REASONS), ("status", ERROR_STATUSES))
+    for record in records[:MAX_ERROR_RECORDS]:
+        record = record if isinstance(record, dict) else {}
+        key = tuple(value if isinstance(value := record.get(name), str) and value in allowed
+                    else "unknown" for name, allowed in dimensions)
+        # status=unknown can be a precise observation (e.g. creation mismatch).
+        unknown += not all(isinstance(record.get(name), str) and record[name] in allowed
+                           for name, allowed in dimensions)
+        groups[key] = groups.get(key, 0) + 1
+    retained = min(len(records), MAX_ERROR_RECORDS)
+    consistent = available and reported is not None and reported >= len(records)
+    omitted = reported - retained if consistent else None
+    truncated = coverage.get("errors_truncated") is True or len(records) > MAX_ERROR_RECORDS
+    return {"kind": "eventguard-listener-error-counts-v1", "evidence_available": available,
+            "reported_count": reported, "retained_count": retained,
+            "classified_count": retained - unknown, "unknown_count": unknown,
+            "unretained_count": omitted, "count_consistent": consistent,
+            "truncated": truncated, "complete": bool(consistent and not truncated and omitted == 0 and unknown == 0),
+            "count_unit": "error_records_not_endpoint_rows_or_unique_owners",
+            "groups": [dict(zip((name for name, _ in dimensions), key), count=count)
+                       for key, count in sorted(groups.items())]}
+
+
 def project_baseline(section):
     """Project only fixed statuses and counts; never persist rows or raw errors."""
     section = section if isinstance(section, dict) else {}
@@ -251,6 +301,7 @@ def project_baseline(section):
                 and coverage["process_identity_missing_count"] == 0)
     return {"source": "listeners", "status": status, "complete": bool(complete),
             "row_count": len(rows), "error_count": error_count,
+            "error_summary": summarize_errors(coverage),
             "truncated": coverage.get("truncated") is True, "checks": checks,
             "process_identity_status": "ok" if coverage.get("process_identity_status") == "ok" else "unknown",
             "process_identity_missing_count": _count(coverage.get("process_identity_missing_count"))}

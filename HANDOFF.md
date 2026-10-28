@@ -1,5 +1,13 @@
 # EventGuard 接手
 
+## 2026-10-28 分類計數離線切片已完成（最新）
+
+P2-OS-DIAG-002補回baseline保存時遺失的既有typed原因／階段／操作計數；沒有新增native lookup、PID關聯或放寬complete。新6測試＋原gate/identity共27/27，reports/verify-listener-error-summary-20261028-01／source_unchanged／原Job自然0／remaining0／無強停／native0/model0。舊P2-OS-001 partial及原六回條保留，舊111缺列根因仍UNKNOWN，不重新分類舊資料。
+
+DOING：保存此切片與唯一下一診斷決策包。新reports/windows-listener-diagnostics-20261028-01僅prepare，manifest綁12檔（新增既有winapi依賴）、未批准、無intent/result。精確run/hash/scope／runner／成功與停止條件見docs/WINDOWS_VALIDATION_PLAN頂部及NEXT_DIAGNOSTIC.json；後續唯有人類另批准該一次同範圍native baseline才執行，現在不重問、不採集、不啟模型。summary最多64個error records，與endpoint列／唯一owner無對應；分類complete不等於baseline complete，缺失／截斷未知不補0。
+
+下一具體動作是先核對這份方案的新直接批准及當時HEAD/source/hash／尚未執行狀態；若沒有，保留原生門檻，不沿用03:00舊授權或另起runner。checkpoint提交／普通push同分支並核對遠端；本次程式變更只定向驗證，不能把舊1e8f7e0 CI套到新HEAD。
+
 ## 2026-10-27 已執行原單次 listeners：不完整結果與退出均已保存（最新）
 
 本案已收到人類「同意1、2、3」原問答轉達（03:00 UTC），只使用第3項；下方「原批准未答」已是歷史。執行前由 edc088c／乾淨追蹤工作樹接續，核對原 root/run/manifest 及11檔 source hash，human-approval.json 先落盤，03:04 UTC只執行一次既有 run-owned.py --root reports/windows-listener-baseline-20261026-01。沒有另起競爭 runner；此單次授權已用，不可重跑或自行換目錄。

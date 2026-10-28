@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-10-28 P2-OS-DIAG-002：身分錯誤分類保存已完成，原生未重跑（最新）
+
+接續a7bdfc0、原開發分支；追蹤工作樹原乾淨，兩個他人未追蹤目錄保留。窄讀發現NativeBackend／WindowsCollectors已有typed原因碼／階段／操作，但原baseline投影只保存總數。只改scripts/validate_windows_listener.py，加入有上限的error_summary及winapi.py來源hash綁定；不改native採集、規則或complete標準。分組只允許固定碼，未知維持unknown，保留／未保留／分類數分列；沒有新增PID、命令列、路徑、帳戶、端點或身分一致性資料。舊111缺列／21錯誤仍不可回推根因。
+
+新增6個注入／合成測試，命令 py -3.13 -B scripts/verify.py --run-dir reports/verify-listener-error-summary-20261028-01 --timeout-seconds 180 --module test_listener_error_summary --module test_windows_listener_validation --module test_listener_identity：UTC03:56:35–03:56:44（台北11:56:35–11:56:44+08:00），27/27、7.506秒、0fail/error/skip、source_unchanged、原guardian自然0／remaining0／無強停／無逐測試殘留。native scan/model均0，未手動觸發CI，也未重跑真04／長測試；普通push可能觸發既有CI，其結果尚未另核實。新切片不是原1e8f7e0受測CI或真主機通過。
+
+唯一下一診斷方案只prepare於reports/windows-listener-diagnostics-20261028-01，query_started=false、未批准、無intent/result/outer-start；run/hash與完整有界決策在docs/WINDOWS_VALIDATION_PLAN及該目錄NEXT_DIAGNOSTIC.json。沿用原一次native baseline範圍5秒／30秒與私有Job收尾，只新增固定分類數保存；本輪不開新批准問題，不執行、不沿用舊批准。拒讀／物件不可用／建立時間晚於捕捉／API不可用／一般失敗可分列，仍不能證明程序退出競態或逐owner根因。checkpoint按原規則commit/push；runtime／批准template不提交，遠端結果另存回條。
+
 ## 2026-10-27 P2-OS-001 已批准並實跑：partial，未通過完整基線（最新）
 
 收到 dot 轉達的人類原問答：2026-10-27 03:00 UTC「同意1、2、3」，本案僅第3項單次 native listeners baseline。於原 reports/windows-listener-baseline-20261026-01 寫 human-approval.json，保守以 03:00:00–03:30:00 UTC 綁定原 root/run/manifest hash/scope；執行前確認 HEAD edc088c、原11檔 source hash 相符、無 intent/result/outer 回條，沒有重複執行。此新具名批准已取代下方歷史「尚未答覆」，一次授權現已使用。

@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-28 下一身分診斷的離線前置完成
+
+P2-OS-DIAG-002已補baseline固定錯誤分類／階段／操作計數、未知與截斷守恆，27/27定向、原Job自然0／remaining0；沒有native重跑。下一次同範圍baseline方案僅prepare於reports/windows-listener-diagnostics-20261028-01，精確run/hash與唯一後續決策見WINDOWS_VALIDATION_PLAN頂部。舊P2-OS-001 partial不變、舊批准已用；新方案需另外精確批准，現在不另問或執行。可追溯調查仍以未知保留、真實覆蓋／誤報與可靠性為方向；無同條件實測不宣稱超越CrowdStrike／SentinelOne。
+
 ## 2026-10-27 原生關卡的最新狀態
 
 P2-OS-001 已獲原具名批准並執行一次，原先待批文字不再是現況。四表ok共235列，必要程序身分缺111列／error21，partial／baseline_incomplete，完整baseline未通過；內Job自然0／外validator自然2，均remaining0／無強停。原目錄保存結果與13/13收據一致性核對（非驗收PASS），一次授權已使用。後續native診斷／重驗需另批准；既定離線切片與受測1e8f7e0 CI成果保留，不能用fixture替代身分缺口的真實查證。

@@ -1,5 +1,13 @@
 # 證據與時間日誌
 
+## 2026-10-28：保留既有listener錯誤分類，僅離線驗證
+
+從a7bdfc0增量接續。現有contract/native/winapi已提供access_denied、object_unavailable、listener_pid_reused、api_unavailable、query_failed及stage/operation/status，WindowsCollectors亦保留；缺口只在project_baseline丟掉原因。新增固定allowlist分組與64筆prefix上限，不複製任意文字、錯誤數字、PID、路徑或端點。reported/retained/classified/unknown/unretained與count_consistent/truncated分列；無法核對總數時unretained=null，分類完整不改原baseline完整性判斷。來源manifest另納入既有winapi.py，未改原native backend。
+
+6個新測試只注入process_created_at結果或fixture collector：既有錯誤經NativeBackend→WindowsCollectors→投影保存分類、同owner多端點與error筆數不同、未知／畸形／私人文字丟棄、64/80保留截斷守恆、缺／矛盾／bool總數不洗綠、partial不能由summary覆蓋、合成execute實際保存。命令 py -3.13 -B scripts/verify.py --run-dir reports/verify-listener-error-summary-20261028-01 --timeout-seconds 180 --module test_listener_error_summary --module test_windows_listener_validation --module test_listener_identity，UTC03:56:35–03:56:44（台北11:56:35–11:56:44+08:00）、7.506秒、27/27、0fail/error/skip、213檔AST無錯，source_unchanged／原Job自然0／remaining0／無強停／逐測試殘留0；machine_scan_executed=false/model0。不是原生採集、真agent或新全庫CI。
+
+py -3.13 -B scripts/validate_windows_listener.py --root reports/windows-listener-diagnostics-20261028-01只prepare，query_started=false，run6dd82da8fcd84d72ace2fd6689bc20e7、manifest a0a3d93cebe3c71b874dd638d7dfb9e79e9b74fda16fec29b030ec88e9282477、12來源hash，template approved=false；無human-approval/intent/result/outer回條。唯一後續決策包在同目錄NEXT_DIAGNOSTIC.json與WINDOWS_VALIDATION_PLAN頂部，沒有另問批准或執行。舊235列／111身分缺口／21錯誤原件不可回推原因，原六收據hash核對仍應一致；新分類不是舊根因證據。不跑舊長測試／模型、不改系統／授權，runtime不提交，普通commit/push現有分支並另留遠端回條。
+
 ## 2026-10-27：一次已批准 native listeners 實跑，partial 如實保存
 
 人類於03:00 UTC回覆 dot 的三項具體範圍「同意1、2、3」，原主責只接第3項。接續 edc088c，原 root/run/manifest hash與11 source hashes匹配且未執行，於 reports/windows-listener-baseline-20261026-01/human-approval.json先保存原文、轉達來源及時間；批准保守綁03:00:00–03:30:00 UTC，執行在有效窗內。manifest與未批准template原件均保留，不將一般持續工程要求當OS授權。
