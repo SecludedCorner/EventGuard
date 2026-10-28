@@ -1,5 +1,15 @@
 # EventGuard 現況
 
+## 2026-10-28 新候選交付驗收閉合：b53479a（最新）
+
+固定候選b53479a28ea030a92ae23ba50ed24d6aca2be679已普通push／直接核對遠端；來源切片相對8b9cf27為7檔460新增，非未保存修改。新增受版控verify_candidate.py及12個測試，外部commit／ZIP hash必填、完整逐檔manifest比對、純離線預設與可選有界私有Job合成smoke；CHANGELOG與操作命令已保存。
+
+本機定向verify-candidate-tool-20261028-03為31/31、0skip/fail/error、1.193秒、218AST無錯、原Job自然0／remaining0／無強停；240來源hash與新候選包全符。新candidate03實際318檔／兩ZIP一致，SHA256d755a8d85a9fec15343a88b7b0adeb24b003f7d21d6e3322b127df73b3e10605；新工具在candidate-verify-release-20261028-01實跑13/13，四CLI原Job自然0／remaining0／無強停；兩個實際負向CLI在解壓／啟child前拒絕錯誤pin／竄改manifest（exit2、owned空）。新候選回復演練5/5、九個Git Job自然退出，真index／checkout不變。原b57的1624完整結果沒有改標新SHA。
+
+精確新SHA CI run40642090530於UTC06:14:47（台北14:14:47）completed/success：Windows1636run=expected、1589pass／47可選SDK不可用skip、0fail/error、337.593秒、source_unchanged／stop flags false／原Job自然0／remaining0／無強停／逐測試殘留0；Linux fixture104/104。固定結果在reports/release-prep-candidate-20261028-03/ci-*.json，未安裝依賴或手動觸發CI。真模型／native均0，歷史真04不冒稱重驗。
+
+最新入口docs/RELEASE_PREPARATION.md；只補四份結果文件checkpoint後普通push原開發分支並另存SHA／0/0核對。追蹤檔案應乾淨，兩張未追蹤附件／其他worktree及私人main保留。排程已刪除、不恢復；無main/tag/release／部署／刪分支。此輪交付工具缺口已閉合，原生111缺列／21error仍partial、24h/reboot及桌面喚醒仍未驗，須各自條件與授權；不把準備通過當真實環境全通過。
+
 ## 2026-10-28 候選交付增量：驗包／smoke已固化（最新）
 
 接續8b9cf27，追蹤工作樹原乾淨／upstream0/0，未追蹤附件保留。使用者明確續做準備；排程已刪除，本次不建立／恢復。實際缺口是repo只有打包器，解壓smoke依賴reports臨時腳本；新增scripts/verify_candidate.py及tests/test_verify_candidate.py，必填外部commit與ZIP SHA256、有界輸入快照、完整manifest／逐檔比對、重複key／型別／路徑與舊目錄拒絕；預設離線不啟子程序，--smoke才在新reports副本跑合成CLI，事先私有Job與原退出回條，無模型／native／ACK／系統變更。

@@ -1,5 +1,17 @@
 # 證據與時間日誌
 
+## 2026-10-28：b53479a新候選的固定來源、完整CI與實際交付
+
+工程checkpoint b53479a28ea030a92ae23ba50ed24d6aca2be679，明列七檔審查／無固定秘密模式、git diff --cached --check通過，普通push既有feat/local-codex-acceptance，直接ls-remote相同。相對8b9cf27為7檔460新增；沒有src/config/playbooks/contrib/.github或啟動cmd改動。定向03的240來源hash逐一等於新ZIP檔案，source-binding.json與source-commit.json保存零差異；31/31只作本機定向，舊b57完整1624不移植。
+
+py -3.13 -B scripts/package_candidate.py --root reports/release-prep-candidate-20261028-03 --commit b53479a28ea030a92ae23ba50ed24d6aca2be679：318檔、兩ZIP byte相同／SHA256d755a8d85a9fec15343a88b7b0adeb24b003f7d21d6e3322b127df73b3e10605，兩原Git Job自然0／remaining0／無強停。新工具verify_candidate.py以該ZIP／release-manifest.json及外部相同commit與hash、--root reports/candidate-verify-release-20261028-01 --smoke實跑，manifest核對及13/13 checks／四原CLI Job自然0／remaining0／無強停。source未變、一件synthetic pending／一份case／零ACK／無live namespace，保存重開相同且唯讀DB hash不變；無模型／native。
+
+同一新包的兩次負向實際CLI皆帶--smoke：全零錯誤外部hash→candidate-verify-reject-pin-20261028-01的external_archive_hash_mismatch；只竄改manifest LICENSE digest→candidate-verify-reject-manifest-20261028-01的manifest_content_mismatch。兩者exit2、passedfalse、owned_steps空且未建立unpacked；negative-cli-crosscheck.json為2/2，原包／manifest未改。新候選獨立index反向patch在candidate03/rollback/rollback-result.json為5/5、九Git Job自然退出；公開main tree相同、真index／checkout未變。artifact-crosscheck.json為8/8，CI終結與最終保存另閉合。
+
+gh api及gh run view只抽固定摘要核對[新精確run40642090530](https://github.com/SecludedCorner/EventGuard/actions/runs/40642090530)，head_sha=b53479a、UTC06:14:47 completed/success。Windows job122662316404：1636run=expected1636、1589pass／47可選SDK不可用skip、0fail/error、337.593秒、218AST、source_unchanged、stopped_early/stop_requested皆false、per_test_residuals0，原Job自然0／remaining0／無強停。Linux job122662316070為fixture104/104、0skip，不是Linux native；固定欄位及skip分類保存candidate03/ci-*.json，不保存完整logs／不安裝依賴／手動dispatch／rerun。
+
+本輪補齊repo可重現驗包與隔離smoke，新候選含工具本體；後續四份純文件checkpoint只補結果，另存遠端SHA、產品無差異、0/0與乾淨tracked回條。排程未建立／恢復，私人main及其他worktree／附件不動，無main/tag/release／部署／分支刪除。原生111缺列／21error、24h/reboot與既有桌面喚醒未升格；真04只沿用歷史範圍，runtime／授權／回條不提交。
+
 ## 2026-10-28：驗包／包內 smoke 自臨時腳本固化
 
 8b9cf27後核對repo只有package_candidate，既有smoke與resume只在reports；新增scripts/verify_candidate.py與tests/test_verify_candidate.py。明確外部40hex commit／64hex ZIP hash，輸入快照後核對原archive audit與完整逐檔manifest，JSON型別精確且拒重複key；篡改者即使更新ZIP及自述manifest仍不能替代外部pin。拒缺必要檔、來源不符、逃逸／私人路徑／碰撞、大小超限、redirect及覆寫舊輸出；smoke前拒絕不啟child。工具預設離線；可選合成CLI在Windows私有Job下有界執行，原退出不明／強停／殘留／逾時均不能過。

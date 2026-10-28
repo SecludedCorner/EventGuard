@@ -1,5 +1,13 @@
 # EventGuard 接手
 
+## 2026-10-28 新候選驗包／smoke已交付，無進行中runner（最新）
+
+候選b53479a28ea030a92ae23ba50ed24d6aca2be679已推；repo現在有verify_candidate.py及12個新測試，不再用舊臨時smoke。最新定向31/31、240來源hash與318檔新包全符；兩ZIP hash均d755a8d85a9fec15343a88b7b0adeb24b003f7d21d6e3322b127df73b3e10605。實際外部pins驗包＋13/13合成smoke、兩負向CLI拒絕在child前、來源回復5/5皆通過，各原Job自然退出／remaining0／無強停。
+
+精確CI run40642090530已completed/success：Windows1636run／1589pass／47可選SDKskip，Linux fixture104/104；本機沒有另跑全庫，舊1624只屬b57。證據reports/release-prep-candidate-20261028-03、reports/candidate-verify-release-20261028-01與reports/verify-candidate-tool-20261028-03；完整命令與限制在docs/RELEASE_PREPARATION.md。最後結果文件checkpoint只補紀錄，不能冒稱新產品測試。
+
+恢復先核對Git與以上回條；沒有在跑的guardian／CI，不依舊PID操作，不重跑已驗且未變來源。這次明定的交付缺口已閉合；進一步native／模型仍需各自精確批准，正式release不在本次範圍。排程已刪除，不建立／恢復；不推main/tag、不發布／部署／刪分支。私人main／其他worktree與附件保留，原生partial／24h/reboot／既有桌面喚醒未升格。
+
 ## 2026-10-28 正在完成候選驗包工具增量（最新）
 
 已由8b9cf27接續並補實際缺口：repo新增verify_candidate.py及12個篡改／路徑／完整性／退出測試，外部pins必填，離線預設、可選Windows私有Job合成smoke，舊輸出不覆寫。定向31/31（verify-candidate-tool-20261028-03，含remaining必須int0），新工具先前對原b57 ZIP的13/13 smoke已實跑通過／四子程序自然退出。沒有完整guardian在跑，舊1624完整測試只屬b57。

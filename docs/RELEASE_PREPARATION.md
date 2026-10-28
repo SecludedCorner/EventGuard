@@ -1,5 +1,18 @@
 # 發布前準備
 
+## 目前交付候選：b53479a（2026-10-28 最新結果）
+
+固定受測／打包commit為`b53479a28ea030a92ae23ba50ed24d6aca2be679`，已普通推到既有開發分支。此次相對8b9cf27為7檔／460新增，含新的驗包工具與12個測試；產品src/config/playbooks等未變。後續純結果文件checkpoint不改產品來源，不另冒稱產品測試。
+
+- `reports/release-prep-candidate-20261028-03/candidate.zip`：318檔，兩次建置完全一致；SHA256為`d755a8d85a9fec15343a88b7b0adeb24b003f7d21d6e3322b127df73b3e10605`。`release-manifest.json`為完整逐檔清單，兩個Git Job自然0／remaining0／無強停。
+- `source-binding.json`與`reports/verify-candidate-tool-20261028-03/source-commit.json`：240個定向受測來源hash與新包全符、零差異；本機31/31（0skip/fail/error，1.193秒）只聲稱定向範圍。
+- `reports/candidate-verify-release-20261028-01/verification-result.json`：使用本頁外部commit／ZIP pin，以repo工具實跑manifest核對與13/13隔離smoke；四個原CLI Job自然0／remaining0／無強停。一件合成pending、一份case、零ACK／native／model，重開保存相等與唯讀DB hash不變。
+- `candidate-verify-reject-pin-20261028-01`及`candidate-verify-reject-manifest-20261028-01`：實際CLI帶`--smoke`仍在解壓／啟child前拒絕錯誤外部hash與竄改manifest，均exit2／owned_steps空；candidate03的`negative-cli-crosscheck.json`為2/2。
+- candidate03的`rollback/rollback-result.json`：新候選反向patch的獨立index演練5/5、九個Git Job自然退出；tree等於公開main615f77f，真index／checkout未變。`artifact-crosscheck.json`為8/8，另以CI及最終保存回條閉合。
+- [新候選精確CI run40642090530](https://github.com/SecludedCorner/EventGuard/actions/runs/40642090530)：UTC06:14:47 completed/success；Windows1636run=expected、1589pass／47既有可選SDK不可用skip、0fail/error，337.593秒、218AST、source_unchanged、未提前停止、原Job自然0／remaining0／無強停／逐測試殘留0；Linux fixture104/104、0skip，無Linux原生支援。固定摘要保存candidate03/ci-*.json；不保存完整logs，不手動dispatch或rerun。
+
+受版控工具現可由下方命令重現驗包／smoke，不再依賴舊reports臨時smoke。正式release、main/tag、分支刪除與排程均未執行；原生111缺列／21error仍partial，24h/reboot與桌面喚醒未驗。歷史真04收件只保留原範圍。前一輪b57證據如下保留為歷史，不移植成新候選結果。
+
 ## 2026-10-28：repo 內可重現驗包／隔離 smoke（最新增量）
 
 使用者要求繼續補實際交付缺口；不建立／恢復接續排程。原候選的解壓smoke僅在reports臨時腳本，現新增受版控`scripts/verify_candidate.py`與篡改／退出測試。外部必填expected commit與ZIP SHA256，先把輸入有界快照保存到全新目錄，再核對commit comment、逐檔hash／size、必要檔案、版本及完整manifest；manifest不能自行充當信任來源。拒絕重複JSON keys與數字型別替換，不複寫舊結果。
@@ -16,7 +29,7 @@ expected值須由已審查checkpoint／可信交付紀錄取得，不能直接�
 
 最後來源再收緊remaining必須int0，避免False被當零；`reports/verify-candidate-tool-20261028-03`定向31/31、1.193秒、0skip/fail/error與原Job自然退出，才是本切片受測來源。保存後以同commit新包實跑，不重用原b57 smoke當新來源證據。
 
-## 範圍與目前狀態（2026-10-28 已完成準備）
+## 歷史基準：前一輪準備狀態（b57候選）
 
 2026-10-28 使用者要求完成所有發布準備、連續接續，但不執行 release。本文件是本次唯一準備佇列；現況／證據沿用 STATUS、HANDOFF、EVIDENCE，不建立另一套產品目標。
 
@@ -32,7 +45,7 @@ expected值須由已審查checkpoint／可信交付紀錄取得，不能直接�
 
 這裡的「準備完成」不代表正式環境驗收全過；已知native partial與其他未驗事項必須隨包揭露，不能以測試數或打包成功取代。
 
-## 本次交付與可核對結果
+## 前一輪交付與可核對結果（b57歷史）
 
 固定受測／打包候選為`b57b43be8333327584ef05af4e71740b5b80d621`，不是之後的純文件checkpoint。238個驗證來源檔案hash全數等於ZIP內該commit檔案；完整回歸來源未變，沒有用舊CI替代。候選相對公開main615f77f的差異是285檔、55340新增／1961刪除，屬已提交歷史合計，不是尚未保存的修改。
 
@@ -85,6 +98,6 @@ py -3.13 -B scripts/verify.py --run-dir reports/verify-release-preparation-full-
 
 恢復保留目前遠端main基準615f77f及候選SHA、完整binary diff與hash。準備階段可用獨立臨時index反向套用該diff並核對所得tree等於基準，不改checkout或遠端。未來真回復用新revert commit與重新驗證，不reset／force。分支刪除須另列本地／遠端清單並等使用者確認。
 
-## 連續接續
+## 接續限制（排程已取消）
 
-本聊天已安排15分鐘接續。已有build／測試／CI時核對原操作，不另啟第二runner；來源未變且已過的測試直接沿用。只在實質里程碑、失敗或需要人類時回報。全部準備完成後暫停本次接續，不執行release，也不恢復原跨專案暫停排程。需電腦開機且桌面app保持運作；不是Windows服務或開機自啟。
+先前15分鐘接續任務已依使用者要求刪除，本次不建立或恢復排程；原跨專案暫停排程不動。工程只在目前工作階段內推進。已有build／測試／CI時核對原操作，不另啟第二runner；來源未變且已過的測試直接沿用。只在實質里程碑、失敗或需要人類時回報，不承諾會話結束後自動運行。
