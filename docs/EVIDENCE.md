@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-28：六情境合成比較補全
+
+`reports/ux-compare-20261028-02/comparison.json` 延續 `-01` 的嚴重清單與最後成功，補拒讀、保存關聯、診斷缺口、handled／pending：拒讀舊 1 操作／446ms、新 0／45ms；關聯各 1，舊 848ms／新 775ms；缺口各 1，舊 838ms 顯示原始代碼／新 789ms 顯示中文；handled／pending 各 1，舊 758ms／新 850ms，兩者皆可見。這是單次自動化 wall time，舊版錨定列索引以 fixture API 先核對，不計人類尋找或閱讀時間；不能據此推論完成率、統計效果或超越競品。
+
+第二組共用 SQLite hash `ed790b81de89b668de32121db789f2e8ce72d64a1c688689574743b5a5b697e0` 前後不變；兩 Job 自然 0／remaining 0／無強停、0 POST／native／model。`reports/verify-ux-six-synthetic-20261028-01` 46/46、0 skip／224 AST／Job 自然退出。人類六任務、200% zoom、競品帳戶與真實環境仍未驗證。
+
 ## 2026-10-28：GUI 合成固定版本前後比較
 
 `reports/release-prep-ux-before-20261028-01` 與 `-after-20261028-01` 各兩份可重現 archive，固定 ad1f127／338cdc5；`reports/ux-compare-20261028-01/comparison.json` 記相同 synthetic DB hash `a40645cbbb8777cadf0f8e857cebafcbda71541ad0f8f3a9636cdc2d74ea8a09` 與真瀏覽器操作。嚴重／new 篩選：舊版 3 次選擇／提交、516ms，新版按提示 1 次、293ms，皆 2 件／首列嚴重；拒讀後最後成功：舊卡 1 操作／434ms 未呈現，新卡 1 操作／398ms 可見且拒讀仍在。觀察錯誤結果與誤判安全均 0，但樣本僅兩項單次自動化操作，不能推論人類或產品優越性。

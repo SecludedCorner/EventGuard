@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-28 六情境合成前後觀察
+
+固定 ad1f127／338cdc5 完成六種 synthetic 自動化觀察：新增嚴重清單 3→1 操作；拒讀 1→0 操作；最後成功舊版卡片不可見、新版可見；保存關聯、診斷缺口及 handled／pending 各自 1→1 操作。舊版缺口顯示代碼，新版有中文；各案例未觀察錯誤結果或誤判安全。各次自動化耗時見 `reports/ux-compare-20261028-01/comparison.json` 與 `-02/comparison.json`，非人類測量；舊版錨定列以合成 API 定位，非使用者尋找時間。
+
+兩版本第二 fixture hash 前後一致、0 POST／native／model、Job 自然 0／remaining 0／無強停；`reports/verify-ux-six-synthetic-20261028-01` UTC 09:10:33、46/46、0 skip、224 AST、Job 自然退出。僅完成合成觀察；人類／200% zoom／合法競品對照及歷程容量恢復仍未完成。來源 build 為工作樹 ZIP 自檢。
+
 ## 2026-10-28 合成 GUI 前後比較（部分）
 
 固定 ad1f127 與 338cdc5 來源包、相同 synthetic SQLite／來源，實際瀏覽器各量一次：篩選新增嚴重事件由 3 操作／516ms 變 1 操作／293ms，兩者均顯示 2 件與嚴重首列；查看拒讀的最後成功時間，舊卡 1 操作／434ms 無法完成，新卡 1 操作／398ms 可見且目前仍拒讀。兩案例未觀察錯誤結果或誤判安全；時間為自動化單次 wall time，不是人類速度或統計結論。
