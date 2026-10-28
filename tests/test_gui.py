@@ -524,6 +524,94 @@ class GuiOwnTkWidgetTests(unittest.TestCase):
             finally:
                 release.set()
 
+    def test_selecting_another_event_clears_previous_detail_while_read_is_pending(self):
+        self.wait_for(lambda: not self.ui.worker.pending)
+        first = self.controller.value['events'][0]
+        self.ui._show_detail(self.controller.inspect(first['event_id']))
+        second = dict(first, event_id='synthetic-example-2')
+        self.controller.value['events'].append(second)
+        self.ui._apply_snapshot(copy.deepcopy(self.controller.value))
+        entered, release = threading.Event(), threading.Event()
+        original = self.controller.inspect
+        def inspect(event_id):
+            entered.set()
+            release.wait(timeout=2)
+            return original(event_id)
+        with patch.object(self.controller, 'inspect', side_effect=inspect):
+            try:
+                self.ui.events.selection_set(second['event_id'])
+                self.ui.select_event()
+                self.wait_for(entered.is_set)
+                text = self.ui.detail.get('1.0', 'end')
+                self.assertNotIn(first['event_id'], text)
+                self.assertIn('正在讀取', text)
+            finally:
+                release.set()
+        self.wait_for(lambda: not self.ui.worker.pending)
+        self.wait_for(lambda: second['event_id'] in self.ui.detail.get('1.0', 'end'))
+
+    def test_failed_detail_is_unknown_and_same_row_can_be_retried(self):
+        self.wait_for(lambda: not self.ui.worker.pending)
+        event_id = self.controller.value['events'][0]['event_id']
+        with patch.object(self.controller, 'inspect', side_effect=OSError('private fixture secret')):
+            self.ui.events.selection_set(event_id)
+            self.ui.select_event()
+            self.wait_for(lambda: not self.ui.worker.pending)
+            self.wait_for(lambda: self.ui.worker.results.empty())
+            text = self.ui.detail.get('1.0', 'end')
+            self.assertIn('詳情讀取失敗', text)
+            self.assertIn('未知', text)
+            self.assertNotIn('待接手', text)
+            self.assertNotIn('private fixture', text)
+        self.ui.select_event()
+        self.wait_for(lambda: '連接埠：43210' in self.ui.detail.get('1.0', 'end'))
+        self.assertEqual(self.controller.value['events'][0]['delivery_status'], 'pending')
+        self.assertEqual(self.ui.detail.cget('state'), 'disabled')
+        self.assertFalse(any(action in {'ack', 'diagnose', 'start'} for action, _ in self.controller.calls))
+
+    def test_wrong_event_identity_is_unknown_and_late_failure_cannot_replace_success(self):
+        self.wait_for(lambda: not self.ui.worker.pending)
+        event_id = self.controller.value['events'][0]['event_id']
+        wrong = {'event': dict(self.controller.value['events'][0], event_id='other-case')}
+        with patch.object(self.controller, 'inspect', return_value=wrong):
+            self.ui.events.selection_set(event_id)
+            self.ui.select_event()
+            self.wait_for(lambda: not self.ui.worker.pending)
+            self.wait_for(lambda: self.ui.worker.results.empty())
+            self.assertIn('詳情讀取失敗', self.ui.detail.get('1.0', 'end'))
+            self.assertNotIn('other-case', self.ui.detail.get('1.0', 'end'))
+        self.ui.select_event()
+        self.wait_for(lambda: '連接埠：43210' in self.ui.detail.get('1.0', 'end'))
+        before = self.ui.detail.get('1.0', 'end')
+        self.ui.worker.results.put(('inspect', {'state': 'error', 'requested_event_id': 'other-case'}))
+        self.ui._drain()
+        self.assertEqual(before, self.ui.detail.get('1.0', 'end'))
+
+    def test_switching_back_during_inflight_read_keeps_selected_event_details(self):
+        self.wait_for(lambda: not self.ui.worker.pending)
+        first = self.controller.value['events'][0]['event_id']
+        self.controller.value['events'].append(dict(self.controller.value['events'][0], event_id='synthetic-example-2'))
+        self.ui._apply_snapshot(copy.deepcopy(self.controller.value))
+        entered, release = threading.Event(), threading.Event()
+        original = self.controller.inspect
+        def inspect(event_id):
+            entered.set()
+            release.wait(timeout=2)
+            return original(event_id)
+        with patch.object(self.controller, 'inspect', side_effect=inspect):
+            try:
+                for event_id in (first, 'synthetic-example-2', first):
+                    self.ui.events.selection_set(event_id)
+                    self.ui.select_event()
+                    self.wait_for(entered.is_set)
+                release.set()
+                self.wait_for(lambda: not self.ui.worker.pending and self.ui._inspect_after_refresh is None)
+                self.wait_for(lambda: first in self.ui.detail.get('1.0', 'end'))
+                self.assertEqual(self.ui.events.selection(), (first,))
+                self.assertNotIn('synthetic-example-2', self.ui.detail.get('1.0', 'end'))
+            finally:
+                release.set()
+
     def test_window_close_minimizes_and_unconfirmed_exit_keeps_window(self):
         with patch.object(self.window, "iconify") as minimize:
             self.ui.minimize()

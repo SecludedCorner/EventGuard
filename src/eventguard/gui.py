@@ -156,6 +156,8 @@ class ControllerWorker:
                 # Do not store raw exception text: it may contain private paths.
                 result = {"state": "error", "reason": "desktop_operation_failed",
                           "error_type": safe_text(type(error).__name__, 80)}
+            if action == "inspect":
+                result = dict(result, requested_event_id=arguments[0])
             self.results.put((action, result))
             with self._lock:
                 self._pending = False
@@ -428,9 +430,10 @@ class EventGuardWindow:
             return
         event_id = selection[0]
         if event_id != self._last_event:
-            if self._request("inspect", event_id):
-                self._last_event = event_id
-            else:
+            self._show_detail({"state": "loading"})
+            self._last_event = event_id
+            self._inspect_after_refresh = None
+            if not self._request("inspect", event_id):
                 self._inspect_after_refresh = event_id
 
     def filter_events(self, _event=None):
@@ -538,8 +541,12 @@ class EventGuardWindow:
                 # Never put its details under another selected row.
                 selected = self.events.selection()
                 if (selected and self._last_event == selected[0] and self.events.exists(self._last_event)
-                        and event_id in (None, self._last_event)):
-                    self._show_detail(value)
+                        and value.get("requested_event_id") == self._last_event):
+                    if value.get("state") == "error" or event_id != self._last_event:
+                        self._show_detail({"state": "error"})
+                        self._last_event = None  # Permit retrying the same selected row.
+                    else:
+                        self._show_detail(value)
             else:
                 self._set_busy(False)
                 if action == "close" and value.get("can_close") is True:
@@ -569,7 +576,8 @@ class EventGuardWindow:
             self.refresh()
         elif self._inspect_after_refresh is not None and not self.worker.pending:
             event_id, self._inspect_after_refresh = self._inspect_after_refresh, None
-            if self.events.exists(event_id) and self._request("inspect", event_id):
+            if (self.events.exists(event_id) and self.events.selection() == (event_id,)
+                    and self._request("inspect", event_id)):
                 self._last_event = event_id
         self._after(75, self._drain)
 

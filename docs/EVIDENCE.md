@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面詳情讀取失敗／切換
+
+`reports/verify-desktop-detail-failure-20261029-04` UTC 2026-10-28 19:33:53：79/79、0skip、source_unchanged、Job自然退出0／remaining0。真Tk驗讀取中不留舊案、失敗未知且不補pending／不洩漏例外、同列重試、身分不符與晚到錯誤、快速切回原事件；未採集／模型／ACK，pending保留。01先重現2失敗，02為77/77、03為78/78、最終04為79/79。`reports/build-desktop-detail-failure-20261029-02`：268檔受測hash相符、246檔編譯成功。前單元56786b40542f9f374186bf91e6a8cc5a035a0a67以ff-only merge整合並普通push main，ls-remote核對兩ref一致；348檔來源包可重現，見`reports/release-prep-desktop-source-consistency-20261029-01`。Web／真人／原生驗收未升格。
+
 ## 2026-10-29：桌面來源一致性
 
 `reports/verify-desktop-source-consistency-20261029-05` UTC 2026-10-28 19:27:20：77/77、0skip、source_unchanged、Job自然退出／remaining0。新拒讀取代舊overview成功、過期拒讀歷史、損壞／test不供live、保存失敗不當ok，並在真Tk表格核對狀態／零筆／成功時間／原因與摘要；讀前後保存檔hash相同，採集入口哨兵未觸發。`reports/build-desktop-source-consistency-20261029-01`：268檔hash相符、246檔編譯。01／03固定fixture在wallclock未來造成2／1失敗，02／04及最終05通過；未放寬產品時間保護，原失敗保留。

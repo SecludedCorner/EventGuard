@@ -285,6 +285,10 @@ def handling_summary(value):
 def event_summary(value):
     """Human headings over the existing saved guidance, never a new diagnosis."""
     value = value if isinstance(value, dict) else {}
+    if value.get("state") == "loading":
+        return "正在讀取選取事件的保存詳情；內容尚未確認。"
+    if value.get("state") == "error":
+        return "詳情讀取失敗，內容維持未知。請重新點選事件重試；未執行採集、模型或 ACK。"
     event = value.get("event") if isinstance(value.get("event"), dict) else value
     guidance = value.get("guidance") if isinstance(value.get("guidance"), dict) else {}
     lines = [event_title(event, guidance), "事件 ID：" + safe_text(event.get("event_id"), 160),

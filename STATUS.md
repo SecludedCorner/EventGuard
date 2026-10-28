@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面詳情讀取與重試
+
+切換事件立即清除舊詳情並顯示讀取中；worker結果綁定實際請求ID，錯誤／身分不符維持未知且可重點同列重試，不補造pending。合併中的選擇以最後選取為準，過期結果不顯示其他事件。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-detail-failure-20261029-04 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_gui_saved_evidence --module test_desktop`：2026-10-29 03:33（UTC+8）79/79、0skip、source_unchanged、Job自然退出0／remaining0，含實際Tk與fixture；01先重現2失敗，02／03及最終04通過。`reports/build-desktop-detail-failure-20261029-02`：268檔hash相符、246檔編譯通過。前單元56786b4已普通ff merge／push並直接核對main及開發ref一致，工作樹與分支差異清零；未做Web、真人、原生驗收。
+
 ## 2026-10-29 桌面來源欄位統一保存資料入口
 
 修正桌面來源列混用舊overview與新保存成功紀錄：狀態、筆數、時間、原因及歷史成功改由同次source_status結果投影。最後結果與新鮮度分列，未知／讀取失敗不回退舊成功；stale保留歷史拒讀但current_coverage未知，test成功不供live使用。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-source-consistency-20261029-05 --timeout-seconds 180 --module test_desktop_source_consistency --module test_desktop --module test_gui --module test_source_success_history`：2026-10-29 03:27（UTC+8）77/77、0skip、source_unchanged，Job自然退出／remaining0；含實際Tk＋保存合成觀察、讀前後hash不變與採集哨兵。`reports/build-desktop-source-consistency-20261029-01`：268檔hash相符、246檔編譯成功。01的2失敗與03的1失敗是固定fixture時間晚於wallclock，改固定過去epoch後時間保護保留；02為75/75、04為76/76，最終以05為準。人工／Web／原生仍待驗。
