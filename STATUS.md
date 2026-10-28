@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 既有授權提醒與瀏覽器限制更正
+
+CLAUDE.md 已記錄本專案既有讀改、fixture／合成測試、隔離瀏覽器驗收及指定開發分支 commit／push 授權；相同範圍不重複詢問。使用者設定畫面顯示瀏覽器已開啟，但工具回報停用，原因未確認；舊文的「Work 設定禁用」僅代表工具原文，不證明使用者未授權。UI／鍵盤／200% 仍待實測。
+
+本次純文件變更；2026-10-29 01:23（UTC+8）來源 build：`py -3.13 -B scripts/package_candidate.py --root reports/release-prep-permission-reminder-20261029-01 --commit df5680825d518a94bfa447a82630a65b8470315e`，346 檔可重現。`py -3.13 -B scripts/verify.py --run-dir reports/verify-permission-reminder-20261029-01 --timeout-seconds 180 --module test_package_candidate`：8/8、0 skip、source_unchanged、Job 自然退出 0／remaining 0；此來源 build 為父版本，不含本次文件改動，不代表新增產品或瀏覽器驗收。
+
 ## 2026-10-28 可重跑修訂元件合成行為測試
 
 新增專案測試直接執行實際修訂 renderer，合成 DOM 核對診斷變更與成員相符分列、部分診斷、重繪展開／摘要焦點、外部焦點不搶及切事件不沿用。使用既有 Node 與 Windows 私有 Job；缺少任一條件明示 skip、不下載。`reports/verify-revision-renderer-reusable-20261028-01` UTC 11:29:27：21/21、0 skip、244 AST、source_unchanged；受管 Job 自然 0／remaining 0／無強停。合成 DOM 非瀏覽器，不提供版面、200% 或真實鍵盤證據；Work 設定仍禁用本機瀏覽器。
