@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：全域上限與並行更新合成測試
+
+`reports/verify-investigation-revision-concurrency-20261028-02` UTC 10:26:43，17/17、0 skip、237 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 原件建立 16 個事件各 16 筆，全球第 257 筆拒絕且原數不變；兩執行緒更新保留原始及兩新版快照，pending／ACK 不變。首次 `...-01` 一測試失敗，原因是預期時間缺少保存格式的微秒；修正測試格式後重驗通過。未測跨程序／長時負載，無容量釋放。
+
 ## 2026-10-28：有修訂錨點保留合成測試
 
 `reports/verify-investigation-revision-retention-20261028-03` UTC 10:24:57，61/61、0 skip、236 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成 DB 核對 ACK 錨點期限、空間輪替、數量輪替不刪及版本／當前案件／事件不變，無修訂事件既有到期測試仍過；不代表永久歸檔或無損容量恢復。首次 `...-01` 使用不存在的 test_event_store 模組，參數檢查拒絕且未起 worker；換成實際模組後 `...-02`／`...-03` 各 61/61。

@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 修訂全域上限與並行合成測試
+
+`reports/verify-investigation-revision-concurrency-20261028-02` UTC 10:26:43：17/17、0 skip、237 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成記憶體 SQLite 實際塞入 256 版本並拒絕第 257 筆；兩執行緒同事件更新後前版與兩個新快照均可讀、pending 2／ACK 0。全域滿載只測儲存原件，尚未驗整體產品流量或跨程序壓力；瀏覽器與容量恢復仍未完成。
+
 ## 2026-10-28 保護有修訂的事件錨點
 
 自動期限、筆數與空間輪替排除有已保存修訂的 ACK 事件，避免原事件和最新案件被清除後版本無法回看；其他 ACK 事件沿用既有政策。`reports/verify-investigation-revision-retention-20261028-03` UTC 10:24:57：61/61、0 skip、236 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成測試涵蓋過期、空間輪替與筆數壓力，原案／修訂／pending 保留。保留錨點可能使容量先滿，尚無安全歸檔／釋放方案；不可自行刪除。瀏覽器 WIP 仍未驗。
