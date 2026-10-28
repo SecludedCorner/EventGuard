@@ -169,7 +169,11 @@ class IntelligenceIntegration(unittest.TestCase):
     def test_shipped_facts_example_is_readable_but_cannot_be_live_evidence(self):
         from eventguard.intelligence.inventory import collect_inventory
         original=Path(__file__).resolve().parents[1]/"config/advisory-assets.example.json"
-        config={"inventory":{"paths":[{"path":str(original),"kind":"facts"}]}}
+        # A managed checkout can live under .codex, which inventory must refuse.
+        # Read the shipped fixture from a disposable test directory instead.
+        sample=self.root/"advisory-assets.example.json"
+        sample.write_bytes(original.read_bytes())
+        config={"inventory":{"paths":[{"path":str(sample),"kind":"facts"}]}}
         observed=collect_inventory(config,now=NOW)
         self.assertEqual(observed["status"],"success")
         self.assertEqual(len(observed["assets"]),2)

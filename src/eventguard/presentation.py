@@ -297,6 +297,20 @@ def render(result, command="", operation=""):
             lines.append("UNKNOWN：原事件缺失或內容已變；保存快照不代表目前狀態。")
         lines.append("下一步：檢閱保存事實；新來源觀測須先批准。allowed_actions=[]；未採集、未呼叫模型、未ACK。")
         return "\n".join(lines)
+    if command=="events" and operation=="backup-history":
+        if result.get("file_fsynced") is not True:
+            return "歷程備份未完成。來源紀錄未清理。"
+        return "\n".join(["歷程備份已寫入："+text(result.get("path")),
+                          "筆數="+text(result.get("records"))+"；SHA256="+text(result.get("sha256")),
+                          "來源紀錄未清理；目錄項持久性未確認。此備份不能取代完整資料庫或還原驗證。"])
+    if command=="events" and operation=="preview-history":
+        if result.get("restore_performed") is not False or result.get("restore_authorized") is not False:
+            return "歷程身分預檢未完成。"
+        counts=result.get("counts",{})
+        return "\n".join(["歷程身分唯讀預檢：", "未綁定="+text(counts.get("unbound"))+"；事件缺失="+text(counts.get("event_missing"))+"；事件不符="+text(counts.get("event_mismatch")),
+                          "操作衝突="+text(counts.get("operation_conflict"))+"；已存在="+text(counts.get("already_present"))+"；未存在="+text(counts.get("absent_operation")),
+                          "歷程順序："+({"exact_prefix":"目標為備份的完全前綴","diverged":"目標與備份順序或內容分歧"}.get(result.get("history_order"),"未知")),
+                          "未還原、未刪除。此預檢不驗證來源真實性、容量或可還原性。"])
     if command=="events" and operation=="detail":
         return "\n".join(["事件詳情："+text(result.get("event_id")),
                           "處置狀態："+text(result.get("status")),

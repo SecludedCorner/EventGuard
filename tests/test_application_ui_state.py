@@ -179,6 +179,194 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertIn("尚未確認", table["closing"]["label"])
         self.assertEqual(headers["Cache-Control"], "no-store")
 
+    def test_source_cards_use_separate_history_freshness_and_current_status(self):
+        code, _, page = self.request("/")
+        self.assertEqual(code, 200)
+        self.assertIn('id="source-cards"', page)
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        match = re.search(r"async function sources\(\)\{([^\n]+)", script)
+        self.assertIsNotNone(match)
+        source_renderer = match.group(1)
+        for required in ("$('source-cards')", "s.last_collected_at", "s.saved_status", "s.status",
+                         "sourceSuccess(s)", "sourceFreshness(s)", "s.row_count", "s.reasons"):
+            self.assertIn(required, source_renderer)
+        self.assertNotIn("innerHTML", source_renderer)
+        self.assertIn("s.last_success_state!=='known'", script)
+        self.assertIn("time<=Date.now()", script)
+        self.assertEqual(self.calls, [])
+
+    def test_three_source_http_reads_preserve_synthetic_event_and_saved_files(self):
+        from eventguard.events.store import EventStore
+        from eventguard.runtime import Runtime
+        from eventguard.synthetic import make_synthetic
+        store = EventStore(self.root / "data" / "test")
+        store.enqueue(make_synthetic("listener"))
+        Runtime(self.root).save_observation({"id": "defender", "status": "ok", "rows": [],
+            "observed_at": "2026-10-24T00:00:00+00:00", "coverage": {"status": "ok", "errors": []}}, "test")
+        files = lambda: {p.relative_to(self.root): p.read_bytes() for p in
+                         (self.root / "data").rglob("*") if p.is_file()}
+        before_files, before_stats = files(), store.stats()
+        for _ in range(3):
+            code, _, raw = self.request("/api/sources")
+            self.assertEqual(code, 200)
+            self.assertEqual(len(json.loads(raw)["sources"]), 7)
+        self.assertEqual(files(), before_files)
+        self.assertEqual(store.stats(), before_stats)
+        self.assertEqual(before_stats["pending"], 1)
+        self.assertEqual(self.calls, [])
+
+    def test_event_page_exposes_source_gap_summary_independently_of_event_rows(self):
+        code, _, page = self.request("/")
+        self.assertEqual(code, 200)
+        event_section = page.split('<section id="events">', 1)[1].split('<section id="sources"', 1)[0]
+        self.assertIn('id="source-gap-summary" role="status"', event_section)
+        self.assertIn("不代表主機安全", event_section)
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        renderer = script.split("async function sourceGap(){", 1)[1].split("function invalidateEventList(){", 1)[0]
+        for required in ("/api/sources", "SOURCE_IDS.length", "indexed.has(row.source_id)",
+                         "status!=='ok'", "freshness!=='fresh'", "來源狀態無法確認"):
+            self.assertIn(required, renderer)
+        self.assertIn("sequence!==sourceGapSequence", renderer)
+        self.assertIn("sequence===sourceGapSequence", renderer)
+        self.assertIn("if(busy){refreshQueued=true;return;}", script)
+        self.assertIn("queueMicrotask(refresh)", script)
+        self.assertNotIn("event-rows", renderer)
+        self.assertNotIn("innerHTML", renderer)
+        self.assertEqual(self.calls, [])
+
+    def test_notice_exposes_distinct_new_severity_filter_entry_points(self):
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        notice = script.split("function openNoticeSeverity(value){", 1)[1].split("async function refresh(){", 1)[0]
+        for required in ("form.elements.severity.value=value", "form.elements.source.value=''",
+                         "form.elements.status.value='new'", "offset=0", "invalidateEventList()",
+                         "severity=high&status=new", "severity=critical&status=new",
+                         "兩次獨立讀取", "openNoticeSeverity(key)"):
+            self.assertIn(required, notice)
+        self.assertNotIn("innerHTML", notice)
+        self.assertEqual(self.calls, [])
+
+    def test_root_serves_constant_page_for_filter_urls_without_reflecting_query(self):
+        _, baseline_headers, baseline = self.request("/")
+        for query in ("?severity=high&status=new&page=1", "?severity=high&severity=critical",
+                      "?page=10001", "?payload=synthetic-marker"):
+            code, headers, page = self.request("/" + query)
+            self.assertEqual(code, 200)
+            self.assertEqual(page, baseline)
+            self.assertNotIn("synthetic-marker", page)
+            self.assertEqual(headers["Content-Security-Policy"], baseline_headers["Content-Security-Policy"])
+        self.assertEqual(self.calls, [])
+
+    def test_filter_url_contract_has_bounded_page_and_stale_event_guard(self):
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        contract = script.split("function invalidateEventList(){", 1)[1].split("async function detail(", 1)[0]
+        for required in ("URLSearchParams(location.search)", "params.getAll(name).length===1",
+                         "Number(page)>10000", "網址篩選無效", "sequence!==eventSequence"):
+            self.assertIn(required, contract)
+        self.assertIn("window.addEventListener('popstate'", script)
+        self.assertEqual(self.calls, [])
+
+    def test_detail_return_exposes_focus_target_and_guards_delivery_sequence(self):
+        code, _, page = self.request("/")
+        self.assertEqual(code, 200)
+        detail = page.split('<article id="detail"', 1)[1].split('</article>', 1)[0]
+        self.assertIn('id="return-to-list"', detail)
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        event_renderer = script.split("async function events(){", 1)[1].split("async function detail(", 1)[0]
+        detail_renderer = script.split("async function detail(id){", 1)[1].split("async function sources(){", 1)[0]
+        self.assertIn("const sameEvent=selected===id;if(!sameEvent){$('detail').hidden=true;$('investigation-revisions').replaceChildren();}selected=id", detail_renderer)
+        self.assertIn("b.dataset.eventId=e.event_id", event_renderer)
+        self.assertIn("item.dataset.eventId===focused", event_renderer)
+        delivery = script.split("const showDetail=detail;", 1)[1].split("$('investigate')", 1)[0]
+        self.assertIn("sequence!==deliverySequence", delivery)
+        self.assertIn("sequence===deliverySequence", delivery)
+        self.assertIn("item.dataset.eventId===id", delivery)
+        self.assertEqual(self.calls, [])
+
+    def test_investigation_control_explains_snapshot_replacement(self):
+        code, _, page = self.request("/")
+        self.assertEqual(code, 200)
+        detail = page.split('<article id="detail"', 1)[1].split('</article>', 1)[0]
+        self.assertIn('id="investigation-retention"', detail)
+        self.assertIn('此功能啟用前的版本未知，版本滿載時更新會失敗', detail)
+        self.assertIn('沒有前版的已 ACK 事件與調查可能依保留期限或容量規則被移除', detail)
+        self.assertIn('有前版時事件錨點受保護，但空間仍可能不足', detail)
+        self.assertLess(detail.index('id="investigation-retention"'), detail.index('id="investigate"'))
+        self.assertEqual(self.calls, [])
+
+    def test_investigation_capacity_has_user_facing_error(self):
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        action = script.split("$('investigate').addEventListener", 1)[1].split("$('filters')", 1)[0]
+        self.assertIn("investigation_capacity", action)
+        self.assertIn("原調查與事件未變更", action)
+        self.assertEqual(self.calls, [])
+
+    def test_revision_renderer_is_bound_to_detail_and_preserves_unknown(self):
+        code, _, page = self.request("/")
+        self.assertEqual(code, 200)
+        detail = page.split('<article id="detail"', 1)[1].split('</article>', 1)[0]
+        self.assertIn('id="investigation-revisions"', detail)
+        code, _, script = self.request("/app.js")
+        renderer = script.split("function renderInvestigationRevisions(value,preserve=false){", 1)[1].split("function renderInvestigation(", 1)[0]
+        for field in ("功能啟用前的版本未知", "證據未知", "版本數已達上限", "revision.missing_event_ids", "revision.changed_event_ids"):
+            self.assertIn(field, renderer)
+        self.assertNotIn("innerHTML", renderer)
+        self.assertIn("investigationGapLabels[gap.reason]", renderer)
+        self.assertIn("revision.diagnostic_evidence_status", renderer)
+        self.assertIn("診斷：'+diagnosticLabel", renderer)
+        self.assertIn("診斷狀態未知", renderer)
+        self.assertIn("diagnosis.observations", renderer)
+        self.assertIn("observed:'已觀測，非安全判定'", renderer)
+        self.assertIn("partial:'部分觀測，資料不完整'", renderer)
+        self.assertIn("diagnosticResultLabels[diagnosis.result_status]||'未知'", renderer)
+        self.assertIn("renderInvestigationRevisions(d.investigation_revisions,sameEvent)", script)
+        self.assertEqual(self.calls, [])
+
+    def test_saved_investigation_summary_preserves_uncertainty_and_bounds(self):
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        renderer = script.split("function renderInvestigation(value){", 1)[1].split("function isStatusSnapshot(", 1)[0]
+        for required in ("保存的調查快照", "c.anchor_event_id", "value.evidence_status==='saved_snapshot'",
+                         "未知，原事件缺失或已變更", "value.snapshot_freshness", "c.timeline.length",
+                         "correlation.examined", "c.gaps.length", "correlation.truncated===true",
+                         "correlation.truncated===false", "主機安全與入侵狀態未判定"):
+            self.assertIn(required, renderer)
+        self.assertNotIn("innerHTML", renderer)
+        self.assertEqual(self.calls, [])
+
+    def test_investigation_timeline_keeps_basis_and_gaps_with_each_observation(self):
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        renderer = script.split("function renderInvestigation(value){", 1)[1].split("function isStatusSnapshot(", 1)[0]
+        for required in ("li.dataset.eventId=item.event_id", "item.event_id===c.anchor_event_id",
+                         "correlation.basis==='same_host_source_stable_entity'",
+                         "c.gaps.filter(entry=>entry.event_id===item.event_id)",
+                         "value.missing_event_ids.includes(item.event_id)",
+                         "value.changed_event_ids.includes(item.event_id)", "investigationGapLabels[gap.reason]"):
+            self.assertIn(required, renderer)
+        self.assertIn("diagnostic_not_saved:'沒有保存診斷'", script)
+        self.assertNotIn("innerHTML", renderer)
+        self.assertEqual(self.calls, [])
+
+    def test_handling_history_renderer_is_bound_to_detail_and_keeps_uncertainty(self):
+        code, _, page = self.request("/")
+        self.assertEqual(code, 200)
+        self.assertIn('id="handling-history"', page.split('<article id="detail"', 1)[1].split('</article>', 1)[0])
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        renderer = script.split("function renderHandlingHistory(value){", 1)[1].split("function renderInvestigation(", 1)[0]
+        for required in ("value.state", "處置歷程無法確認", "並非已驗證操作者", "不等於 ACK",
+                         "item.previous_status", "item.status", "無變更", "value.count_capacity"):
+            self.assertIn(required, renderer)
+        self.assertNotIn("innerHTML", renderer)
+        self.assertIn("renderHandlingHistory(d.handling_history)", script)
+        self.assertEqual(self.calls, [])
+
     def test_served_script_exposes_pure_state_functions_and_bounded_timeouts(self):
         code, _, script = self.request("/app.js")
         self.assertEqual(code, 200)

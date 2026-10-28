@@ -346,12 +346,20 @@ class Application:
         _identifier(event_id)
         if type(status) is not str or status not in STATUSES:
             raise ValueError("invalid_event_status")
+        operation_id = self._request(source, operation_id)
         def update():
+            from .events.disposition_history_store import HistoryConflictError
+            from .events.store import CapacityError
             if self._closing or self.cancel.is_set():
                 return {"state": "blocked", "reason": "monitor_application_closing"}
-            return {**self._catalog().set_status(event_id, status),
-                    "state": "event_status_updated", "reason": "event_status_saved"}
-        return self._operate("set_event_status", source, operation_id, ("event_status", event_id, status), update)
+            try:
+                result = self._catalog().set_status(event_id, status, source=source, operation_id=operation_id)
+            except HistoryConflictError:
+                return {"state": "conflict", "reason": "operation_id_conflict"}
+            except CapacityError:
+                return {"state": "blocked", "reason": "event_status_capacity"}
+            return {**result, "state": "event_status_updated", "reason": "event_status_saved"}
+        return self._operate("set_event_status", source, operation_id, ("event_status", event_id, status, source), update)
 
     def status(self):
         from .background import status

@@ -267,14 +267,20 @@ class EventStore:
         count = int(previous[0]) if previous else 0
         db.execute("INSERT OR REPLACE INTO meta(key,value) VALUES(?,?)", (key, str(count + amount)))
 
+    @staticmethod
+    def _rotation_guard(db):
+        # Keep anchors and latest cases reachable while saved revisions exist.
+        has_revisions = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='investigation_revisions'").fetchone()
+        return (" AND NOT EXISTS (SELECT 1 FROM investigation_revisions r WHERE r.event_id=events.event_id)"
+                if has_revisions else "")
+
     def _prune(self, db, now, slots=1):
         self._expire(db, now)
         count = db.execute("SELECT COUNT(*) FROM events").fetchone()[0]
         needed = max(0, count + slots - self.max_events)
         if needed:
-            rows = db.execute("""SELECT event_id,delivery_status FROM events
-                WHERE delivery_status='ack'
-                ORDER BY updated_at,event_id LIMIT ?""", (needed,)).fetchall()
+            rows = db.execute("SELECT event_id,delivery_status FROM events WHERE delivery_status='ack'"
+                              + self._rotation_guard(db) + " ORDER BY updated_at,event_id LIMIT ?", (needed,)).fetchall()
             has_reviews = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_reviews'").fetchone()
             has_dispositions = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_dispositions'").fetchone()
             has_investigations = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_investigations'").fetchone()
@@ -289,8 +295,8 @@ class EventStore:
                 self._increment(db, "rotated_" + row["delivery_status"], 1)
 
     def _expire(self, db, now):
-        rows = db.execute("SELECT event_id,delivery_status FROM events WHERE delivery_status='ack' AND updated_at<?",
-                          (now-self.policy["acked_retention_seconds"],)).fetchall()
+        rows = db.execute("SELECT event_id,delivery_status FROM events WHERE delivery_status='ack' AND updated_at<?"
+                          + self._rotation_guard(db), (now-self.policy["acked_retention_seconds"],)).fetchall()
         self._delete_completed(db, rows)
         removed = db.execute("DELETE FROM receipts WHERE pending_finalization=0 AND acked_at<?", (now-self.policy["receipt_retention_seconds"],)).rowcount
         pinned = db.execute("SELECT COUNT(*) FROM receipts WHERE pending_finalization=1").fetchone()[0]
@@ -345,7 +351,8 @@ class EventStore:
         return (db.execute("PRAGMA page_count").fetchone()[0]-db.execute("PRAGMA freelist_count").fetchone()[0])*db.execute("PRAGMA page_size").fetchone()[0]
 
     def _rotate_completed(self,db,now):
-        rows=db.execute("SELECT event_id,delivery_status FROM events WHERE delivery_status='ack' ORDER BY updated_at,event_id LIMIT 100").fetchall()
+        rows=db.execute("SELECT event_id,delivery_status FROM events WHERE delivery_status='ack'"
+                        + self._rotation_guard(db) + " ORDER BY updated_at,event_id LIMIT 100").fetchall()
         self._delete_completed(db, rows)
         return len(rows)
 
@@ -538,17 +545,57 @@ class EventStore:
                         raise StoreError("investigation_diagnostic_changed")
                 db.execute("""CREATE TABLE IF NOT EXISTS event_investigations(event_id TEXT PRIMARY KEY,
                     payload_hash TEXT NOT NULL,result TEXT NOT NULL,updated_at REAL NOT NULL)""")
-                previous = db.execute("SELECT length(CAST(result AS BLOB)) FROM event_investigations WHERE event_id=?", (event_id,)).fetchone()
-                growth = max(0, len(encoded)-(previous[0] if previous else 0))
+                previous = db.execute("SELECT payload_hash,result,updated_at FROM event_investigations WHERE event_id=?", (event_id,)).fetchone()
+                if previous is not None:
+                    from .investigation_revision import make_revision
+                    from .investigation_revision_store import append_revision, RevisionCapacityError
+                    if previous[0] != payload_hash or type(previous[1]) is not str or len(previous[1].encode("utf-8")) > 65536:
+                        raise StoreError("investigation_previous_identity_conflict")
+                    try:
+                        old_case = json.loads(previous[1])
+                        revision = make_revision(old_case, self._row(row), saved_at=previous[2])
+                    except (TypeError, ValueError, KeyError, OverflowError):
+                        raise StoreError("investigation_previous_invalid") from None
+                    if old_case == result:
+                        return
+                    available = max(0, self.max_bytes - self._used_bytes(db) - self.ack_reserve_bytes)
+                    try:
+                        append_revision(db, revision, self._row(row), available_bytes=available)
+                    except RevisionCapacityError as exc:
+                        raise CapacityError("investigation_revision_capacity_pending_preserved") from exc
+                growth = max(0, len(encoded)-(len(previous[1].encode("utf-8")) if previous else 0))
                 page = db.execute("PRAGMA page_size").fetchone()[0]
                 if self._used_bytes(db)+growth+page+self.ack_reserve_bytes > self.max_bytes:
                     raise CapacityError("investigation_capacity_pending_and_ack_space_preserved")
                 db.execute("INSERT OR REPLACE INTO event_investigations VALUES(?,?,?,?)",
                            (event_id, payload_hash, encoded, time.time()))
+                if self._used_bytes(db)+self.ack_reserve_bytes > self.max_bytes:
+                    raise CapacityError("investigation_revision_capacity_pending_preserved")
         except sqlite3.Error as exc:
             raise self._sqlite_error(exc) from exc
 
-    def set_disposition(self, event_id, status):
+    def _restore_history(self, value, *, namespace):
+        """Internal restore building block; caller must independently verify provenance.
+
+        No CLI/UI endpoint calls this. It never deletes or ACKs events, and a
+        failure rolls back the full SQLite transaction including imported rows.
+        """
+        from .disposition_history_restore import restore_suffix
+        from .disposition_history_store import HistoryCapacityError
+        try:
+            with self._lock, self._connect() as db:
+                db.execute("BEGIN IMMEDIATE")
+                available = max(0, self.max_bytes - self._used_bytes(db) - self.ack_reserve_bytes)
+                result = restore_suffix(db, value, namespace=namespace, available_bytes=available)
+                if result["appended"] and self._used_bytes(db) + self.ack_reserve_bytes > self.max_bytes:
+                    raise CapacityError("history_restore_capacity_pending_preserved")
+                return {**result, "caller_commit_required": False}
+        except HistoryCapacityError as exc:
+            raise CapacityError("history_restore_capacity_pending_preserved") from exc
+        except sqlite3.Error as exc:
+            raise self._sqlite_error(exc) from exc
+
+    def set_disposition(self, event_id, status, *, source="unknown", operation_id=None):
         """Save a person's handling state without altering receipt or evidence.
 
         A handling state never means a source event was delivered or repaired.
@@ -558,40 +605,52 @@ class EventStore:
             raise ValueError("invalid_event_identifier")
         if type(status) is not str or status not in {"new", "read", "handled", "ignored"}:
             raise ValueError("invalid_event_status")
+        from .disposition_history_store import HistoryCapacityError, record_attempt
+        operation_id = uuid.uuid4().hex if operation_id is None else operation_id
         try:
             with self._lock, self._connect() as db:
                 db.execute("BEGIN IMMEDIATE")
-                source = db.execute("SELECT * FROM events WHERE event_id=?", (event_id,)).fetchone()
-                if source is None:
+                event_row = db.execute("SELECT * FROM events WHERE event_id=?", (event_id,)).fetchone()
+                if event_row is None:
                     raise ValueError("event_not_found")
                 # The catalog's preceding read is a separate connection. Check
                 # current payload/hash while this write transaction owns the
                 # lock, before creating or updating any handling state.
-                self._row(source)
+                self._row(event_row)
                 exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_dispositions'").fetchone()
                 previous = db.execute("SELECT status,updated_at FROM event_dispositions WHERE event_id=?", (event_id,)).fetchone() if exists else None
                 previous_status = previous["status"] if previous else "new"
                 if previous_status not in {"new", "read", "handled", "ignored"}:
                     raise StoreError("stored_event_disposition_invalid")
                 previous_time = _disposition_timestamp(previous["updated_at"]) if previous else None
-                if previous_status == status:
-                    return {"event_id": event_id, "status": status, "previous_status": previous_status,
-                            "changed": False, "status_updated_at": previous_time}
                 page = db.execute("PRAGMA page_size").fetchone()[0]
-                # The first write needs the table and its PK index. Reserve a
-                # page for a new row, too. Updates reuse their existing row.
-                growth = (3 if not exists else 1 if previous is None else 0) * page
-                if self._used_bytes(db) + growth + self.ack_reserve_bytes > self.max_bytes:
-                    raise CapacityError("event_status_capacity_pending_and_ack_space_preserved")
+                growth = (3 if not exists else 1 if previous is None else 0) * page if previous_status != status else 0
+                available = max(0, self.max_bytes - self._used_bytes(db) - growth - self.ack_reserve_bytes)
+                status_over_capacity = previous_status != status and self._used_bytes(db) + growth + self.ack_reserve_bytes > self.max_bytes
+                now = time.time()
+                try:
+                    attempt = record_attempt(db, {"event_id": event_id, "operation_id": operation_id,
+                        "previous_status": previous_status, "status": status, "source": source, "at": now},
+                        available_bytes=available, payload_hash=event_row["payload_hash"])
+                except HistoryCapacityError:
+                    reason = ("event_status_capacity_pending_and_ack_space_preserved" if status_over_capacity
+                              else "event_history_capacity_pending_and_ack_space_preserved")
+                    raise CapacityError(reason) from None
+                if not attempt["replayed"] and self._used_bytes(db) + growth + self.ack_reserve_bytes > self.max_bytes:
+                    raise CapacityError("event_history_capacity_pending_and_ack_space_preserved")
+                if attempt["replayed"] or previous_status == status:
+                    return {"event_id": event_id, "status": previous_status, "previous_status": previous_status,
+                            "changed": False, "status_updated_at": previous_time, "history_replayed": attempt["replayed"]}
                 db.execute("""CREATE TABLE IF NOT EXISTS event_dispositions(
                     event_id TEXT PRIMARY KEY,
                     status TEXT NOT NULL CHECK(status IN('new','read','handled','ignored')),
                     updated_at REAL NOT NULL)""")
-                now = time.time()
                 db.execute("INSERT OR REPLACE INTO event_dispositions(event_id,status,updated_at) VALUES(?,?,?)",
                            (event_id, status, now))
+                if self._used_bytes(db) + self.ack_reserve_bytes > self.max_bytes:
+                    raise CapacityError("event_history_capacity_pending_and_ack_space_preserved")
                 return {"event_id": event_id, "status": status, "previous_status": previous_status,
-                        "changed": True, "status_updated_at": _iso(now)}
+                        "changed": True, "status_updated_at": _iso(now), "history_replayed": False}
         except sqlite3.Error as exc:
             raise self._sqlite_error(exc) from exc
 

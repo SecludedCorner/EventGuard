@@ -9,6 +9,16 @@ from .runtime import Runtime, read_json
 from .operations import OperatorAPI, store as _store, status, export_report
 
 
+def _unique_json_object(pairs):
+    """Reject ambiguous JSON objects before validating an untrusted backup."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("history_backup_duplicate_field")
+        result[key] = value
+    return result
+
+
 def parser():
     p=argparse.ArgumentParser(prog="eventguard",description="EventGuard 本機資安監看。run 啟動採集、事件頁與通知。")
     p.add_argument("--format",choices=("auto","json","text"),default="auto",
@@ -140,6 +150,13 @@ def parser():
     handling.add_argument("--event-id",required=True)
     handling.add_argument("--status",choices=("new","read","handled","ignored"),required=True)
     handling.add_argument("--event-source",type=Path,help="選填。test範圍內既有的合成事件source。")
+    history_backup=eventsub.add_parser("backup-history",help="明確保存歷程快照到 reports；不清理、不 ACK。")
+    history_backup.add_argument("--namespace",choices=("live","test"),default="live")
+    history_backup.add_argument("--name",required=True,help="history-backup-<名稱>.json；已有檔案不覆寫")
+    history_backup.add_argument("--event-source",type=Path,help="選填。僅 test 範圍既有合成事件 source。")
+    history_preview=eventsub.add_parser("preview-history",help="從標準輸入唯讀預檢備份身分；不還原、不刪除。")
+    history_preview.add_argument("--namespace",choices=("live","test"),default="live")
+    history_preview.add_argument("--event-source",type=Path,help="選填。僅 test 範圍既有合成事件 source。")
     rules=sub.add_parser("rules",help="查看或檢查config/rules.json。不採集。")
     rules.add_argument("action",choices=("list","validate"),default="list",nargs="?")
     for name in ("inspect", "diagnose", "receive", "retry"):
@@ -292,7 +309,7 @@ def execute(args,runtime,progress=None):
         from .diagnostics.api import DiagnosticAPI
         return DiagnosticAPI(query_admission=runtime.query_launch).query(args.operation,values)
     if args.command=="events":
-        if args.event_command in {"list","detail","set-status","investigate"}:
+        if args.event_command in {"list","detail","set-status","investigate","backup-history","preview-history"}:
             from .events.catalog import EventCatalog
             catalog=EventCatalog(runtime.root,args.namespace,directory=args.event_source)
             if args.event_command=="list":
@@ -302,7 +319,19 @@ def execute(args,runtime,progress=None):
                 return catalog.detail(args.event_id)
             if args.event_command=="investigate":
                 return catalog.investigate(args.event_id)
-            return catalog.set_status(args.event_id,args.status)
+            if args.event_command=="backup-history":
+                from .events.disposition_history_backup_file import write_backup
+                return write_backup(runtime.root,args.name,catalog.handling_history_snapshot())
+            if args.event_command=="preview-history":
+                from .events.disposition_history_backup import MAX_EXPORT_BYTES
+                stream=getattr(sys.stdin,"buffer",sys.stdin)
+                if stream.isatty():
+                    raise ValueError("history_backup_stdin_required")
+                content=stream.read(MAX_EXPORT_BYTES+1025)
+                if len(content)>MAX_EXPORT_BYTES+1024:
+                    raise ValueError("history_backup_bytes_limit")
+                return catalog.preview_handling_history(json.loads(content,object_pairs_hook=_unique_json_object))
+            return catalog.set_status(args.event_id,args.status,source="cli")
         if args.event_command=="receive":
             return operator.call("receive_event",args.event_id,args.namespace)
         if args.event_command=="ack":

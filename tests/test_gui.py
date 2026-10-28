@@ -101,6 +101,16 @@ class GuiPresentationTests(unittest.TestCase):
         self.assertEqual({row[0] for row in view["sources"]}, set(SOURCE_NAMES))
         self.assertIn("未知", view["counts"])
         self.assertFalse(view["agent_enabled"])
+        self.assertIn("未知／尚無觀察 7", view["source_gaps"])
+
+    def test_source_gaps_count_overlap_without_promoting_history_to_current_success(self):
+        rows = [{"source_id": key, "status": state, "freshness": {"state": fresh},
+                 "last_success_state": "known", "last_success_at": "2026-01-01T00:00:00Z"}
+                for key, (state, fresh) in zip(SOURCE_NAMES, [("denied", "stale"), ("partial", "fresh"),
+                    ("error", "fresh"), ("ok", "fresh"), ("ok", "unknown"), ("not_applicable", "fresh"), ([], [])])]
+        view = view_snapshot({"sources": rows})
+        for text in ("可讀且新鮮 1", "拒讀 1", "部分可讀 1", "讀取失敗 1", "過期 1", "未知／尚無觀察 2", "不適用 1", "非安全判定"):
+            self.assertIn(text, view["source_gaps"])
 
     def test_enabled_or_old_running_flag_is_not_proof_of_collection(self):
         view = view_snapshot({"state": "running", "monitoring": False, "desired_enabled": True})
@@ -261,6 +271,8 @@ class GuiOwnTkWidgetTests(unittest.TestCase):
         self.assertFalse(any(action in {"start", "pause", "close"} for action, _ in self.controller.calls))
         self.assertEqual(self.ui.detail.cget("state"), "disabled")
         self.assertIn("暫停", self.ui.headline.get())
+        self.assertIn("部分可讀 1", self.ui.source_gaps.get())
+        self.assertIn("未知／尚無觀察 6", self.ui.source_gaps.get())
         self.evidence = {"scope": "real own Tk widgets + fixture controller; no collector/model",
                          "source_rows": 7, "model_calls": 0}
 
@@ -275,6 +287,34 @@ class GuiOwnTkWidgetTests(unittest.TestCase):
         self.ui._apply_snapshot(copy.deepcopy(self.controller.value))
         self.assertEqual(self.ui.activities.item(row["id"], "values")[3], "已完成")
         self.assertIn("執行中 0", self.ui.activity_status.get())
+
+    def test_real_source_widgets_separate_history_from_denial_staleness_and_missing(self):
+        at = "2026-01-01T00:00:00+00:00"
+        document = copy.deepcopy(self.controller.value)
+        cases = [("denied", "fresh", "known", at), ("ok", "stale", "known", at),
+                 ("unknown", "unknown", "unknown", None), ("denied", "fresh", "known", "invalid"),
+                 ("ok", "fresh", "known", "9999-01-01T00:00:00Z"), ("ok", "fresh", "known", at)]
+        before = copy.deepcopy(document)
+        for source, (status, fresh, known, success) in zip(SOURCE_NAMES, cases):
+            document["sources"] = [{"source_id": source, "status": status, "row_count": 0,
+                                   "freshness": {"state": fresh}, "last_success_state": known,
+                                   "last_success_at": success}]
+            self.ui._apply_snapshot(document)
+            self.window.update_idletasks()
+            row = self.ui.sources.item(source, "values")
+            self.assertEqual(row[2], "0")
+            self.assertEqual(row[5], at if known == "known" and success == at else "未知／尚無成功紀錄")
+            if status == "denied":
+                self.assertEqual(row[1], "拒讀")
+            if fresh == "stale":
+                self.assertEqual(row[3], "過期")
+                self.assertIn("過期 1", self.ui.source_gaps.get())
+            if status == "denied":
+                self.assertIn("拒讀 1", self.ui.source_gaps.get())
+        self.assertEqual(self.ui.sources.heading("success", "text"), "最後成功時間（歷史）")
+        self.assertEqual(len(self.ui.sources.get_children()), 7)
+        self.assertFalse(any(action != "snapshot" for action, _ in self.controller.calls))
+        self.assertEqual(before["events"], document["events"])
 
     def test_start_stays_responsive_while_controller_is_busy_then_pause_is_durable(self):
         self.controller.release.clear()

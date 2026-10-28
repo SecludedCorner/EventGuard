@@ -1,5 +1,347 @@
 # EventGuard 現況
 
+## 2026-10-29 整合測試的受保護 checkout 路徑修正
+
+隔離整合工作樹在 `.codex` 下，首次完整回歸的 shipped facts example 測試直接把該路徑交給 inventory，觸發既有 private_or_build_path_refused 保護。main 整合暫停；測試改將已知公開範例複製至專用臨時目錄再驗證，沒有修改產品拒讀規則。`reports/verify-inventory-fixture-location-20261029-01` 因指定不存在模組而未執行測試，保留此命令失敗；正確命令 `py -3.13 -B scripts/verify.py --run-dir reports/verify-inventory-fixture-location-20261029-02 --timeout-seconds 180 --module test_intelligence_integration --module test_adversarial_intelligence`，2026-10-29 02:50（UTC+8）：16/16、0 skip、source_unchanged，Job 自然退出／remaining 0。`reports/build-inventory-fixture-location-20261029-01`：266 檔 hash 相符、244 檔 Python 編譯通過。尚需在隔離整合樹重跑完整回歸，未將首輪失敗改記通過。
+
+## 2026-10-29 500 行範圍更正與 main 整合
+
+使用者澄清上限包含開發分支相對 main 待整併差異，並明確授權測試通過後普通 merge／push main。CLAUDE 已更新兩個比較基準與整合流程；不再以開發分支已 push 代替整合。開始時工作樹乾淨、開發分支 c83ff95 遠端一致；origin/main=c80a4be，相對差異 49 檔 +3936/−71。這是既有 backlog，先完成整合，暫不增加產品功能。本地 main 為保留的不同歷史，無共同祖先；不覆寫，從 origin/main 準備隔離整合 checkout。整合結果另記，尚未宣稱 main 更新或產品驗收完成。
+
+2026-10-29 02:41（UTC+8）父版本來源 build：`py -3.13 -B scripts/package_candidate.py --root reports/release-prep-branch-limit-20261029-01 --commit c83ff950e59646c0de48fce907b43bee2a89ecfa`，346 檔可重現；`py -3.13 -B scripts/verify.py --run-dir reports/verify-branch-limit-20261029-01 --timeout-seconds 180 --module test_package_candidate`，8/8、0 skip、Job 自然退出／remaining 0。純文件另做 diff／連結檢查，不含新產品驗收。
+
+## 2026-10-29 桌面詳情共用保存資料入口
+
+DesktopController.inspect 改用既有 EventCatalog.detail，帶回已保存調查、修訂與處置歷程；仍明示 system_query_executed=false，不執行 diagnose／採集／模型／ACK。合成事件在臨時 live 目錄建立保存調查後，讀取保持 SQLite hash 與 pending 不變。2026-10-29 02:35（UTC+8）`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-saved-detail-20261029-01 --timeout-seconds 180 --module test_desktop --module test_gui --module test_event_investigation`：75/75、0 skip、source_unchanged、Job 自然退出 0／remaining 0。`reports/build-desktop-saved-detail-20261029-01`：受測 manifest 266 檔相符、244 Python 編譯成功，包含未提交變更。此切片接通資料與原始結構化檢視，友善摘要下一單元；人工桌面與瀏覽器仍待驗。
+
+## 2026-10-29 持續執行順序更新
+
+MAINTENANCE_GOAL 與 CLAUDE 已明定瀏覽器待驗不阻塞桌面／離線產品工程、每單元驗證後立即保存並接續，保留所有原 Web／實機驗收條件。平台目標卡片仍為 blocked；嘗試其「編輯目標」介面兩次均遇座標幾何不可用，未宣稱卡片已更新或恢復。磁碟佇列可繼續執行，不建立排程。2026-10-29 02:33（UTC+8）父 SHA 5208415 的來源 build 346 檔可重現（reports/release-prep-continuous-goal-20261029-01）；`py -3.13 -B scripts/verify.py --run-dir reports/verify-continuous-goal-20261029-01 --timeout-seconds 180 --module test_package_candidate`：8/8、0 skip、source_unchanged，Job 自然退出／remaining 0。本次純文件，不提供新產品驗收。
+
+## 2026-10-29 桌面來源缺口摘要
+
+Tk 七來源頁新增只讀摘要，分列可讀且新鮮、拒讀、部分可讀、讀取失敗、過期、未知／尚無觀察及不適用；明示分類可重疊、均非安全判定。歷史成功不增加目前可讀計數，未出現的來源仍列未知。2026-10-29 02:28（UTC+8）`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-source-gaps-20261029-01 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop --module test_source_success_history`：75/75、0 skip、source_unchanged，含真 Tk 元件刷新摘要與 fixture，Job 自然退出 0／remaining 0。`reports/build-desktop-source-gaps-20261029-01`：當前工作樹 266 檔 hash 與受測來源相符、244 檔 Python 編譯成功。未採集／模型／ACK；人工版面與瀏覽器關卡仍待驗。
+
+## 2026-10-29 桌面版七來源歷史成功時間
+
+既有 Tk 桌面版沿用 DesktopController；快照從 source_status 只讀保存的 live 成功紀錄，七來源表格新增「最後成功時間（歷史）」。目前可見性／新鮮度獨立顯示；未知、無效、無時區及未來時間保持未知，零列不抹除歷史成功。未啟動監看、原生採集、模型或 ACK。
+
+2026-10-29 02:25（UTC+8）：`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-source-history-20261029-01 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop --module test_source_success_history`，74/74、0 skip、source_unchanged；包含真 Tk 元件配合 fixture、六情境表格驗證、保存來源讀前後 hash 不變，Job 自然退出 0／remaining 0。`reports/build-desktop-source-history-20261029-01/build-result.json`：對照同一受測來源 manifest，266 檔 hash 相符、244 Python 檔編譯成功；這是未提交工作樹的來源 build，非獨立 exe。桌面人工操作／縮放、Web 修訂／鍵盤／200% 及實機關卡仍待驗。
+
+## 2026-10-29 500 行上限與瀏覽器工具排查
+
+CLAUDE.md 已增加相對 HEAD 的未提交新增＋刪除 500 行硬上限，包含 staged／unstaged／本次 untracked，保留每 commit 約 200 行與每單元立即 push。開始時工作樹乾淨。本次僅修改規則與診斷記錄。
+
+2026-10-29 01:34（UTC+8）：`py -3.13 -B scripts/package_candidate.py --root reports/release-prep-diff-limit-20261029-01 --commit 02725aa91ccac28e98688aa3b07d63d16e8d5020`，父版本來源 build 346 檔可重現，不含本次文件；`py -3.13 -B scripts/verify.py --run-dir reports/verify-diff-limit-20261029-01 --timeout-seconds 180 --module test_package_candidate`，8/8、0 skip、source_unchanged，Job 自然退出 0／remaining 0。文件另做 diff／本地連結與修改量檢查；無新增產品驗收。
+
+瀏覽器存取排查已嘗試重建連線與直接選取內建瀏覽器；原生視窗 Raise／還原後成功讀取設定頁並觀察瀏覽器開關開啟，但操作中亦出現視窗尺寸變更及控制項快取失效，仍未證明瀏覽器工具已恢復。不得沿用失效識別操作或將未知根因歸咎未授權；未更動權限、未保存或提交畫面。原生 UI 狀態恢復不等於瀏覽器驗收通過。
+
+## 2026-10-29 既有授權提醒與瀏覽器限制更正
+
+CLAUDE.md 已記錄本專案既有讀改、fixture／合成測試、隔離瀏覽器驗收及指定開發分支 commit／push 授權；相同範圍不重複詢問。使用者設定畫面顯示瀏覽器已開啟，但工具回報停用，原因未確認；舊文的「Work 設定禁用」僅代表工具原文，不證明使用者未授權。UI／鍵盤／200% 仍待實測。
+
+本次純文件變更；2026-10-29 01:23（UTC+8）來源 build：`py -3.13 -B scripts/package_candidate.py --root reports/release-prep-permission-reminder-20261029-01 --commit df5680825d518a94bfa447a82630a65b8470315e`，346 檔可重現。`py -3.13 -B scripts/verify.py --run-dir reports/verify-permission-reminder-20261029-01 --timeout-seconds 180 --module test_package_candidate`：8/8、0 skip、source_unchanged、Job 自然退出 0／remaining 0；此來源 build 為父版本，不含本次文件改動，不代表新增產品或瀏覽器驗收。
+
+## 2026-10-28 可重跑修訂元件合成行為測試
+
+新增專案測試直接執行實際修訂 renderer，合成 DOM 核對診斷變更與成員相符分列、部分診斷、重繪展開／摘要焦點、外部焦點不搶及切事件不沿用。使用既有 Node 與 Windows 私有 Job；缺少任一條件明示 skip、不下載。`reports/verify-revision-renderer-reusable-20261028-01` UTC 11:29:27：21/21、0 skip、244 AST、source_unchanged；受管 Job 自然 0／remaining 0／無強停。合成 DOM 非瀏覽器，不提供版面、200% 或真實鍵盤證據；Work 設定仍禁用本機瀏覽器。
+
+## 2026-10-28 修訂收合摘要診斷狀態 WIP
+
+修訂收合摘要現在同時顯示事件成員與診斷證據狀態，避免成員相符掩蓋診斷變更或缺失。`reports/verify-revision-diagnostic-summary-20261028-01` UTC 11:27:37：26/26、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。`reports/revision-diagnostic-summary-dom-20261028-01` 實際 renderer 合成 DOM 五種診斷狀態通過，不是真瀏覽器；Work 設定仍禁用本機瀏覽器，UI 待驗。
+
+## 2026-10-28 前版診斷結果語意 WIP
+
+前版診斷 observed 顯示「已觀測，非安全判定」，partial 顯示「部分觀測，資料不完整」，不認得的結果顯示未知。`reports/verify-revision-diagnostic-result-20261028-01` UTC 11:26:05：28/28、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。`reports/revision-diagnostic-result-dom-20261028-01` 直接執行實際 renderer 的三組 synthetic DOM，非瀏覽器；Work 設定仍禁用本機瀏覽器，UI 待驗。
+
+## 2026-10-28 歷程預檢拒絕重複 JSON 欄位
+
+標準輸入的備份 JSON 在所有物件層拒絕重複欄位，避免解析器對來源或完整性欄位採不同值；不改既有備份格式。`reports/verify-history-preview-duplicate-20261028-01` UTC 11:23:39：35/35、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 測頂層及巢狀重複、正常預檢、DB／pending／ACK 不變；此檢查不認證來源或證明可還原。
+
+## 2026-10-28 歷程預檢實際 CLI 合成驗證
+
+`reports/history-preview-real-cli-20261028-03` 使用既有 PowerShell 7 管線與真正 `EventGuard.cmd`／CLI、專用 synthetic event-source；預檢 exact_prefix、1 筆已存在且可還原性 unknown，無 ID 輸出。合成 DB SHA256 前後 57e5bb4065816cb369753eae5efb19c75ee52efcd91bb5b5968b2abf5914b8a8、pending 1／ACK 0／native 0／model 0；Job 自然退出 0／remaining 0／無強停。`...-02` 另驗直接 stdin 檔案 handle，亦自然 0；`...-01` 輔助程式退出原因無效而未保存原 Job 回條，殘留狀態未確認，不列為通過。均非真實資料還原或容量釋放。
+
+## 2026-10-28 歷程預檢機器輸出未知狀態
+
+JSON 明確將來源真實性、歷程是否完整、容量與可還原性標為 unknown，即使身分零衝突也不升格為可還原。`reports/verify-history-preview-unknown-20261028-01` UTC 11:18:26：10/10、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic CLI／前綴定向；無真實還原或容量釋放。
+
+## 2026-10-28 歷程預檢順序比對
+
+唯讀預檢增加目標與備份的完全前綴／分歧及筆數，避免僅看身分衝突誤認順序一致。`reports/verify-history-preview-order-20261028-01` UTC 11:14:43：13/13、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 核對短前綴及已分歧目標，與內部追加原件的接受／拒絕一致。完全前綴仍不證明來源真實性、備份是否涵蓋全部歷程、容量或可還原性；無真實還原或容量釋放。
+
+## 2026-10-28 歷程完全前綴追加與分歧拒絕
+
+`reports/verify-history-restore-prefix-20261028-01` UTC 11:10:51：15/15、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 實測先還原一筆後再追加尾段，順序不變、重開重播不增列；目標後續已有不同操作時整筆拒絕，DB／pending／ACK 不變。仍無使用者入口、來源認證、真實還原與容量釋放。
+
+## 2026-10-28 歷程還原內部交易與容量回滾
+
+EventStore 新增僅內部使用的追加還原交易：先預留 ACK 空間，再以實際 DB 使用量複核；容量不足整筆回滾。`reports/verify-history-restore-integration-20261028-01` UTC 11:08:45：42/42、0 skip、242 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 核對前後容量失敗、重開與操作重播、pending／ACK／來源不變。沒有 CLI／UI 還原入口、備份來源認證、真實還原或容量釋放；歷程追加不改目前處置狀態。
+
+## 2026-10-28 歷程備份追加還原交易原件
+
+新增未接產品入口的交易原件：僅在目標現存歷程與備份是完全一致前綴、scope 及每個事件 payload 身分吻合時追加缺失尾段，保留順序；不刪源、不改處置狀態、不 ACK、不自行 commit。savepoint 失敗回滾；呼叫端仍須獨立驗證來源真實性、ACK 保留及實際 bytes，才能決定交易。`reports/verify-history-restore-primitive-20261028-02` UTC 11:05:31：18/18、0 skip、241 AST、source_unchanged，Job 自然 0／remaining 0／無強停。synthetic 測空目標、重播、錯 scope／hash／未綁定／改事件、容量拒絕與中途失敗；這不等於已完成還原產品、容量釋放或授權真實資料操作。
+
+## 2026-10-28 處置歷程備份唯讀預檢 CLI
+
+新增 `events preview-history`，從標準輸入有界接收已保存備份，對指定 namespace／事件庫唯讀核對身分，只輸出彙總計數；交互式 stdin、超大內容、錯誤／未綁定 scope 拒絕。沒有還原、清理或 ACK，零衝突也不證明來源真實性、容量或可還原性。`reports/verify-history-preview-cli-20261028-02` UTC 11:01:42：38/38、0 skip、239 AST、source_unchanged；Job 自然 0／remaining 0／無強停。僅 synthetic；無損釋放容量尚未實作。
+
+## 2026-10-28 調查保留政策明示 WIP
+
+事件詳情說明：沒有前版的已 ACK 事件／調查可能依期限或容量輪替，有前版時錨點受保護但空間可能不足；同步修正 MAINTENANCE_GOAL 過時的修訂進度。`reports/verify-investigation-retention-copy-20261028-01` UTC 10:59:13：62/62、0 skip、238 AST、source_unchanged；Job 自然 0／remaining 0／無強停。靜態元件與保留策略合成回歸通過；Work 禁用本機瀏覽器，實際畫面仍未驗。
+
+## 2026-10-28 修訂診斷 loopback GET
+
+`reports/verify-revision-diagnostics-http-20261028-01` UTC 10:56:47：17/17、0 skip、238 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 真 loopback GET 核對同一前版事件成員相符時，診斷變更仍另回 changed；DB bytes／pending／ACK 不變，model 0。這不是真瀏覽器驗收。
+
+## 2026-10-28 前版診斷證據呈現 WIP
+
+前版畫面分開顯示診斷相符、變更、缺失、未綁定或未知，並顯示當時保存診斷摘要；不把事件成員雜湊相符解讀為診斷相符或主機安全。`reports/verify-revision-diagnostics-web-20261028-01` UTC 10:55:18：25/25、0 skip、238 AST、source_unchanged；Job 自然 0／remaining 0／無強停。`reports/revision-diagnostics-dom-20261028-01` 實際 renderer 五種合成 DOM 狀態通過；非瀏覽器，Work 禁用本機瀏覽器，頁面驗收仍 WIP。
+
+## 2026-10-28 前版調查的診斷證據狀態
+
+事件詳情唯讀 API 為每個前版分別回報診斷 matched／changed／missing／not_bound；讀取方未提供診斷則 unknown，不以事件成員相符推定診斷相符。`reports/verify-revision-diagnostics-20261028-02` UTC 10:53:47：22/22、0 skip、238 AST、source_unchanged，Job 自然 0／remaining 0／無強停。synthetic 測保存診斷更改／移除、舊案未綁定與未提供來源；無重新採集、ACK 或模型。Web 尚未呈現此欄且瀏覽器受阻。
+
+## 2026-10-28 修訂自動更新展開與焦點 WIP
+
+同一事件自動重繪按穩定 revision_id 保留展開狀態與原摘要焦點；使用者焦點在外部時不搶焦點；切事件立即清除舊版 DOM，防止相同 revision_id 跨事件串用。`reports/verify-revision-refresh-20261028-02` UTC 10:51:46：29/29、0 skip、237 AST、source_unchanged、Job 自然 0／remaining 0／無強停。`reports/revision-refresh-dom-fixture-20261028-01` 實際 renderer 的三組合成 DOM 驗證插入新版後保留、外部焦點、切事件不沿用；不是真瀏覽器，Work 設定仍禁用本機瀏覽器，UI 未驗收。
+
+## 2026-10-28 修訂穩定識別前置
+
+事件詳情修訂資料加上有界 SQLite revision_id，供 UI 重繪辨識同一版本；不代表操作者或認證身分。`reports/verify-revision-stable-id-20261028-01` UTC 10:49:46：34/34、0 skip、237 AST、source_unchanged，Job 自然 0／remaining 0／無強停。synthetic 核對重讀識別穩定、舊庫及資料不變。UI 展開／焦點保留尚未接線，瀏覽器仍受 Work 設定阻擋。
+
+## 2026-10-28 修訂呈現合成 DOM 補充
+
+`reports/revision-web-dom-fixture-20261028-01/run.js` 對目前實際 renderInvestigationRevisions 執行三組合成 DOM fixture：未知／無歷程／缺口與容量滿載，Node exit 0；驗證中文缺口與文字輸出。此非瀏覽器、無版面或鍵盤證據，不改變 Work 設定阻擋及 UI WIP。
+
+## 2026-10-28 先前版本缺口中文說明 WIP
+
+先前版本與最新快照共用固定缺口中文標籤，未知代碼仍按不可信文字顯示；`reports/verify-investigation-revision-gap-labels-20261028-02` UTC 10:44:47，43/43、0 skip、237 AST、source_unchanged，Job 自然 0／remaining 0／無強停。`reports/revision-web-javascript-check-20261028-02` 本機 Node `--check` 語法通過，不是 JS 行為／瀏覽器驗收；Work 禁用本機瀏覽器，修訂畫面仍 WIP。完整 fixture 回歸僅針對前版 d0faaf1。
+
+## 2026-10-28 案件修訂完整合成回歸
+
+產品來源 `d0faaf1b156d7344e0571696eebc5c728e9dcf62`：`reports/verify-full-revision-20261028-01` UTC 10:41:02，1715 執行／1712 通過／3 跳過／0 失敗錯誤，237 AST、source_unchanged；2 skip 為 symlink 不可建立、1 skip 為 notification_icon_unavailable。Job 自然 0／remaining 0／無強停，無 native 掃描／模型。`reports/release-prep-revision-20261028-01` 來源 commit 339 檔、兩 ZIP 可重現 SHA256 887d7e8b758e455bcb68fb16bacba162acd0ad002660dbf43b3f0ca47c71a299；僅候選來源封裝，非發布。瀏覽器 Work 設定禁用，修訂 UI 仍待真瀏覽器驗收；容量無損釋放、200%／人類／原生／24h／重啟／桌面喚醒各自未達。
+
+## 2026-10-28 調查容量不足錯誤回報
+
+調查更新遇容量不足時 loopback API 明確回報 investigation_capacity，Web 顯示容量不足與原調查／事件未變更。`reports/verify-investigation-revision-capacity-error-20261028-02` UTC 10:29:30：49/49、0 skip、237 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成 HTTP 注入容量錯誤、核對回碼與 DB 不變；交易滿載回滾見先前 integration 證據。Web JS 僅靜態測，因 Work 禁用本機瀏覽器尚未驗實際顯示。
+
+## 2026-10-28 修訂全域上限與並行合成測試
+
+`reports/verify-investigation-revision-concurrency-20261028-02` UTC 10:26:43：17/17、0 skip、237 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成記憶體 SQLite 實際塞入 256 版本並拒絕第 257 筆；兩執行緒同事件更新後前版與兩個新快照均可讀、pending 2／ACK 0。全域滿載只測儲存原件，尚未驗整體產品流量或跨程序壓力；瀏覽器與容量恢復仍未完成。
+
+## 2026-10-28 保護有修訂的事件錨點
+
+自動期限、筆數與空間輪替排除有已保存修訂的 ACK 事件，避免原事件和最新案件被清除後版本無法回看；其他 ACK 事件沿用既有政策。`reports/verify-investigation-revision-retention-20261028-03` UTC 10:24:57：61/61、0 skip、236 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成測試涵蓋過期、空間輪替與筆數壓力，原案／修訂／pending 保留。保留錨點可能使容量先滿，尚無安全歸檔／釋放方案；不可自行刪除。瀏覽器 WIP 仍未驗。
+
+## 2026-10-28 調查修訂 Web 呈現 WIP（瀏覽器待驗）
+
+事件詳情新增前版展開、觀測、缺口、證據未知與容量說明；`reports/verify-investigation-revision-web-20261028-01` UTC 10:21:28：46/46、0 skip、236 AST、source_unchanged，僅契約／合成測試，非瀏覽器驗收。`reports/investigation-revision-browser-20261028-01` 隔離合成伺服器已準備，但 IAB 回報 Local browser use is disabled in Work settings，沒有實際操作／渲染證據；Job 合作退出 0／remaining 0／無強停、0 POST／native／model，DB SHA256 前後 9565ba61b68544acb447b85f98c3ce7f0473e6007a0c7ae663f45b125a1355ee。此切片是 WIP，須恢復允許的瀏覽器後依規格驗收，不能標 UI DONE。
+
+## 2026-10-28 事件詳情修訂唯讀 API
+
+既有事件詳情 GET 增加有界 `investigation_revisions`，包含已保存前版與 evidence_status；舊庫未記錄、損壞／成員缺失為 unknown。`reports/verify-investigation-revision-api-20261028-01` UTC 10:19:28：67/67、0 skip、236 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成 loopback GET 與 catalog 一致、來源 DB hash 不變、model 0；尚未接 Web 呈現，也未驗過期 anchor 回看、全域滿載或併發。
+
+## 2026-10-28 案件修訂唯讀核心
+
+有界唯讀交易核對快照與事件身分、hash；舊庫無表明示未記錄，此前歷史 unknown；成員缺失／變更為 unknown，不修改來源。`reports/verify-investigation-revision-read-20261028-01` UTC 10:17:54：34/34、0 skip、236 AST、source_unchanged，Job 自然 0／remaining 0／無強停。只完成讀取核心，尚未接 API／Web；hash 非認證，anchor 過期後的回看仍未實作。
+
+## 2026-10-28 案件修訂原子保存
+
+明確更新已保存調查時，在同一 SQLite 交易先驗並保存上一版，再寫最新案；相同快照重送不新增版本。容量不足或舊快照損壞直接失敗，回滾保留先前資料與 pending／ACK。`reports/verify-investigation-revision-integration-20261028-03` UTC 10:16:28：56/56、0 skip、234 AST、source_unchanged；Job 自然 0／remaining 0／無強停，均 synthetic。每事件 16、全域 256 上限後不自動清理；版本讀取／瀏覽器、全域滿載和併發尚未驗。已有舊版之前的歷史不能重建；到期 anchor 的歷史保留與回看方案仍需處理。
+
+## 2026-10-28 案件修訂交易儲存原件
+
+新增受呼叫端交易控制的有界 append 原件；不自行 commit 或淘汰，容量／位元組不足拒絕，回滾可撤銷建表與插入。`reports/verify-investigation-revision-store-20261028-01` UTC 10:13:48：29/29、0 skip、233 AST、source_unchanged；Job 自然 0／remaining 0／無強停。尚未接產品寫入、核實實際 DB 成長、讀取或 UI；此原件不代表能回看調查。
+
+## 2026-10-28 案件修訂有界契約前置
+
+純契約定義每事件 16、全域 256 上限與 64 KiB case，綁定錨定事件／內容 hash、實際保存時間；相容 1.0／1.1 case，拒絕偽造狀態、身分及超限。不寫資料、不補造歷史，也未提供使用者功能。`reports/verify-investigation-revision-contract-20261028-02` UTC 09:53:30：33/33、0 skip、231 AST、source_unchanged、Job 自然 0／remaining 0／無強停。交易保存、讀取、瀏覽器及容量故障驗收尚未實作；完整清單見 MAINTENANCE_GOAL。指定競品研究任務原目標已完成，後續市場比較未視為已實測。當前 Codex 工程目標達使用額度限制，保存後不承諾自動續跑。
+
+## 2026-10-28 調查更新的覆蓋提示
+
+事件詳情在建立／更新按鈕前明示僅保留最新快照、更新取代舊版且不能回看。`reports/verify-investigation-retention-warning-20261028-03` UTC 09:51:31：35/35、0 skip、229 AST、source_unchanged、Job 自然 0／remaining 0／無強停。`reports/investigation-retention-ui-20261028-01` 隔離真瀏覽器打開合成事件詳情，提示與按鈕可見且順序正確；SQLite SHA256 前後 ED790B81…B697E0、0 POST／native／model，Job 自然 0。此提示未提供版本保存。
+
+200% 縮放嘗試見 `reports/ux-zoom-20261028-01`：IAB 快捷鍵後 CSS viewport／devicePixelRatio 未改變，未達驗收，無法用窄視窗代稱真縮放；合成 DB hash 不變、0 POST／native／model，Job 自然 0。
+
+## 2026-10-28 歷程備份身分唯讀預檢核心
+
+新增未接操作入口的唯讀預檢：核對備份完整性與 namespace、事件實際 payload hash、未綁定記錄、缺事件及 operation 衝突，只輸出計數，不執行或授權還原。`reports/verify-history-backup-preview-20261028-01`：19/19、0 skip、229 AST、source_unchanged、Job 自然 0／remaining 0／無強停；synthetic 驗證相同、缺少、衝突、範圍錯誤、舊格式 unknown、來源不改。這不檢查容量、歷程順序、來源真實性或能否恢復；完整還原及釋放容量仍未實作。
+
+## 2026-10-28 歷程備份 CLI 與來源範圍
+
+明確執行 `events backup-history --namespace test|live --name history-backup-<名稱>.json` 才會寫入 reports；讀取使用 query-only，輸出僅為摘要，來源不刪除、不 ACK。快照 1.1 綁定 namespace，1.0 回報 unknown；SHA256 非簽章。`reports/verify-history-backup-cli-20261028-03`：42/42、0 skip、228 AST、source_unchanged、Job 自然退出 0／remaining 0／無強停，僅 synthetic。實際 junction、斷電後目錄項持久性、完整 DB 備份、還原與容量釋放尚未驗證。下一步建立不修改資料的還原前檢查；不得刪除歷程。
+
+## 2026-10-28 歷程備份不覆寫落盤核心
+
+新增明確呼叫的 reports 本機備份寫入器：先驗快照、檔案 fsync、hard-link 不覆寫、重讀及 hash／schema 再驗，保留原資料；目錄項持久性未確認，hash 非簽章。遇不支援 hard link、既有目的地或無效內容直接失敗；尚未接 CLI／UI，也未實作還原、跨檔重播或釋放容量。
+
+`reports/verify-history-backup-file-20261028-02` UTC 09:38:15、25/25、0 skip、228 AST、source_unchanged、Job 自然 0／remaining 0／無強停；合成檔測既有檔不覆寫、錯誤清理僅自建暫存、source DB／pending／ACK 不變及模擬 junction 拒絕。真 junction／停電後目錄 durability 未驗；工作樹來源 ZIP 含兩新檔。
+
+## 2026-10-28 歷程快照驗證核心
+
+新增有界快照完整性驗證，核對 schema、事件／操作識別、狀態、來源、時間、重複、256／4096 上限、長度與 canonical SHA256；輸出快照也先驗證。SHA256 不是簽章，不證明操作者身分或防竄改。`reports/verify-history-backup-validation-20261028-02` UTC 09:36:09、20/20、0 skip、226 AST、source_unchanged、Job 自然 0／remaining 0／無強停。仍僅記憶體，沒有持久檔、還原或容量釋放；下一步不覆寫落盤。工作樹來源 ZIP 自檢。
+
+## 2026-10-28 歷程無損恢復前置：唯讀快照
+
+新增有界 query-only SQLite 快照核心，保留操作識別、前後狀態、來源及已綁定／未綁定 hash，計算 canonical SHA256；拒絕損壞資料，不修補或改寫來源。這只是記憶體中的歷程 payload，含敏感 metadata，尚未接 CLI／檔案保存、全庫備份、還原或容量釋放，不能當作已完成恢復或防竄改證據。
+
+`reports/verify-history-backup-payload-20261028-01` UTC 09:33:28、45/45、0 skip、226 AST、source_unchanged、Job 自然 0／remaining 0／無強停；合成 SQLite 核對唯讀交易、舊表、不綁定保留、hash、損壞拒絕及 pending／ACK 未變。工作樹 ZIP 含兩個新檔。下一步安全落盤與驗證，不能自行刪除或宣稱已釋放容量。
+
+## 2026-10-28 GUI／歷程整合完整回歸
+
+來源 commit `7de39b3cec4c99308783afb3dc7f0c6240e47b25`：`py -3.13 -B scripts/verify.py --run-dir reports/verify-full-gui-history-20261028-01 --timeout-seconds 1800`，UTC 09:23:05–09:31:17、1670 run／1667 pass／3 skip、0 fail/error、224 AST、source_unchanged；兩項 symlink 建立不可用、一項 notification_icon_unavailable。原 Job 自然 0／remaining 0／無強停／逐測殘留 0；native scan／model 0。synthetic／fixture 全回歸不等於原生覆蓋或真 agent 收件。
+
+`reports/release-prep-gui-history-20261028-01` 精確 7de39b3 候選 326 檔、兩 ZIP 一致；文件 checkpoint 另以 `reports/verify-full-checkpoint-docs-20261028-01` 19/19、0 skip 及工作樹 ZIP 自檢。全庫／byte 歷程滿載無損恢復、人類 UX／200% zoom、真機 24h／重啟／喚醒仍未完成。
+
+## 2026-10-28 處置歷程單事件容量局部恢復
+
+每事件上限從 32 調整為 256，全庫仍 4096 且受既有 byte／ACK reserve 限制；不刪或覆寫舊歷程。`reports/gui-history-capacity-recovery-20261028-01` 合成真瀏覽器驗舊版 32 筆滿載後可完成新處置、舊 32 列逐筆相同、32 筆未綁定仍未知、pending／receipt null；`-02` 驗新 256 筆滿載明示拒絕、狀態與 pending 不變。兩 Job 自然 0／remaining 0／無強停、各 1 合成 POST、native／model 0。
+
+`reports/verify-history-capacity-recovery-20261028-02` UTC 09:20:47、72/72、0 skip、224 AST、source_unchanged、Job 自然退出；含 256 單事件與 4096 全庫滿載的資料保全。這是提高有界容量、恢復舊 32 限制的部分改善，不是永久恢復：256／4096 或 byte 滿載仍拒絕新處置，尚無不丟失證據的全庫恢復。工作樹 326 檔 ZIP 自檢。
+
+## 2026-10-28 事件詳情切換安全修正
+
+切換到不同事件時立即隱藏舊詳情，避免新事件還在載入時，畫面顯示舊事件卻操作新事件；同事件輪詢仍保留詳情。`reports/gui-detail-switch-safety-20261028-01` 合成瀏覽器延遲第二事件，確認舊詳情隱藏／可見處置按鈕 0，放行後顯示第二事件及其 delivery；0 POST／native／model、Job 自然 0／remaining 0／無強停。`reports/verify-detail-switch-safety-20261028-01` UTC 09:17:08、49/49、0 skip、224 AST、source_unchanged、Job 自然退出；來源工作樹 ZIP 自檢。歷程容量恢復仍未完成。
+
+## 2026-10-28 處置歷程事件身分綁定
+
+發現事件 ID 可在保留期後重用，舊歷程若只靠 ID 可能誤歸屬；新紀錄與重播綁定驗證過的 payload hash。舊表未綁定資料不自動回填，讀取與重播顯示未知／衝突；新寫入時同交易惰性加欄、保留舊列，不以目前內容倒推舊身分。
+
+`reports/verify-history-identity-20261028-02` UTC 09:14:14、96/96、0 skip、224 AST、source_unchanged、Job 自然 0／remaining 0／無強停；合成測試含內容改變、舊表遷移、重播衝突、回滾與 pending。`reports/gui-history-identity-20261028-01` 合成真瀏覽器核對相符／變更／未綁定，讀取前後 SQLite hash 一致、0 POST／native／model、Job 自然退出。工作樹 326 檔 ZIP 來源自檢，非 commit 候選。容量恢復仍未完成。
+
+## 2026-10-28 六情境合成前後觀察
+
+固定 ad1f127／338cdc5 完成六種 synthetic 自動化觀察：新增嚴重清單 3→1 操作；拒讀 1→0 操作；最後成功舊版卡片不可見、新版可見；保存關聯、診斷缺口及 handled／pending 各自 1→1 操作。舊版缺口顯示代碼，新版有中文；各案例未觀察錯誤結果或誤判安全。各次自動化耗時見 `reports/ux-compare-20261028-01/comparison.json` 與 `-02/comparison.json`，非人類測量；舊版錨定列以合成 API 定位，非使用者尋找時間。
+
+兩版本第二 fixture hash 前後一致、0 POST／native／model、Job 自然 0／remaining 0／無強停；`reports/verify-ux-six-synthetic-20261028-01` UTC 09:10:33、46/46、0 skip、224 AST、Job 自然退出。僅完成合成觀察；人類／200% zoom／合法競品對照及歷程容量恢復仍未完成。來源 build 為工作樹 ZIP 自檢。
+
+## 2026-10-28 合成 GUI 前後比較（部分）
+
+固定 ad1f127 與 338cdc5 來源包、相同 synthetic SQLite／來源，實際瀏覽器各量一次：篩選新增嚴重事件由 3 操作／516ms 變 1 操作／293ms，兩者均顯示 2 件與嚴重首列；查看拒讀的最後成功時間，舊卡 1 操作／434ms 無法完成，新卡 1 操作／398ms 可見且目前仍拒讀。兩案例未觀察錯誤結果或誤判安全；時間為自動化單次 wall time，不是人類速度或統計結論。
+
+`reports/ux-compare-20261028-01` SQLite hash 前後一致，0 POST／native／model，兩 Job 自然 0／remaining 0／無強停；新版來源頁 800／1280px 無橫向溢位。六情境、人類參與者、200% zoom 與合法競品環境尚未測，P2-UX-001 僅部分完成。`reports/verify-ux-comparison-20261028-01` 26/26、0 skip、224 AST、Job 自然退出；工作樹來源 ZIP 自檢。處置歷程容量恢復仍待做。
+
+## 2026-10-28 P2-HISTORY-001C 處置歷程 Web
+
+事件詳情顯示時間、前後狀態、無變更請求、來源通道、此前未知及數量容量；明示來源不是已驗證操作者、處置不是 ACK。損壞歷程顯示無法確認，不以數量未滿推定剩餘位元組。
+
+`reports/gui-handling-history-20261028-01` 合成真瀏覽器核對正常／無紀錄／損壞／32 筆滿載，SQLite hash 讀取前後一致、4 pending／0 receipt，0 POST／native／model、Job 自然退出。`reports/verify-gui-handling-history-20261028-01` UTC 09:03:29、47/47、0 skip、224 AST、source_unchanged、Job 自然 0／remaining 0／無強停。工作樹 326 檔 ZIP 自檢，非 commit 候選。容量恢復仍未實作，滿載拒絕新處置；後續需另定不損失重要證據的恢復方式及操作量測。
+
+## 2026-10-28 P2-HISTORY-001C 唯讀後端
+
+事件詳情新增有界 `handling_history`：包含狀態轉換、無變更請求、時間與來源；不暴露操作識別、不宣稱操作者身分。舊 DB 顯示未記錄且此前未知；損壞／超限顯示 unknown，不在讀取時建表或修補；數量容量不代表剩餘位元組。
+
+`reports/verify-history-read-20261028-01` UTC 09:00:59、53/53、0 skip、224 AST、source_unchanged、原 Job 自然 0／remaining 0／無強停；合成 SQLite 檢查前後 bytes、pending／ACK、舊 schema、無變更及損壞。工作樹 326 檔來源 ZIP 自檢，非 commit 候選。Web 顯示與容量恢復尚未完成，下一步 UI。
+
+## 2026-10-28 P2-HISTORY-001B 原子寫入已接線
+
+事件處置狀態與有界操作紀錄同 SQLite 交易；同 ID 跨 Application 重建可重播、不回退後來狀態，衝突及容量不足明示；滿載仍可重播，寫入前後保留 ACK 空間。無變更請求也占冪等槽，32／4096 滿載會阻擋新操作，恢復方式尚未提供；舊歷程不能補造，畫面尚未顯示歷程。
+
+`reports/verify-history-integration-20261028-05` UTC 08:58:18：99/99、0 skip；精簡重複測試後 `reports/verify-history-integration-20261028-07` 7/7、0 skip；223 AST、source_unchanged、Job 自然 0／remaining 0／無強停。`reports/history-integration-20261028-03`／`-04` 最終來源合成瀏覽器分別驗成功及容量拒絕，均保留 pending／無 ACK、Job 自然退出；POST 為明示合成處置，native／model 0。工作樹 325 檔來源 ZIP 自檢，非 commit 候選。下一步 001C 唯讀歷程與 UI。
+
+## 2026-10-28 P2-HISTORY-001B 交易核心（尚未接產品）
+
+新增 SQLite transaction helper：要求由呼叫方開交易、延遲建表、同操作識別重播／衝突、無變更請求也保存有界冪等識別但不算狀態轉換；以 32／4096 筆與呼叫方提供的 ACK 預留後可用位元組拒絕滿載，不自行 commit 或 ACK。這是獨立核心，未接 EventStore／Application／Web，尚不能回看或持久記錄實際處置。
+
+`reports/verify-history-transaction-core-20261028-01` UTC 08:46:57、57/57、0 skip、222 AST、source_unchanged，Job 自然 0／remaining 0／無強停。synthetic SQLite 測交易回滾、相同 ID 重播、衝突、無變更、容量拒絕及 pending／receipt 未變；不代表產品已整合。工作樹來源 ZIP build 包含兩個新檔，非 commit 候選。下一步把同一操作識別及來源傳入真寫入交易，測故障回滾與重啟。
+
+## 2026-10-28 歷程契約換行修正
+
+前一 checkpoint 的 staged `git diff --check` 對新檔 CRLF 報尾隨空白，但 PowerShell 未自動停止後續 commit；該 checkpoint 已推送，不改寫歷史。本單元將兩個新檔統一 LF，內容語意不變；重新 diff-check 無輸出。`reports/verify-history-line-endings-20261028-01` UTC 08:45:06、27/27、0 skip、220 AST、source_unchanged、Job 自然退出。來源 build 為工作樹 ZIP 自檢。後續提交改成獨立檢查退出碼，再執行 commit。下一步 P2-HISTORY-001B。
+
+## 2026-10-28 P2-HISTORY-001A 處置歷程純契約
+
+新增純驗證：歷程只接受具界限的事件／操作識別、狀態轉換、來源與有限時間；單事件 32／全庫 4096 筆預定上限，滿載拒絕新紀錄。來源不是已驗證使用者身分，舊資料不能憑最新狀態補造歷程。此切片不建立資料表、不接寫入或 UI；現有事件處置行為未改，不能稱歷程功能完成。
+
+`reports/verify-disposition-history-contract-20261028-02` UTC 08:43:52：58/58、0 skip、220 AST、source_unchanged，原 Job 自然 0／remaining 0／無強停。工作樹 build 包含兩個新檔；非 commit 綁定候選。下一步 001B 在同交易接入、處理重試識別、容量／ACK 預留及回滾；完成前不得宣稱可回看歷程。
+
+## 2026-10-28 P1-INVEST-004B 逐觀測理由與缺口
+
+已保存時間線每筆觀測旁顯示錨定或既有同主機／來源／穩定身分關聯依據、對應缺口，以及原事件缺失／變更的未知；診斷缺口有中文說明。未改關聯算法或推定程序樹／攻擊鏈。
+
+`reports/gui-investigation-reasons-20261028-02` 真瀏覽器 synthetic 案件：錨定列顯示截斷與未保存診斷，變更成員列顯示未知；PID 重用、異來源、缺身分候選未進時間線，16 成員，SQLite hash 讀前後不變。兩輪 Job 自然 0／remaining 0／無強停，0 POST／native／model。定向 `reports/verify-gui-investigation-reasons-20261028-01` UTC 08:41:23、63/63、0 skip、218 AST、source_unchanged、Job 自然退出。工作樹 320 檔 ZIP 來源自檢，不是 commit 候選。下一步依佇列評估有界歷程與合成 UX 驗收。
+
+## 2026-10-28 P1-INVEST-004A 保存調查摘要
+
+Web 已保存調查增加快照概況：錨定事件、保存時間、成員 hash 狀態、快照新鮮度、保存成員／候選／缺口數及截斷；未知與過期明示，不判安全或因果。既有關聯與資料儲存規則未改。
+
+`reports/gui-investigation-summary-20261028-02` 真瀏覽器合成案例：16 成員／26 候選／截斷、過期及缺口可見，重新開啟內容一致；改變獨立 synthetic 成員後證據變未知，該狀態讀取前後 SQLite SHA256 不變。Job 自然 0／remaining 0／無強停，0 POST／native／model。定向 `reports/verify-gui-investigation-summary-20261028-01` UTC 08:38:09、62/62、0 skip、218 AST、source_unchanged、Job 自然退出。來源 build 是工作樹 320 檔 ZIP 自檢，非 commit 候選。下一步 P1-INVEST-004B，關聯理由與缺口靠近觀測。
+
+## 2026-10-28 修正網址分頁 regex 的 Python 載入警告
+
+P1-INVEST-004A 的合成 fixture 建立時發現 Web 內嵌 JavaScript `\d` 讓 Python 3.13 發出 SyntaxWarning；改為等價 `[0-9]`，頁碼語意不變。`py -3.13 -B -W error::SyntaxWarning -c "import sys; sys.path.insert(0, 'src'); import eventguard.web"` 通過；`reports/verify-gui-url-regex-20261028-01` UTC 08:35:31、33/33、0 skip、218 AST、Job 自然退出。工作樹來源 ZIP build 320 檔自檢，非 commit 候選。下一步接續已保存調查摘要；尚未驗收。
+
+## 2026-10-28 P1-GUI-003B 補驗完成
+
+`reports/gui-detail-edge-20261028-01` 使用隔離 synthetic 事件與真瀏覽器：延遲 high 清單回覆時切到 critical，放行後畫面仍是 critical 2 筆；在獨立 synthetic SQLite 將所選事件設 handled（無 ACK），使它離開 new 清單，返回焦點正確落在篩選按鈕。原 Job 自然 0／remaining 0／無強停、0 POST／native／model。定向 `reports/verify-gui-detail-edge-20261028-01`：UTC 08:32:43，33/33、0 skip、218 AST、source_unchanged、Job 自然退出。工作樹來源 ZIP build 320 檔 hash 自檢；非 commit 候選。下一步 P1-INVEST-004A。
+
+## 2026-10-28 P1-GUI-003B 詳情返回與延遲回覆
+
+事件詳情新增鍵盤可用的返回清單按鈕，回到原事件焦點，清單週期重繪保留事件按鈕焦點；失去原列時回篩選按鈕。切換／返回使在途詳情與 delivery 回覆失效，避免舊事件證據覆蓋新選取。
+
+`reports/gui-detail-return-20261028-01` 合成真瀏覽器：高事件第二頁開啟／返回原事件與頁碼；五秒週期後焦點不變；延遲第一事件詳情並切換第二事件，放行舊回覆後詳情與 delivery 均為第二事件，返回焦點正確。Job 自然 0／remaining 0／無強停，0 POST／native／model。`reports/verify-gui-detail-return-20261028-01` UTC 08:30:12、61/61、0 skip、218 AST、source_unchanged、Job 自然退出。工作樹來源 build 320 檔 ZIP 自檢，非 commit 候選。慢事件清單回覆及原列消失後焦點的瀏覽器故障注入尚未驗證；下一步先補驗再做 P1-INVEST-004。
+
+## 2026-10-28 P1-GUI-003A 網址篩選與頁碼
+
+Web 網址只保存嚴重度／來源／處置狀態的既有列舉及 0–10000 頁碼，不含事件內容；重新載入、返回／前進可恢復。無效／重複／未知／超限參數顯示固定錯誤並不顯示事件；重新選取可恢復。篩選或頁碼變化使在途舊事件清單回覆失效。根路由現在提供固定頁面給含查詢網址，仍驗 Host／長度，不反射 query。
+
+合成真瀏覽器核對高 55 件第二頁、reload／back／forward、嚴重入口、四種無效網址和三篩選恢復。`reports/gui-url-filters-20261028-01` 首測重現根路由 route_not_found，修正後 `-02` 通過；兩個原 Job 自然 0／remaining 0／無強停，無 POST／native／model。定向 `reports/verify-gui-url-filters-20261028-01` 31/32：舊靜態測試切段含新 helper，修正後 `-02` 32/32、0 skip、218 AST、source_unchanged、原 Job 自然退出。另擴充路由／控制測試 `reports/verify-gui-url-filters-20261028-03`：68 run、67 pass、1 skip（notification_icon_unavailable）、0 fail/error，218 AST，Job 自然退出。來源 build 為工作樹 320 檔 ZIP 自檢，不是 commit 候選。慢事件回覆與詳情／焦點仍待 003B。
+
+## 2026-10-28 P1-GUI-002B 新增事件入口
+
+高／嚴重事件分開顯示可點按數字，進入對應嚴重度＋新增狀態，清除來源篩選與詳情、回第一頁；兩次獨立計數明示時間可能不同。相同數字不重建按鈕以保留焦點。
+
+合成真瀏覽器測試：55 高、2 嚴重、1 資訊；高首頁 50／次頁 5，從次頁點嚴重得到 2 筆、首列及篩選一致，跨頁鍵盤回高首頁正確。`reports/gui-high-links-20261028-01` Job 自然 0／remaining 0／無強停，0 POST／native／model。`reports/verify-gui-high-links-20261028-01`：UTC 08:21:48，30/30、0 skip、218 AST、source_unchanged、Job 自然退出。工作樹來源 build 320 檔 ZIP／逐檔 hash 自檢，非 commit 候選。下一步 P1-GUI-003A。
+
+## 2026-10-28 P1-GUI-002A 慢回覆切頁修正
+
+合成瀏覽器重現切頁後舊成功回覆暫時覆蓋來源失敗；切頁現在使舊來源回覆失效，忙碌期間的刷新合併排隊，完成後重新讀取。修正後同情境顯示未確認，恢復正常後能顯示觀測成功；不推定主機安全。
+
+`reports/gui-source-gap-race-20261028-01`／`-02` 保存修正前後合成 Job 回條，皆自然退出／remaining 0／無強停。`reports/verify-gui-source-gap-race-20261028-01`：UTC 08:19:20，41/41、0 skip、218 AST、source_unchanged、Job 自然退出。工作樹來源 build 320 檔 ZIP 自檢，非 commit 綁定正式候選包。下一步 P1-GUI-002B。
+
+## 2026-10-28 P1-GUI-002A 事件頁來源缺口摘要
+
+事件頁只讀 `/api/sources`，要求七個不同的已知來源；非 ok／非 fresh 列出缺口，缺項、重複、空回覆或讀取錯誤顯示未確認，不宣稱主機安全。來源讀取失敗不清除事件。刷新由既有 busy 串行；尚未注入慢回覆驗證切頁競態。
+
+`reports/verify-gui-source-gap-20261028-01`：UTC 08:15:39，41/41、0 skip、218 AST、source_unchanged，Job 自然退出／剩餘 0／無強停。隔離瀏覽器在合成 fixture 核對七來源成功、拒讀、過期、缺項、重複、空與錯誤，錯誤時合成 pending 事件仍可見；`reports/gui-source-gap-20261028-01` 原 Job 自然 0／remaining 0／無強停，0 POST／native／model。測試不代表真主機覆蓋。
+
+來源 build 是工作樹 320 檔 ZIP／逐檔 hash 自檢，非提交 SHA 的正式候選包。下一步補慢回覆切頁驗證並做 P1-GUI-002B。
+
+## 2026-10-28 P1-GUI-001 七來源卡片
+
+Web 卡片分列最後採集、原結果、目前狀態、最後成功、新鮮度與觀測列數；缺失／無效／未來成功時間顯示未知，拒讀或過期不被歷史成功覆蓋。合成零列不表示安全；來源文字以 textContent 顯示。
+
+定向：`py -3.13 -B scripts/verify.py --run-dir reports/verify-gui-source-cards-20261028-02 --timeout-seconds 180 --module test_source_success_history --module test_application_ui_state`，UTC 08:11:37，18/18、0 skip、218 AST、source_unchanged，Job 自然退出／剩餘 0／無強停。三次 HTTP GET 比較資料檔 bytes 與合成 pending／stats 未變。
+
+未提交工作樹來源 build：`reports/gui-source-cards-20261028-01/working-tree-build.zip`，320 個已追蹤檔案逐檔 hash／ZIP 自檢；含本切片，並非既有以 commit 建置的正式候選包。
+
+隔離真瀏覽器實際核對 `#source-cards` 七卡：拒讀、過期、未知、無效及未來時間、零列與 HTML 樣式文字；800px 無水平溢位、Enter 切換頁面，合成 worker 退出 0／剩餘 0／無強停。證據 `reports/gui-source-cards-20261028-01`；來源 build 與限制見 EVIDENCE。非實機採集或使用者研究；後續 P1-GUI-002A。
+
+## 2026-10-28 競品研究與工程開工規格完成（未實作產品）
+
+[公開研究](docs/research/competitor-gui/README.md) 與 [工程規格](docs/research/competitor-gui/ENGINEERING_PLAN.md) 已連回 MAINTENANCE_GOAL。核對現有 Web／Tk、API、事件／調查／活動資料與測試後，第一切片定為 P1-GUI-001：補 Web 七來源卡片的最後成功／新鮮度；API 已具備、畫面尚缺。六驗收案例、觸點、後續排序及原生／偵測／真環境前置均已列明，全部產品切片仍未實作。正式主控台未測，不能稱優於競品。
+
+第一單元 f1ed1e07f884e961e96aaffa3cbf9cf51544578d：`docs(research): verify competitor GUI and GitHub evidence [skip ci]`，+113/-0；普通 push origin/feat/local-codex-acceptance 後 ls-remote 同 SHA、ahead/behind 0/0，status／shortstat 無輸出。第二單元開始亦確認乾淨，僅改本研究的規格／既有現況文件。
+
+本單元來源 build：`py -3.13 -B scripts/package_candidate.py --root reports/release-prep-gui-research-20261028-02 --commit f1ed1e07f884e961e96aaffa3cbf9cf51544578d`，319 檔、兩 ZIP 一致。定向：`py -3.13 -B scripts/verify.py --run-dir reports/verify-gui-research-20261028-02 --timeout-seconds 180 --module test_source_success_history --module test_application_ui_state --module test_activity`；台北 15:47:52–15:47:55，29/29、0 fail/error/skip、218 AST、source_unchanged、原 Job 自然 0／remaining 0／無強停。與先前 74 項有重疊，不相加；只驗既有來源，不是提案或新 GUI 的實作驗收。
+
+文件／連結、240 來源 hash 與本次保存結果在 reports/research-gui-20261028-01；不提交 runtime／截圖。本輪只做兩個單一目的文件 checkpoint；推送不等於 CI／發布，未推 main/tag。研究目標完成後交由後續工程從 G01 接續，不在此研究任務擴張產品修改。
+
+## 2026-10-28 競品 GUI／GitHub 研究：公開證據完成，工程切片待落地
+
+從乾淨 f86254bb0393b606b1202b370efa18b35f649e8e／origin 同 SHA 接續；原聊天僅等待研究，未觀察到其他寫入。新增 [競品研究](docs/research/competitor-gui/README.md)，核對兩家官方展示、目前文件與四倉庫固定 SHA／授權／封存。修正 Lightweight Console：固定目錄只有佔位 README，不能稱有 GUI 實作。正式主控台、兩家偵測／回應成效與同環境比較未測。
+
+來源 build：`py -3.13 -B scripts/package_candidate.py --root reports/release-prep-gui-research-20261028-01 --commit f86254bb0393b606b1202b370efa18b35f649e8e`，318 檔、兩 ZIP 一致、原 Git Job 自然退出。定向：`py -3.13 -B scripts/verify.py --run-dir reports/verify-gui-research-20261028-01 --timeout-seconds 180 --module test_event_catalog --module test_event_investigation --module test_investigation_diagnostics --module test_source_success_history --module test_application_ui_state --module test_package_candidate`；台北 15:33:12–15:33:20，74/74、0 fail/error/skip、218 AST、source_unchanged、原 Job 自然 0／remaining 0／無強停。這是既有來源驗證，未包含新文件的候選包，也不代表新版 GUI 實測。
+
+首次 build 使用不符合 `release-prep-` 限制的目錄而受阻，未建立輸出或啟動 Git child；改合法新目錄後成功，未改 builder 或繞過閘道。文件連結／差異與來源紀錄留 reports/research-gui-20261028-01；runtime／圖片不提交。下一單元是現有實作缺口、優先順序及第一個可直接開工的小切片；本任務不實作產品、不連帳戶、不啟模型／native／排程。
+
+## 2026-10-28 乾淨工作區與原子提交規則（最新）
+
+本單元只落實最新Git工作規則：AGENTS／CLAUDE明定單一目的、約200行先拆、提交前build與相關測試全過、type(scope): summary、明列stage、禁amend／force／no-verify、單元後輸出hash／message／行數／status／shortstat並立即push；取代原「最多累積3個」的節奏。開始時工作樹乾淨，HEAD/upstream/main皆c80a4be。
+
+提交前實跑c80a4be既有來源build於reports/release-prep-policy-check-20261028-01，318檔／兩次ZIP一致／兩Git Job自然退出；這不是包含尚未提交政策文件的新候選。當前來源定向verify-checkpoint-policy-20261028-01：UTC06:53:13–06:53:16（台北14:53:13–14:53:16），31/31、1.388秒、0fail/error/skip、218AST無錯、source_unchanged、原Job自然0／remaining0／無強停。新增文件換行混用曾被diff-check攔下，未commit該狀態，修正後重查；政策內容／連結與變更量另驗。僅四份文件以單一docs(workflow) checkpoint普通push既有開發分支，輸出實際SHA與乾淨狀態，不重寫舊commit、不重新宣稱產品／原生驗收。
+
 ## 2026-10-28 main整併終核、完整本機回歸與附件排除（最新）
 
 使用者已明確授權推main並要求整併／測試。fetch後origin/main與開發分支同為a4e13fa75ea0d2d8b455281811114de3efe91844、ahead/behind0/0、tree差異0；五個可分享分支均為main祖先，沒有待合併產品碼。PR #1早於2026-10-22T09:09:47Z合併615f77f，本次依要求移除聊天PR附件，保留GitHub合併歷史。截圖+5368/-39與git diff 4a1a95bced234d75b744537f7507bd9f86235b11 a4e13fa完全相符（58檔已提交歷史），不是未提交數；UI實際基準未直接讀取，不能宣稱畫面已歸零。

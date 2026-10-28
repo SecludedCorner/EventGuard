@@ -1,5 +1,16 @@
 # Phase 4：容量、ACK 保留與恢復
 
+## 處置歷程備份的唯讀身分預檢
+
+明確備份後，可由操作者自行將備份檔內容送入 CLI，例如合成範圍：
+
+```powershell
+Get-Content -Raw reports/history-backup-example.json | .\EventGuard.cmd --format text events preview-history --namespace test
+```
+
+備份含本機敏感識別資料，不要提交或分享。CLI 只接有界標準輸入，不自行挑選或讀取路徑；回傳身分衝突、已存在／缺失操作計數及目標是否為備份的完全前綴，不輸出個別 ID。舊版無 namespace 或跨 namespace 直接拒絕。雜湊非簽章；即使零衝突且順序一致，也不驗來源真實性、備份是否涵蓋全部歷程、容量或還原能力。此命令不還原、不刪除或釋放容量。
+
+
 核心仍為 Python 3.13 標準庫。以下只變更本工具的資料檔，不修改 Windows 設定、不啟動模型、服務或排程。實測命令與精確測試數見 [EVIDENCE](EVIDENCE.md)；24 小時 soak 僅有 [計畫](SOAK_PLAN.md)，尚未執行。
 
 ## 政策與操作
@@ -17,6 +28,12 @@
 outbox 政策保存在 SQLite `meta.storage_policy`，ACK 使用的預設 EventStore opener 會繼承，不會擅自放寬已設定上限。monitor 啟動及後續 evaluation 會清理。`status` 的 namespaces 顯示實際政策、大小、receipt 數及輪替計數；CLI 與可選 agent 的共用 status 都可讀到，不會因查 status 啟動模型。
 
 inbox 政策由 dispatcher 從專案設定套用，保存於專用 state 的 `inbox-limits.json`，其 stdio child 沿用；直接使用 QueueInbox 可傳入同一 `limits` 字典。修改既有 quota 不刪 pending；縮小到低於現有占用量時先阻擋新工作，讓既有工作完成後恢復。outbox 主檔已大於新 byte cap 時拒絕開啟，不偷偷放寬；應恢復原政策，再依既有政策清理。SQLite free pages 可重用；本階段不自動 VACUUM，因此主檔不一定縮小。
+
+## 處置歷程（合成寫入與唯讀顯示已驗）
+
+純 record 驗證已設每事件 256 筆、全庫 4096 筆的硬界線；識別與來源只作冪等及操作通道 metadata，不代表已驗證的操作者。滿載時目標行為為明確拒絕新狀態及新歷程並維持原狀，不刪 pending、ACK 或既有紀錄；容量恢復方式尚待後續明確設計與驗證，不宣稱能永久寫入。已在 EventStore 處置交易內延遲建表及寫入，事件詳情與 Web 可唯讀顯示歷程；未來對舊處置應顯示「此前未記錄」，不能補造。
+
+已以 synthetic 測試同交易、ACK byte reserve、頁面容量、重建 Application 重播／衝突與回滾；舊版 DB 唯讀相容及 GET 不遷移仍須在讀取實作時核對。新紀錄以事件 payload hash 綁定身分；舊版未綁定紀錄保持未知，不依現有事件回填。已有合成測試的明確 CLI 不覆寫備份入口，但尚未驗證還原或釋放容量；不能用它刪除來源紀錄。固定筆數本身不保證磁碟可用，也不代表歷程防竄改。這是待實作契約，非已完成持久化。
 
 ## 永不自動丟棄的資料
 

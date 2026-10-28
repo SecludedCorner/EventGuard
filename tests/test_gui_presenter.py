@@ -2,7 +2,7 @@
 import copy
 import unittest
 
-from eventguard.gui_presenter import event_list_view, event_summary
+from eventguard.gui_presenter import event_list_view, event_summary, source_success_text
 
 
 def item(event_id="fixture-event", **changes):
@@ -12,6 +12,18 @@ def item(event_id="fixture-event", **changes):
 
 
 class GuiPresenterTests(unittest.TestCase):
+    def test_source_success_requires_known_valid_nonfuture_aware_time(self):
+        from datetime import datetime, timezone
+        now = datetime(2026, 10, 29, tzinfo=timezone.utc)
+        for state, at in (("unknown", "2026-01-01T00:00:00Z"), ("known", None),
+                          ("known", "bad"), ("known", "2026-01-01T00:00:00"),
+                          ("known", "2027-01-01T00:00:00Z"), ("known", "x" * 81)):
+            with self.subTest(state=state, at=at):
+                self.assertEqual(source_success_text({"last_success_state": state, "last_success_at": at}, now=now),
+                                 "未知／尚無成功紀錄")
+        self.assertEqual(source_success_text({"last_success_state": "known",
+                         "last_success_at": "2026-01-01T08:00:00+08:00"}, now=now), "2026-01-01T00:00:00+00:00")
+
     def test_actual_observed_at_contract_precedes_legacy_timestamp_fields(self):
         document = {"events": [item(occurred_at="legacy-occurrence", created_at="legacy-created")], "events_total": 1}
         row = event_list_view(document)["events"][0][1]

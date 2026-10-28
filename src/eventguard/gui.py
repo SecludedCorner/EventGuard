@@ -10,7 +10,7 @@ import queue
 import threading
 
 from .gui_presenter import (DELIVERY_FILTERS, SEVERITY_FILTERS, detail_text,
-                            event_list_view, event_summary, safe_text)
+                            event_list_view, event_summary, safe_text, source_success_text, source_gap_text)
 
 
 SOURCE_NAMES = {"defender": "Defender 防護", "listeners": "監聽端點", "processes": "程序",
@@ -65,7 +65,8 @@ def view_snapshot(document, *, severity="all", delivery="all"):
         fresh = fresh.get("state") if isinstance(fresh, dict) else fresh
         rows.append((source, (title, state_text(item.get("status", "not_observed")),
                               safe_text(item.get("row_count"), 24), state_text(fresh),
-                              safe_text(item.get("observed_at"), 80), safe_text(item.get("reason"), 180))))
+                              safe_text(item.get("observed_at"), 80), source_success_text(item),
+                              safe_text(item.get("reason"), 180))))
     event_view = event_list_view(value, severity=severity, delivery=delivery)
     agent = value.get("agent_delivery") if isinstance(value.get("agent_delivery"), dict) else {}
     enabled = agent.get("enabled") is True
@@ -104,7 +105,8 @@ def view_snapshot(document, *, severity="all", delivery="all"):
     return {"headline": state_text(state), "state": state, "monitoring": monitoring,
             "updated_at": safe_text(value.get("updated_at"), 80),
             "counts": f"待接手 {count('pending')}　已接收 {count('acked')}　投遞失敗 {count('failed')}",
-            "sources": rows, **event_view, "agent_enabled": enabled, "agent_status": connection,
+            "sources": rows, "source_gaps": source_gap_text([sources.get(key, {}) for key in SOURCE_NAMES]),
+            **event_view, "agent_enabled": enabled, "agent_status": connection,
             "automatic_enabled": auto_enabled, "automatic_status": auto_message,
             "automatic_executable": safe_text(automatic.get("executable"), 2048) if automatic.get("executable") else "",
             "activity_rows": activity_rows, "activity_status": activity_status,
@@ -201,6 +203,7 @@ class EventGuardWindow:
         self.headline = tk.StringVar(value="正在讀取狀態…")
         self.counts = tk.StringVar(value="待接手 未知　已接收 未知　投遞失敗 未知")
         self.updated = tk.StringVar(value="尚無更新")
+        self.source_gaps = tk.StringVar(value="正在讀取保存的來源觀察…")
         self.message = tk.StringVar(value="按「開始」持續監看；按「暫停」停止採集，事件仍會保留。")
         self.agent_enabled = tk.BooleanVar(value=False)
         self.agent_status = tk.StringVar(value="正在讀取接收設定…")
@@ -267,9 +270,10 @@ class EventGuardWindow:
         source_frame.columnconfigure(0, weight=1)
         source_frame.rowconfigure(0, weight=1)
         self.sources = ttk.Treeview(source_frame, show="headings", height=8,
-                                   columns=("source", "coverage", "count", "freshness", "time", "reason"))
+                                   columns=("source", "coverage", "count", "freshness", "time", "success", "reason"))
         for key, label, width in (("source", "來源", 130), ("coverage", "可見性", 110), ("count", "筆數", 65),
-                                  ("freshness", "新鮮度", 90), ("time", "最後觀察時間", 220), ("reason", "原因", 260)):
+                                  ("freshness", "新鮮度", 90), ("time", "最後觀察時間", 220),
+                                  ("success", "最後成功時間（歷史）", 220), ("reason", "原因", 260)):
             self.sources.heading(key, text=label)
             self.sources.column(key, width=width, minwidth=50, stretch=key in {"time", "reason"})
         self.sources.grid(row=0, column=0, sticky="nsew")
@@ -279,7 +283,8 @@ class EventGuardWindow:
         source_horizontal = ttk.Scrollbar(source_frame, orient="horizontal", command=self.sources.xview)
         source_horizontal.grid(row=1, column=0, sticky="ew")
         self.sources.configure(xscrollcommand=source_horizontal.set)
-        ttk.Label(source_frame, text="部分、拒讀、過期或未知都不代表安全。此處只讀取保存觀察，不另行掃描。").grid(row=2, column=0, sticky="w", pady=(8, 0))
+        ttk.Label(source_frame, textvariable=self.source_gaps, wraplength=790).grid(row=2, column=0, sticky="w", pady=(8, 0))
+        ttk.Label(source_frame, text="部分、拒讀、過期或未知都不代表安全。此處只讀取保存觀察，不另行掃描。").grid(row=3, column=0, sticky="w", pady=(8, 0))
         notebook.add(source_frame, text="七個來源")
         event_frame = ttk.Frame(notebook, padding=8)
         event_frame.columnconfigure(0, weight=1)
@@ -474,6 +479,7 @@ class EventGuardWindow:
         self.headline.set(view["headline"])
         self.counts.set(view["counts"])
         self.updated.set("最後更新：" + view["updated_at"])
+        self.source_gaps.set(view["source_gaps"])
         self.agent_enabled.set(view["agent_enabled"])
         self.agent_status.set(view["agent_status"])
         self.automatic_enabled.set(view["automatic_enabled"])

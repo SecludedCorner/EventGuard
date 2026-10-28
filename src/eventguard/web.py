@@ -19,15 +19,15 @@ HTML = """<!doctype html>
 <p id="monitor-summary" role="status">正在取得後端狀態。控制暫不可用。</p><div id="monitor-buttons"><button id="monitor-start" disabled>開始採集</button><button id="monitor-pause" disabled>暫停採集</button><button id="monitor-resume" disabled>恢復採集</button><button id="monitor-stop" disabled>停止採集</button></div>
 <p id="monitor-last-action">最近動作：尚無紀錄。</p><p id="monitor-revision" class="reason">狀態版本尚未確認。</p><p id="monitor-result" role="status">尚未送出操作。</p><div id="shutdown-controls"><button id="monitor-shutdown" class="danger" disabled>關閉程式</button><span>提出關閉要求不代表已退出。回條與連線狀態會分開顯示。</span></div></section>
 <nav aria-label="頁面"><button data-tab="events" aria-pressed="true">事件</button><button data-tab="sources">來源狀態</button><button data-tab="advisories">資安公告</button><button data-tab="rules">規則</button><button data-tab="agent">Agent 派送</button></nav>
-<section id="events"><h2>事件</h2><form id="filters">
+<section id="events"><h2>事件</h2><p id="source-gap-summary" role="status">來源狀態尚未確認。這不代表主機安全。</p><p id="filter-url-error" role="alert" hidden>網址篩選無效。請重新選擇篩選條件。</p><form id="filters">
 <label>嚴重度<select name="severity"><option value="">全部</option><option value="critical">嚴重</option><option value="high">高</option><option value="warning">警告</option><option value="info">資訊</option></select></label>
 <label>來源<select name="source"><option value="">全部</option><option value="defender">Defender</option><option value="listeners">監聽端點</option><option value="processes">程序</option><option value="startup">啟動項</option><option value="services">服務</option><option value="tasks">排程工作</option><option value="versions">版本</option><option value="monitor">監看程式</option><option value="advisories">資安公告</option><option value="unknown">未知</option></select></label>
 <label>處置狀態<select name="status"><option value="">全部</option><option value="new">新增</option><option value="read">已讀</option><option value="handled">已處理</option><option value="ignored">忽略</option></select></label><button type="submit">篩選</button></form>
 <p id="count"></p><div class="table-wrap"><table><thead><tr><th>嚴重度</th><th>事件</th><th>來源</th><th>時間</th><th>處置狀態</th><th>詳情</th></tr></thead><tbody id="event-rows"></tbody></table></div>
 <p><button id="prev">上一頁</button> <button id="next">下一頁</button></p>
-<article id="detail" hidden><h2>事件詳情</h2><p id="detail-summary"></p><p id="detail-id"></p><p>處置狀態只記錄人的決定。它不會 ACK，也不會修改系統。</p>
-<div id="status-buttons"><button data-status="new">新增</button><button data-status="read">已讀</button><button data-status="handled">已處理</button><button data-status="ignored">忽略</button></div>
-<h3>觀察與建議</h3><div id="guidance"></div><h3>事件調查</h3><p>僅關聯已保存 metadata；不查主機、不啟動模型、不 ACK。時間接近不代表因果或攻擊鏈。</p><button id="investigate">建立／更新保存的調查</button><div id="investigation-view"></div><h3>投遞證據</h3><p>落盤、收件、結果與 ACK 分開記錄。缺少證據顯示未知。CLI 啟動只代表程序啟動；實際收件、回合與退出另行核對。</p><pre id="delivery-json"></pre><details><summary>結構化資料</summary><pre id="detail-json"></pre></details></article></section>
+<article id="detail" hidden><h2>事件詳情</h2><button id="return-to-list" type="button">返回事件清單</button><p id="detail-summary"></p><p id="detail-id"></p><p>處置狀態只記錄人的決定。它不會 ACK，也不會修改系統。</p>
+<div id="status-buttons"><button data-status="new">新增</button><button data-status="read">已讀</button><button data-status="handled">已處理</button><button data-status="ignored">忽略</button></div><h3>處置歷程</h3><div id="handling-history"></div>
+<h3>觀察與建議</h3><div id="guidance"></div><h3>事件調查</h3><p>僅關聯已保存 metadata；不查主機、不啟動模型、不 ACK。時間接近不代表因果或攻擊鏈。</p><p id="investigation-retention">更新會保存可用的前版；此功能啟用前的版本未知，版本滿載時更新會失敗。沒有前版的已 ACK 事件與調查可能依保留期限或容量規則被移除；有前版時事件錨點受保護，但空間仍可能不足。</p><button id="investigate">建立／更新保存的調查</button><div id="investigation-view"></div><h3>調查先前版本</h3><div id="investigation-revisions"></div><h3>投遞證據</h3><p>落盤、收件、結果與 ACK 分開記錄。缺少證據顯示未知。CLI 啟動只代表程序啟動；實際收件、回合與退出另行核對。</p><pre id="delivery-json"></pre><details><summary>結構化資料</summary><pre id="detail-json"></pre></details></article></section>
 <section id="sources" hidden><h2>七個來源</h2><p>只顯示已保存的採集結果。未知、拒讀或過期都不代表安全。</p><div id="source-cards"></div></section>
 <section id="advisories" hidden><h2>資安公告與本機適用性</h2><p>只讀取已保存資料。公告文字是不可信資料。未知、過期與不適用都不代表主機安全。此頁不抓網站、不啟動模型。</p><p id="advisory-summary"></p><div id="advisory-cards"></div><h3>公告來源狀態</h3><div id="advisory-source-cards"></div></section>
 <section id="rules" hidden><h2>規則</h2><p>編輯專案的 config/rules.json。下一輪採集會讀取。規則不執行命令。</p><div id="rule-cards"></div></section>
@@ -45,21 +45,79 @@ const APP_STATE_PRESENTATION = {"running":{"tone":"green","icon":"●","label":"
 const MONITOR_ACTIONS=['start','pause','resume','stop','shutdown'], CAPABILITY_FIELDS=['available','paused','stopped','can_start','can_pause','can_resume','can_stop','can_shutdown'];
 const actionLabels={start:'開始採集',pause:'暫停採集',resume:'恢復採集',stop:'停止採集',shutdown:'關閉程式',set_event_status:'變更事件處置狀態'}, sourceLabels={cli:'CLI',gui:'GUI',mcp:'MCP',startup:'啟動流程',system:'系統'}, actionStates={processing:'處理中',succeeded:'成功',busy:'忙碌，要求未執行',failed:'失敗',unknown:'未確認',running:'採集運作中',paused:'採集已暫停',stopped:'採集已停止',event_status_updated:'事件處置已保存',shutdown_requested:'關閉要求已接受，退出待確認',shutdown_unconfirmed:'退出未確認',blocked:'操作受阻',conflict:'操作識別衝突'};
 const STATUS_TIMEOUT_MS=4000, CONTROL_TIMEOUT_MS=30000, STATUS_POLL_MS=1000, STATUS_STALE_MS=5000;
-let offset=0, selected=null, tab='events', busy=false, controlFlight=null, statusFlight=null, clientSeq=0, statusTimer=null, detailSequence=0;
+let offset=0, selected=null, tab='events', busy=false, refreshQueued=false, sourceGapSequence=0, eventSequence=0, filterUrlValid=true, controlFlight=null, statusFlight=null, clientSeq=0, statusTimer=null, detailSequence=0, deliverySequence=0;
 let currentStatus=null, instanceId=null, stateRevision=-1, lastAppliedSeq=-1, lastPollSuccessAt=0, connectionHealthy=false, reloadPending=false;
 function node(tag,text,cls){const e=document.createElement(tag);e.textContent=text??'';if(cls)e.className=cls;return e;}
 function when(s){if(!s)return '尚無紀錄';const d=new Date(s);return Number.isNaN(+d)?'時間未知':d.toLocaleString('zh-TW',{hour12:false});}
+function sourceSuccess(s){
+  if(s.last_success_state!=='known'||typeof s.last_success_at!=='string')return '未知／尚無成功紀錄';
+  const time=Date.parse(s.last_success_at);
+  return Number.isFinite(time)&&time<=Date.now()?when(s.last_success_at):'未知／尚無成功紀錄';
+}
+function sourceFreshness(s){const labels={fresh:'新鮮',stale:'已過期',unknown:'未知'};return Object.prototype.hasOwnProperty.call(labels,s.freshness)?labels[s.freshness]:'未知';}
+function renderHandlingHistory(value){
+  const target=$('handling-history');target.replaceChildren();
+  if(!value||!['available','not_recorded'].includes(value.state)||!Array.isArray(value.entries)){target.append(node('p','處置歷程無法確認。此前狀態變化未知。','result-unknown'));return;}
+  target.append(node('p','此前狀態變化未記錄或未知。來源僅表示操作通道，並非已驗證操作者；處置不等於 ACK。'));
+  if(!value.entries.length)target.append(node('p','尚無可顯示的處置紀錄。'));
+  const list=node('ol');for(const item of value.entries){const transition=(handling[item.previous_status]||'未知')+' → '+(handling[item.status]||'未知');list.append(node('li',when(item.at)+' / '+transition+(item.changed?'':'（無變更）')+' / 來源：'+(sourceLabels[item.source]||'未知')));}target.append(list);
+  target.append(node('p',value.count_capacity==='full'?'紀錄數量已達上限；新處置會被拒絕。':value.count_capacity==='available'?'紀錄數量未達上限；實際儲存空間仍可能不足。':'紀錄數量容量未知。'));
+}
+const investigationGapLabels={stable_entity_missing:'缺少穩定實體綁定，不能關聯',source_unknown:'來源未知',source_incomplete:'來源觀測不完整',saved_observation_stale:'保存觀測已過期',observation_in_future:'觀測時間在未來',simultaneous_metadata_conflict:'同時間／序號 metadata 矛盾',sequence_time_conflict:'序號與時間順序矛盾',candidate_or_member_limit:'候選或案件事件達上限，關聯不完整',diagnostic_not_saved:'沒有保存診斷',diagnostic_incomplete:'診斷資料不完整',diagnostic_result_missing:'缺少診斷結果',diagnostic_stale:'保存診斷已過期',diagnostic_in_future:'診斷時間在未來'};
+function renderInvestigationRevisions(value,preserve=false){
+  const target=$('investigation-revisions'),open=new Set(),focused=preserve?document.activeElement:null;
+  let focusedId=null;
+  if(preserve)for(const box of target.querySelectorAll('details[data-revision-id]')){
+    if(box.open)open.add(box.dataset.revisionId);
+    if(box.querySelector('summary')===focused)focusedId=box.dataset.revisionId;
+  }
+  target.replaceChildren();
+  if(!value||!['available','not_recorded'].includes(value.state)||!Array.isArray(value.revisions)){target.append(node('p','先前版本無法確認；不可推定沒有歷程。','result-unknown'));return;}
+  target.append(node('p','功能啟用前的版本未知。這些快照不代表目前主機安全；雜湊不驗證操作者身分。'));
+  if(!value.revisions.length)target.append(node('p','尚無可顯示的先前版本。'));
+  for(const revision of value.revisions){
+    const diagnosticLabels={matched:'目前保存診斷與當時雜湊相符',changed:'目前診斷已變更',missing:'目前沒有保存診斷',not_bound:'此舊版本未綁定診斷',unknown:'診斷狀態未知'};
+    const diagnosticLabel=diagnosticLabels[revision.diagnostic_evidence_status]||'診斷狀態未知';
+    const c=revision.case,box=node('details'),summary=node('summary','保存於 '+(typeof revision.saved_at==='number'?when(revision.saved_at*1000):'時間未知')+' / '+(revision.evidence_status==='saved_snapshot'?'保存成員相符':'證據未知')+' / 診斷：'+diagnosticLabel);
+    box.dataset.revisionId=String(revision.revision_id);box.open=open.has(box.dataset.revisionId);
+    box.append(summary,node('p','快照時間：'+when(c.as_of)+'。案件：'+c.case_id+'。內容雜湊：'+revision.case_hash+'。'));
+    if(revision.evidence_status!=='saved_snapshot')box.append(node('p','原事件缺失或內容已變，證據未知：'+[...revision.missing_event_ids,...revision.changed_event_ids].join(', '),'result-unknown'));
+    box.append(node('p','診斷證據：'+diagnosticLabel+'；這不代表目前主機安全。'));
+    const diagnosis=c.diagnostic_context;if(diagnosis&&diagnosis.state==='saved'){
+      const diagnosticResultLabels={observed:'已觀測，非安全判定',partial:'部分觀測，資料不完整'};
+      box.append(node('p','當時診斷時間：'+when(diagnosis.observed_at)+'，結果：'+(diagnosticResultLabels[diagnosis.result_status]||'未知')+'。'));
+      for(const observed of diagnosis.observations)box.append(node('p',(sourceNames[observed.source]||observed.source)+' / '+(states[observed.status]||observed.status)+' / 保存列數 '+observed.row_count+' / '+when(observed.observed_at)));
+    }
+    box.append(node('p','觀測 '+c.timeline.length+' 筆；證據缺口 '+c.gaps.length+' 筆。時間接近不代表因果。'));
+    const list=node('ol');for(const item of c.timeline){const li=node('li',when(item.observed_at)+' / '+item.event_id+' / '+(eventNames[item.event_type]||item.event_type));li.append(node('pre',JSON.stringify(item.facts,null,2)));list.append(li);}box.append(list);
+    const gaps=node('ul');for(const gap of c.gaps)gaps.append(node('li',(investigationGapLabels[gap.reason]||gap.reason)+' / '+gap.event_id));box.append(gaps);target.append(box);
+    if(box.dataset.revisionId===focusedId)summary.focus({preventScroll:true});
+  }
+  target.append(node('p',value.count_capacity==='full'?'版本數已達上限，新更新會被拒絕。':value.count_capacity==='available'?'版本數未達上限；實際儲存空間仍可能不足。':'版本容量未知。'));
+}
 function renderInvestigation(value){
   const target=$('investigation-view');target.replaceChildren();if(!value){target.append(node('p','尚未建立調查。查看事件不會自動保存。'));return;}
-  const c=value.case;target.append(node('p','案件 '+c.case_id+'。保存於 '+when(c.as_of)+'。'+(c.status==='limited'?'證據有缺口。':'僅確認 metadata 關聯。')+' 主機安全與入侵狀態未判定。'));
+  const c=value.case,correlation=c.correlation||{};
+  const evidence=value.evidence_status==='saved_snapshot'?'成員與保存雜湊相符':'未知，原事件缺失或已變更';
+  const freshness={ok:'未判過期',stale:'已過期',unknown:'未知'};
+  target.append(node('h4','保存的調查快照'),node('p','案件 '+c.case_id+'。錨定事件：'+c.anchor_event_id+'。保存時間：'+when(c.as_of)+'。'),
+    node('p','證據狀態：'+evidence+'。快照新鮮度：'+(freshness[value.snapshot_freshness]||'未知')+'。'+(c.status==='limited'?'證據有缺口。':c.status==='related_metadata_only'?'僅確認 metadata 關聯。':'調查狀態未知。')),
+    node('p','保存成員：'+c.timeline.length+'。檢視候選：'+correlation.examined+'。缺口：'+c.gaps.length+'。截斷：'+(correlation.truncated===true?'是':correlation.truncated===false?'否':'未知')+'。主機安全與入侵狀態未判定。'));
   target.append(node('p','關聯依據：同主機範圍、同來源、穩定程序實例或持久項目；時間範圍前後15分鐘。'));
-  const list=node('ol');for(const item of c.timeline){const li=node('li');li.append(node('p',when(item.observed_at)+' / '+item.event_id+' / '+(eventNames[item.event_type]||item.event_type)+' / '+item.transition+' / '+(states[item.coverage_status]||item.coverage_status)),node('pre',JSON.stringify(item.facts,null,2)));list.append(li);}target.append(list);
-  const labels={stable_entity_missing:'缺少穩定實體綁定，不能關聯',source_unknown:'來源未知',source_incomplete:'來源觀測不完整',saved_observation_stale:'保存觀測已過期',observation_in_future:'觀測時間在未來',simultaneous_metadata_conflict:'同時間／序號 metadata 矛盾',sequence_time_conflict:'序號與時間順序矛盾',candidate_or_member_limit:'候選或案件事件達上限，關聯不完整'};
-  const gaps=node('ul');for(const gap of c.gaps)gaps.append(node('li',(labels[gap.reason]||gap.reason)+'：'+gap.event_id));target.append(node('h4','缺失／過期／矛盾證據'),gaps);if(!c.gaps.length)target.append(node('p','此快照未發現上述 metadata 缺口；不代表主機安全。'));
+  const list=node('ol');for(const item of c.timeline){
+    const li=node('li');li.dataset.eventId=item.event_id;
+    const basis=item.event_id===c.anchor_event_id?'錨定事件':correlation.basis==='same_host_source_stable_entity'?'同主機範圍、同來源、相同穩定身分；僅 metadata 關聯':'關聯依據未知';
+    li.append(node('p',when(item.observed_at)+' / '+item.event_id+' / '+(eventNames[item.event_type]||item.event_type)+' / '+item.transition+' / '+(states[item.coverage_status]||item.coverage_status)),node('p','關聯依據：'+basis+'。'));
+    for(const gap of c.gaps.filter(entry=>entry.event_id===item.event_id))li.append(node('p','此觀測缺口：'+(investigationGapLabels[gap.reason]||gap.reason),'result-unknown'));
+    if(value.missing_event_ids.includes(item.event_id))li.append(node('p','原事件缺失，證據未知。','result-unknown'));
+    if(value.changed_event_ids.includes(item.event_id))li.append(node('p','原事件內容已變，證據未知。','result-unknown'));
+    li.append(node('pre',JSON.stringify(item.facts,null,2)));list.append(li);
+  }target.append(node('h4','已保存觀測時間線'),list);
+  const gaps=node('ul');for(const gap of c.gaps)gaps.append(node('li',(investigationGapLabels[gap.reason]||gap.reason)+'：'+gap.event_id));target.append(node('h4','缺失／過期／矛盾證據'),gaps);if(!c.gaps.length)target.append(node('p','此快照未發現上述 metadata 缺口；不代表主機安全。'));
   if(value.evidence_status==='unknown')target.append(node('p','原事件缺失或內容已變，證據目前為 UNKNOWN：'+[...value.missing_event_ids,...value.changed_event_ids].join(', '),'result-unknown'));
   const diagnosticLabels={missing:'沒有已保存診斷',matched:'保存hash相符',changed:'診斷已變，原快照不改寫',not_bound:'舊案件未綁定診斷'};
   if(c.diagnostic_context){const d=c.diagnostic_context;target.append(node('h4','已保存的查證依據'),node('p',(diagnosticLabels[value.diagnostic_evidence_status]||'未知')+'。觀測時間：'+when(d.observed_at)+'。'+(d.review_hash?'hash '+d.review_hash:'缺少診斷結果。')));for(const observation of d.observations)target.append(node('p',observation.operation+' / '+(sourceNames[observation.source]||observation.source)+' / '+(states[observation.status]||observation.status)+' / 保存列數 '+observation.row_count+' / '+when(observation.observed_at)));target.append(node('p','這裡只讀既有診斷摘要，沒有重新查詢。之後的觀測不能證明過去已恢復。'));}
-  target.append(node('p','作業系統帳戶 owner：UNKNOWN（未保存）；沒有推定跨帳戶因果。快照新鮮度：'+(states[value.snapshot_freshness]||value.snapshot_freshness)));
+  target.append(node('p','作業系統帳戶 owner：UNKNOWN（未保存）；沒有推定跨帳戶因果。'));
   target.append(node('p','下一步：人工檢閱保存事實；需要新觀測時先取得該來源的採集批准。允許處置清單為空；此頁不執行隔離、終止或修復。'));
 }
 function isStatusSnapshot(value){
@@ -158,25 +216,62 @@ async function monitorAction(action){
     if(controlFlight===request){connectionHealthy=false;$('monitor-result').textContent='要求回覆未確認：'+(error.code||'connection_failed')+'。不自動重送。將繼續查詢後端狀態。';$('monitor-result').className='result-unknown';}
   }finally{if(controlFlight===request)controlFlight=null;renderApplication();await pollStatus();}
 }
-async function events(){const q=new URLSearchParams(new FormData($('filters')));for(const [k,v] of [...q])if(!v)q.delete(k);q.set('limit','50');q.set('offset',offset);const data=await api('/api/events?'+q);$('event-rows').replaceChildren();for(const e of data.events){const tr=node('tr');tr.append(node('td',severity[e.severity]||e.severity,e.severity),node('td',eventNames[e.event_type]||e.event_type),node('td',sourceNames[e.source]||e.source),node('td',when(e.observed_at)),node('td',handling[e.status]||e.status));const td=node('td'),b=node('button','查看');b.addEventListener('click',()=>detail(e.event_id).catch(fail));td.append(b);tr.append(td);$('event-rows').append(tr);}if(!data.events.length){const tr=node('tr'),td=node('td','沒有符合條件的事件。這不代表主機安全。');td.colSpan=6;tr.append(td);$('event-rows').append(tr);}$('count').textContent='符合條件 '+data.total+' 件。本頁 '+data.events.length+' 件。';$('prev').disabled=offset===0;$('next').disabled=!data.has_more;}
-async function detail(id){selected=id;const sequence=++detailSequence;const d=await api('/api/events/'+encodeURIComponent(id));if(sequence!==detailSequence||selected!==id)return;$('detail').hidden=false;$('detail-summary').textContent=(severity[d.severity]||d.severity)+' / '+(sourceNames[d.source]||d.source)+' / '+(handling[d.status]||d.status)+' / '+when(d.observed_at);$('detail-id').textContent=id;$('detail-json').textContent=JSON.stringify(d,null,2);renderInvestigation(d.investigation);$('guidance').replaceChildren();if(d.guidance){$('guidance').append(node('p',d.guidance.observation));for(const step of d.guidance.next_steps||[])$('guidance').append(node('p',typeof step==='string'?step:JSON.stringify(step)));}for(const b of $('status-buttons').querySelectorAll('button'))b.disabled=b.dataset.status===d.status;}
-async function sources(){const d=await api('/api/sources');$('source-cards').replaceChildren();for(const s of d.sources){const a=node('article',null,'source-card');a.append(node('h3',s.name||sourceNames[s.source_id]||s.source_id),node('p','最後採集：'+when(s.last_collected_at)+'。結果：'+(states[s.saved_status]||s.saved_status)+'。目前：'+(states[s.status]||s.status)+'。'));for(const reason of s.reasons||[])a.append(node('p',JSON.stringify(reason),'reason'));a.append(node('p',s.suggestion));$('source-cards').append(a);}}
+const SOURCE_IDS=['defender','listeners','processes','startup','services','tasks','versions'];
+async function sourceGap(){
+  const target=$('source-gap-summary'),sequence=++sourceGapSequence;target.textContent='來源狀態正在確認。這不代表主機安全。';
+  try{
+    const data=await api('/api/sources'),rows=data&&data.sources;if(sequence!==sourceGapSequence)return;
+    if(!Array.isArray(rows)||rows.length!==SOURCE_IDS.length)throw Error('invalid_sources');
+    const indexed=new Map();
+    for(const row of rows){if(!row||!SOURCE_IDS.includes(row.source_id)||indexed.has(row.source_id))throw Error('invalid_sources');indexed.set(row.source_id,row);}
+    const gaps=SOURCE_IDS.filter(id=>indexed.get(id).status!=='ok'||indexed.get(id).freshness!=='fresh');
+    target.textContent=gaps.length?'來源缺口 '+gaps.length+'／7：'+gaps.map(id=>sourceNames[id]+'（'+(states[indexed.get(id).status]||'未知')+'，'+sourceFreshness(indexed.get(id))+'）').join('、')+'。請查看來源狀態；不代表主機安全。':'七個來源最近觀測成功且未過期；不代表主機安全。';
+  }catch(error){if(sequence===sourceGapSequence)target.textContent='來源狀態無法確認，請查看來源狀態；不代表主機安全。';}
+}
+function invalidateEventList(){eventSequence++;detailSequence++;deliverySequence++;selected=null;$('detail').hidden=true;$('event-rows').replaceChildren();$('count').textContent='正在讀取事件。';$('prev').disabled=true;$('next').disabled=true;}
+function writeFilterUrl(){
+  const params=new URLSearchParams(),form=$('filters');for(const name of ['severity','source','status'])if(form.elements[name].value)params.set(name,form.elements[name].value);
+  if(offset)params.set('page',String(offset/50));const query=params.toString();history.pushState(null,'',location.pathname+(query?'?'+query:''));
+}
+function restoreFilterUrl(){
+  const params=new URLSearchParams(location.search),form=$('filters'),names=['severity','source','status'];
+  let valid=[...params.keys()].every(name=>[...names,'page'].includes(name)&&params.getAll(name).length===1);
+  for(const name of names){const value=params.get(name)||'';if(![...form.elements[name].options].some(option=>option.value===value))valid=false;}
+  const page=params.get('page')||'0';if(!/^(0|[1-9][0-9]{0,4})$/.test(page)||Number(page)>10000)valid=false;
+  for(const name of names)form.elements[name].value=valid?(params.get(name)||''):'';
+  offset=valid?Number(page)*50:0;filterUrlValid=valid;$('filter-url-error').hidden=valid;invalidateEventList();
+}
+async function events(){const sequence=++eventSequence;if(!filterUrlValid){$('count').textContent='網址篩選無效，無法顯示事件。';return;}const q=new URLSearchParams(new FormData($('filters')));for(const [k,v] of [...q])if(!v)q.delete(k);q.set('limit','50');q.set('offset',offset);const data=await api('/api/events?'+q);if(sequence!==eventSequence)return;const focused=document.activeElement&&document.activeElement.dataset.eventId;$('event-rows').replaceChildren();for(const e of data.events){const tr=node('tr');tr.append(node('td',severity[e.severity]||e.severity,e.severity),node('td',eventNames[e.event_type]||e.event_type),node('td',sourceNames[e.source]||e.source),node('td',when(e.observed_at)),node('td',handling[e.status]||e.status));const td=node('td'),b=node('button','查看');b.dataset.eventId=e.event_id;b.addEventListener('click',async()=>{try{await detail(e.event_id);if(selected===e.event_id)$('return-to-list').focus();}catch(error){fail(error);}});td.append(b);tr.append(td);$('event-rows').append(tr);}if(!data.events.length){const tr=node('tr'),td=node('td','沒有符合條件的事件。這不代表主機安全。');td.colSpan=6;tr.append(td);$('event-rows').append(tr);}$('count').textContent='符合條件 '+data.total+' 件。本頁 '+data.events.length+' 件。';$('prev').disabled=offset===0;$('next').disabled=!data.has_more||offset>=500000;if(focused){const button=[...$('event-rows').querySelectorAll('button')].find(item=>item.dataset.eventId===focused);if(button)button.focus();}}
+async function detail(id){const sameEvent=selected===id;if(!sameEvent){$('detail').hidden=true;$('investigation-revisions').replaceChildren();}selected=id;const sequence=++detailSequence;const d=await api('/api/events/'+encodeURIComponent(id));if(sequence!==detailSequence||selected!==id)return;$('detail').hidden=false;$('detail-summary').textContent=(severity[d.severity]||d.severity)+' / '+(sourceNames[d.source]||d.source)+' / '+(handling[d.status]||d.status)+' / '+when(d.observed_at);$('detail-id').textContent=id;$('detail-json').textContent=JSON.stringify(d,null,2);renderHandlingHistory(d.handling_history);renderInvestigation(d.investigation);renderInvestigationRevisions(d.investigation_revisions,sameEvent);$('guidance').replaceChildren();if(d.guidance){$('guidance').append(node('p',d.guidance.observation));for(const step of d.guidance.next_steps||[])$('guidance').append(node('p',typeof step==='string'?step:JSON.stringify(step)));}for(const b of $('status-buttons').querySelectorAll('button'))b.disabled=b.dataset.status===d.status;}
+async function sources(){const d=await api('/api/sources');$('source-cards').replaceChildren();for(const s of d.sources){const a=node('article',null,'source-card');a.append(node('h3',s.name||sourceNames[s.source_id]||s.source_id),node('p','最後採集：'+when(s.last_collected_at)+'。結果：'+(states[s.saved_status]||s.saved_status)+'。目前：'+(states[s.status]||s.status)+'。'),node('p','最後成功：'+sourceSuccess(s)+'。新鮮度：'+sourceFreshness(s)+'。'),node('p','觀測列數：'+(Number.isSafeInteger(s.row_count)&&s.row_count>=0?s.row_count:'未知')+'。'));for(const reason of s.reasons||[])a.append(node('p',JSON.stringify(reason),'reason'));a.append(node('p',s.suggestion));$('source-cards').append(a);}}
 async function rules(){const d=await api('/api/rules');$('rule-cards').replaceChildren();for(const r of d.rules){const a=node('article',null,'rule-card');a.append(node('h3',r.name),node('p','嚴重度：'+(severity[r.severity]||r.severity)+'。'+(r.enabled===false?'已停用':'已啟用')+'。'),node('pre',JSON.stringify(r.conditions,null,2)));$('rule-cards').append(a);}}
 const advisoryStates={not_started:'尚未啟用',ready:'資料可讀',partial:'資料不完整',blocked:'讀取受阻',possible:'需要調查',not_applicable:'目前條件不適用',unknown:'未知',success:'成功',not_modified:'未變更',failed:'失敗',fresh:'未過期',stale:'已過期'};
 function advisorySource(s){const a=node('article',null,'source-card');a.append(node('h3',s.source_id||'未知來源'),node('p','狀態：'+(advisoryStates[s.status]||'未知')+'。新鮮度：'+(advisoryStates[s.freshness]||'未知')+'。'),node('p','來源 URL：'+(s.source_url||'未確認'),'reason'),node('p','發布：'+when(s.published_at)+'。更新：'+when(s.updated_at)+'。擷取：'+when(s.fetched_at)+'。最後成功：'+when(s.last_success_at)+'。'));if(s.partial||s.reason_code||(s.item_errors||[]).length)a.append(node('pre',JSON.stringify({partial:s.partial,reason:s.reason_code,item_errors:s.item_errors},null,2)));return a;}
 async function advisories(){const d=await api('/api/advisories?limit=50');$('advisory-summary').textContent=(advisoryStates[d.state]||'未知')+'。共 '+d.total+' 案。本頁 '+d.advisories.length+' 案。'+(d.has_more?'其餘案件請用 CLI 篩選查看。':'')+'未評估是否已遭入侵。'+(d.reason_codes||[]).join(' / ');$('advisory-cards').replaceChildren();for(const c of d.advisories){const a=node('article',null,'source-card'),v=c.current_assessment||{};a.append(node('h3',c.title||'未提供標題'),node('p',(c.aliases||[]).join(' / '),'reason'),node('p','適用性：'+(advisoryStates[v.status]||'未知')+'。信心：'+c.confidence+'。資料不完整：'+(c.partial?'是':'否')+'。'),node('p','原因：'+(v.reason_codes||[]).join(' / '),'reason'));for(const s of c.sources||[])a.append(advisorySource(s));$('advisory-cards').append(a);}if(!d.advisories.length)$('advisory-cards').append(node('p','尚無可顯示的公告案件。這不代表沒有風險。'));$('advisory-source-cards').replaceChildren();for(const s of d.sources||[])$('advisory-source-cards').append(advisorySource(s));}
 function mcpExitSummary(value){const m=value&&typeof value==='object'?value:{},verified=m.status==='verified'&&m.exit_code===0&&m.ack_flushed===true&&m.reason==='mcp_natural_exit_verified',code=Number.isInteger(m.exit_code)&&m.exit_code>=-2147483648&&m.exit_code<=4294967295?m.exit_code:'未知';return (verified?'MCP退出已驗證':'MCP退出未驗證')+'。退出碼：'+code+'。ACK回應已flush：'+(verified?'是':'未知')+'。';}
 async function agent(){const d=await api('/api/agent'),task=d.dispatcher||{},failed=Number.isInteger(task.codex_exit_code)&&task.codex_exit_code!==0;$('agent-summary').textContent='程序：'+(d.host_liveness||'未知')+'。狀態：'+(d.state||d.host_state||'未知')+'。待收：'+(d.pending_events??'未知')+'。最後進度：'+(d.last_progress||d.heartbeat_at||'未知')+'。原因：'+(d.reason||d.blocked_reason||'無')+'。'+mcpExitSummary(d.mcp_lifecycle)+(failed?' 上次 CLI 任務失敗。退出碼：'+task.codex_exit_code+'。事件：'+(task.pending_event_id||'未知')+'。Attempt：'+(task.active_attempt_id||'未知')+'。接收／查證／ACK 請核對下方 delivery_progress；程序已退出不代表事件已收到。':'');$('agent-json').textContent=JSON.stringify(d,null,2);}
-const showDetail=detail;detail=async function(id){await showDetail(id);$('delivery-json').textContent='正在讀取保存證據…';try{const d=await api('/api/events/'+encodeURIComponent(id)+'/delivery');if(selected===id)$('delivery-json').textContent=JSON.stringify(d,null,2);}catch(e){if(selected===id)$('delivery-json').textContent='投遞證據不可用：'+e.message;}};
-$('investigate').addEventListener('click',async()=>{if(!selected)return;const id=selected;$('investigate').disabled=true;try{const value=await api('/api/events/'+encodeURIComponent(id)+'/investigation',{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:'{}'});if(selected===id){renderInvestigation(value);await detail(id);}}catch(error){fail(error);}finally{$('investigate').disabled=false;}});
-async function refreshNotice(){const high=await api('/api/events?severity=high&status=new&limit=1'),critical=await api('/api/events?severity=critical&status=new&limit=1');const count=high.total+critical.total;$('notice').hidden=count===0;$('notice').textContent='有 '+count+' 件新增的高嚴重度事件。請查看事件並記錄處置狀態。';}
-async function refresh(){if(busy||reloadPending)return;busy=true;try{await refreshNotice();if(tab==='events'){await events();if(selected)await detail(selected);}if(tab==='sources')await sources();if(tab==='advisories')await advisories();if(tab==='rules')await rules();if(tab==='agent')await agent();}catch(error){fail(error);}finally{busy=false;}}
-$('filters').addEventListener('submit',event=>{event.preventDefault();offset=0;refresh();});$('prev').addEventListener('click',()=>{offset=Math.max(0,offset-50);refresh();});$('next').addEventListener('click',()=>{offset+=50;refresh();});
-for(const button of document.querySelectorAll('nav button'))button.addEventListener('click',()=>{tab=button.dataset.tab;for(const name of ['events','sources','advisories','rules','agent'])$(name).hidden=name!==tab;for(const item of document.querySelectorAll('nav button'))item.setAttribute('aria-pressed',String(item===button));refresh();});
+const showDetail=detail;detail=async function(id){const sequence=++deliverySequence;await showDetail(id);if(selected!==id||sequence!==deliverySequence)return;$('delivery-json').textContent='正在讀取保存證據…';try{const d=await api('/api/events/'+encodeURIComponent(id)+'/delivery');if(selected===id&&sequence===deliverySequence)$('delivery-json').textContent=JSON.stringify(d,null,2);}catch(e){if(selected===id&&sequence===deliverySequence)$('delivery-json').textContent='投遞證據不可用：'+e.message;}};
+$('return-to-list').addEventListener('click',()=>{const id=selected;selected=null;detailSequence++;deliverySequence++;$('detail').hidden=true;const button=[...$('event-rows').querySelectorAll('button')].find(item=>item.dataset.eventId===id);(button||$('filters').querySelector('button')).focus();});
+$('investigate').addEventListener('click',async()=>{if(!selected)return;const id=selected;$('investigate').disabled=true;try{const value=await api('/api/events/'+encodeURIComponent(id)+'/investigation',{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:'{}'});if(selected===id){renderInvestigation(value);await detail(id);}}catch(error){fail(error.code==='investigation_capacity'?Error('調查保存空間或版本容量不足，原調查與事件未變更'):error);}finally{$('investigate').disabled=false;}});
+function openNoticeSeverity(value){
+  const form=$('filters');form.elements.severity.value=value;form.elements.source.value='';form.elements.status.value='new';offset=0;filterUrlValid=true;$('filter-url-error').hidden=true;invalidateEventList();writeFilterUrl();
+  document.querySelector('nav button[data-tab="events"]').click();
+}
+async function refreshNotice(){
+  const high=await api('/api/events?severity=high&status=new&limit=1'),critical=await api('/api/events?severity=critical&status=new&limit=1');
+  if(![high.total,critical.total].every(n=>Number.isSafeInteger(n)&&n>=0))throw Error('invalid_event_totals');
+  const target=$('notice');target.hidden=high.total+critical.total===0;
+  if(target.dataset.high===String(high.total)&&target.dataset.critical===String(critical.total))return;
+  target.dataset.high=String(high.total);target.dataset.critical=String(critical.total);target.replaceChildren(node('span','新增事件（兩次獨立讀取，時間可能不同）： '));
+  for(const [key,count] of [['high',high.total],['critical',critical.total]])if(count){const button=node('button',severity[key]+' '+count+' 件');button.type='button';button.addEventListener('click',()=>openNoticeSeverity(key));target.append(button,node('span',' '));}
+}
+async function refresh(){if(reloadPending)return;if(busy){refreshQueued=true;return;}busy=true;try{if(tab==='events')await sourceGap();await refreshNotice();if(tab==='events'){await events();if(selected)await detail(selected);}if(tab==='sources')await sources();if(tab==='advisories')await advisories();if(tab==='rules')await rules();if(tab==='agent')await agent();}catch(error){fail(error);}finally{busy=false;if(refreshQueued){refreshQueued=false;queueMicrotask(refresh);}}}
+$('filters').addEventListener('submit',event=>{event.preventDefault();offset=0;filterUrlValid=true;$('filter-url-error').hidden=true;invalidateEventList();writeFilterUrl();refresh();});$('prev').addEventListener('click',()=>{offset=Math.max(0,offset-50);invalidateEventList();writeFilterUrl();refresh();});$('next').addEventListener('click',()=>{if(offset>=500000)return;offset+=50;invalidateEventList();writeFilterUrl();refresh();});window.addEventListener('popstate',()=>{restoreFilterUrl();refresh();});
+for(const button of document.querySelectorAll('nav button'))button.addEventListener('click',()=>{sourceGapSequence++;$('source-gap-summary').textContent='來源狀態尚未確認。這不代表主機安全。';tab=button.dataset.tab;for(const name of ['events','sources','advisories','rules','agent'])$(name).hidden=name!==tab;for(const item of document.querySelectorAll('nav button'))item.setAttribute('aria-pressed',String(item===button));refresh();});
 for(const action of ['pause','stop'])$('agent-'+action).addEventListener('click',async()=>{const button=$('agent-'+action);button.disabled=true;try{await api('/api/agent/'+action,{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:'{}'});await agent();}catch(error){fail(error);}finally{button.disabled=false;}});
 for(const action of MONITOR_ACTIONS)$('monitor-'+action).addEventListener('click',()=>monitorAction(action));
-for(const button of $('status-buttons').querySelectorAll('button'))button.addEventListener('click',async()=>{if(!selected)return;button.disabled=true;try{await api('/api/events/'+encodeURIComponent(selected)+'/status',{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:JSON.stringify({status:button.dataset.status})});await detail(selected);await refresh();}catch(error){fail(error);button.disabled=false;}});
-renderApplication();pollStatus();scheduleStatusPoll();refresh();setInterval(refresh,5000);setInterval(renderApplication,500);
+for(const button of $('status-buttons').querySelectorAll('button'))button.addEventListener('click',async()=>{if(!selected)return;if(!window.crypto||typeof window.crypto.randomUUID!=='function'){fail(Error('operation_id_unavailable'));return;}const id=selected,status=button.dataset.status,operationId=window.crypto.randomUUID();button.disabled=true;try{const result=await api('/api/events/'+encodeURIComponent(id)+'/status',{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:JSON.stringify({status,operation_id:operationId})});if((result.state&&result.state!=='event_status_updated')||result.status!==status)throw Error(result.reason||'event_status_unconfirmed');if(selected===id){await detail(id);await refresh();}}catch(error){const labels={event_status_capacity:'處置紀錄容量不足，狀態未變更',operation_id_conflict:'操作識別衝突，狀態未變更'};fail(Error(labels[error.message]||error.message));button.disabled=false;}});
+restoreFilterUrl();renderApplication();pollStatus();scheduleStatusPoll();refresh();setInterval(refresh,5000);setInterval(renderApplication,500);
 """
 
 
@@ -266,11 +361,11 @@ class LocalWeb:
                     return self.error(403, "local_host_required")
                 try:
                     route = urlsplit(self.path)
+                    if route.path == "/":
+                        return self.reply(200, HTML.replace("__TOKEN__", app.token).replace("__SCOPE_NOTICE__", app.scope_notice()), "text/html; charset=utf-8")
                     query = parse_qs(route.query, max_num_fields=8, strict_parsing=True) if route.query else {}
                     if any(len(v) != 1 for v in query.values()):
                         raise ValueError("duplicate_filter")
-                    if route.path == "/" and not query:
-                        return self.reply(200, HTML.replace("__TOKEN__", app.token).replace("__SCOPE_NOTICE__", app.scope_notice()), "text/html; charset=utf-8")
                     if route.path in {"/app.js", "/app.css"} and not query:
                         return self.reply(200, JS if route.path.endswith(".js") else CSS,
                                           "text/javascript; charset=utf-8" if route.path.endswith(".js") else "text/css; charset=utf-8")
@@ -362,7 +457,12 @@ class LocalWeb:
                     if len(parts) == 5 and parts[:3] == ["", "api", "events"] and parts[4] == "investigation":
                         if self.json_body(size) != {}:
                             raise ValueError("invalid_investigation_request")
-                        return self.reply(200, app.catalog.investigate(parts[3]))
+                        from .events.store import CapacityError
+                        try:
+                            result = app.catalog.investigate(parts[3])
+                        except CapacityError:
+                            return self.error(503, "investigation_capacity")
+                        return self.reply(200, result)
                     if len(parts) != 5 or parts[:3] != ["", "api", "events"] or parts[4] != "status":
                         return self.error(404, "route_not_found")
                     data = self.json_body(size)
@@ -370,8 +470,15 @@ class LocalWeb:
                         raise ValueError("invalid_status_request")
                     self.operation_id(data)
                     event_id = unquote(parts[3], errors="strict")
-                    result = (app.event_status_control(event_id, **data) if app.event_status_control is not None
-                              else app.catalog.set_status(event_id, data["status"]))
+                    from .events.disposition_history_store import HistoryConflictError
+                    from .events.store import CapacityError
+                    try:
+                        result = (app.event_status_control(event_id, **data) if app.event_status_control is not None
+                                  else app.catalog.set_status(event_id, data["status"], source="gui", operation_id=data.get("operation_id")))
+                    except HistoryConflictError:
+                        return self.error(409, "operation_id_conflict")
+                    except CapacityError:
+                        return self.error(503, "event_status_capacity")
                     return self.reply(200, result)
                 except (ValueError, UnicodeError):
                     self.error(400, "invalid_status_request")
