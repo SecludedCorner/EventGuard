@@ -190,6 +190,14 @@ class EventCatalog:
                 raise ValueError("history_store_not_found")
             return snapshot(db, namespace=self.namespace)
 
+    def preview_handling_history(self, value):
+        """Explicit, read-only identity checks; not a restore or approval."""
+        from .disposition_history_backup import preview_identity
+        with self._read() as db:
+            if db is None:
+                raise ValueError("history_store_not_found")
+            return preview_identity(db, value, namespace=self.namespace)
+
     @staticmethod
     def _saved_handling_history(db, event_id, payload_hash):
         """Read bounded operation metadata without creating or repairing tables."""

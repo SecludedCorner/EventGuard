@@ -303,6 +303,13 @@ def render(result, command="", operation=""):
         return "\n".join(["歷程備份已寫入："+text(result.get("path")),
                           "筆數="+text(result.get("records"))+"；SHA256="+text(result.get("sha256")),
                           "來源紀錄未清理；目錄項持久性未確認。此備份不能取代完整資料庫或還原驗證。"])
+    if command=="events" and operation=="preview-history":
+        if result.get("restore_performed") is not False or result.get("restore_authorized") is not False:
+            return "歷程身分預檢未完成。"
+        counts=result.get("counts",{})
+        return "\n".join(["歷程身分唯讀預檢：", "未綁定="+text(counts.get("unbound"))+"；事件缺失="+text(counts.get("event_missing"))+"；事件不符="+text(counts.get("event_mismatch")),
+                          "操作衝突="+text(counts.get("operation_conflict"))+"；已存在="+text(counts.get("already_present"))+"；未存在="+text(counts.get("absent_operation")),
+                          "未還原、未刪除。此預檢不驗證來源真實性、容量或可還原性。"])
     if command=="events" and operation=="detail":
         return "\n".join(["事件詳情："+text(result.get("event_id")),
                           "處置狀態："+text(result.get("status")),

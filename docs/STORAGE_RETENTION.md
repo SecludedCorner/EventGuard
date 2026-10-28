@@ -1,5 +1,16 @@
 # Phase 4：容量、ACK 保留與恢復
 
+## 處置歷程備份的唯讀身分預檢
+
+明確備份後，可由操作者自行將備份檔內容送入 CLI，例如合成範圍：
+
+```powershell
+Get-Content -Raw reports/history-backup-example.json | .\EventGuard.cmd --format text events preview-history --namespace test
+```
+
+備份含本機敏感識別資料，不要提交或分享。CLI 只接有界標準輸入，不自行挑選或讀取路徑；回傳身分衝突與已存在／缺失操作計數，不輸出個別 ID。舊版無 namespace 或跨 namespace 直接拒絕。雜湊非簽章；即使零衝突，也不驗來源真實性、容量、順序或還原能力。此命令不還原、不刪除或釋放容量。
+
+
 核心仍為 Python 3.13 標準庫。以下只變更本工具的資料檔，不修改 Windows 設定、不啟動模型、服務或排程。實測命令與精確測試數見 [EVIDENCE](EVIDENCE.md)；24 小時 soak 僅有 [計畫](SOAK_PLAN.md)，尚未執行。
 
 ## 政策與操作

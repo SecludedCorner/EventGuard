@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 處置歷程備份唯讀預檢 CLI
+
+新增 `events preview-history`，從標準輸入有界接收已保存備份，對指定 namespace／事件庫唯讀核對身分，只輸出彙總計數；交互式 stdin、超大內容、錯誤／未綁定 scope 拒絕。沒有還原、清理或 ACK，零衝突也不證明來源真實性、容量或可還原性。`reports/verify-history-preview-cli-20261028-02` UTC 11:01:42：38/38、0 skip、239 AST、source_unchanged；Job 自然 0／remaining 0／無強停。僅 synthetic；無損釋放容量尚未實作。
+
 ## 2026-10-28 調查保留政策明示 WIP
 
 事件詳情說明：沒有前版的已 ACK 事件／調查可能依期限或容量輪替，有前版時錨點受保護但空間可能不足；同步修正 MAINTENANCE_GOAL 過時的修訂進度。`reports/verify-investigation-retention-copy-20261028-01` UTC 10:59:13：62/62、0 skip、238 AST、source_unchanged；Job 自然 0／remaining 0／無強停。靜態元件與保留策略合成回歸通過；Work 禁用本機瀏覽器，實際畫面仍未驗。

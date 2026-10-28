@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：歷程備份 stdin 預檢合成測試
+
+`reports/verify-history-preview-cli-20261028-02` UTC 11:01:42，38/38、0 skip、239 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic CLI 測合法彙總、錯 scope／修改 hash／超限拒絕、互動 stdin 不等待、無識別輸出、DB／pending／ACK 不變；非還原、容量或真實使用者資料驗收。
+
 ## 2026-10-28：調查保留政策提示合成回歸
 
 `reports/verify-investigation-retention-copy-20261028-01` UTC 10:59:13，62/62、0 skip、238 AST、source_unchanged；Job 自然 0／remaining 0／無強停。核對目標元件文字與既有有／無修訂的保留測試，不代表已在瀏覽器顯示，也不代表容量恢復已實作。
