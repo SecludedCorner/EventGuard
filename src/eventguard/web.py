@@ -231,7 +231,7 @@ $('filters').addEventListener('submit',event=>{event.preventDefault();offset=0;f
 for(const button of document.querySelectorAll('nav button'))button.addEventListener('click',()=>{sourceGapSequence++;$('source-gap-summary').textContent='來源狀態尚未確認。這不代表主機安全。';tab=button.dataset.tab;for(const name of ['events','sources','advisories','rules','agent'])$(name).hidden=name!==tab;for(const item of document.querySelectorAll('nav button'))item.setAttribute('aria-pressed',String(item===button));refresh();});
 for(const action of ['pause','stop'])$('agent-'+action).addEventListener('click',async()=>{const button=$('agent-'+action);button.disabled=true;try{await api('/api/agent/'+action,{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:'{}'});await agent();}catch(error){fail(error);}finally{button.disabled=false;}});
 for(const action of MONITOR_ACTIONS)$('monitor-'+action).addEventListener('click',()=>monitorAction(action));
-for(const button of $('status-buttons').querySelectorAll('button'))button.addEventListener('click',async()=>{if(!selected)return;button.disabled=true;try{await api('/api/events/'+encodeURIComponent(selected)+'/status',{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:JSON.stringify({status:button.dataset.status})});await detail(selected);await refresh();}catch(error){fail(error);button.disabled=false;}});
+for(const button of $('status-buttons').querySelectorAll('button'))button.addEventListener('click',async()=>{if(!selected)return;if(!window.crypto||typeof window.crypto.randomUUID!=='function'){fail(Error('operation_id_unavailable'));return;}const id=selected,status=button.dataset.status,operationId=window.crypto.randomUUID();button.disabled=true;try{const result=await api('/api/events/'+encodeURIComponent(id)+'/status',{method:'POST',headers:{'Content-Type':'application/json','X-EventGuard-CSRF':document.querySelector('meta[name=csrf]').content},body:JSON.stringify({status,operation_id:operationId})});if((result.state&&result.state!=='event_status_updated')||result.status!==status)throw Error(result.reason||'event_status_unconfirmed');if(selected===id){await detail(id);await refresh();}}catch(error){const labels={event_status_capacity:'處置紀錄容量不足，狀態未變更',operation_id_conflict:'操作識別衝突，狀態未變更'};fail(Error(labels[error.message]||error.message));button.disabled=false;}});
 restoreFilterUrl();renderApplication();pollStatus();scheduleStatusPoll();refresh();setInterval(refresh,5000);setInterval(renderApplication,500);
 """
 
@@ -426,8 +426,15 @@ class LocalWeb:
                         raise ValueError("invalid_status_request")
                     self.operation_id(data)
                     event_id = unquote(parts[3], errors="strict")
-                    result = (app.event_status_control(event_id, **data) if app.event_status_control is not None
-                              else app.catalog.set_status(event_id, data["status"]))
+                    from .events.disposition_history_store import HistoryConflictError
+                    from .events.store import CapacityError
+                    try:
+                        result = (app.event_status_control(event_id, **data) if app.event_status_control is not None
+                                  else app.catalog.set_status(event_id, data["status"], source="gui", operation_id=data.get("operation_id")))
+                    except HistoryConflictError:
+                        return self.error(409, "operation_id_conflict")
+                    except CapacityError:
+                        return self.error(503, "event_status_capacity")
                     return self.reply(200, result)
                 except (ValueError, UnicodeError):
                     self.error(400, "invalid_status_request")

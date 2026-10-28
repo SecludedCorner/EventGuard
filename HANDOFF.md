@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-28 P2-HISTORY-001B 原子寫入
+
+已接 EventStore／catalog／Application／CLI／Web；合成 SQLite 含回滾、重播、衝突、容量與 ACK reserve，最終來源瀏覽器驗成功及滿載拒絕；99/99 定向。每事件 32／全庫 4096 冪等槽滿載後拒絕新操作，尚無容量恢復；下一步 001C 只讀歷程／UI，詳 STATUS／EVIDENCE。
+
 ## 2026-10-28 P2-HISTORY-001B 交易核心未接線
 
 新增需既有 SQLite transaction 的有界操作記錄 helper，synthetic rollback／重播／衝突／無變更／容量及 pending 證據通過；定向 57/57。它尚未接 EventStore、Application 或 UI；下一步接線並驗證跨重啟／原子回滾／ACK reserve，詳 STATUS／EVIDENCE。

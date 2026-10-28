@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-28 P2-HISTORY-001B 原子寫入已接線
+
+事件處置狀態與有界操作紀錄同 SQLite 交易；同 ID 跨 Application 重建可重播、不回退後來狀態，衝突及容量不足明示；滿載仍可重播，寫入前後保留 ACK 空間。無變更請求也占冪等槽，32／4096 滿載會阻擋新操作，恢復方式尚未提供；舊歷程不能補造，畫面尚未顯示歷程。
+
+`reports/verify-history-integration-20261028-05` UTC 08:58:18：99/99、0 skip；精簡重複測試後 `reports/verify-history-integration-20261028-07` 7/7、0 skip；223 AST、source_unchanged、Job 自然 0／remaining 0／無強停。`reports/history-integration-20261028-03`／`-04` 最終來源合成瀏覽器分別驗成功及容量拒絕，均保留 pending／無 ACK、Job 自然退出；POST 為明示合成處置，native／model 0。工作樹 325 檔來源 ZIP 自檢，非 commit 候選。下一步 001C 唯讀歷程與 UI。
+
 ## 2026-10-28 P2-HISTORY-001B 交易核心（尚未接產品）
 
 新增 SQLite transaction helper：要求由呼叫方開交易、延遲建表、同操作識別重播／衝突、無變更請求也保存有界冪等識別但不算狀態轉換；以 32／4096 筆與呼叫方提供的 ACK 預留後可用位元組拒絕滿載，不自行 commit 或 ACK。這是獨立核心，未接 EventStore／Application／Web，尚不能回看或持久記錄實際處置。

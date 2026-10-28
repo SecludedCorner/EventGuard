@@ -8,10 +8,10 @@
 | --- | --- | --- |
 | 1 | P1-GUI-001 DONE（synthetic 瀏覽器與定向） | Web 七來源卡片補 last_success_at/state 與 freshness；只沿用 source_status 1.0，完成六情境合成／真瀏覽器驗收。 |
 | 2–3 | P1-GUI-002A/B、003A/B 合成瀏覽器已驗 | 來源缺口摘要、可點的新增高嚴重度提示；再做篩選／頁碼及返回焦點保存，按規格拆 A/B。 |
-| 4–6 | P1-INVEST-004A/B 合成已驗；P2-HISTORY-001A 純契約、001B/C 與 P2-INVEST-REV-001 待做 | 已保存調查易讀化 → 有界處置歷史 → 有界案件修訂；不新增推論攻擊鏈或敏感回應。 |
+| 4–6 | P1-INVEST-004A/B 合成已驗；P2-HISTORY-001A/B 合成已驗、001C 與 P2-INVEST-REV-001 待做 | 已保存調查易讀化 → 有界處置歷史 → 有界案件修訂；不新增推論攻擊鏈或敏感回應。 |
 | 7 | P2-UX-001 PLANNED | 在以上切片後做合成任務可用性驗收；跨產品比較待合法帳戶／可比資料及另行授權。 |
 
-P1-GUI-001 已將 API 最後成功／新鮮度接到七來源卡片；驗收與限制見 STATUS／EVIDENCE。下一步 P2-HISTORY-001B 原子歷程寫入。原生 coverage／偵測率／GUI 體驗／真環境可靠性分開量測，不宣稱超越兩家 EDR。
+P1-GUI-001 已將 API 最後成功／新鮮度接到七來源卡片；驗收與限制見 STATUS／EVIDENCE。下一步 P2-HISTORY-001C 唯讀呈現。原生 coverage／偵測率／GUI 體驗／真環境可靠性分開量測，不宣稱超越兩家 EDR。
 原生工作仍看 [WINDOWS_VALIDATION_PLAN](WINDOWS_VALIDATION_PLAN.md) 最新段：舊診斷包已 superseded，需當前 source/hash 新準備與另一次精確批准；下方「已 prepare」文字是歷史，不能直接執行。離線 GUI 工程不受此局部關卡阻擋。
 
 ## 2026-10-28 下一身分診斷的離線前置完成

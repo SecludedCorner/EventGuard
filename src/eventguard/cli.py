@@ -302,7 +302,7 @@ def execute(args,runtime,progress=None):
                 return catalog.detail(args.event_id)
             if args.event_command=="investigate":
                 return catalog.investigate(args.event_id)
-            return catalog.set_status(args.event_id,args.status)
+            return catalog.set_status(args.event_id,args.status,source="cli")
         if args.event_command=="receive":
             return operator.call("receive_event",args.event_id,args.namespace)
         if args.event_command=="ack":

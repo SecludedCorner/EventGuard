@@ -548,7 +548,7 @@ class EventStore:
         except sqlite3.Error as exc:
             raise self._sqlite_error(exc) from exc
 
-    def set_disposition(self, event_id, status):
+    def set_disposition(self, event_id, status, *, source="unknown", operation_id=None):
         """Save a person's handling state without altering receipt or evidence.
 
         A handling state never means a source event was delivered or repaired.
@@ -558,40 +558,52 @@ class EventStore:
             raise ValueError("invalid_event_identifier")
         if type(status) is not str or status not in {"new", "read", "handled", "ignored"}:
             raise ValueError("invalid_event_status")
+        from .disposition_history_store import HistoryCapacityError, record_attempt
+        operation_id = uuid.uuid4().hex if operation_id is None else operation_id
         try:
             with self._lock, self._connect() as db:
                 db.execute("BEGIN IMMEDIATE")
-                source = db.execute("SELECT * FROM events WHERE event_id=?", (event_id,)).fetchone()
-                if source is None:
+                event_row = db.execute("SELECT * FROM events WHERE event_id=?", (event_id,)).fetchone()
+                if event_row is None:
                     raise ValueError("event_not_found")
                 # The catalog's preceding read is a separate connection. Check
                 # current payload/hash while this write transaction owns the
                 # lock, before creating or updating any handling state.
-                self._row(source)
+                self._row(event_row)
                 exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_dispositions'").fetchone()
                 previous = db.execute("SELECT status,updated_at FROM event_dispositions WHERE event_id=?", (event_id,)).fetchone() if exists else None
                 previous_status = previous["status"] if previous else "new"
                 if previous_status not in {"new", "read", "handled", "ignored"}:
                     raise StoreError("stored_event_disposition_invalid")
                 previous_time = _disposition_timestamp(previous["updated_at"]) if previous else None
-                if previous_status == status:
-                    return {"event_id": event_id, "status": status, "previous_status": previous_status,
-                            "changed": False, "status_updated_at": previous_time}
                 page = db.execute("PRAGMA page_size").fetchone()[0]
-                # The first write needs the table and its PK index. Reserve a
-                # page for a new row, too. Updates reuse their existing row.
-                growth = (3 if not exists else 1 if previous is None else 0) * page
-                if self._used_bytes(db) + growth + self.ack_reserve_bytes > self.max_bytes:
-                    raise CapacityError("event_status_capacity_pending_and_ack_space_preserved")
+                growth = (3 if not exists else 1 if previous is None else 0) * page if previous_status != status else 0
+                available = max(0, self.max_bytes - self._used_bytes(db) - growth - self.ack_reserve_bytes)
+                status_over_capacity = previous_status != status and self._used_bytes(db) + growth + self.ack_reserve_bytes > self.max_bytes
+                now = time.time()
+                try:
+                    attempt = record_attempt(db, {"event_id": event_id, "operation_id": operation_id,
+                        "previous_status": previous_status, "status": status, "source": source, "at": now},
+                        available_bytes=available)
+                except HistoryCapacityError:
+                    reason = ("event_status_capacity_pending_and_ack_space_preserved" if status_over_capacity
+                              else "event_history_capacity_pending_and_ack_space_preserved")
+                    raise CapacityError(reason) from None
+                if not attempt["replayed"] and self._used_bytes(db) + growth + self.ack_reserve_bytes > self.max_bytes:
+                    raise CapacityError("event_history_capacity_pending_and_ack_space_preserved")
+                if attempt["replayed"] or previous_status == status:
+                    return {"event_id": event_id, "status": previous_status, "previous_status": previous_status,
+                            "changed": False, "status_updated_at": previous_time, "history_replayed": attempt["replayed"]}
                 db.execute("""CREATE TABLE IF NOT EXISTS event_dispositions(
                     event_id TEXT PRIMARY KEY,
                     status TEXT NOT NULL CHECK(status IN('new','read','handled','ignored')),
                     updated_at REAL NOT NULL)""")
-                now = time.time()
                 db.execute("INSERT OR REPLACE INTO event_dispositions(event_id,status,updated_at) VALUES(?,?,?)",
                            (event_id, status, now))
+                if self._used_bytes(db) + self.ack_reserve_bytes > self.max_bytes:
+                    raise CapacityError("event_history_capacity_pending_and_ack_space_preserved")
                 return {"event_id": event_id, "status": status, "previous_status": previous_status,
-                        "changed": True, "status_updated_at": _iso(now)}
+                        "changed": True, "status_updated_at": _iso(now), "history_replayed": False}
         except sqlite3.Error as exc:
             raise self._sqlite_error(exc) from exc
 
