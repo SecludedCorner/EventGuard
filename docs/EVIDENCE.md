@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：main同版本桌面／歷程整合
+
+已普通ff-only merge／push並直接核對main與開發ref=dd4deebaa9846b61f29974d64436c3c83563b589；未提交及對origin/main差異皆0。`reports/verify-main-desktop-history-20261029-01` UTC 2026-10-28 19:42:14：13個受影響模組131/131、0skip、source_unchanged、246檔語法無誤，Job自然退出0／remaining0／無強停，未原生採集／模型／ACK。`reports/release-prep-history-transition-preview-20261029-01`：348檔可重現，source-commit.json保存直接遠端核對與各次來源差異，較早單元後續受其他提交改動的hash未冒稱仍相同。本節純文件沿用來源build，Web／真人／原生與完整恢復仍未驗。
+
 ## 2026-10-29：CLI唯讀相鄰轉換預檢
 
 `reports/verify-history-transition-preview-20261029-03` UTC 2026-10-28 19:39:22：34/34、0skip、source_unchanged、Job自然退出0／remaining0。合成JSON／中文CLI驗前綴及身分相符仍可存在轉換衝突，逐事件交錯／noop與空集合正確，未知範圍明示；讀前後DB hash、pending／receipt不變。01錯誤指定不存在的test_presentation未執行且build無manifest，未冒稱成功；02為33/33，最終03及`reports/build-history-transition-preview-20261029-02` 268檔hash相符／246檔編譯通過。真實恢復與來源認證仍未驗。

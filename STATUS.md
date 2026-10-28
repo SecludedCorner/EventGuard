@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面與歷程增量已整合main
+
+56786b4（+162/−10）、534d0f1（+122/−6）、1518062（+35/−1）、dd4deeb（+87/−6）均已審查、build／相關測試通過、逐單元普通push開發ref，再以ff-only merge普通push main。直接ls-remote核對兩ref=dd4deebaa9846b61f29974d64436c3c83563b589，工作樹及對origin/main差異0；未改寫歷史、刪分支或release。最終跨受影響模組整合：`py -3.13 -B scripts/verify.py --run-dir reports/verify-main-desktop-history-20261029-01 --timeout-seconds 180`加該目錄verification-summary所列13個`--module`，2026-10-29 03:42（UTC+8）131/131、0skip、source_unchanged、Job自然退出0／remaining0，246檔語法檢查通過。`reports/release-prep-history-transition-preview-20261029-01`綁定該40碼SHA，348檔來源包可重現；未確認CI，不等於真人／瀏覽器／原生或完整恢復驗收。本節純文件沿用上述來源build／測試並檢查diff與既有路徑。
+
 ## 2026-10-29 唯讀恢復預檢呈現轉換衝突
 
 `events preview-history` JSON及中文文字新增備份內逐事件相鄰轉換檢查，與目標前綴／事件身分獨立；無相鄰紀錄不當通過，相符只限已提供紀錄，第一筆以前／遺漏／完整性、來源與可恢復性仍未知。與恢復拒絕閘道共用純函式，不寫入／還原／刪除或ACK。`py -3.13 -B scripts/verify.py --run-dir reports/verify-history-transition-preview-20261029-03 --timeout-seconds 180 --module test_disposition_history_backup_preview --module test_disposition_history_preview_cli --module test_disposition_history_restore --module test_disposition_history_restore_prefix --module test_disposition_history_restore_integration --module test_application_cli_text --module test_disposition_history_contract`：2026-10-29 03:39（UTC+8）34/34、0skip、source_unchanged、Job自然退出0／remaining0；含多事件交錯、noop、DB hash與pending／receipt保留。01模組名稱錯誤未執行，02為33/33，最終03通過。`reports/build-history-transition-preview-20261029-02`：268檔hash相符、246檔編譯通過。剩餘驗收仍為可證來源／完整使用者恢復、Web、真人與原生關卡。
