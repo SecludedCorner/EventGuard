@@ -1,5 +1,13 @@
 # 證據與時間日誌
 
+## 2026-10-28：實際build與中斷驗證器的兩個修復
+
+3ed82a8的package_candidate首輪01只回candidate_build_failed；該root與build-failure-analysis.json保留。JobPopen以applicationName原值呼叫CreateProcessW，不為git短名稱查PATH；改shutil.which後只接受現有absolute .exe，再交私有Job，不下載或使用cmd wrapper。新增兩個注入測試，沒有真Git child。
+
+修來源前以guardian-stop.request合作停止完整01；UTC05:33:10–05:40:08，417.007秒、1533run／1530pass／3skip、0fail/error，原Job自然0／remaining0／無強停、source_unchanged，但原passed_checks=true不能作完整證據。acceptance-classification.json明確拒絕。實際根因是stopTest只result.stop()，worker/parent未比對預期總數。修非空expected_tests／run相等、stopped_early與stop_requested皆false才接受，worker及parent同時套用；新增4個純注入suite回歸。
+
+py -3.13 -B scripts/verify.py --run-dir reports/verify-release-prep-repairs-20261028-01 --timeout-seconds 180 --module test_package_candidate --module test_verify_completion --module test_verify_portability：UTC05:42:43–05:42:44、.681秒、19/19／expected19、0fail/error/skip，AST216無錯、source_unchanged、原Job自然0／remaining0／無強停、無逐測試殘留，native/model0。新完整02同原full入口／1800秒已開始，未出結果不宣稱通過。修復依checkpoint保存後繼續真ZIPbuild與副本smoke，不以單元測試代替build。
+
 ## 2026-10-28：發布前整合與source candidate build前置
 
 最新人類要求全部release準備、不執行release，從98d507d接續。fetch後公開origin/main仍615f77f；git merge --no-ff --no-commit origin/main無衝突／原產品tree無變更。候選已含其他可分享開發分支；私人本機main與原worktree保留，不推main／tag或刪分支。新CHANGELOG明示Unreleased，工作佇列見RELEASE_PREPARATION。

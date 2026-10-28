@@ -1,5 +1,11 @@
 # EventGuard 接手
 
+## 2026-10-28 當前worker已換為修後完整02（最新）
+
+3ed82a8整合已保存。實際build01因短名稱git未由owned launcher解析PATH失敗，已改既有完整git.exe與wrapper拒絕；原目錄保留。完整01已由合作stop自然退出，1533項部分結果不可當完整PASS；驗證器原passed_checks=true是已重現bug，原回條與取消分類分開保留。修非空expected/run計數、提前停止及stop flag雙閘道，定向19/19。
+
+DOING：唯一完整guardian現在是reports/verify-release-preparation-full-20261028-02；01已退出，不要再依舊PID操作。src/scripts/tests再次凍結，只補文件，等原02結果再處理新失敗。NEXT：修復checkpoint→同commit package_candidate新02→解壓副本合成CLI→反向diff臨時index演練→精確CI／SHA／hash終核→暫停本次接續。其他worktree、私人歷史／圖片不動，不發布main/tag。
+
 ## 2026-10-28 當前原子工作：完成發布前準備，不發布（最新）
 
 最新人類授權自主完成所有release準備，沿用feat/local-codex-acceptance。已無衝突合入origin/main既有公開紀錄（原產品tree不變），不接私人本機main歷史。新增有界source candidate打包器／安全測試，CHANGELOG與docs/RELEASE_PREPARATION.md是本次準備入口。原native診斷未批准仍不執行；不動main/tag／部署／分支刪除。

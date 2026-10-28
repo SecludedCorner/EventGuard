@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -88,10 +89,14 @@ def audit_archive(path, revision):
 
 def archive_commit(root, revision, filename):
     """Git runs inside our private Job before execution; save fixed receipts."""
+    executable = shutil.which("git")
+    if (not executable or not Path(executable).is_absolute() or not Path(executable).is_file()
+            or Path(executable).suffix.lower() != ".exe"):
+        raise ValueError("installed_native_git_required")
     child, receipt = None, None
     reason = "owner_exception"
     try:
-        child = spawn(["git", "archive", "--format=zip", "--prefix=EventGuard/",
+        child = spawn([str(Path(executable).resolve()), "archive", "--format=zip", "--prefix=EventGuard/",
                        "--output=" + str(root / filename), revision], cwd=PROJECT,
                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:

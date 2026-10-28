@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-10-28 發布準備實跑修復與固定來源重驗（最新）
+
+整合checkpoint3ed82a8已推；首次實際ZIP build在新01目錄失敗，私有Job launcher不替applicationName短名稱git查PATH。改先解析並驗證既有完整git.exe路徑，不執行wrapper／不下載；新增兩個fixture。原失敗目錄與固定原因保留，未將其稱build成功。
+
+為修正build而合作停止原完整01，原worker自然0／remaining0／無強停，跑1533項／1530pass／3skip；原驗證器卻給passed_checks=true，確認另一實際缺陷。原回條保持原樣，acceptance-classification.json明示取消／不得作完整PASS。修worker與parent雙閘道：必須非空、expected_tests等於tests_run、stopped_early=false、stop_requested=false；新增完整／中斷／末項取消／空suite／缺或bool計數fixture，避免乾淨exit洗綠。
+
+定向verify-release-prep-repairs-20261028-01為19/19、expected19、0fail/error/skip、.681秒、source_unchanged／原Job自然0／remaining0／無強停，native/model0。修後完整02已啟動於reports/verify-release-preparation-full-20261028-02，原01不重用；來源再次固定，僅文件可增量更新。接續新commit的實際ZIP02／包內合成smoke／恢復演練，全部證據閉合才稱準備完成。
+
 ## 2026-10-28 全部發布前準備已啟動（最新）
 
 最新使用者明確改為「不用release，但完成全部release準備、安排連續任務」。不再以分支／版本未選阻擋準備：沿用現有開發候選、納入所有可分享分支及公開main既有紀錄，私人本機main祖先、其他worktree與圖片保留；不push main／tag／正式發布或刪分支，語意衝突仍停止。

@@ -9,8 +9,8 @@
 | 工作 | 完成條件 | 狀態 |
 | --- | --- | --- |
 | PREP-1 分支整合 | 所有可分享分支是候選祖先；無語意衝突；私人歷史不可達 | 公開main已無衝突合入，待checkpoint與祖先終核 |
-| PREP-2 build／測試 | AST與完整guardian回歸；失敗保留後修正，原Job自然退出／remaining0 | 完整回歸進行中，受測來源不再修改 |
-| PREP-3 候選包 | 指定commit的source ZIP；逐檔hash／必要檔案／容量／路徑檢查；兩次build位元組一致 | 打包器與合成安全測試已加入，待候選commit實際build |
+| PREP-2 build／測試 | AST與完整guardian回歸；失敗保留後修正，原Job自然退出／remaining0 | 原01已取消、不接受其假綠；驗證器完整性修復後02進行中，來源凍結 |
+| PREP-3 候選包 | 指定commit的source ZIP；逐檔hash／必要檔案／容量／路徑檢查；兩次build位元組一致 | 首輪01短名稱Git啟動失敗已修，原失敗保留，待新commit實際build02 |
 | PREP-4 包內操作 | 解壓到新reports副本，以原Job執行合成CLI操作與保存／重開；無native／模型 | 待PREP-3 |
 | PREP-5 保存與恢復 | changelog、未驗範圍、可回復程序、遠端SHA／CI及交付包hash均可核對 | changelog草稿已備，等待實測結果 |
 

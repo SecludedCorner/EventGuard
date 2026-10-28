@@ -87,6 +87,13 @@ def guardian_succeeded(receipt, scope):
             and receipt.get("deadline_or_owner_failure") is False)
 
 
+def suite_completed(value):
+    """A clean exit is insufficient when discovery was empty or stopped early."""
+    expected, ran = value.get("expected_tests"), value.get("tests_run")
+    return (type(expected) is int and expected > 0 and type(ran) is int and ran == expected
+            and value.get("stopped_early") is False and value.get("stop_requested") is False)
+
+
 def worker(output, guardian_name, scope="full", modules=()):
     evidence, residuals, syntax = [], [], []
     baseline = {}
@@ -136,9 +143,13 @@ def worker(output, guardian_name, scope="full", modules=()):
         # Windows may attach a conhost to the test worker during SDK imports.
         # Account for the exact pre-test PID+creation identities, never a count.
         baseline = current_job_members(guardian_name) if os.name == "nt" else {}
+        expected_tests = suite.countTestCases()
         result = unittest.TextTestRunner(stream=log, verbosity=2, resultclass=Result).run(suite)
     value = {"verified_at_utc": datetime.now(timezone.utc).isoformat(), "python": platform.python_version(),
-             "tests_run": result.testsRun, "passed": result.testsRun-len(result.failures)-len(result.errors)-len(result.skipped),
+             "tests_run": result.testsRun, "expected_tests": expected_tests,
+             "stopped_early": bool(result.shouldStop or result.testsRun != expected_tests),
+             "stop_requested": (output / "guardian-stop.request").exists(),
+             "passed": result.testsRun-len(result.failures)-len(result.errors)-len(result.skipped),
              "failures": [test.id() for test, _ in result.failures], "errors": [test.id() for test, _ in result.errors],
              "skipped": [{"test": test.id(), "reason": reason} for test, reason in result.skipped],
              "python_files": len(files), "syntax_errors": syntax, "duration_seconds": round(time.monotonic()-tick, 3),
@@ -150,7 +161,7 @@ def worker(output, guardian_name, scope="full", modules=()):
                  selected_modules=list(modules) if modules else list(MOCK_MODULES) if scope == "mock" else ["test_*.py"])
     atomic_json(output / "worker-summary.json", value, 2*1024*1024)
     atomic_json(output / "lifecycle-evidence.json", evidence, 4*1024*1024)
-    return 0 if result.wasSuccessful() and not syntax and not residuals else 1
+    return 0 if result.wasSuccessful() and suite_completed(value) and not syntax and not residuals else 1
 
 
 def main(argv=None):
@@ -203,7 +214,7 @@ def main(argv=None):
     value.update(source_unchanged=before == sources(), guardian=receipt,
                  command="python -B scripts/verify.py --scope " + args.scope + "".join(" --module "+name for name in args.module) + " --run-dir " + str(output.relative_to(ROOT)), output_dir=str(output.relative_to(ROOT)),
                  passed_checks=bool(guardian_succeeded(receipt, args.scope)
-                     and before == sources() and not value.get("worker_summary_missing")
+                     and before == sources() and not value.get("worker_summary_missing") and suite_completed(value)
                      and not value.get("failures") and not value.get("errors") and not value.get("per_test_residuals")))
     atomic_json(output / "verification-summary.json", value, 2*1024*1024)
     print(json.dumps(value, ensure_ascii=True))

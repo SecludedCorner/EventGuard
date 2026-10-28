@@ -3,6 +3,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -85,6 +86,26 @@ class CandidateArchiveTests(unittest.TestCase):
                 package.audit_archive(self.path, REVISION)
         finally:
             package.MAX_UNPACKED = old
+
+
+    def test_git_launch_resolves_installed_executable_before_owned_creation(self):
+        executable = Path(self.directory.name) / "git.exe"
+        executable.write_text("synthetic; never executed", encoding="utf-8")
+        receipt = {"managed": True, "child_exited": True, "exit_code": 0,
+                   "remaining_owned_processes": 0, "forcibly_terminated": False}
+        with patch.object(package.shutil, "which", return_value=str(executable)), \
+                patch.object(package, "spawn", return_value=Mock()) as spawn, \
+                patch.object(package, "finish", return_value=receipt):
+            package.archive_commit(Path(self.directory.name), REVISION, "fixture.zip")
+        self.assertEqual(spawn.call_args.args[0][0], str(executable.resolve()))
+
+    def test_missing_or_wrapper_git_does_not_create_a_child(self):
+        for executable in (None, "git", str(Path(self.directory.name) / "git.cmd")):
+            with self.subTest(executable=executable), patch.object(package.shutil, "which", return_value=executable), \
+                    patch.object(package, "spawn") as spawn:
+                with self.assertRaisesRegex(ValueError, "installed_native_git"):
+                    package.archive_commit(Path(self.directory.name), REVISION, "fixture.zip")
+                spawn.assert_not_called()
 
 
 if __name__ == "__main__":
