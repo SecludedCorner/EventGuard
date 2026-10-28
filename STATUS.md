@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 Web來源卡片失敗與舊回覆防護
+
+來源讀取中清除舊卡片並明示未知；HTTP／格式錯誤不沿用先前成功，七個唯一來源驗證完成後才依固定順序一次呈現。新請求序號阻擋晚到成功／失敗覆蓋新結果，保持歷史成功、原結果、目前狀態與新鮮度分列。`py -3.13 -B scripts/verify.py --run-dir reports/verify-web-source-read-state-20261029-02 --timeout-seconds 180 --module test_web_source_read_state --module test_web_detail_read_state --module test_application_ui_state --module test_source_success_history --module test_product_sources`：2026-10-29 03:52（UTC+8）44/44、0skip、source_unchanged、Job自然退出0／remaining0。Node執行實際renderer／node／時間函式，六情境及缺失／重複／空集合／晚到回覆合成已驗，非瀏覽器。01為43通過1失敗（fixture把本地化日期當ISO），改與實際when函式輸出比較後02通過；不更動產品日期語意。`reports/build-web-source-read-state-20261029-01`：270檔hash相符、248檔編譯成功。Web／200%／真人／原生維持待驗。
+
 ## 2026-10-29 Web詳情失敗與身分核對
 
 詳情新增讀取狀態；同事件刷新失敗時清除舊內容、處置／調查／投遞資料維持未知並停用寫入，重試成功才恢復。回覆event_id須符合請求，晚到失敗／成功不串到其他案件，失敗不續查delivery；按鈕處理函式亦拒絕未確認詳情。`py -3.13 -B scripts/verify.py --run-dir reports/verify-web-detail-read-state-20261029-03 --timeout-seconds 180 --module test_web_detail_read_state --module test_application_ui_state --module test_event_catalog --module test_investigation_revision_renderer`：2026-10-29 03:49（UTC+8）41/41、0skip、source_unchanged、Job自然退出0／remaining0；Node執行實際JS函式與處理器＋synthetic DOM/API，非瀏覽器驗收。`reports/build-web-detail-read-state-20261029-02`：269檔hash相符、247檔編譯通過。01／02各41/41；修復寫檔造成的換行雜訊後03重驗，diff-check通過，不提交無關換行修改。Web真瀏覽器／200%／真人／原生仍待驗。

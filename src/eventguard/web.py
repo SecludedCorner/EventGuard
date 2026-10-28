@@ -28,7 +28,7 @@ HTML = """<!doctype html>
 <article id="detail" hidden><h2>事件詳情</h2><button id="return-to-list" type="button">返回事件清單</button><p id="detail-read-state" role="status"></p><p id="detail-summary"></p><p id="detail-id"></p><p>處置狀態只記錄人的決定。它不會 ACK，也不會修改系統。</p>
 <div id="status-buttons"><button data-status="new">新增</button><button data-status="read">已讀</button><button data-status="handled">已處理</button><button data-status="ignored">忽略</button></div><h3>處置歷程</h3><div id="handling-history"></div>
 <h3>觀察與建議</h3><div id="guidance"></div><h3>事件調查</h3><p>僅關聯已保存 metadata；不查主機、不啟動模型、不 ACK。時間接近不代表因果或攻擊鏈。</p><p id="investigation-retention">更新會保存可用的前版；此功能啟用前的版本未知，版本滿載時更新會失敗。沒有前版的已 ACK 事件與調查可能依保留期限或容量規則被移除；有前版時事件錨點受保護，但空間仍可能不足。</p><button id="investigate">建立／更新保存的調查</button><div id="investigation-view"></div><h3>調查先前版本</h3><div id="investigation-revisions"></div><h3>投遞證據</h3><p>落盤、收件、結果與 ACK 分開記錄。缺少證據顯示未知。CLI 啟動只代表程序啟動；實際收件、回合與退出另行核對。</p><pre id="delivery-json"></pre><details><summary>結構化資料</summary><pre id="detail-json"></pre></details></article></section>
-<section id="sources" hidden><h2>七個來源</h2><p>只顯示已保存的採集結果。未知、拒讀或過期都不代表安全。</p><div id="source-cards"></div></section>
+<section id="sources" hidden><h2>七個來源</h2><p>只顯示已保存的採集結果。未知、拒讀或過期都不代表安全。</p><p id="source-read-state" role="status">來源資料尚未確認。</p><div id="source-cards"></div></section>
 <section id="advisories" hidden><h2>資安公告與本機適用性</h2><p>只讀取已保存資料。公告文字是不可信資料。未知、過期與不適用都不代表主機安全。此頁不抓網站、不啟動模型。</p><p id="advisory-summary"></p><div id="advisory-cards"></div><h3>公告來源狀態</h3><div id="advisory-source-cards"></div></section>
 <section id="rules" hidden><h2>規則</h2><p>編輯專案的 config/rules.json。下一輪採集會讀取。規則不執行命令。</p><div id="rule-cards"></div></section>
 <section id="agent" hidden><h2>Agent 派送</h2><p>這是選配的短期專用任務。無事件由普通程式等待。此頁不會啟動模型。ACK 不是風險結案。</p><p id="agent-summary"></p><button id="agent-pause">暫停新派送</button> <button id="agent-stop">停止派送程序</button><p>恢復需在終端明確執行 agent resume --execute。採集及原事件不受這兩個按鈕影響。</p><pre id="agent-json"></pre></section>
@@ -264,7 +264,18 @@ async function detail(id){const sameEvent=selected===id;if(!sameEvent){$('detail
     return false;
   }
 }
-async function sources(){const d=await api('/api/sources');$('source-cards').replaceChildren();for(const s of d.sources){const a=node('article',null,'source-card');a.append(node('h3',s.name||sourceNames[s.source_id]||s.source_id),node('p','最後採集：'+when(s.last_collected_at)+'。結果：'+(states[s.saved_status]||s.saved_status)+'。目前：'+(states[s.status]||s.status)+'。'),node('p','最後成功：'+sourceSuccess(s)+'。新鮮度：'+sourceFreshness(s)+'。'),node('p','觀測列數：'+(Number.isSafeInteger(s.row_count)&&s.row_count>=0?s.row_count:'未知')+'。'));for(const reason of s.reasons||[])a.append(node('p',JSON.stringify(reason),'reason'));a.append(node('p',s.suggestion));$('source-cards').append(a);}}
+let sourceCardsSequence=0;
+async function sources(){
+  const target=$('source-cards'),sequence=++sourceCardsSequence;
+  $('source-read-state').textContent='正在確認來源資料；先前成功尚未重新確認。';target.replaceChildren(node('p','來源資料正在讀取，狀態未知。'));
+  try{
+    const d=await api('/api/sources');if(sequence!==sourceCardsSequence)return;
+    if(!d||!Array.isArray(d.sources)||d.sources.length!==SOURCE_IDS.length)throw Error('invalid_sources');
+    const indexed=new Map();for(const s of d.sources){if(!s||!SOURCE_IDS.includes(s.source_id)||indexed.has(s.source_id))throw Error('invalid_sources');indexed.set(s.source_id,s);}
+    const cards=[];for(const id of SOURCE_IDS){const s=indexed.get(id),a=node('article',null,'source-card');a.append(node('h3',s.name||sourceNames[s.source_id]||s.source_id),node('p','最後採集：'+when(s.last_collected_at)+'。結果：'+(states[s.saved_status]||'未知')+'。目前：'+(states[s.status]||'未知')+'。'),node('p','最後成功：'+sourceSuccess(s)+'。新鮮度：'+sourceFreshness(s)+'。'),node('p','觀測列數：'+(Number.isSafeInteger(s.row_count)&&s.row_count>=0?s.row_count:'未知')+'。'));for(const reason of s.reasons||[])a.append(node('p',JSON.stringify(reason),'reason'));a.append(node('p',s.suggestion));cards.push(a);}
+    target.replaceChildren(...cards);$('source-read-state').textContent='已讀取七來源保存資料；不代表目前主機安全。';
+  }catch(error){if(sequence===sourceCardsSequence){target.replaceChildren(node('p','來源資料無法確認，狀態未知；不代表主機安全。','result-unknown'));$('source-read-state').textContent='來源資料讀取失敗或格式不符；不沿用先前成功。';}}
+}
 async function rules(){const d=await api('/api/rules');$('rule-cards').replaceChildren();for(const r of d.rules){const a=node('article',null,'rule-card');a.append(node('h3',r.name),node('p','嚴重度：'+(severity[r.severity]||r.severity)+'。'+(r.enabled===false?'已停用':'已啟用')+'。'),node('pre',JSON.stringify(r.conditions,null,2)));$('rule-cards').append(a);}}
 const advisoryStates={not_started:'尚未啟用',ready:'資料可讀',partial:'資料不完整',blocked:'讀取受阻',possible:'需要調查',not_applicable:'目前條件不適用',unknown:'未知',success:'成功',not_modified:'未變更',failed:'失敗',fresh:'未過期',stale:'已過期'};
 function advisorySource(s){const a=node('article',null,'source-card');a.append(node('h3',s.source_id||'未知來源'),node('p','狀態：'+(advisoryStates[s.status]||'未知')+'。新鮮度：'+(advisoryStates[s.freshness]||'未知')+'。'),node('p','來源 URL：'+(s.source_url||'未確認'),'reason'),node('p','發布：'+when(s.published_at)+'。更新：'+when(s.updated_at)+'。擷取：'+when(s.fetched_at)+'。最後成功：'+when(s.last_success_at)+'。'));if(s.partial||s.reason_code||(s.item_errors||[]).length)a.append(node('pre',JSON.stringify({partial:s.partial,reason:s.reason_code,item_errors:s.item_errors},null,2)));return a;}

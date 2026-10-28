@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：Web來源卡片讀取失敗離線行為
+
+`reports/verify-web-source-read-state-20261029-02` UTC 2026-10-28 19:52:57：44/44、0skip、source_unchanged、Job自然退出0／remaining0。實際JS sources／node／時間函式以synthetic DOM/API驗拒讀後歷史成功、過期、未知／缺失／無效／未來時間、零列、HTML樣式文字；缺來源／重複／空資料及HTTP錯誤不留舊成功，慢成功／失敗不覆蓋新資料。01本地化日期斷言錯誤為43/44，02修正fixture比較後通過。`reports/build-web-source-read-state-20261029-01`：270檔受測hash相符、248檔編譯成功。這不是瀏覽器／人類可用性／原生驗收；既有待驗不變。
+
 ## 2026-10-29：Web詳情失敗離線行為
 
 `reports/verify-web-detail-read-state-20261029-03` UTC 2026-10-28 19:49:34：41/41、0skip、source_unchanged、Job自然退出0／remaining0。實際JS詳情／delivery與按鈕處理器在Node＋synthetic DOM/API驗同案失敗清除、未知／停用、重試、錯案ID、晚到結果及未確認時不送保存請求；非瀏覽器。`reports/build-web-detail-read-state-20261029-02` 269檔hash相符、247檔編譯。01／02通過後發現混合換行被寫檔正規化，保存原未改行bytes移除無關diff，03為最終；blocker回條留reports，未放寬diff檢查或UI驗收。

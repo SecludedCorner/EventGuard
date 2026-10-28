@@ -185,7 +185,7 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertIn('id="source-cards"', page)
         code, _, script = self.request("/app.js")
         self.assertEqual(code, 200)
-        match = re.search(r"async function sources\(\)\{([^\n]+)", script)
+        match = re.search(r"async function sources\(\)\{(.*?)async function rules\(\)", script, re.S)
         self.assertIsNotNone(match)
         source_renderer = match.group(1)
         for required in ("$('source-cards')", "s.last_collected_at", "s.saved_status", "s.status",
