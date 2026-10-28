@@ -27,15 +27,15 @@ class DispositionHistoryBackupTests(unittest.TestCase):
         with closing(sqlite3.connect(self.store.path.as_uri() + "?mode=ro", uri=True)) as db:
             db.execute("PRAGMA query_only=ON")
             db.execute("BEGIN")
-            return snapshot(db)
+            return snapshot(db, namespace="test")
 
     def test_requires_explicit_read_only_transaction(self):
         with closing(sqlite3.connect(self.store.path)) as db:
             with self.assertRaisesRegex(ValueError, "history_snapshot_read_transaction_required"):
-                snapshot(db)
+                snapshot(db, namespace="test")
             db.execute("BEGIN")
             with self.assertRaisesRegex(ValueError, "history_snapshot_read_transaction_required"):
-                snapshot(db)
+                snapshot(db, namespace="test")
 
     def test_legacy_without_table_does_not_create_or_invent_records(self):
         before = self.store.path.read_bytes()
@@ -85,6 +85,20 @@ class DispositionHistoryBackupTests(unittest.TestCase):
         altered["data"]["records"][0]["changed"] = False
         with self.assertRaisesRegex(ValueError, "history_backup_invalid"):
             verify_snapshot(altered)
+
+    def test_namespace_is_bound_and_legacy_format_remains_unknown(self):
+        value = self.read_snapshot()
+        self.assertEqual(verify_snapshot(value)["namespace"], "test")
+        swapped = deepcopy(value)
+        swapped["data"]["namespace"] = "live"
+        with self.assertRaisesRegex(ValueError, "history_backup_integrity_failed"):
+            verify_snapshot(swapped)
+        legacy = deepcopy(value)
+        legacy["data"].pop("namespace")
+        legacy["data"]["schema_version"] = "1.0"
+        encoded = json.dumps(legacy["data"], sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+        legacy.update(sha256=hashlib.sha256(encoded).hexdigest(), bytes=len(encoded))
+        self.assertEqual(verify_snapshot(legacy)["namespace"], "unknown")
 
     def test_corrupt_metadata_is_rejected_without_repair(self):
         self.store.set_disposition("evt-backup-fixture", "read", operation_id="op-first")

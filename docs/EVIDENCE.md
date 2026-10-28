@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：明確歷程備份 CLI 與 namespace
+
+`reports/verify-history-backup-cli-20261028-03` UTC 09:42:38，42/42、0 skip、228 AST、source_unchanged；Job 自然退出 0、remaining 0、無強停；synthetic 驗證 CLI 明確呼叫、摘要不洩識別、缺庫不建立、既有檔不覆寫、原 DB 不變，以及 1.1 namespace 綁定／1.0 unknown。先前 `--module test_presentation` 指定不存在的模組，參數檢查即失敗，未啟動測試 worker；已改為實際模組重驗。真 junction／斷電持久性、還原和容量釋放均未驗，hash 非簽章。
+
 ## 2026-10-28：歷程備份不覆寫合成測試
 
 `reports/verify-history-backup-file-20261028-02` 25/25／0 skip／228 AST／source_unchanged、Job 自然 0／remaining 0／無強停。synthetic 測驗證後 reports 落盤／重讀、既有目的地不覆寫、無效內容拒絕、link 失敗只清自建暫存、模擬 junction 拒絕、DB／pending／ACK 不變。實際 junction 與意外斷電後目錄項 durability 未驗；不以 hash 宣稱防竄改或認證，未提供還原或自動清理。

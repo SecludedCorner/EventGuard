@@ -11,12 +11,14 @@ from .disposition_history import MAX_HISTORY_ENTRIES, MAX_HISTORY_PER_EVENT, val
 MAX_EXPORT_BYTES = 4 * 1024 * 1024
 
 
-def snapshot(db):
+def snapshot(db, *, namespace):
     """Capture a stable query-only transaction without inferring legacy identity.
 
     Returned metadata contains event and operation identifiers. It is local
     sensitive runtime data, not a log or an authenticated forensic record.
     """
+    if namespace not in ("live", "test"):
+        raise ValueError("history_snapshot_namespace_invalid")
     if not db.in_transaction or db.execute("PRAGMA query_only").fetchone()[0] != 1:
         raise ValueError("history_snapshot_read_transaction_required")
     exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_disposition_operations'").fetchone()
@@ -38,7 +40,7 @@ def snapshot(db):
                 raise ValueError("history_snapshot_invalid")
             seen.add(value["operation_id"])
             records.append({**value, "changed": bool(row[6]), "payload_hash": row[7]})
-    data = {"schema_version": "1.0", "state": "available" if exists else "not_recorded", "records": records}
+    data = {"schema_version": "1.1", "namespace": namespace, "state": "available" if exists else "not_recorded", "records": records}
     encoded = json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False).encode("ascii")
     if len(encoded) > MAX_EXPORT_BYTES:
         raise ValueError("history_snapshot_bytes_limit")
@@ -52,8 +54,12 @@ def verify_snapshot(value):
     if type(value) is not dict or set(value) != {"data", "sha256", "bytes"}:
         raise ValueError("history_backup_invalid")
     data = value["data"]
-    if (type(data) is not dict or set(data) != {"schema_version", "state", "records"} or
-            data["schema_version"] != "1.0" or type(data["state"]) is not str or data["state"] not in {"available", "not_recorded"} or
+    if type(data) is not dict:
+        raise ValueError("history_backup_invalid")
+    version = data.get("schema_version")
+    legacy = version == "1.0" and set(data) == {"schema_version", "state", "records"}
+    scoped = version == "1.1" and set(data) == {"schema_version", "namespace", "state", "records"} and data.get("namespace") in ("live", "test")
+    if (not (legacy or scoped) or type(data["state"]) is not str or data["state"] not in {"available", "not_recorded"} or
             type(data["records"]) is not list or len(data["records"]) > MAX_HISTORY_ENTRIES or
             data["state"] == "not_recorded" and data["records"]):
         raise ValueError("history_backup_invalid")
@@ -77,4 +83,5 @@ def verify_snapshot(value):
             type(value["sha256"]) is not str or re.fullmatch(r"[a-f0-9]{64}", value["sha256"]) is None or
             not hmac.compare_digest(value["sha256"], digest)):
         raise ValueError("history_backup_integrity_failed")
-    return {"records": len(data["records"]), "sha256": digest, "bytes": len(encoded)}
+    return {"records": len(data["records"]), "sha256": digest, "bytes": len(encoded),
+            "namespace": data["namespace"] if scoped else "unknown"}

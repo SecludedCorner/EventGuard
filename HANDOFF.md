@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-28 明確歷程備份 CLI
+
+備份入口與 namespace 綁定已完成 synthetic 42/42；備份含敏感識別資料，只存本機 reports，不提交。舊 1.0 快照 namespace 為 unknown；hash 非身分驗證。尚無還原或容量釋放，實際 junction 與目錄項持久性未驗。下一步設計並驗證唯讀的還原相容性檢查，保留原資料。詳 STATUS／EVIDENCE。
+
 ## 2026-10-28 歷程備份落盤核心
 
 reports 不覆寫 hard-link／fsync／重讀驗證已合成測試 25/25；目錄項 durability、真 junction 與跨檔還原未驗，尚未接 CLI／UI 或釋放容量。下一步安全接線並驗證備份與恢復；不可刪除既有紀錄。

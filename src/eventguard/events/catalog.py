@@ -179,6 +179,14 @@ class EventCatalog:
                                                                limit=1, event_id=event_id)
             return result
 
+    def handling_history_snapshot(self):
+        """Explicit read-only snapshot; no backup file, deletion or ACK."""
+        from .disposition_history_backup import snapshot
+        with self._read() as db:
+            if db is None:
+                raise ValueError("history_store_not_found")
+            return snapshot(db, namespace=self.namespace)
+
     @staticmethod
     def _saved_handling_history(db, event_id, payload_hash):
         """Read bounded operation metadata without creating or repairing tables."""

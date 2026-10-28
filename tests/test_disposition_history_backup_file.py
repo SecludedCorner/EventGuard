@@ -1,7 +1,8 @@
 """Synthetic no-overwrite local backup tests; never read user data."""
-from contextlib import closing
+from contextlib import closing, redirect_stdout
 from pathlib import Path
 import json
+import io
 import sqlite3
 import tempfile
 import unittest
@@ -26,7 +27,7 @@ class DispositionHistoryBackupFileTests(unittest.TestCase):
         with closing(sqlite3.connect(self.store.path.as_uri() + "?mode=ro", uri=True)) as db:
             db.execute("PRAGMA query_only=ON")
             db.execute("BEGIN")
-            self.value = snapshot(db)
+            self.value = snapshot(db, namespace="test")
 
     def test_persists_verified_snapshot_without_touching_source(self):
         before = self.store.path.read_bytes()
@@ -68,6 +69,47 @@ class DispositionHistoryBackupFileTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "redirected_runtime_path"):
                 write_backup(self.root, "history-backup-fixture.json", self.value)
         self.assertEqual(list(reports.iterdir()), [])
+
+    def test_cli_explicit_backup_returns_receipt_without_record_contents(self):
+        from eventguard.cli import main
+        before = self.store.path.read_bytes()
+        output = io.StringIO()
+        args = ["--format", "json", "events", "backup-history", "--namespace", "test",
+                "--name", "history-backup-cli.json"]
+        with redirect_stdout(output):
+            self.assertEqual(main(args, root=self.root), 0)
+        receipt = json.loads(output.getvalue())
+        self.assertEqual((receipt["records"], receipt["source_history_removed"], receipt["namespace"]), (1, False, "test"))
+        self.assertNotIn("evt-file-fixture", output.getvalue())
+        self.assertNotIn("op-file", output.getvalue())
+        path = self.root / receipt["path"]
+        self.assertEqual(verify_snapshot(json.loads(path.read_bytes()))["sha256"], receipt["sha256"])
+        self.assertEqual(self.store.path.read_bytes(), before)
+        original = path.read_bytes()
+        with redirect_stdout(io.StringIO()):
+            self.assertNotEqual(main(args, root=self.root), 0)
+        self.assertEqual(path.read_bytes(), original)
+
+    def test_cli_missing_store_does_not_create_database_or_report(self):
+        from eventguard.cli import main
+        missing = self.root / "missing"
+        missing.mkdir()
+        with redirect_stdout(io.StringIO()):
+            code = main(["--format", "json", "events", "backup-history", "--namespace", "test",
+                         "--name", "history-backup-missing.json"], root=missing)
+        self.assertNotEqual(code, 0)
+        self.assertFalse((missing / "data").exists())
+        self.assertFalse((missing / "reports").exists())
+
+    def test_cli_human_receipt_mentions_file_and_no_cleanup(self):
+        from eventguard.cli import main
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(main(["--format", "text", "events", "backup-history", "--namespace", "test",
+                                   "--name", "history-backup-text.json"], root=self.root), 0)
+        self.assertIn("reports/history-backup-text.json", output.getvalue())
+        self.assertIn("來源紀錄未清理", output.getvalue())
+        self.assertNotIn("evt-file-fixture", output.getvalue())
 
     def test_link_failure_cleans_only_own_temp_and_preserves_database(self):
         before = self.store.path.read_bytes()

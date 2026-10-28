@@ -297,6 +297,12 @@ def render(result, command="", operation=""):
             lines.append("UNKNOWN：原事件缺失或內容已變；保存快照不代表目前狀態。")
         lines.append("下一步：檢閱保存事實；新來源觀測須先批准。allowed_actions=[]；未採集、未呼叫模型、未ACK。")
         return "\n".join(lines)
+    if command=="events" and operation=="backup-history":
+        if result.get("file_fsynced") is not True:
+            return "歷程備份未完成。來源紀錄未清理。"
+        return "\n".join(["歷程備份已寫入："+text(result.get("path")),
+                          "筆數="+text(result.get("records"))+"；SHA256="+text(result.get("sha256")),
+                          "來源紀錄未清理；目錄項持久性未確認。此備份不能取代完整資料庫或還原驗證。"])
     if command=="events" and operation=="detail":
         return "\n".join(["事件詳情："+text(result.get("event_id")),
                           "處置狀態："+text(result.get("status")),
