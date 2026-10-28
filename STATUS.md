@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-28 歷程備份不覆寫落盤核心
+
+新增明確呼叫的 reports 本機備份寫入器：先驗快照、檔案 fsync、hard-link 不覆寫、重讀及 hash／schema 再驗，保留原資料；目錄項持久性未確認，hash 非簽章。遇不支援 hard link、既有目的地或無效內容直接失敗；尚未接 CLI／UI，也未實作還原、跨檔重播或釋放容量。
+
+`reports/verify-history-backup-file-20261028-02` UTC 09:38:15、25/25、0 skip、228 AST、source_unchanged、Job 自然 0／remaining 0／無強停；合成檔測既有檔不覆寫、錯誤清理僅自建暫存、source DB／pending／ACK 不變及模擬 junction 拒絕。真 junction／停電後目錄 durability 未驗；工作樹來源 ZIP 含兩新檔。
+
 ## 2026-10-28 歷程快照驗證核心
 
 新增有界快照完整性驗證，核對 schema、事件／操作識別、狀態、來源、時間、重複、256／4096 上限、長度與 canonical SHA256；輸出快照也先驗證。SHA256 不是簽章，不證明操作者身分或防竄改。`reports/verify-history-backup-validation-20261028-02` UTC 09:36:09、20/20、0 skip、226 AST、source_unchanged、Job 自然 0／remaining 0／無強停。仍僅記憶體，沒有持久檔、還原或容量釋放；下一步不覆寫落盤。工作樹來源 ZIP 自檢。

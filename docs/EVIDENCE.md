@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：歷程備份不覆寫合成測試
+
+`reports/verify-history-backup-file-20261028-02` 25/25／0 skip／228 AST／source_unchanged、Job 自然 0／remaining 0／無強停。synthetic 測驗證後 reports 落盤／重讀、既有目的地不覆寫、無效內容拒絕、link 失敗只清自建暫存、模擬 junction 拒絕、DB／pending／ACK 不變。實際 junction 與意外斷電後目錄項 durability 未驗；不以 hash 宣稱防竄改或認證，未提供還原或自動清理。
+
 ## 2026-10-28：歷程快照驗證核心
 
 `reports/verify-history-backup-validation-20261028-02` 20/20／0 skip／226 AST／source_unchanged、Job 自然 0／remaining 0／無強停；synthetic 測合法快照、內容竄改、重複 operation ID、狀態錯誤、非 ASCII hash、損壞來源及唯讀。資料完整性 hash 不提供認證或防竄改；尚無可持久保存的檔案或恢復流程。
