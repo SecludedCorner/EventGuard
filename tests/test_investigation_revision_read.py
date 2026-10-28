@@ -3,12 +3,15 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from pathlib import Path
 import sqlite3
+import http.client
+import json
 import tempfile
 import unittest
 
 from eventguard.events.catalog import EventCatalog
 from eventguard.events.investigation_revision_read import read_revisions
 from eventguard.events.store import EventStore
+from eventguard.web import LocalWeb
 from test_event_investigation import fixture_events, NOW
 
 
@@ -69,6 +72,26 @@ class RevisionReadTests(unittest.TestCase):
         before = self.store.path.read_bytes()
         self.assertEqual(self.read()["state"], "unknown")
         self.assertEqual(self.store.path.read_bytes(), before)
+
+    def test_detail_and_http_read_are_bounded_and_leave_source_unchanged(self):
+        self.assertEqual(self.catalog.detail("evt-anchor")["investigation_revisions"]["state"], "not_recorded")
+        self.update()
+        before = self.store.path.read_bytes()
+        expected = self.catalog.detail("evt-anchor")["investigation_revisions"]
+        web = LocalWeb(self.root, "test", port=0, status_provider=lambda: {})
+        web.start()
+        try:
+            with closing(http.client.HTTPConnection("127.0.0.1", web.server.server_port, timeout=5)) as client:
+                client.request("GET", "/api/events/evt-anchor")
+                response = client.getresponse()
+                self.assertEqual(response.status, 200)
+                result = json.loads(response.read())
+            self.assertEqual(result["investigation_revisions"], expected)
+            self.assertEqual(result["investigation_revisions"]["revisions"][0]["case"], self.first)
+            self.assertEqual(result["model_calls"], 0)
+            self.assertEqual(self.store.path.read_bytes(), before)
+        finally:
+            self.assertTrue(web.close()["web_thread_exited"])
 
     def test_requires_query_only_transaction(self):
         with closing(sqlite3.connect(self.store.path)) as db:

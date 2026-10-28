@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 事件詳情修訂唯讀 API
+
+既有事件詳情 GET 增加有界 `investigation_revisions`，包含已保存前版與 evidence_status；舊庫未記錄、損壞／成員缺失為 unknown。`reports/verify-investigation-revision-api-20261028-01` UTC 10:19:28：67/67、0 skip、236 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成 loopback GET 與 catalog 一致、來源 DB hash 不變、model 0；尚未接 Web 呈現，也未驗過期 anchor 回看、全域滿載或併發。
+
 ## 2026-10-28 案件修訂唯讀核心
 
 有界唯讀交易核對快照與事件身分、hash；舊庫無表明示未記錄，此前歷史 unknown；成員缺失／變更為 unknown，不修改來源。`reports/verify-investigation-revision-read-20261028-01` UTC 10:17:54：34/34、0 skip、236 AST、source_unchanged，Job 自然 0／remaining 0／無強停。只完成讀取核心，尚未接 API／Web；hash 非認證，anchor 過期後的回看仍未實作。

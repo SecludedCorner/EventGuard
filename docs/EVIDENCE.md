@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：案件修訂事件詳情唯讀 API
+
+`reports/verify-investigation-revision-api-20261028-01` UTC 10:19:28，67/67、0 skip、236 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 舊庫與保存版本、真 loopback GET 與 catalog 相同、DB bytes 不變、模型 0；未驗 UI、過期 anchor、全域容量與併發。
+
 ## 2026-10-28：案件修訂唯讀合成回歸
 
 `reports/verify-investigation-revision-read-20261028-01` UTC 10:17:54，34/34、0 skip、236 AST、source_unchanged，Job 自然 0／remaining 0／無強停。synthetic 驗證舊表缺失不建立、前版重讀及來源 bytes 不變、成員消失或更改 unknown、損壞 hash unknown、pending／ACK 未變。尚未接 API／Web、真機及 anchor 過期恢復。
