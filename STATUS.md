@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 歷程恢復的內部轉換一致性
+
+修正append-only恢復原語：同一事件的下一筆previous_status必須符合上一筆status，逐事件核對保存順序，不以時間重排；內容重算hash不能繞過此檢查，衝突在寫入前拒絕。`py -3.13 -B scripts/verify.py --run-dir reports/verify-history-transition-order-20261029-02 --timeout-seconds 180 --module test_disposition_history_restore --module test_disposition_history_restore_prefix --module test_disposition_history_restore_integration --module test_disposition_history_backup --module test_disposition_history_backup_preview --module test_disposition_history_store --module test_disposition_history_integration`：2026-10-29 03:36（UTC+8）35/35、0skip、source_unchanged、Job自然退出0／remaining0；01先重現1失敗，02通過，衝突DB hash及pending／receipt保留。`reports/build-history-transition-order-20261029-01`：268檔hash相符、246檔編譯成功。只驗合成內部原語，未建立來源認證、使用者還原／容量釋放流程或實機恢復。前單元534d0f1已普通ff merge／push並核對兩ref一致。
+
 ## 2026-10-29 桌面詳情讀取與重試
 
 切換事件立即清除舊詳情並顯示讀取中；worker結果綁定實際請求ID，錯誤／身分不符維持未知且可重點同列重試，不補造pending。合併中的選擇以最後選取為準，過期結果不顯示其他事件。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-detail-failure-20261029-04 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_gui_saved_evidence --module test_desktop`：2026-10-29 03:33（UTC+8）79/79、0skip、source_unchanged、Job自然退出0／remaining0，含實際Tk與fixture；01先重現2失敗，02／03及最終04通過。`reports/build-desktop-detail-failure-20261029-02`：268檔hash相符、246檔編譯通過。前單元56786b4已普通ff merge／push並直接核對main及開發ref一致，工作樹與分支差異清零；未做Web、真人、原生驗收。

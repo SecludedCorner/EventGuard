@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：歷程轉換衝突拒絕
+
+`reports/verify-history-transition-order-20261029-02` UTC 2026-10-28 19:36:56：35/35、0skip、source_unchanged、Job自然退出0／remaining0，合成內部恢復／備份／保存整合。01先驗證重算hash但轉換不連續的備份可被錯誤接受；修正後寫入前拒絕且目標DB hash／pending1／receipt0不變，既有前綴／冪等／容量回滾測試通過。`reports/build-history-transition-order-20261029-01`：268檔受測hash相符、246檔編譯通過。來源認證、使用者入口、容量釋放與實機恢復未完成。534d0f19230e251895981699daa3a386c556166c已普通整合並核對main／開發ref一致，348檔來源包可重現見`reports/release-prep-desktop-detail-failure-20261029-01`。
+
 ## 2026-10-29：桌面詳情讀取失敗／切換
 
 `reports/verify-desktop-detail-failure-20261029-04` UTC 2026-10-28 19:33:53：79/79、0skip、source_unchanged、Job自然退出0／remaining0。真Tk驗讀取中不留舊案、失敗未知且不補pending／不洩漏例外、同列重試、身分不符與晚到錯誤、快速切回原事件；未採集／模型／ACK，pending保留。01先重現2失敗，02為77/77、03為78/78、最終04為79/79。`reports/build-desktop-detail-failure-20261029-02`：268檔受測hash相符、246檔編譯成功。前單元56786b40542f9f374186bf91e6a8cc5a035a0a67以ff-only merge整合並普通push main，ls-remote核對兩ref一致；348檔來源包可重現，見`reports/release-prep-desktop-source-consistency-20261029-01`。Web／真人／原生驗收未升格。

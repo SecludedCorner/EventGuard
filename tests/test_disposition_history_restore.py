@@ -106,6 +106,21 @@ class HistoryRestoreTests(unittest.TestCase):
             db.rollback()
         self.assertEqual(self.target.path.read_bytes(), before)
 
+    def test_rehashed_but_discontinuous_history_is_rejected_without_writes(self):
+        before = self.target.path.read_bytes()
+        altered = deepcopy(self.backup)
+        # Content hashes can be recalculated; they do not establish a valid
+        # transition sequence or authenticate the supplied history.
+        altered['data']['records'][1]['previous_status'] = 'new'
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            with self.assertRaisesRegex(ValueError, 'history_restore_transition_conflict'):
+                restore_suffix(db, resign(altered), namespace='test', available_bytes=1000000)
+            self.assertIsNone(db.execute("SELECT 1 FROM sqlite_master WHERE name='event_disposition_operations'").fetchone())
+            db.rollback()
+        self.assertEqual(self.target.path.read_bytes(), before)
+        self.assertEqual((self.target.stats()['pending'], self.target.stats()['receipt_count']), (1, 0))
+
     def test_read_only_or_missing_transaction_is_rejected(self):
         with self.connect() as db:
             with self.assertRaisesRegex(ValueError, "write_transaction_required"):
