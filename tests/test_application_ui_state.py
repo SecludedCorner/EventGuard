@@ -228,6 +228,10 @@ class ApplicationUIContractTests(unittest.TestCase):
         for required in ("/api/sources", "SOURCE_IDS.length", "indexed.has(row.source_id)",
                          "status!=='ok'", "freshness!=='fresh'", "來源狀態無法確認"):
             self.assertIn(required, renderer)
+        self.assertIn("sequence!==sourceGapSequence", renderer)
+        self.assertIn("sequence===sourceGapSequence", renderer)
+        self.assertIn("if(busy){refreshQueued=true;return;}", script)
+        self.assertIn("queueMicrotask(refresh)", script)
         self.assertNotIn("event-rows", renderer)
         self.assertNotIn("innerHTML", renderer)
         self.assertEqual(self.calls, [])

@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-28：來源摘要延遲切頁競態
+
+`reports/gui-source-gap-race-20261028-01`：舊合成成功回覆延遲、切往來源頁再回事件頁，切換 fixture 為錯誤後，舊版仍短暫顯示七來源觀測成功，構成重現；原 Job 自然 0／remaining 0／無強停。
+
+`reports/gui-source-gap-race-20261028-02`：相同步驟於修正版先顯示未確認，延遲回覆放行後新失敗顯示無法確認；再切換正常 fixture／按篩選可恢復觀測成功。worker 來源 GET 8／POST 0／native 0／model 0，原 Job 自然 0／remaining 0／無強停；shutdown_requested_reason 是 harness 預設，實際為合作停止。靜態契約不取代此真瀏覽器情境，仍非所有可能競態的完整證明。定向 `reports/verify-gui-source-gap-race-20261028-01` 41/41，0 skip；來源 build 工作樹逐檔自檢。
+
 ## 2026-10-28：P1-GUI-002A 合成來源缺口摘要
 
 隔離真瀏覽器核對 `#source-gap-summary`：七個唯一來源 ok/fresh 時只稱觀測成功；過期／拒讀顯示來源與缺口；缺項、重複、空與 HTTP error 均為未確認，始終明示不代表安全。HTTP error 下 `#event-rows` 仍含一個人工建立的合成 pending 事件。與真主機資料、人工 UX 計時或競品比較無關；慢回覆切頁競態尚未注入。
