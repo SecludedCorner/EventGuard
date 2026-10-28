@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-10-28 P1-GUI-002A 事件頁來源缺口摘要
+
+事件頁只讀 `/api/sources`，要求七個不同的已知來源；非 ok／非 fresh 列出缺口，缺項、重複、空回覆或讀取錯誤顯示未確認，不宣稱主機安全。來源讀取失敗不清除事件。刷新由既有 busy 串行；尚未注入慢回覆驗證切頁競態。
+
+`reports/verify-gui-source-gap-20261028-01`：UTC 08:15:39，41/41、0 skip、218 AST、source_unchanged，Job 自然退出／剩餘 0／無強停。隔離瀏覽器在合成 fixture 核對七來源成功、拒讀、過期、缺項、重複、空與錯誤，錯誤時合成 pending 事件仍可見；`reports/gui-source-gap-20261028-01` 原 Job 自然 0／remaining 0／無強停，0 POST／native／model。測試不代表真主機覆蓋。
+
+來源 build 是工作樹 320 檔 ZIP／逐檔 hash 自檢，非提交 SHA 的正式候選包。下一步補慢回覆切頁驗證並做 P1-GUI-002B。
+
 ## 2026-10-28 P1-GUI-001 七來源卡片
 
 Web 卡片分列最後採集、原結果、目前狀態、最後成功、新鮮度與觀測列數；缺失／無效／未來成功時間顯示未知，拒讀或過期不被歷史成功覆蓋。合成零列不表示安全；來源文字以 textContent 顯示。

@@ -216,6 +216,22 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertEqual(before_stats["pending"], 1)
         self.assertEqual(self.calls, [])
 
+    def test_event_page_exposes_source_gap_summary_independently_of_event_rows(self):
+        code, _, page = self.request("/")
+        self.assertEqual(code, 200)
+        event_section = page.split('<section id="events">', 1)[1].split('<section id="sources"', 1)[0]
+        self.assertIn('id="source-gap-summary" role="status"', event_section)
+        self.assertIn("不代表主機安全", event_section)
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        renderer = script.split("async function sourceGap(){", 1)[1].split("async function events(){", 1)[0]
+        for required in ("/api/sources", "SOURCE_IDS.length", "indexed.has(row.source_id)",
+                         "status!=='ok'", "freshness!=='fresh'", "來源狀態無法確認"):
+            self.assertIn(required, renderer)
+        self.assertNotIn("event-rows", renderer)
+        self.assertNotIn("innerHTML", renderer)
+        self.assertEqual(self.calls, [])
+
     def test_served_script_exposes_pure_state_functions_and_bounded_timeouts(self):
         code, _, script = self.request("/app.js")
         self.assertEqual(code, 200)

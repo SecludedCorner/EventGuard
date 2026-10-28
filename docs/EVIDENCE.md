@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-28：P1-GUI-002A 合成來源缺口摘要
+
+隔離真瀏覽器核對 `#source-gap-summary`：七個唯一來源 ok/fresh 時只稱觀測成功；過期／拒讀顯示來源與缺口；缺項、重複、空與 HTTP error 均為未確認，始終明示不代表安全。HTTP error 下 `#event-rows` 仍含一個人工建立的合成 pending 事件。與真主機資料、人工 UX 計時或競品比較無關；慢回覆切頁競態尚未注入。
+
+`reports/gui-source-gap-20261028-01/worker-exit.json`：來源 GET 20、POST 0、native/model 0、web thread 已退出；guardian-exit 自然 0／remaining 0／無強停。shutdown_requested_reason 為 harness 預設 timeout 標籤，實際合作 stop.request，reason 為 natural_exit。`reports/verify-gui-source-gap-20261028-01`：41/41，0 skip、218 AST、source_unchanged，Job 自然退出；靜態 UI 契約測試不是瀏覽器行為測試。工作樹 ZIP 僅是來源建置自檢，不是已提交 SHA 候選包。
+
 ## 2026-10-28：P1-GUI-001 合成來源卡片
 
 目標 `#source-cards` 實際瀏覽器觀察七張卡片：歷史成功後拒讀保留原因、舊成功顯示目前過期、未知／無效／未來時間顯示未知、零列顯示 0、HTML 樣式名稱與原因為文字且無 img／b 節點。800px 寬 `scrollWidth=785`、鍵盤 Enter 切事件與來源頁；沒有保存截圖。合成 API fixture 非真主機資料；before／after 人類操作時間與競品比較未取得。
