@@ -314,6 +314,7 @@ class ApplicationUIContractTests(unittest.TestCase):
         for field in ("功能啟用前的版本未知", "證據未知", "版本數已達上限", "revision.missing_event_ids", "revision.changed_event_ids"):
             self.assertIn(field, renderer)
         self.assertNotIn("innerHTML", renderer)
+        self.assertIn("investigationGapLabels[gap.reason]", renderer)
         self.assertIn("renderInvestigationRevisions(d.investigation_revisions)", script)
         self.assertEqual(self.calls, [])
 
@@ -337,8 +338,9 @@ class ApplicationUIContractTests(unittest.TestCase):
                          "correlation.basis==='same_host_source_stable_entity'",
                          "c.gaps.filter(entry=>entry.event_id===item.event_id)",
                          "value.missing_event_ids.includes(item.event_id)",
-                         "value.changed_event_ids.includes(item.event_id)", "沒有保存診斷"):
+                         "value.changed_event_ids.includes(item.event_id)", "investigationGapLabels[gap.reason]"):
             self.assertIn(required, renderer)
+        self.assertIn("diagnostic_not_saved:'沒有保存診斷'", script)
         self.assertNotIn("innerHTML", renderer)
         self.assertEqual(self.calls, [])
 

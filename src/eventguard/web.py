@@ -63,6 +63,7 @@ function renderHandlingHistory(value){
   const list=node('ol');for(const item of value.entries){const transition=(handling[item.previous_status]||'未知')+' → '+(handling[item.status]||'未知');list.append(node('li',when(item.at)+' / '+transition+(item.changed?'':'（無變更）')+' / 來源：'+(sourceLabels[item.source]||'未知')));}target.append(list);
   target.append(node('p',value.count_capacity==='full'?'紀錄數量已達上限；新處置會被拒絕。':value.count_capacity==='available'?'紀錄數量未達上限；實際儲存空間仍可能不足。':'紀錄數量容量未知。'));
 }
+const investigationGapLabels={stable_entity_missing:'缺少穩定實體綁定，不能關聯',source_unknown:'來源未知',source_incomplete:'來源觀測不完整',saved_observation_stale:'保存觀測已過期',observation_in_future:'觀測時間在未來',simultaneous_metadata_conflict:'同時間／序號 metadata 矛盾',sequence_time_conflict:'序號與時間順序矛盾',candidate_or_member_limit:'候選或案件事件達上限，關聯不完整',diagnostic_not_saved:'沒有保存診斷',diagnostic_incomplete:'診斷資料不完整',diagnostic_result_missing:'缺少診斷結果',diagnostic_stale:'保存診斷已過期',diagnostic_in_future:'診斷時間在未來'};
 function renderInvestigationRevisions(value){
   const target=$('investigation-revisions');target.replaceChildren();
   if(!value||!['available','not_recorded'].includes(value.state)||!Array.isArray(value.revisions)){target.append(node('p','先前版本無法確認；不可推定沒有歷程。','result-unknown'));return;}
@@ -74,7 +75,7 @@ function renderInvestigationRevisions(value){
     if(revision.evidence_status!=='saved_snapshot')box.append(node('p','原事件缺失或內容已變，證據未知：'+[...revision.missing_event_ids,...revision.changed_event_ids].join(', '),'result-unknown'));
     box.append(node('p','觀測 '+c.timeline.length+' 筆；證據缺口 '+c.gaps.length+' 筆。時間接近不代表因果。'));
     const list=node('ol');for(const item of c.timeline){const li=node('li',when(item.observed_at)+' / '+item.event_id+' / '+(eventNames[item.event_type]||item.event_type));li.append(node('pre',JSON.stringify(item.facts,null,2)));list.append(li);}box.append(list);
-    const gaps=node('ul');for(const gap of c.gaps)gaps.append(node('li',gap.reason+' / '+gap.event_id));box.append(gaps);target.append(box);
+    const gaps=node('ul');for(const gap of c.gaps)gaps.append(node('li',(investigationGapLabels[gap.reason]||gap.reason)+' / '+gap.event_id));box.append(gaps);target.append(box);
   }
   target.append(node('p',value.count_capacity==='full'?'版本數已達上限，新更新會被拒絕。':value.count_capacity==='available'?'版本數未達上限；實際儲存空間仍可能不足。':'版本容量未知。'));
 }
@@ -87,17 +88,16 @@ function renderInvestigation(value){
     node('p','證據狀態：'+evidence+'。快照新鮮度：'+(freshness[value.snapshot_freshness]||'未知')+'。'+(c.status==='limited'?'證據有缺口。':c.status==='related_metadata_only'?'僅確認 metadata 關聯。':'調查狀態未知。')),
     node('p','保存成員：'+c.timeline.length+'。檢視候選：'+correlation.examined+'。缺口：'+c.gaps.length+'。截斷：'+(correlation.truncated===true?'是':correlation.truncated===false?'否':'未知')+'。主機安全與入侵狀態未判定。'));
   target.append(node('p','關聯依據：同主機範圍、同來源、穩定程序實例或持久項目；時間範圍前後15分鐘。'));
-  const labels={stable_entity_missing:'缺少穩定實體綁定，不能關聯',source_unknown:'來源未知',source_incomplete:'來源觀測不完整',saved_observation_stale:'保存觀測已過期',observation_in_future:'觀測時間在未來',simultaneous_metadata_conflict:'同時間／序號 metadata 矛盾',sequence_time_conflict:'序號與時間順序矛盾',candidate_or_member_limit:'候選或案件事件達上限，關聯不完整',diagnostic_not_saved:'沒有保存診斷',diagnostic_incomplete:'診斷資料不完整',diagnostic_result_missing:'缺少診斷結果',diagnostic_stale:'保存診斷已過期',diagnostic_in_future:'診斷時間在未來'};
   const list=node('ol');for(const item of c.timeline){
     const li=node('li');li.dataset.eventId=item.event_id;
     const basis=item.event_id===c.anchor_event_id?'錨定事件':correlation.basis==='same_host_source_stable_entity'?'同主機範圍、同來源、相同穩定身分；僅 metadata 關聯':'關聯依據未知';
     li.append(node('p',when(item.observed_at)+' / '+item.event_id+' / '+(eventNames[item.event_type]||item.event_type)+' / '+item.transition+' / '+(states[item.coverage_status]||item.coverage_status)),node('p','關聯依據：'+basis+'。'));
-    for(const gap of c.gaps.filter(entry=>entry.event_id===item.event_id))li.append(node('p','此觀測缺口：'+(labels[gap.reason]||gap.reason),'result-unknown'));
+    for(const gap of c.gaps.filter(entry=>entry.event_id===item.event_id))li.append(node('p','此觀測缺口：'+(investigationGapLabels[gap.reason]||gap.reason),'result-unknown'));
     if(value.missing_event_ids.includes(item.event_id))li.append(node('p','原事件缺失，證據未知。','result-unknown'));
     if(value.changed_event_ids.includes(item.event_id))li.append(node('p','原事件內容已變，證據未知。','result-unknown'));
     li.append(node('pre',JSON.stringify(item.facts,null,2)));list.append(li);
   }target.append(node('h4','已保存觀測時間線'),list);
-  const gaps=node('ul');for(const gap of c.gaps)gaps.append(node('li',(labels[gap.reason]||gap.reason)+'：'+gap.event_id));target.append(node('h4','缺失／過期／矛盾證據'),gaps);if(!c.gaps.length)target.append(node('p','此快照未發現上述 metadata 缺口；不代表主機安全。'));
+  const gaps=node('ul');for(const gap of c.gaps)gaps.append(node('li',(investigationGapLabels[gap.reason]||gap.reason)+'：'+gap.event_id));target.append(node('h4','缺失／過期／矛盾證據'),gaps);if(!c.gaps.length)target.append(node('p','此快照未發現上述 metadata 缺口；不代表主機安全。'));
   if(value.evidence_status==='unknown')target.append(node('p','原事件缺失或內容已變，證據目前為 UNKNOWN：'+[...value.missing_event_ids,...value.changed_event_ids].join(', '),'result-unknown'));
   const diagnosticLabels={missing:'沒有已保存診斷',matched:'保存hash相符',changed:'診斷已變，原快照不改寫',not_bound:'舊案件未綁定診斷'};
   if(c.diagnostic_context){const d=c.diagnostic_context;target.append(node('h4','已保存的查證依據'),node('p',(diagnosticLabels[value.diagnostic_evidence_status]||'未知')+'。觀測時間：'+when(d.observed_at)+'。'+(d.review_hash?'hash '+d.review_hash:'缺少診斷結果。')));for(const observation of d.observations)target.append(node('p',observation.operation+' / '+(sourceNames[observation.source]||observation.source)+' / '+(states[observation.status]||observation.status)+' / 保存列數 '+observation.row_count+' / '+when(observation.observed_at)));target.append(node('p','這裡只讀既有診斷摘要，沒有重新查詢。之後的觀測不能證明過去已恢復。'));}

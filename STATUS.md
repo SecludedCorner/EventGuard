@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 先前版本缺口中文說明 WIP
+
+先前版本與最新快照共用固定缺口中文標籤，未知代碼仍按不可信文字顯示；`reports/verify-investigation-revision-gap-labels-20261028-02` UTC 10:44:47，43/43、0 skip、237 AST、source_unchanged，Job 自然 0／remaining 0／無強停。`reports/revision-web-javascript-check-20261028-02` 本機 Node `--check` 語法通過，不是 JS 行為／瀏覽器驗收；Work 禁用本機瀏覽器，修訂畫面仍 WIP。完整 fixture 回歸僅針對前版 d0faaf1。
+
 ## 2026-10-28 案件修訂完整合成回歸
 
 產品來源 `d0faaf1b156d7344e0571696eebc5c728e9dcf62`：`reports/verify-full-revision-20261028-01` UTC 10:41:02，1715 執行／1712 通過／3 跳過／0 失敗錯誤，237 AST、source_unchanged；2 skip 為 symlink 不可建立、1 skip 為 notification_icon_unavailable。Job 自然 0／remaining 0／無強停，無 native 掃描／模型。`reports/release-prep-revision-20261028-01` 來源 commit 339 檔、兩 ZIP 可重現 SHA256 887d7e8b758e455bcb68fb16bacba162acd0ad002660dbf43b3f0ca47c71a299；僅候選來源封裝，非發布。瀏覽器 Work 設定禁用，修訂 UI 仍待真瀏覽器驗收；容量無損釋放、200%／人類／原生／24h／重啟／桌面喚醒各自未達。

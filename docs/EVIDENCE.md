@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：案件修訂缺口標籤 WIP
+
+`reports/verify-investigation-revision-gap-labels-20261028-02` UTC 10:44:47，43/43、0 skip、237 AST、source_unchanged；Job 自然 0／remaining 0／無強停。`reports/revision-web-javascript-check-20261028-02/app.js` Node --check 0；僅語法及靜態元件契約，不是真瀏覽器。首次 `...-01` 42/43，因共用標籤移出函式後舊靜態測試仍限定字串位置，更新為核對共用標籤與目標引用後重驗通過。
+
 ## 2026-10-28：修訂後完整合成回歸
 
 `reports/verify-full-revision-20261028-01/verification-summary.json`，來源 `d0faaf1b156d7344e0571696eebc5c728e9dcf62`，UTC 10:41:02，1715 run／1712 pass／3 skip／0 fail/error，237 AST、source_unchanged、636.987 秒；2 symlink unavailable、1 notification_icon_unavailable。Job 自然 0／remaining 0／無強停，machine_scan_executed=false、model_calls=0。`reports/release-prep-revision-20261028-01` 精確來源 339 檔、可重現 archive SHA256 887d7e8b758e455bcb68fb16bacba162acd0ad002660dbf43b3f0ca47c71a299。此證據不驗修訂 UI、原生覆蓋、24h、重啟、桌面喚醒或競品。
