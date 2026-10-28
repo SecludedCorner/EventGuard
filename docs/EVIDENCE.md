@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：清單main整合與單次瀏覽器核對
+
+df55da8bb06bca06853b3b0fb9354e4a340717c4已普通ff-only merge／push main，直接ls-remote核對main及開發ref一致，未提交及對main差異0。`reports/release-prep-web-list-read-state-20261029-01`：351檔可重現，archive SHA256 1036c260d8422bc0470f078e2a706464576f110bc353365d8e3f76459a0ec739；`reports/build-web-list-javascript-20261029-01`完整served JS語法通過、Job自然退出0／remaining0／無強停。同目錄browser-state.json只保存單次cua.getState的去識別錯誤：browsers=[]、Work settings disabled；不保存私人視窗清單／截圖。42項離線通過不能證明真瀏覽器／200%／真人／原生。目標盤點明列未達成及外部解除條件，未冒稱完成。
+
 ## 2026-10-29：事件清單失敗／提示隔離
 
 `reports/verify-web-list-read-state-20261029-03` UTC 2026-10-28 19:59:51：42/42、0skip、source_unchanged、Job自然退出0／remaining0。Node執行實際events／invalidateEventList／refresh，合成驗失敗未知、停用分頁／隱藏詳情、錯誤／重複ID、計數不符、零列非安全、慢回覆不覆蓋，以及notice失敗仍能更新清單。01為原程式重現失敗；02fixture缺實際helper為41/42，03補入後通過。`reports/build-web-list-read-state-20261029-01`：271檔受測hash相符、249檔編譯成功。未新增採集／模型／ACK，非瀏覽器、人類或原生驗收。

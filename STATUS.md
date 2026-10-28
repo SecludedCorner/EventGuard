@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 清單修正整合與驗收阻擋盤點
+
+df55da8bb06bca06853b3b0fb9354e4a340717c4（fix(web): make failed event list refreshes explicitly unknown，+110/−2）已普通push開發ref、ff-only merge／普通push main並直接核對兩ref一致，工作樹／對main差異0。42/42與249檔編譯見下節；`reports/release-prep-web-list-read-state-20261029-01`綁定此SHA，351檔來源包可重現；`reports/build-web-list-javascript-20261029-01`完整served JS語法通過、私有Job自然退出0／remaining0。單次瀏覽器inventory仍空且回傳Work settings disabled，回條已保存；未把授權問題歸給使用者。最終目標逐項盤點見MAINTENANCE_GOAL頂部：核心功能有離線證據，本版真瀏覽器／200%／焦點、人類可比量測、原生各自仍缺外部條件，目標未完成。純文件沿用本版來源build／相關測試，檢查diff及引用路徑；不反覆輪詢或添加無關功能代替驗收。
+
 ## 2026-10-29 Web事件清單失敗與獨立刷新
 
 清單重新確認時筆數標示尚未確認、分頁暫停；HTTP／格式錯誤清除舊列，筆數未知並停用分頁，隱藏未確認詳情。比對筆數／分頁一致性與唯一合法ID，晚到成功／失敗不覆蓋新清單。高嚴重度提示失敗只顯示未知，不再阻止事件清單獨立刷新；恢復前清除舊提示cache以重建內容。`py -3.13 -B scripts/verify.py --run-dir reports/verify-web-list-read-state-20261029-03 --timeout-seconds 180 --module test_web_event_list_read_state --module test_application_ui_state --module test_event_catalog --module test_web_detail_read_state --module test_web_source_read_state`：2026-10-29 03:59（UTC+8）42/42、0skip、source_unchanged、Job自然退出0／remaining0，實際JS＋synthetic DOM/API，非瀏覽器。01原程式重現失敗；02測試未載入實際invalidate helper而1失敗，補入後03通過。`reports/build-web-list-read-state-20261029-01`：271檔hash相符、249檔編譯成功。Web真瀏覽器／200%／真人／原生仍待驗。

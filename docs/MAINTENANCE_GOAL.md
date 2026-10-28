@@ -1,5 +1,20 @@
 # EventGuard 目前目標
 
+## 2026-10-29 最終驗收盤點：目標尚未完成
+
+目前Web核心改善已有程式與離線證據，以下缺口不能由新增功能、Node／Tk或語法檢查補足。最近三個續航階段均保留同一瀏覽器驗收阻擋；本次一次`cua.getState()`仍回傳browsers=[]及`Local browser use is disabled in Work settings`，具體回條在`reports/build-web-list-javascript-20261029-01/browser-state.json`。既有使用者授權持續有效，原因是工具狀態，沒有重新要求權限或改設定。
+
+| 原目標／驗收要求 | 現有可核對證據 | 尚缺與解除條件 |
+| --- | --- | --- |
+| G01七來源、歷史成功／新鮮度、六情境 | web.py sources／sourceSuccess；test_source_success_history、test_web_source_read_state；目前44項重疊定向 | 本版實際瀏覽器元件與六情境重驗；工具可操作後執行，不以synthetic DOM當瀏覽器 |
+| G02來源缺口／新增嚴重事件入口 | web.py sourceGap／openNoticeSeverity；test_application_ui_state與既有合成證據 | 本版真瀏覽器連線失敗、提示獨立失敗與入口操作 |
+| G03篩選／URL／返回與慢回覆 | writeFilterUrl／restoreFilterUrl／return-to-list；清單／詳情實際JS離線42項 | 真瀏覽器reload／back／forward、鍵盤焦點與失敗後重試 |
+| G04保存調查／缺口／先前版本／處置與ACK獨立 | renderInvestigation／renderInvestigationRevisions／renderHandlingHistory；catalog／revision／Tk及Node既有證據 | 真瀏覽器版本展開／焦點及跨頁重開；不能從時間相近補造關係 |
+| 200%／800與1280px／可比操作量測 | ENGINEERING_PLAN與LOCAL_UI_ACCEPTANCE既有程序；200%尚未驗 | 可用瀏覽器確認實際縮放；真人量測需參與者，可比競品需合法帳戶與資料，未宣稱優越 |
+| 原生覆蓋／24h／reboot／桌面喚醒 | WINDOWS_VALIDATION_PLAN／既有partial證據，各自保留關卡 | 當前有效的具體授權與環境；本次未啟動採集／模型／長跑 |
+
+下一個直接驗收動作：工具狀態確有變更後開專用合成頁面，依上述G01–G04與200%程序驗實際元件，保存匿名結果及讀前後hash／pending／ACK／程序退出。原目標保留，不縮小為離線通過。現有HISTORY-RECOVERY來源信任根與無損使用者恢復仍獨立未完成，不建立未批准憑證或以hash冒充認證。
+
 ## 2026-10-29 Web事件清單未知狀態
 
 事件清單刷新失敗／格式錯誤明示未知、停用分頁、清除未確認舊列；提示數量獨立失敗不阻塞清單。42/42實際JS＋synthetic DOM/API與來源編譯通過，仍缺真瀏覽器／200%／鍵盤／先前版本焦點。下一步一次有界檢查可用瀏覽器能力，不反覆輪詢同一錯誤或以離線結果升格。
