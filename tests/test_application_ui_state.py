@@ -297,6 +297,19 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertNotIn("innerHTML", renderer)
         self.assertEqual(self.calls, [])
 
+    def test_investigation_timeline_keeps_basis_and_gaps_with_each_observation(self):
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        renderer = script.split("function renderInvestigation(value){", 1)[1].split("function isStatusSnapshot(", 1)[0]
+        for required in ("li.dataset.eventId=item.event_id", "item.event_id===c.anchor_event_id",
+                         "correlation.basis==='same_host_source_stable_entity'",
+                         "c.gaps.filter(entry=>entry.event_id===item.event_id)",
+                         "value.missing_event_ids.includes(item.event_id)",
+                         "value.changed_event_ids.includes(item.event_id)", "沒有保存診斷"):
+            self.assertIn(required, renderer)
+        self.assertNotIn("innerHTML", renderer)
+        self.assertEqual(self.calls, [])
+
     def test_served_script_exposes_pure_state_functions_and_bounded_timeouts(self):
         code, _, script = self.request("/app.js")
         self.assertEqual(code, 200)

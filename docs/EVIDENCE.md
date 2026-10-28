@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-28：P1-INVEST-004B 合成逐觀測理由
+
+真瀏覽器 `#investigation-view ol` 合成保存案件含 16 成員：錨定列有截斷及「沒有保存診斷」，被修改的 synthetic 成員列有「原事件內容已變，證據未知」及限定 metadata 的同主機／來源／穩定身分理由；PID 重用、異來源、缺身分候選不在時間線。第一輪發現診斷代碼未翻譯，補既有五種診斷代碼中文後於 `reports/gui-investigation-reasons-20261028-02` 重驗；0 POST／native／model，Job 自然 0／remaining 0／無強停。SQLite SHA256 讀取前後同為 `1bf0d18fa9b18e7cf136974866bb11deedb1d87785104b39c144b7a1db78367e`。shutdown_requested_reason 是 harness 預設，實際合作停止。
+
+`reports/verify-gui-investigation-reasons-20261028-01` 63/63／0 skip／218 AST／source_unchanged，Job 自然退出；含 correlation 與診斷負控制。合成結果不代表真環境覆蓋、攻擊鏈或競品比較。
+
 ## 2026-10-28：P1-INVEST-004A 合成保存調查
 
 獨立 synthetic fixture 根據既有 investigation metadata 建立保存案件，含 16 成員、26 候選、truncated=true；真瀏覽器 `#investigation-view` 顯示錨定事件、hash 相符、快照過期、缺口及截斷，重開文字一致。原始資料庫 hash `2bf9ea39710c5db4d3a02b86346657d108b80e574aa65fd8d04abfe2a10d018f` 在第一次瀏覽前後一致。測試另在隔離 SQLite 更改一個 synthetic 成員內容及其自洽 hash；已保存案件改顯示證據未知，讀取前後 SQLite hash 同為 `1bf0d18fa9b18e7cf136974866bb11deedb1d87785104b39c144b7a1db78367e`。初次只改 payload 造成 local_storage_unavailable，之後改為一致的合成記錄才進行未知狀態驗收，沒有改產品資料或略過錯誤。

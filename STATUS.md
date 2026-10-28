@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-28 P1-INVEST-004B 逐觀測理由與缺口
+
+已保存時間線每筆觀測旁顯示錨定或既有同主機／來源／穩定身分關聯依據、對應缺口，以及原事件缺失／變更的未知；診斷缺口有中文說明。未改關聯算法或推定程序樹／攻擊鏈。
+
+`reports/gui-investigation-reasons-20261028-02` 真瀏覽器 synthetic 案件：錨定列顯示截斷與未保存診斷，變更成員列顯示未知；PID 重用、異來源、缺身分候選未進時間線，16 成員，SQLite hash 讀前後不變。兩輪 Job 自然 0／remaining 0／無強停，0 POST／native／model。定向 `reports/verify-gui-investigation-reasons-20261028-01` UTC 08:41:23、63/63、0 skip、218 AST、source_unchanged、Job 自然退出。工作樹 320 檔 ZIP 來源自檢，不是 commit 候選。下一步依佇列評估有界歷程與合成 UX 驗收。
+
 ## 2026-10-28 P1-INVEST-004A 保存調查摘要
 
 Web 已保存調查增加快照概況：錨定事件、保存時間、成員 hash 狀態、快照新鮮度、保存成員／候選／缺口數及截斷；未知與過期明示，不判安全或因果。既有關聯與資料儲存規則未改。
