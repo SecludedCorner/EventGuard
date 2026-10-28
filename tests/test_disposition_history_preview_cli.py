@@ -43,6 +43,8 @@ class HistoryPreviewCliTests(unittest.TestCase):
         result = json.loads(output)
         self.assertEqual(result["counts"]["already_present"], 1)
         self.assertEqual(result["identity_conflicts"], 0)
+        for field in ("provenance_status", "history_completeness", "capacity_status", "recoverability_status"):
+            self.assertEqual(result[field], "unknown")
         self.assertFalse(result["restore_performed"])
         self.assertFalse(result["restore_authorized"])
         self.assertNotIn("evt-preview-cli-fixture", output)

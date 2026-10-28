@@ -137,4 +137,6 @@ def preview_identity(db, value, *, namespace):
             ("unbound", "event_missing", "event_mismatch", "operation_conflict")),
             "history_order": "exact_prefix" if exact_prefix else "diverged",
             "target_records": len(existing), "backup_records": len(backed_up),
+            "provenance_status": "unknown", "history_completeness": "unknown",
+            "capacity_status": "unknown", "recoverability_status": "unknown",
             "restore_performed": False, "restore_authorized": False}

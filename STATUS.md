@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 歷程預檢機器輸出未知狀態
+
+JSON 明確將來源真實性、歷程是否完整、容量與可還原性標為 unknown，即使身分零衝突也不升格為可還原。`reports/verify-history-preview-unknown-20261028-01` UTC 11:18:26：10/10、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic CLI／前綴定向；無真實還原或容量釋放。
+
 ## 2026-10-28 歷程預檢順序比對
 
 唯讀預檢增加目標與備份的完全前綴／分歧及筆數，避免僅看身分衝突誤認順序一致。`reports/verify-history-preview-order-20261028-01` UTC 11:14:43：13/13、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 核對短前綴及已分歧目標，與內部追加原件的接受／拒絕一致。完全前綴仍不證明來源真實性、備份是否涵蓋全部歷程、容量或可還原性；無真實還原或容量釋放。

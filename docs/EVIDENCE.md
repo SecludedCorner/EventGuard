@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：歷程預檢未知欄位合成測試
+
+`reports/verify-history-preview-unknown-20261028-01` UTC 11:18:26，10/10、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic JSON 在零身分衝突下仍將來源、歷程完整性、容量與可還原性標記 unknown，未還原、未授權。
+
 ## 2026-10-28：歷程預檢與還原前綴一致性
 
 `reports/verify-history-preview-order-20261028-01` UTC 11:14:43，13/13、0 skip、243 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 目標短前綴回 exact_prefix、分歧回 diverged 並與內部 restore 接受／拒絕一致；CLI 不輸出識別資料。不是來源認證、歷程涵蓋完整性或可還原性驗證。
