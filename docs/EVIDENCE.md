@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：案件修訂 Web WIP 與瀏覽器阻擋
+
+`reports/verify-investigation-revision-web-20261028-01` UTC 10:21:28，46/46、0 skip、236 AST、source_unchanged；Job 自然 0／remaining 0／無強停；僅元件靜態契約與合成 API，非 JavaScript／瀏覽器驗收。`reports/investigation-revision-browser-20261028-01` 合成 DB 準備好後本機瀏覽器因 Work settings 禁用，未進頁；伺服器合作退出、Job 自然 0／remaining 0／無強停、0 POST／native／model、DB SHA256 前後 9565ba61b68544acb447b85f98c3ce7f0473e6007a0c7ae663f45b125a1355ee。不得視為瀏覽器通過。
+
 ## 2026-10-28：案件修訂事件詳情唯讀 API
 
 `reports/verify-investigation-revision-api-20261028-01` UTC 10:19:28，67/67、0 skip、236 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 舊庫與保存版本、真 loopback GET 與 catalog 相同、DB bytes 不變、模型 0；未驗 UI、過期 anchor、全域容量與併發。

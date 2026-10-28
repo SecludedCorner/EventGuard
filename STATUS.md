@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 調查修訂 Web 呈現 WIP（瀏覽器待驗）
+
+事件詳情新增前版展開、觀測、缺口、證據未知與容量說明；`reports/verify-investigation-revision-web-20261028-01` UTC 10:21:28：46/46、0 skip、236 AST、source_unchanged，僅契約／合成測試，非瀏覽器驗收。`reports/investigation-revision-browser-20261028-01` 隔離合成伺服器已準備，但 IAB 回報 Local browser use is disabled in Work settings，沒有實際操作／渲染證據；Job 合作退出 0／remaining 0／無強停、0 POST／native／model，DB SHA256 前後 9565ba61b68544acb447b85f98c3ce7f0473e6007a0c7ae663f45b125a1355ee。此切片是 WIP，須恢復允許的瀏覽器後依規格驗收，不能標 UI DONE。
+
 ## 2026-10-28 事件詳情修訂唯讀 API
 
 既有事件詳情 GET 增加有界 `investigation_revisions`，包含已保存前版與 evidence_status；舊庫未記錄、損壞／成員缺失為 unknown。`reports/verify-investigation-revision-api-20261028-01` UTC 10:19:28：67/67、0 skip、236 AST、source_unchanged；Job 自然 0／remaining 0／無強停。合成 loopback GET 與 catalog 一致、來源 DB hash 不變、model 0；尚未接 Web 呈現，也未驗過期 anchor 回看、全域滿載或併發。

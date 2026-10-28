@@ -292,8 +292,21 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertEqual(code, 200)
         detail = page.split('<article id="detail"', 1)[1].split('</article>', 1)[0]
         self.assertIn('id="investigation-retention"', detail)
-        self.assertIn('更新會取代先前快照，舊版本無法回看', detail)
+        self.assertIn('此功能啟用前的版本未知，版本滿載時更新會失敗', detail)
         self.assertLess(detail.index('id="investigation-retention"'), detail.index('id="investigate"'))
+        self.assertEqual(self.calls, [])
+
+    def test_revision_renderer_is_bound_to_detail_and_preserves_unknown(self):
+        code, _, page = self.request("/")
+        self.assertEqual(code, 200)
+        detail = page.split('<article id="detail"', 1)[1].split('</article>', 1)[0]
+        self.assertIn('id="investigation-revisions"', detail)
+        code, _, script = self.request("/app.js")
+        renderer = script.split("function renderInvestigationRevisions(value){", 1)[1].split("function renderInvestigation(", 1)[0]
+        for field in ("功能啟用前的版本未知", "證據未知", "版本數已達上限", "revision.missing_event_ids", "revision.changed_event_ids"):
+            self.assertIn(field, renderer)
+        self.assertNotIn("innerHTML", renderer)
+        self.assertIn("renderInvestigationRevisions(d.investigation_revisions)", script)
         self.assertEqual(self.calls, [])
 
     def test_saved_investigation_summary_preserves_uncertainty_and_bounds(self):
