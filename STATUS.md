@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 修訂自動更新展開與焦點 WIP
+
+同一事件自動重繪按穩定 revision_id 保留展開狀態與原摘要焦點；使用者焦點在外部時不搶焦點；切事件立即清除舊版 DOM，防止相同 revision_id 跨事件串用。`reports/verify-revision-refresh-20261028-02` UTC 10:51:46：29/29、0 skip、237 AST、source_unchanged、Job 自然 0／remaining 0／無強停。`reports/revision-refresh-dom-fixture-20261028-01` 實際 renderer 的三組合成 DOM 驗證插入新版後保留、外部焦點、切事件不沿用；不是真瀏覽器，Work 設定仍禁用本機瀏覽器，UI 未驗收。
+
 ## 2026-10-28 修訂穩定識別前置
 
 事件詳情修訂資料加上有界 SQLite revision_id，供 UI 重繪辨識同一版本；不代表操作者或認證身分。`reports/verify-revision-stable-id-20261028-01` UTC 10:49:46：34/34、0 skip、237 AST、source_unchanged，Job 自然 0／remaining 0／無強停。synthetic 核對重讀識別穩定、舊庫及資料不變。UI 展開／焦點保留尚未接線，瀏覽器仍受 Work 設定阻擋。

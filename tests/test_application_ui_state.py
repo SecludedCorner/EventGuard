@@ -278,7 +278,7 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertEqual(code, 200)
         event_renderer = script.split("async function events(){", 1)[1].split("async function detail(", 1)[0]
         detail_renderer = script.split("async function detail(id){", 1)[1].split("async function sources(){", 1)[0]
-        self.assertIn("if(selected!==id)$('detail').hidden=true;selected=id", detail_renderer)
+        self.assertIn("const sameEvent=selected===id;if(!sameEvent){$('detail').hidden=true;$('investigation-revisions').replaceChildren();}selected=id", detail_renderer)
         self.assertIn("b.dataset.eventId=e.event_id", event_renderer)
         self.assertIn("item.dataset.eventId===focused", event_renderer)
         delivery = script.split("const showDetail=detail;", 1)[1].split("$('investigate')", 1)[0]
@@ -310,12 +310,12 @@ class ApplicationUIContractTests(unittest.TestCase):
         detail = page.split('<article id="detail"', 1)[1].split('</article>', 1)[0]
         self.assertIn('id="investigation-revisions"', detail)
         code, _, script = self.request("/app.js")
-        renderer = script.split("function renderInvestigationRevisions(value){", 1)[1].split("function renderInvestigation(", 1)[0]
+        renderer = script.split("function renderInvestigationRevisions(value,preserve=false){", 1)[1].split("function renderInvestigation(", 1)[0]
         for field in ("功能啟用前的版本未知", "證據未知", "版本數已達上限", "revision.missing_event_ids", "revision.changed_event_ids"):
             self.assertIn(field, renderer)
         self.assertNotIn("innerHTML", renderer)
         self.assertIn("investigationGapLabels[gap.reason]", renderer)
-        self.assertIn("renderInvestigationRevisions(d.investigation_revisions)", script)
+        self.assertIn("renderInvestigationRevisions(d.investigation_revisions,sameEvent)", script)
         self.assertEqual(self.calls, [])
 
     def test_saved_investigation_summary_preserves_uncertainty_and_bounds(self):

@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：修訂重繪合成 DOM
+
+`reports/verify-revision-refresh-20261028-02` UTC 10:51:46，29/29、0 skip、237 AST、source_unchanged，Job 自然 0／remaining 0／無強停。`reports/revision-refresh-dom-fixture-20261028-01/run.js` node exit 0、3 情境直接執行實際 renderer：新增版本後同 ID 保留、外部焦點不搶、切事件不保留；非真瀏覽器。首次 `...-01` 一項測試錯誤，靜態測試仍尋找舊函式簽名；更新為新簽名後重驗通過。
+
 ## 2026-10-28：修訂穩定識別合成回歸
 
 `reports/verify-revision-stable-id-20261028-01` UTC 10:49:46，34/34、0 skip、237 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 重讀 revision_id 穩定、source DB 不變；未測 UI 展開或瀏覽器。
