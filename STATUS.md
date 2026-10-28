@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 修訂穩定識別前置
+
+事件詳情修訂資料加上有界 SQLite revision_id，供 UI 重繪辨識同一版本；不代表操作者或認證身分。`reports/verify-revision-stable-id-20261028-01` UTC 10:49:46：34/34、0 skip、237 AST、source_unchanged，Job 自然 0／remaining 0／無強停。synthetic 核對重讀識別穩定、舊庫及資料不變。UI 展開／焦點保留尚未接線，瀏覽器仍受 Work 設定阻擋。
+
 ## 2026-10-28 修訂呈現合成 DOM 補充
 
 `reports/revision-web-dom-fixture-20261028-01/run.js` 對目前實際 renderInvestigationRevisions 執行三組合成 DOM fixture：未知／無歷程／缺口與容量滿載，Node exit 0；驗證中文缺口與文字輸出。此非瀏覽器、無版面或鍵盤證據，不改變 Work 設定阻擋及 UI WIP。

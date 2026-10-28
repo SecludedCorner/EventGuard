@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：修訂穩定識別合成回歸
+
+`reports/verify-revision-stable-id-20261028-01` UTC 10:49:46，34/34、0 skip、237 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 重讀 revision_id 穩定、source DB 不變；未測 UI 展開或瀏覽器。
+
 ## 2026-10-28：修訂呈現合成 DOM fixture
 
 `node reports/revision-web-dom-fixture-20261028-01/run.js` exit 0、3 情境：未知、無歷程、已保存版本的缺失／中文缺口／容量滿載與文字；直接擷取當前程式的 renderInvestigationRevisions 和固定標籤執行合成 DOM。不是瀏覽器或可及性驗收，不提供版面、焦點、資料庫、實機、模型或 ACK 證據。

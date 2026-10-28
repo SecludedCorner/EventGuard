@@ -20,13 +20,14 @@ def read_revisions(db, event):
         if not exists:
             return {"state": "not_recorded", "revisions": [], "prior_history": "unknown", "count_capacity": "available"}
         total = db.execute("SELECT COUNT(*) FROM investigation_revisions").fetchone()[0]
-        rows = db.execute("SELECT event_id,payload_hash,case_hash,saved_at,case_json FROM investigation_revisions WHERE event_id=? ORDER BY revision_id DESC LIMIT ?",
+        rows = db.execute("SELECT event_id,payload_hash,case_hash,saved_at,case_json,revision_id FROM investigation_revisions WHERE event_id=? ORDER BY revision_id DESC LIMIT ?",
                           (event["event_id"], MAX_REVISIONS_PER_EVENT + 1)).fetchall()
         if total > MAX_REVISIONS or len(rows) > MAX_REVISIONS_PER_EVENT:
             return unknown
         results = []
         for row in rows:
-            if type(row[4]) is not str or len(row[4].encode("utf-8")) > MAX_CASE_BYTES:
+            if (type(row[4]) is not str or len(row[4].encode("utf-8")) > MAX_CASE_BYTES
+                    or type(row[5]) is not int or not 1 <= row[5] <= 2**53-1):
                 return unknown
             revision = {"schema_version": "1.0", "event_id": row[0], "payload_hash": row[1],
                         "case_hash": row[2], "saved_at": row[3], "case": json.loads(row[4])}
@@ -43,7 +44,7 @@ def read_revisions(db, event):
                         digest = None
                     if digest != member["payload_hash"]:
                         changed.append(member["event_id"])
-            results.append({**revision, "evidence_status": "unknown" if missing or changed else "saved_snapshot",
+            results.append({**revision, "revision_id": row[5], "evidence_status": "unknown" if missing or changed else "saved_snapshot",
                             "missing_event_ids": missing, "changed_event_ids": changed})
         full = total >= MAX_REVISIONS or len(rows) >= MAX_REVISIONS_PER_EVENT
         return {"state": "available" if results else "not_recorded", "revisions": results,
