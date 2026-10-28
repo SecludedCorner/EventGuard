@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-29：修改上限與新增工具診斷
+
+本次從乾淨 HEAD 02725aa 接續，規則明定未提交新增＋刪除不得超過 500 行，不取代單一 commit 約 200 行。原生工具實際執行視窗 Raise／還原，成功讀到設定與開啟的瀏覽器控制；中途出現 `window bounds changed`、控制項快取失效及目標觀察不一致，未改權限，未取得可靠瀏覽器存取。本記錄僅保存錯誤類型；私人畫面與內容未寫入專案。產品驗收不因這次診斷升格。
+
+`reports/release-prep-diff-limit-20261029-01`：父來源 build 可重現、346 檔；`reports/verify-diff-limit-20261029-01`：2026-10-29 01:34（UTC+8）、8/8、0 skip、Job 自然退出／remaining 0。檢查限包裝與文件，不是瀏覽器操作驗收。
+
 ## 2026-10-29：授權提醒與狀態歸因更正
 
 CLAUDE.md 保存專案既有操作與不重複詢問規則，未提交私人圖片或單次執行授權回條。使用者提供畫面中的瀏覽器控制開啟；工具仍回報停用，不能據此認定使用者未授權，根因未明。`reports/release-prep-permission-reminder-20261029-01`：父 SHA df56808，346 檔來源 build 可重現；`reports/verify-permission-reminder-20261029-01` UTC 17:23:12（台灣 10/29 01:23）：8/8、0 skip、244 AST、source_unchanged，Job 自然退出 0／remaining 0。本次文件另做 diff／本地連結檢查；這些檢查不提供產品 UI 或真實環境驗收。

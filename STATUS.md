@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-10-29 500 行上限與瀏覽器工具排查
+
+CLAUDE.md 已增加相對 HEAD 的未提交新增＋刪除 500 行硬上限，包含 staged／unstaged／本次 untracked，保留每 commit 約 200 行與每單元立即 push。開始時工作樹乾淨。本次僅修改規則與診斷記錄。
+
+2026-10-29 01:34（UTC+8）：`py -3.13 -B scripts/package_candidate.py --root reports/release-prep-diff-limit-20261029-01 --commit 02725aa91ccac28e98688aa3b07d63d16e8d5020`，父版本來源 build 346 檔可重現，不含本次文件；`py -3.13 -B scripts/verify.py --run-dir reports/verify-diff-limit-20261029-01 --timeout-seconds 180 --module test_package_candidate`，8/8、0 skip、source_unchanged，Job 自然退出 0／remaining 0。文件另做 diff／本地連結與修改量檢查；無新增產品驗收。
+
+瀏覽器存取排查已嘗試重建連線與直接選取內建瀏覽器；原生視窗 Raise／還原後成功讀取設定頁並觀察瀏覽器開關開啟，但操作中亦出現視窗尺寸變更及控制項快取失效，仍未證明瀏覽器工具已恢復。不得沿用失效識別操作或將未知根因歸咎未授權；未更動權限、未保存或提交畫面。原生 UI 狀態恢復不等於瀏覽器驗收通過。
+
 ## 2026-10-29 既有授權提醒與瀏覽器限制更正
 
 CLAUDE.md 已記錄本專案既有讀改、fixture／合成測試、隔離瀏覽器驗收及指定開發分支 commit／push 授權；相同範圍不重複詢問。使用者設定畫面顯示瀏覽器已開啟，但工具回報停用，原因未確認；舊文的「Work 設定禁用」僅代表工具原文，不證明使用者未授權。UI／鍵盤／200% 仍待實測。
