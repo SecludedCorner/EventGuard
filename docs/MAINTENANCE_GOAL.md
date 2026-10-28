@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 桌面離線工作接續
+
+使用者要求先推進不依賴瀏覽器的工程；瀏覽器驗收保留獨立關卡。P1 DESKTOP-SOURCE-001：Tk 七來源表格歷史成功時間已接線，來源編譯與 74 項定向測試（含真 Tk＋fixture）通過；桌面人工操作與縮放仍待驗。下一個可執行項為桌面來源缺口摘要，驗收需拒讀／過期／未知不當安全、刷新不新增採集／模型／ACK；不以桌面結果取代 Web P1 GUI-UX-200 或 INVEST-REV 的待驗範圍。
+
 ## 2026-10-28 當前缺口與可驗收目標
 
 研究任務「EventGuard 競品 GUI 研究與增強規劃」已完成原定研究與工程規格（f1ed1e0、ad1f127）；其後市場比較 Wazuh、Velociraptor、Portmaster、Fleet、Elastic、Security Onion、System Informer 的補充結論在原任務對話，未宣稱已落地為完整獨立研究或實測。以現有工程證據為準：

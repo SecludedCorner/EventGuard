@@ -179,6 +179,30 @@ class DesktopTests(unittest.TestCase):
         self.controller.api.call.assert_called_once_with("inspect_event", "event-1", namespace="live")
         self.assertFalse(value["system_query_executed"])
 
+    def test_snapshot_preserves_saved_success_after_denial_without_collecting(self):
+        import hashlib
+        from eventguard.runtime import Runtime
+        runtime = Runtime(self.root)
+        for status, at in (("ok", "2026-01-01T00:00:00+00:00"), ("denied", "2026-01-02T00:00:00+00:00")):
+            runtime.save_observation({"id": "defender", "status": status, "observed_at": at,
+                                      "coverage": {"status": status, "errors": []}, "rows": []}, "live")
+        self.controller.api.call.return_value = {
+            "source_coverage": {"defender": {"status": "denied", "freshness": {"state": "stale"}}}}
+        def hashes():
+            return {str(p.relative_to(self.root)): hashlib.sha256(p.read_bytes()).hexdigest()
+                    for p in self.root.rglob('*') if p.is_file()}
+        before = hashes()
+        with patch("eventguard.collectors.windows.WindowsCollectors.collect", side_effect=AssertionError("no scan")):
+            value = self.controller.snapshot()
+        source = value["sources"][0]
+        self.assertEqual(source["status"], "denied")
+        self.assertEqual(source["freshness"]["state"], "stale")
+        self.assertEqual(source["last_success_at"], "2026-01-01T00:00:00+00:00")
+        self.assertEqual(source["last_success_state"], "known")
+        self.assertEqual(value["sources"][1]["last_success_state"], "unknown")
+        self.assertEqual(before, hashes())
+        self.controller.api.call.assert_called_once_with("overview", namespace="live", limit=100)
+
     def test_event_snapshot_exposes_total_and_loaded_window_without_new_query(self):
         self.controller.api.call.return_value = {
             "event_list": {"events": [{"event_id":"synthetic-1"}], "total":487, "truncated":True},

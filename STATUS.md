@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面版七來源歷史成功時間
+
+既有 Tk 桌面版沿用 DesktopController；快照從 source_status 只讀保存的 live 成功紀錄，七來源表格新增「最後成功時間（歷史）」。目前可見性／新鮮度獨立顯示；未知、無效、無時區及未來時間保持未知，零列不抹除歷史成功。未啟動監看、原生採集、模型或 ACK。
+
+2026-10-29 02:25（UTC+8）：`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-source-history-20261029-01 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop --module test_source_success_history`，74/74、0 skip、source_unchanged；包含真 Tk 元件配合 fixture、六情境表格驗證、保存來源讀前後 hash 不變，Job 自然退出 0／remaining 0。`reports/build-desktop-source-history-20261029-01/build-result.json`：對照同一受測來源 manifest，266 檔 hash 相符、244 Python 檔編譯成功；這是未提交工作樹的來源 build，非獨立 exe。桌面人工操作／縮放、Web 修訂／鍵盤／200% 及實機關卡仍待驗。
+
 ## 2026-10-29 500 行上限與瀏覽器工具排查
 
 CLAUDE.md 已增加相對 HEAD 的未提交新增＋刪除 500 行硬上限，包含 staged／unstaged／本次 untracked，保留每 commit 約 200 行與每單元立即 push。開始時工作樹乾淨。本次僅修改規則與診斷記錄。

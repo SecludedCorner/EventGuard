@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import unicodedata
+from datetime import datetime, timezone
 
 
 SEVERITY_FILTERS = {"所有嚴重度": "all", "資訊": "info", "注意": "warning", "高": "high",
@@ -57,6 +58,20 @@ def safe_text(value, limit=200):
                      if unicodedata.category(char) in {"Cc", "Cf", "Cs"} else char
                      for char in raw[:limit])
     return result + ("…" if len(raw) > limit else "")
+
+
+def source_success_text(item, *, now=None):
+    """Historical success is separate from present coverage and freshness."""
+    value = item.get("last_success_at")
+    if item.get("last_success_state") != "known" or not isinstance(value, str) or len(value) > 80:
+        return "未知／尚無成功紀錄"
+    try:
+        at = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if at.tzinfo is None or at.utcoffset() is None or at > (now or datetime.now(timezone.utc)):
+            return "未知／尚無成功紀錄"
+        return at.astimezone(timezone.utc).isoformat(timespec="seconds")
+    except (ValueError, TypeError, OverflowError):
+        return "未知／尚無成功紀錄"
 
 
 def detail_text(value, limit=60000):

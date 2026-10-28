@@ -359,6 +359,8 @@ class DesktopController:
             counts = storage.get("counts") or {}
             known = storage.get("state") in {"available", "not_created"}
             sources = []
+            from .source_status import source_status
+            saved_sources = {row["source_id"]: row for row in source_status(self.root, "live")["sources"]}
             for source in SOURCES:
                 item = coverage.get(source) or {}
                 errors = item.get("errors") or []
@@ -371,6 +373,8 @@ class DesktopController:
                 sources.append({"source_id": source, "status": item.get("status", "not_observed"),
                     "row_count": item.get("row_count"), "observed_at": item.get("observed_at"),
                     "freshness": item.get("freshness") or {"state": "unknown"},
+                    "last_success_at": saved_sources[source]["last_success_at"],
+                    "last_success_state": saved_sources[source]["last_success_state"],
                     **evidence, "current_coverage": item.get("current_coverage", "unknown")})
             scope_matches = (monitor.get("scope_matches") is not False
                              and monitor.get("namespace") in (None, "live"))
