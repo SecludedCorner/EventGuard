@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 修訂呈現合成 DOM 補充
+
+`reports/revision-web-dom-fixture-20261028-01/run.js` 對目前實際 renderInvestigationRevisions 執行三組合成 DOM fixture：未知／無歷程／缺口與容量滿載，Node exit 0；驗證中文缺口與文字輸出。此非瀏覽器、無版面或鍵盤證據，不改變 Work 設定阻擋及 UI WIP。
+
 ## 2026-10-28 先前版本缺口中文說明 WIP
 
 先前版本與最新快照共用固定缺口中文標籤，未知代碼仍按不可信文字顯示；`reports/verify-investigation-revision-gap-labels-20261028-02` UTC 10:44:47，43/43、0 skip、237 AST、source_unchanged，Job 自然 0／remaining 0／無強停。`reports/revision-web-javascript-check-20261028-02` 本機 Node `--check` 語法通過，不是 JS 行為／瀏覽器驗收；Work 禁用本機瀏覽器，修訂畫面仍 WIP。完整 fixture 回歸僅針對前版 d0faaf1。

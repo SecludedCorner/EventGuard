@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：修訂呈現合成 DOM fixture
+
+`node reports/revision-web-dom-fixture-20261028-01/run.js` exit 0、3 情境：未知、無歷程、已保存版本的缺失／中文缺口／容量滿載與文字；直接擷取當前程式的 renderInvestigationRevisions 和固定標籤執行合成 DOM。不是瀏覽器或可及性驗收，不提供版面、焦點、資料庫、實機、模型或 ACK 證據。
+
 ## 2026-10-28：案件修訂缺口標籤 WIP
 
 `reports/verify-investigation-revision-gap-labels-20261028-02` UTC 10:44:47，43/43、0 skip、237 AST、source_unchanged；Job 自然 0／remaining 0／無強停。`reports/revision-web-javascript-check-20261028-02/app.js` Node --check 0；僅語法及靜態元件契約，不是真瀏覽器。首次 `...-01` 42/43，因共用標籤移出函式後舊靜態測試仍限定字串位置，更新為核對共用標籤與目標引用後重驗通過。
