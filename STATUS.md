@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 保存證據變更到桌面元件的整合核對
+
+新增測試以合成SQLite建立最新與前版調查，再移除／變更關聯事件，經真EventCatalog讀取到實際Tk元件；最新與前版都顯未知，不沿用「保存成員相符」。每次讀取前後SQLite hash相同、anchor仍pending、未採集／模型／ACK。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-evidence-changes-20261029-01 --timeout-seconds 180 --module test_gui_saved_evidence --module test_gui --module test_gui_presenter --module test_investigation_revision_read --module test_investigation_revision_integration --module test_event_investigation`：79/79、0skip；補正缺display的TclError明示skip路徑後，`--run-dir reports/verify-desktop-evidence-changes-20261029-02 --timeout-seconds 180 --module test_gui_saved_evidence` 於2026-10-29 03:19（UTC+8）2/2、0skip、source_unchanged，兩次Job自然退出／remaining0。`reports/build-desktop-evidence-changes-20261029-01`：267檔hash相符、245檔編譯成功。此為實際元件＋合成資料，不是人類操作或實機驗收。
+
 ## 2026-10-29 桌面前版調查只讀摘要
 
 桌面詳情新增最多最近3版保存摘要，保持後端讀取順序，成員與診斷狀態獨立；錨點身分缺失／不符不顯其他案件，時間異常保持未知，舊資料不補造前版，容量滿載明示。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-revision-summary-20261029-02 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop --module test_investigation_revision_read --module test_investigation_revision_integration`：2026-10-29 03:15（UTC+8）85/85、0skip、source_unchanged；真Tk＋合成EventCatalog驗真保存前版到文字元件與未知時清除，pending不變，Job自然退出／remaining0。`reports/build-desktop-revision-summary-20261029-01`：266檔hash相符、244檔編譯，含未提交修改。01為補強缺失身分前的85/85，最終證據以02為準。人工／Web／原生仍各自待驗。

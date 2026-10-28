@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：缺失／變更證據到桌面元件
+
+`reports/verify-desktop-evidence-changes-20261029-01` 79/79；02於UTC 2026-10-28 19:19:01為最終新增模組2/2，0skip、source_unchanged、Job自然退出／remaining0。真SQLite＋EventCatalog＋Tk驗關聯member刪除／payload變更後最新案與前版皆未知，讀前後hash及pending不變。`reports/build-desktop-evidence-changes-20261029-01`：267檔受測hash相符、245檔編譯成功。未把component／合成測試當Web、真人或實機驗收。
+
 ## 2026-10-29：桌面前版調查元件驗證
 
 `reports/verify-desktop-revision-summary-20261029-02`：85/85、0skip、source_unchanged，Job自然退出／remaining0。真Tk＋合成EventCatalog建立兩版後驗保存前版呈現、未知時清除與pending保留；純呈現驗4版只顯示3版、成員相符與診斷變更分列、缺失／不符身分不顯錯案及時間未知。`reports/build-desktop-revision-summary-20261029-01` 266檔受測hash相符、244檔編譯通過；非真人／Web驗收。
