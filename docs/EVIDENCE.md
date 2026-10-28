@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-28：處置歷程容量局部恢復
+
+`reports/gui-history-capacity-recovery-20261028-01`：從舊 32 筆滿載 synthetic DB 出發，真瀏覽器新處置成功；舊 32 列逐筆保留、未綁定仍未知，總 33、pending／receipt null。`-02`：256 筆 synthetic no-op 顯示滿載，嘗試新處置顯示容量不足且狀態／pending 不變。兩 Job 自然 0／remaining 0／無強停、各 1 合成 POST、native／model 0；shutdown_requested_reason 是 harness 預設，實際合作停止。
+
+`reports/verify-history-capacity-recovery-20261028-02` 72/72／0 skip／224 AST／source_unchanged、Job 自然退出；含實際 256／4096 記錄滿載與資料保全測試。提升上限不等於全庫／byte 滿載的恢復機制，亦不保證永久操作。
+
 ## 2026-10-28：詳情切換安全合成驗收
 
 `reports/gui-detail-switch-safety-20261028-01`：先開合成事件 A，延遲 B 的詳情並點 B；載入中 `#detail` hidden、可見處置按鈕 0；放行後詳情及 delivery 均為 B。worker 0 POST／native／model，原 Job 自然 0／remaining 0／無強停；shutdown_requested_reason 為 harness 預設，實際合作停止。`reports/verify-detail-switch-safety-20261028-01` 49/49／0 skip／224 AST／source_unchanged，Job 自然退出。

@@ -5,7 +5,7 @@ import math
 import re
 
 MAX_HISTORY_ENTRIES = 4096
-MAX_HISTORY_PER_EVENT = 32
+MAX_HISTORY_PER_EVENT = 256
 STATUSES = frozenset({"new", "read", "handled", "ignored"})
 SOURCES = frozenset({"gui", "mcp", "cli", "startup", "system", "unknown"})
 IDENTIFIER = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")

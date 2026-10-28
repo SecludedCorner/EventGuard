@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-28 處置歷程單事件容量局部恢復
+
+每事件上限從 32 調整為 256，全庫仍 4096 且受既有 byte／ACK reserve 限制；不刪或覆寫舊歷程。`reports/gui-history-capacity-recovery-20261028-01` 合成真瀏覽器驗舊版 32 筆滿載後可完成新處置、舊 32 列逐筆相同、32 筆未綁定仍未知、pending／receipt null；`-02` 驗新 256 筆滿載明示拒絕、狀態與 pending 不變。兩 Job 自然 0／remaining 0／無強停、各 1 合成 POST、native／model 0。
+
+`reports/verify-history-capacity-recovery-20261028-02` UTC 09:20:47、72/72、0 skip、224 AST、source_unchanged、Job 自然退出；含 256 單事件與 4096 全庫滿載的資料保全。這是提高有界容量、恢復舊 32 限制的部分改善，不是永久恢復：256／4096 或 byte 滿載仍拒絕新處置，尚無不丟失證據的全庫恢復。工作樹 326 檔 ZIP 自檢。
+
 ## 2026-10-28 事件詳情切換安全修正
 
 切換到不同事件時立即隱藏舊詳情，避免新事件還在載入時，畫面顯示舊事件卻操作新事件；同事件輪詢仍保留詳情。`reports/gui-detail-switch-safety-20261028-01` 合成瀏覽器延遲第二事件，確認舊詳情隱藏／可見處置按鈕 0，放行後顯示第二事件及其 delivery；0 POST／native／model、Job 自然 0／remaining 0／無強停。`reports/verify-detail-switch-safety-20261028-01` UTC 09:17:08、49/49、0 skip、224 AST、source_unchanged、Job 自然退出；來源工作樹 ZIP 自檢。歷程容量恢復仍未完成。

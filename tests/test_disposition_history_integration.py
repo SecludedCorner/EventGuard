@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from eventguard.events.disposition_history import MAX_HISTORY_ENTRIES, MAX_HISTORY_PER_EVENT
 from eventguard.events.disposition_history_store import record_attempt
 from eventguard.events.store import CapacityError, EventStore
 from eventguard.synthetic import make_synthetic
@@ -87,8 +88,30 @@ class DispositionHistoryIntegrationTests(unittest.TestCase):
         conflict = application().set_event_status(self.event_id, "ignored", source="gui", operation_id="op-app")
         self.assertEqual((conflict["state"], conflict["reason"]), ("conflict", "operation_id_conflict"))
         self.assertEqual(len(self.rows()), 2)
-    def test_history_capacity_failure_preserves_status_and_pending(self):
+    def test_previous_32_record_limit_recovers_without_losing_history(self):
         for i in range(32):
+            self.store.set_disposition(self.event_id, "new", operation_id="old-limit-" + str(i))
+        before = self.rows()
+        result = self.store.set_disposition(self.event_id, "handled", operation_id="recovered")
+        self.assertTrue(result["changed"])
+        self.assertEqual(len(self.rows()), 33)
+        self.assertTrue(all(row in self.rows() for row in before))
+        self.assertEqual((self.store.stats()["pending"], self.store.stats()["receipt_count"]), (1, 0))
+    def test_global_count_limit_rejects_without_losing_existing_data(self):
+        self.store.set_disposition(self.event_id, "new", operation_id="seed")
+        with closing(sqlite3.connect(self.store.path)) as db:
+            payload_hash = db.execute("SELECT payload_hash FROM events WHERE event_id=?", (self.event_id,)).fetchone()[0]
+            rows = (("global-" + str(i), "other-" + str(i), "new", "read", "gui", 1000, 1, payload_hash)
+                    for i in range(MAX_HISTORY_ENTRIES - 1))
+            db.executemany("INSERT INTO event_disposition_operations VALUES(?,?,?,?,?,?,?,?)", rows)
+            db.commit()
+        before = self.store.path.read_bytes()
+        with self.assertRaisesRegex(CapacityError, "event_history_capacity"):
+            self.store.set_disposition(self.event_id, "read", operation_id="global-overflow")
+        self.assertEqual(self.store.path.read_bytes(), before)
+        self.assertEqual((self.store.stats()["pending"], self.store.stats()["receipt_count"]), (1, 0))
+    def test_history_capacity_failure_preserves_status_and_pending(self):
+        for i in range(MAX_HISTORY_PER_EVENT):
             self.store.set_disposition(self.event_id, "new", operation_id="noop-" + str(i))
         before = self.rows()
         with self.assertRaisesRegex(CapacityError, "event_history_capacity"):

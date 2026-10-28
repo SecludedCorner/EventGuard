@@ -7,6 +7,7 @@ import tempfile
 import unittest
 
 from eventguard.events.catalog import EventCatalog
+from eventguard.events.disposition_history import MAX_HISTORY_PER_EVENT
 from eventguard.events.store import EventStore, event_payload_hash
 from eventguard.events.disposition_history_store import HistoryConflictError
 from eventguard.synthetic import make_synthetic
@@ -91,9 +92,9 @@ class DispositionHistoryReadTests(unittest.TestCase):
             self.store.set_disposition("evt-history-read", "read", source="gui", operation_id="old")
 
     def test_count_limit_is_explicit_without_claiming_byte_space(self):
-        for i in range(32):
+        for i in range(MAX_HISTORY_PER_EVENT):
             self.catalog.set_status("evt-history-read", "new", operation_id="noop-" + str(i))
         history = self.catalog.detail("evt-history-read")["handling_history"]
-        self.assertEqual(len(history["entries"]), 32)
+        self.assertEqual(len(history["entries"]), MAX_HISTORY_PER_EVENT)
         self.assertEqual(history["count_capacity"], "full")
         self.assertNotIn("byte_capacity", history)
