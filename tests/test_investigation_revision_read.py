@@ -48,6 +48,7 @@ class RevisionReadTests(unittest.TestCase):
         self.assertGreater(result["revisions"][0]["revision_id"], 0)
         self.assertEqual(self.read()["revisions"][0]["revision_id"], result["revisions"][0]["revision_id"])
         self.assertEqual(result["revisions"][0]["evidence_status"], "saved_snapshot")
+        self.assertEqual(result["revisions"][0]["diagnostic_evidence_status"], "unknown")
         self.assertEqual(self.store.path.read_bytes(), before)
         self.assertEqual((self.store.stats()["pending"], self.store.stats()["receipt_count"]), (2, 0))
 

@@ -168,12 +168,13 @@ class EventCatalog:
                 raise ValueError("event_not_found")
             event = EventStore._row(row)
             from .investigation_revision_read import read_revisions
+            diagnosis = self._saved_diagnosis(db, event)
             result = {**self._summary(row, event), "namespace": self.namespace, "event": event_view(event),
                     "interpretation": review(event), "guidance": event_guidance(event),
-                    "latest_diagnosis": self._saved_diagnosis(db, event), "latest_diagnosis_is_saved": True,
+                    "latest_diagnosis": diagnosis, "latest_diagnosis_is_saved": True,
                     "data_trust": "untrusted_data", "incident_conclusion": "not_assessed", "model_calls": 0,
                     "handling_history": self._saved_handling_history(db, event_id, row["payload_hash"]),
-                    "investigation_revisions": read_revisions(db, event),
+                    "investigation_revisions": read_revisions(db, event, diagnosis=diagnosis),
                     "investigation": self._saved_investigation(db, event, row["catalog_source"])}
             if event["event_type"] == "advisory.changed":
                 from ..intelligence.views import public_advisories

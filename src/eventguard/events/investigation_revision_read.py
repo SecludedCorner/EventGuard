@@ -7,7 +7,10 @@ from .schema import validate_event
 from .store import EventStore, StoreError, event_payload_hash
 
 
-def read_revisions(db, event):
+_UNOBSERVED = object()
+
+
+def read_revisions(db, event, *, diagnosis=_UNOBSERVED):
     """Only current matching event identities are considered known.
 
     Older, unrecorded revisions remain unknown; a hash is not a signature.
@@ -24,6 +27,8 @@ def read_revisions(db, event):
                           (event["event_id"], MAX_REVISIONS_PER_EVENT + 1)).fetchall()
         if total > MAX_REVISIONS or len(rows) > MAX_REVISIONS_PER_EVENT:
             return unknown
+        from .investigation import diagnostic_summary
+        current_diagnostic = None if diagnosis is _UNOBSERVED else diagnostic_summary(diagnosis)
         results = []
         for row in rows:
             if (type(row[4]) is not str or len(row[4].encode("utf-8")) > MAX_CASE_BYTES
@@ -44,7 +49,13 @@ def read_revisions(db, event):
                         digest = None
                     if digest != member["payload_hash"]:
                         changed.append(member["event_id"])
+            context = revision["case"].get("diagnostic_context")
+            diagnostic_status = ("not_bound" if context is None else
+                                 "unknown" if current_diagnostic is None else
+                                 "missing" if current_diagnostic["state"] == "missing" else
+                                 "matched" if current_diagnostic["review_hash"] == context["review_hash"] else "changed")
             results.append({**revision, "revision_id": row[5], "evidence_status": "unknown" if missing or changed else "saved_snapshot",
+                            "diagnostic_evidence_status": diagnostic_status,
                             "missing_event_ids": missing, "changed_event_ids": changed})
         full = total >= MAX_REVISIONS or len(rows) >= MAX_REVISIONS_PER_EVENT
         return {"state": "available" if results else "not_recorded", "revisions": results,

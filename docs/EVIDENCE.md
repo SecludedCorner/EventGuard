@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：修訂診斷狀態合成測試
+
+`reports/verify-revision-diagnostics-20261028-02` UTC 10:53:47，22/22、0 skip、238 AST、source_unchanged；Job 自然 0／remaining 0／無強停。synthetic 以已保存診斷核對匹配、變動、缺失、舊 schema 未綁定，以及未提供診斷時 unknown；DB／pending／ACK 不變。未重新採集或執行模型；Web 尚未顯示。
+
 ## 2026-10-28：修訂重繪合成 DOM
 
 `reports/verify-revision-refresh-20261028-02` UTC 10:51:46，29/29、0 skip、237 AST、source_unchanged，Job 自然 0／remaining 0／無強停。`reports/revision-refresh-dom-fixture-20261028-01/run.js` node exit 0、3 情境直接執行實際 renderer：新增版本後同 ID 保留、外部焦點不搶、切事件不保留；非真瀏覽器。首次 `...-01` 一項測試錯誤，靜態測試仍尋找舊函式簽名；更新為新簽名後重驗通過。

@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 前版調查的診斷證據狀態
+
+事件詳情唯讀 API 為每個前版分別回報診斷 matched／changed／missing／not_bound；讀取方未提供診斷則 unknown，不以事件成員相符推定診斷相符。`reports/verify-revision-diagnostics-20261028-02` UTC 10:53:47：22/22、0 skip、238 AST、source_unchanged，Job 自然 0／remaining 0／無強停。synthetic 測保存診斷更改／移除、舊案未綁定與未提供來源；無重新採集、ACK 或模型。Web 尚未呈現此欄且瀏覽器受阻。
+
 ## 2026-10-28 修訂自動更新展開與焦點 WIP
 
 同一事件自動重繪按穩定 revision_id 保留展開狀態與原摘要焦點；使用者焦點在外部時不搶焦點；切事件立即清除舊版 DOM，防止相同 revision_id 跨事件串用。`reports/verify-revision-refresh-20261028-02` UTC 10:51:46：29/29、0 skip、237 AST、source_unchanged、Job 自然 0／remaining 0／無強停。`reports/revision-refresh-dom-fixture-20261028-01` 實際 renderer 的三組合成 DOM 驗證插入新版後保留、外部焦點、切事件不沿用；不是真瀏覽器，Work 設定仍禁用本機瀏覽器，UI 未驗收。

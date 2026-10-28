@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-28 修訂診斷身分
+
+修訂 API 現在區分診斷 matched／changed／missing／not_bound／unknown，synthetic 22/22；下一步在前版顯示獨立診斷狀態，避免事件相符掩蓋診斷缺失。瀏覽器依舊不可用，UI 應標 WIP。
+
 ## 2026-10-28 修訂刷新焦點 WIP
 
 同事件按 revision_id 保存展開與摘要焦點，切事件先清除舊修訂，合成 DOM 3 案例／29 項定向通過。真瀏覽器禁用，實際鍵盤、刷新競態與 200% 縮放仍未驗。
