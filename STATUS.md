@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-28 歷程契約換行修正
+
+前一 checkpoint 的 staged `git diff --check` 對新檔 CRLF 報尾隨空白，但 PowerShell 未自動停止後續 commit；該 checkpoint 已推送，不改寫歷史。本單元將兩個新檔統一 LF，內容語意不變；重新 diff-check 無輸出。`reports/verify-history-line-endings-20261028-01` UTC 08:45:06、27/27、0 skip、220 AST、source_unchanged、Job 自然退出。來源 build 為工作樹 ZIP 自檢。後續提交改成獨立檢查退出碼，再執行 commit。下一步 P2-HISTORY-001B。
+
 ## 2026-10-28 P2-HISTORY-001A 處置歷程純契約
 
 新增純驗證：歷程只接受具界限的事件／操作識別、狀態轉換、來源與有限時間；單事件 32／全庫 4096 筆預定上限，滿載拒絕新紀錄。來源不是已驗證使用者身分，舊資料不能憑最新狀態補造歷程。此切片不建立資料表、不接寫入或 UI；現有事件處置行為未改，不能稱歷程功能完成。

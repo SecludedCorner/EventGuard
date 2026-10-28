@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：歷程契約換行修正
+
+`73b79df` 的 staged diff-check 因 CRLF 回報尾隨空白；PowerShell 命令沒有依退出碼中止，錯誤已保存並普通推送，不改寫既有 commit。本單元僅將兩個新檔轉 LF，`git diff --check` 通過；`reports/verify-history-line-endings-20261028-01` 27/27／0 skip／220 AST／source_unchanged、Job 自然 0／remaining 0／無強停。後續獨立檢查結果後再提交。
+
 ## 2026-10-28：P2-HISTORY-001A 純契約
 
 `disposition_history.py` 為純資料驗證，限制狀態轉換、無使用者身分宣稱的來源、bounded ID／有限時間及 32／4096 筆候選上限；無 SQLite 讀寫。`reports/verify-disposition-history-contract-20261028-02` 58/58、0 skip、220 AST、source_unchanged、Job 自然 0／remaining 0／無強停；包含新契約、event catalog、outbox 及 Application RPC 定向，並非完整回歸或已持久化歷程驗收。

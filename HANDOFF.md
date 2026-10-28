@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-28 歷程契約換行
+
+前次 staged diff-check 發現 CRLF 卻因命令未檢查退出碼而繼續提交；本次改 LF 並重驗 27/27。往後將 stage、diff-check 與 commit 分開並核對退出碼。下一步 P2-HISTORY-001B；純契約仍未接 DB。
+
 ## 2026-10-28 P2-HISTORY-001A 純契約
 
 新增具界限的處置歷程 record／capacity 驗證，但未建立 DB schema 或接線；定向 58/58。下一步 001B 須先處理 operation_id 從 Application／catalog 到 store 的傳遞、同交易寫入與重播衝突、容量及 pending／ACK 保護；舊歷程不可補造，詳 STATUS／STORAGE_RETENTION。
