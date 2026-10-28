@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 整合測試的受保護 checkout 路徑修正
+
+隔離整合工作樹在 `.codex` 下，首次完整回歸的 shipped facts example 測試直接把該路徑交給 inventory，觸發既有 private_or_build_path_refused 保護。main 整合暫停；測試改將已知公開範例複製至專用臨時目錄再驗證，沒有修改產品拒讀規則。`reports/verify-inventory-fixture-location-20261029-01` 因指定不存在模組而未執行測試，保留此命令失敗；正確命令 `py -3.13 -B scripts/verify.py --run-dir reports/verify-inventory-fixture-location-20261029-02 --timeout-seconds 180 --module test_intelligence_integration --module test_adversarial_intelligence`，2026-10-29 02:50（UTC+8）：16/16、0 skip、source_unchanged，Job 自然退出／remaining 0。`reports/build-inventory-fixture-location-20261029-01`：266 檔 hash 相符、244 檔 Python 編譯通過。尚需在隔離整合樹重跑完整回歸，未將首輪失敗改記通過。
+
 ## 2026-10-29 500 行範圍更正與 main 整合
 
 使用者澄清上限包含開發分支相對 main 待整併差異，並明確授權測試通過後普通 merge／push main。CLAUDE 已更新兩個比較基準與整合流程；不再以開發分支已 push 代替整合。開始時工作樹乾淨、開發分支 c83ff95 遠端一致；origin/main=c80a4be，相對差異 49 檔 +3936/−71。這是既有 backlog，先完成整合，暫不增加產品功能。本地 main 為保留的不同歷史，無共同祖先；不覆寫，從 origin/main 準備隔離整合 checkout。整合結果另記，尚未宣稱 main 更新或產品驗收完成。

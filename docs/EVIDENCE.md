@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：修正合成範例的 checkout 路徑假設
+
+首輪 `reports/verify-main-integration-20261029-01` 位於隔離工作樹，shipped facts example 被 `.codex` 路徑保護拒讀，整合暫停。測試把同一公開範例複製到測試臨時目錄；產品路徑限制未變。`reports/verify-inventory-fixture-location-20261029-02` UTC 18:50:36：16/16、0 skip、source_unchanged，Job 自然退出／remaining 0；01 命令因不存在模組被 parser 拒絕，未執行測試。`reports/build-inventory-fixture-location-20261029-01` 當前266檔hash相符、244檔編譯成功。完整整合待修正後重驗。
+
 ## 2026-10-29：分支差異上限與 main 整合授權
 
 直接核對遠端 main=c80a4be90c7e9893544e72fab04c12e7653b33cc、開發分支=c83ff950e59646c0de48fce907b43bee2a89ecfa；本機與遠端 SHA 相符。`git diff origin/main...HEAD --shortstat`：49 檔 +3936/−71，工作樹／index 相對 HEAD 無差異。使用者明確批准測試通過後普通 merge／push main；本次先保存規則，完整整合與測試另記。
