@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-28：P2-HISTORY-001A 純契約
+
+`disposition_history.py` 為純資料驗證，限制狀態轉換、無使用者身分宣稱的來源、bounded ID／有限時間及 32／4096 筆候選上限；無 SQLite 讀寫。`reports/verify-disposition-history-contract-20261028-02` 58/58、0 skip、220 AST、source_unchanged、Job 自然 0／remaining 0／無強停；包含新契約、event catalog、outbox 及 Application RPC 定向，並非完整回歸或已持久化歷程驗收。
+
 ## 2026-10-28：P1-INVEST-004B 合成逐觀測理由
 
 真瀏覽器 `#investigation-view ol` 合成保存案件含 16 成員：錨定列有截斷及「沒有保存診斷」，被修改的 synthetic 成員列有「原事件內容已變，證據未知」及限定 metadata 的同主機／來源／穩定身分理由；PID 重用、異來源、缺身分候選不在時間線。第一輪發現診斷代碼未翻譯，補既有五種診斷代碼中文後於 `reports/gui-investigation-reasons-20261028-02` 重驗；0 POST／native／model，Job 自然 0／remaining 0／無強停。SQLite SHA256 讀取前後同為 `1bf0d18fa9b18e7cf136974866bb11deedb1d87785104b39c144b7a1db78367e`。shutdown_requested_reason 是 harness 預設，實際合作停止。
