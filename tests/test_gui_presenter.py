@@ -12,6 +12,33 @@ def item(event_id="fixture-event", **changes):
 
 
 class GuiPresenterTests(unittest.TestCase):
+    def test_saved_investigation_preserves_independent_unknown_and_stale_evidence(self):
+        document = {"event": item(), "investigation": {"case": {
+            "anchor_event_id": "fixture-event", "case_id": "case-fixture", "as_of": "saved-time",
+            "status": "limited", "timeline": [{}], "gaps": [{}]},
+            "evidence_status": "saved_snapshot", "snapshot_freshness": "stale",
+            "diagnostic_evidence_status": "changed"}}
+        before = copy.deepcopy(document)
+        summary = event_summary(document)
+        for text in ("成員與保存雜湊相符", "診斷已變更，保留未知", "快照新鮮度：過期",
+                     "證據有缺口", "保存關聯項目 1；證據缺口 1", "關聯不等於因果"):
+            self.assertIn(text, summary)
+        self.assertEqual(before, document)
+        document["investigation"]["evidence_status"] = "unknown"
+        self.assertIn("成員證據：未知", event_summary(document))
+        document["investigation"].update(snapshot_freshness=[], diagnostic_evidence_status={})
+        document["investigation"]["case"]["status"] = []
+        summary = event_summary(document)
+        for text in ("快照新鮮度：未知", "診斷證據：未知", "調查狀態：未知"):
+            self.assertIn(text, summary)
+
+    def test_missing_and_mismatched_saved_cases_are_not_invented_or_displayed(self):
+        self.assertIn("尚未保存調查", event_summary({"event": item()}))
+        for value in ([], {}, {"case": {"anchor_event_id": "another-event", "case_id": "wrong-case"}}):
+            summary = event_summary({"event": item(), "investigation": value})
+            self.assertIn("保存調查未知", summary)
+            self.assertNotIn("wrong-case", summary)
+
     def test_source_success_requires_known_valid_nonfuture_aware_time(self):
         from datetime import datetime, timezone
         now = datetime(2026, 10, 29, tzinfo=timezone.utc)

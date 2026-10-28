@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面保存調查友善摘要
+
+事件詳情在既有唯讀 Tk 文字元件新增保存調查摘要，分列成員雜湊／診斷證據、新鮮度、關聯項目與缺口。缺少調查不補造，錨點身分不符不顯示其他案件，格式異常維持未知；歷史相符不等於來源認證或目前安全，未推定程序樹／攻擊鏈。2026-10-29 03:05（UTC+8）`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-investigation-summary-20261029-02 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop --module test_event_investigation`：87/87、0 skip、source_unchanged，含真 Tk 元件＋fixture、只讀刷新與舊案清除，Job 自然退出 0／remaining 0。`reports/build-desktop-investigation-summary-20261029-01`：266檔hash與受測來源相符、244檔編譯成功，含未提交變更。人工桌面版面／鍵盤與 Web 瀏覽器驗收仍待驗。本次在已附加的整合工作樹從572bb49增量接續，HEAD原為detached，保存仍推指定開發遠端ref，不覆寫其他checkout。
+
 ## 2026-10-29 main 整合已推送（最新）
 
 已以普通 merge commit `93910625f509b43a4aae7ee22abe58c3e1e9e5b8` 合併開發成果至 origin/main，推送後直接 ls-remote 核對一致；父 main=c80a4be、開發來源=66638ae。相對第一父 commit：50 檔 +3971/−72，為本次已批准清理的既有 backlog，非新的未提交修改。原開發分支已 ff 同步此 main；相對 origin/main 待整併 diff 已為 0。本地舊 main 無共同祖先，原樣保留，未改寫歷史或建立 tag／release。

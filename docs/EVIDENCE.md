@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面保存調查摘要元件驗證
+
+`reports/verify-desktop-investigation-summary-20261029-02` UTC 2026-10-28 19:05:37：87/87、0 skip、source_unchanged，Job自然退出／remaining0。實際 Tk 唯讀文字元件＋fixture 驗保存案、成員未知／診斷缺失／過期分列，以及切換至無案時清除舊案；純呈現另驗錨點身分與異常欄位。`reports/build-desktop-investigation-summary-20261029-01`：266檔受測hash相符、244檔編譯。未採集／模型／ACK；非瀏覽器、人工桌面版面或鍵盤驗收。
+
 ## 2026-10-29：完整回歸通過並普通推送 main
 
 遠端 main 直接核對為 `93910625f509b43a4aae7ee22abe58c3e1e9e5b8`，普通 merge 父 c80a4be／66638ae，50 檔 +3971/−72。已將隔離工作樹回條複製至原專案 `reports/main-integration-20261029-01`，包含首輪1失敗、第二輪1736通過／2 symlink skip／0失敗、兩組來源包與build結果；第二輪Job自然退出0／remaining0／未強停，來源266檔hash相符、244檔編譯、346檔來源包可重現。開發分支ff同步main後對origin/main diff為0；無force push／tag／release。後續純文件保存不改變受測產品來源，CI與所有真人／原生關卡另驗。

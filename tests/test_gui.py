@@ -276,6 +276,24 @@ class GuiOwnTkWidgetTests(unittest.TestCase):
         self.evidence = {"scope": "real own Tk widgets + fixture controller; no collector/model",
                          "source_rows": 7, "model_calls": 0}
 
+    def test_real_detail_widget_displays_saved_case_and_replaces_it_with_unknown(self):
+        event = copy.deepcopy(self.controller.value["events"][0])
+        document = {"event": event, "investigation": {"case": {
+            "anchor_event_id": event["event_id"], "case_id": "case-fixture", "status": "limited",
+            "as_of": "2026-01-01T00:00:00Z", "timeline": [{}], "gaps": [{}]},
+            "evidence_status": "unknown", "snapshot_freshness": "stale", "diagnostic_evidence_status": "missing"}}
+        self.ui._show_detail(document)
+        self.window.update_idletasks()
+        text = self.ui.detail.get('1.0', 'end')
+        for expected in ("case-fixture", "成員證據：未知", "診斷缺失", "快照新鮮度：過期"):
+            self.assertIn(expected, text)
+        self.assertEqual(self.ui.detail.cget('state'), 'disabled')
+        self.ui._show_detail({"event": event, "investigation": None})
+        text = self.ui.detail.get('1.0', 'end')
+        self.assertIn('尚未保存調查', text)
+        self.assertNotIn('case-fixture', text)
+        self.assertFalse(any(action != 'snapshot' for action, _ in self.controller.calls))
+
     def test_operation_history_tab_shows_agent_progress_and_completion(self):
         row = {"id": "a" * 32, "actor": "agent_mcp", "operation": "diagnose_event", "state": "running",
                "started_at": "2026-10-23T08:00:00+00:00", "elapsed_ms": None}

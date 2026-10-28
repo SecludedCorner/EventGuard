@@ -167,6 +167,28 @@ def event_list_view(document, *, severity="all", delivery="all"):
             "events_loaded": loaded, "events_total": total, "events_truncated": truncated}
 
 
+def investigation_summary(value, event_id):
+    """Summarize only the shared catalog's saved case, without constructing one."""
+    if value is None:
+        return ["尚未保存調查；不代表沒有事件或主機安全。"]
+    case = value.get("case") if isinstance(value, dict) else None
+    if not isinstance(case, dict) or not isinstance(event_id, str) or case.get("anchor_event_id") != event_id:
+        return ["保存調查未知；格式或事件身分無法核對。"]
+    evidence = "成員與保存雜湊相符（非來源認證）" if value.get("evidence_status") == "saved_snapshot" else "未知，原事件缺失或內容已變更"
+    freshness = {"ok": "保存未過期，非目前主機狀態", "stale": "過期"}.get(safe_text(value.get("snapshot_freshness")), "未知")
+    diagnostic = {"matched": "保存診斷相符", "changed": "診斷已變更，保留未知",
+                  "missing": "診斷缺失，保留未知", "not_bound": "未綁定診斷"}.get(safe_text(value.get("diagnostic_evidence_status")), "未知")
+    state = {"limited": "證據有缺口", "related_metadata_only": "僅保存 metadata 關聯"}.get(safe_text(case.get("status")), "未知")
+    timeline, gaps = case.get("timeline"), case.get("gaps")
+    count = len(timeline) if isinstance(timeline, list) and len(timeline) <= 16 else "未知"
+    gap_count = len(gaps) if isinstance(gaps, list) else "未知"
+    return ["調查 ID：" + safe_text(case.get("case_id"), 80),
+            "保存時間：" + safe_text(case.get("as_of"), 80), "調查狀態：" + state,
+            "成員證據：" + evidence, "診斷證據：" + diagnostic, "快照新鮮度：" + freshness,
+            f"保存關聯項目 {count}；證據缺口 {gap_count}。完整資料可展開原始結構化檢視。",
+            "關聯不等於因果；未推定程序樹或攻擊鏈，未判定安全／入侵；作業系統帳戶身分仍未知。"]
+
+
 def event_summary(value):
     """Human headings over the existing saved guidance, never a new diagnosis."""
     value = value if isinstance(value, dict) else {}
@@ -207,6 +229,8 @@ def event_summary(value):
     diagnosis = value.get("latest_diagnosis")
     if isinstance(diagnosis, dict):
         lines.append("有另存的查證結果（歷史觀察）時間：" + safe_text(diagnosis.get("observed_at"), 80))
+    lines.extend(["", "保存調查（只讀，不建立或更新）",
+                  *investigation_summary(value.get("investigation"), event.get("event_id"))])
     lines.extend(["", "建議的唯讀查證（僅文字，不會執行）"])
     steps = guidance.get("next_steps")
     if isinstance(steps, list) and any(isinstance(item, str) for item in steps[:6]):
