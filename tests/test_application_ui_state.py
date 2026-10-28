@@ -310,6 +310,20 @@ class ApplicationUIContractTests(unittest.TestCase):
         self.assertNotIn("innerHTML", renderer)
         self.assertEqual(self.calls, [])
 
+    def test_handling_history_renderer_is_bound_to_detail_and_keeps_uncertainty(self):
+        code, _, page = self.request("/")
+        self.assertEqual(code, 200)
+        self.assertIn('id="handling-history"', page.split('<article id="detail"', 1)[1].split('</article>', 1)[0])
+        code, _, script = self.request("/app.js")
+        self.assertEqual(code, 200)
+        renderer = script.split("function renderHandlingHistory(value){", 1)[1].split("function renderInvestigation(", 1)[0]
+        for required in ("value.state", "處置歷程無法確認", "並非已驗證操作者", "不等於 ACK",
+                         "item.previous_status", "item.status", "無變更", "value.count_capacity"):
+            self.assertIn(required, renderer)
+        self.assertNotIn("innerHTML", renderer)
+        self.assertIn("renderHandlingHistory(d.handling_history)", script)
+        self.assertEqual(self.calls, [])
+
     def test_served_script_exposes_pure_state_functions_and_bounded_timeouts(self):
         code, _, script = self.request("/app.js")
         self.assertEqual(code, 200)

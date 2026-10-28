@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-28 P2-HISTORY-001C 處置歷程 Web
+
+事件詳情顯示時間、前後狀態、無變更請求、來源通道、此前未知及數量容量；明示來源不是已驗證操作者、處置不是 ACK。損壞歷程顯示無法確認，不以數量未滿推定剩餘位元組。
+
+`reports/gui-handling-history-20261028-01` 合成真瀏覽器核對正常／無紀錄／損壞／32 筆滿載，SQLite hash 讀取前後一致、4 pending／0 receipt，0 POST／native／model、Job 自然退出。`reports/verify-gui-handling-history-20261028-01` UTC 09:03:29、47/47、0 skip、224 AST、source_unchanged、Job 自然 0／remaining 0／無強停。工作樹 326 檔 ZIP 自檢，非 commit 候選。容量恢復仍未實作，滿載拒絕新處置；後續需另定不損失重要證據的恢復方式及操作量測。
+
 ## 2026-10-28 P2-HISTORY-001C 唯讀後端
 
 事件詳情新增有界 `handling_history`：包含狀態轉換、無變更請求、時間與來源；不暴露操作識別、不宣稱操作者身分。舊 DB 顯示未記錄且此前未知；損壞／超限顯示 unknown，不在讀取時建表或修補；數量容量不代表剩餘位元組。

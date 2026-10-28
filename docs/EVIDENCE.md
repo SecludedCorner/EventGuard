@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-28：P2-HISTORY-001C 合成瀏覽器
+
+`reports/gui-handling-history-20261028-01` 四 synthetic 事件：三筆 GUI／MCP／CLI 轉換與 no-op；沒有記錄；刻意損壞後未知；32 筆滿載提示。畫面明示來源非已驗證身分與處置非 ACK。SQLite SHA256 前後皆 `0cb758f6764eeedcef8c36a7abd9ef218f1d7e9bfcb3067731d71f9c78166e90`，4 pending／0 receipt；worker 0 POST／native／model、Job 自然 0／remaining 0／無強停，shutdown_requested_reason 為 harness 預設且實際合作停止。
+
+`reports/verify-gui-handling-history-20261028-01` 47/47／0 skip／224 AST／source_unchanged、Job 自然退出。歷程來源沒有認證，並非防竄改稽核；容量恢復尚無。
+
 ## 2026-10-28：P2-HISTORY-001C 合成唯讀後端
 
 `reports/verify-history-read-20261028-01` 53/53／0 skip／224 AST／source_unchanged，Job 自然 0／remaining 0／無強停。合成 SQLite 證實舊 DB 讀取不建表、歷程讀取前後 bytes 不變、轉換與 no-op 分開、損壞來源顯示 unknown、32 筆顯示數量上限、pending 1／receipt 0。這是 API 讀取切片，不是 Web 呈現或容量恢復驗收。
