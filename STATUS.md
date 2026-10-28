@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 唯讀恢復預檢呈現轉換衝突
+
+`events preview-history` JSON及中文文字新增備份內逐事件相鄰轉換檢查，與目標前綴／事件身分獨立；無相鄰紀錄不當通過，相符只限已提供紀錄，第一筆以前／遺漏／完整性、來源與可恢復性仍未知。與恢復拒絕閘道共用純函式，不寫入／還原／刪除或ACK。`py -3.13 -B scripts/verify.py --run-dir reports/verify-history-transition-preview-20261029-03 --timeout-seconds 180 --module test_disposition_history_backup_preview --module test_disposition_history_preview_cli --module test_disposition_history_restore --module test_disposition_history_restore_prefix --module test_disposition_history_restore_integration --module test_application_cli_text --module test_disposition_history_contract`：2026-10-29 03:39（UTC+8）34/34、0skip、source_unchanged、Job自然退出0／remaining0；含多事件交錯、noop、DB hash與pending／receipt保留。01模組名稱錯誤未執行，02為33/33，最終03通過。`reports/build-history-transition-preview-20261029-02`：268檔hash相符、246檔編譯通過。剩餘驗收仍為可證來源／完整使用者恢復、Web、真人與原生關卡。
+
 ## 2026-10-29 歷程恢復的內部轉換一致性
 
 修正append-only恢復原語：同一事件的下一筆previous_status必須符合上一筆status，逐事件核對保存順序，不以時間重排；內容重算hash不能繞過此檢查，衝突在寫入前拒絕。`py -3.13 -B scripts/verify.py --run-dir reports/verify-history-transition-order-20261029-02 --timeout-seconds 180 --module test_disposition_history_restore --module test_disposition_history_restore_prefix --module test_disposition_history_restore_integration --module test_disposition_history_backup --module test_disposition_history_backup_preview --module test_disposition_history_store --module test_disposition_history_integration`：2026-10-29 03:36（UTC+8）35/35、0skip、source_unchanged、Job自然退出0／remaining0；01先重現1失敗，02通過，衝突DB hash及pending／receipt保留。`reports/build-history-transition-order-20261029-01`：268檔hash相符、246檔編譯成功。只驗合成內部原語，未建立來源認證、使用者還原／容量釋放流程或實機恢復。前單元534d0f1已普通ff merge／push並核對兩ref一致。

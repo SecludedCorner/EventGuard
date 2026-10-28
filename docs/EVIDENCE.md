@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：CLI唯讀相鄰轉換預檢
+
+`reports/verify-history-transition-preview-20261029-03` UTC 2026-10-28 19:39:22：34/34、0skip、source_unchanged、Job自然退出0／remaining0。合成JSON／中文CLI驗前綴及身分相符仍可存在轉換衝突，逐事件交錯／noop與空集合正確，未知範圍明示；讀前後DB hash、pending／receipt不變。01錯誤指定不存在的test_presentation未執行且build無manifest，未冒稱成功；02為33/33，最終03及`reports/build-history-transition-preview-20261029-02` 268檔hash相符／246檔編譯通過。真實恢復與來源認證仍未驗。
+
 ## 2026-10-29：歷程轉換衝突拒絕
 
 `reports/verify-history-transition-order-20261029-02` UTC 2026-10-28 19:36:56：35/35、0skip、source_unchanged、Job自然退出0／remaining0，合成內部恢復／備份／保存整合。01先驗證重算hash但轉換不連續的備份可被錯誤接受；修正後寫入前拒絕且目標DB hash／pending1／receipt0不變，既有前綴／冪等／容量回滾測試通過。`reports/build-history-transition-order-20261029-01`：268檔受測hash相符、246檔編譯通過。來源認證、使用者入口、容量釋放與實機恢復未完成。534d0f19230e251895981699daa3a386c556166c已普通整合並核對main／開發ref一致，348檔來源包可重現見`reports/release-prep-desktop-detail-failure-20261029-01`。

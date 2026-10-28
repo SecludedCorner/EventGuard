@@ -95,3 +95,31 @@ class HistoryBackupPreviewTests(unittest.TestCase):
         with closing(sqlite3.connect(self.store.path)) as db:
             with self.assertRaisesRegex(ValueError, "read_transaction_required"):
                 preview_identity(db, self.backup, namespace="test")
+
+    def test_transition_preview_distinguishes_no_pairs_conflict_and_partial_consistency(self):
+        before = self.store.path.read_bytes()
+        self.assertEqual(self.preview()['transition_order'], {'state': 'not_observed', 'checked_pairs': 0, 'conflicts': 0})
+        records = deepcopy(self.backup)
+        first = records['data']['records'][0]
+        second = dict(first, operation_id='op-second', previous_status='new', status='handled')
+        records['data']['records'].append(second)
+        result = self.preview(resign(records))
+        self.assertEqual(result['history_order'], 'exact_prefix')
+        self.assertEqual(result['identity_conflicts'], 0)
+        self.assertEqual(result['transition_order'], {'state': 'conflict', 'checked_pairs': 1, 'conflicts': 1})
+        second['previous_status'] = 'read'
+        result = self.preview(resign(records))
+        self.assertEqual(result['transition_order'], {'state': 'consistent', 'checked_pairs': 1, 'conflicts': 0})
+        self.assertEqual(result['history_completeness'], 'unknown')
+        self.assertEqual(result['provenance_status'], 'unknown')
+        self.assertFalse(result['restore_authorized'])
+        self.assertEqual(before, self.store.path.read_bytes())
+
+    def test_transition_order_keeps_interleaved_events_and_noops_separate(self):
+        from eventguard.events.disposition_history import transition_order
+        first = self.backup['data']['records'][0]
+        records = [first, dict(first, event_id='evt-other', status='ignored'),
+                   dict(first, operation_id='op-noop', previous_status='read', status='read'),
+                   dict(first, event_id='evt-other', operation_id='op-other', previous_status='ignored', status='handled')]
+        self.assertEqual(transition_order(records), {'state': 'consistent', 'checked_pairs': 2, 'conflicts': 0})
+        self.assertEqual(transition_order([]), {'state': 'not_observed', 'checked_pairs': 0, 'conflicts': 0})

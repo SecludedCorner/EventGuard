@@ -2,6 +2,7 @@
 import json
 
 from .disposition_history_backup import verify_snapshot
+from .disposition_history import transition_order
 from .disposition_history_store import record_attempt
 from .schema import validate_event
 from .store import event_payload_hash
@@ -33,14 +34,13 @@ def restore_suffix(db, value, *, namespace, available_bytes):
     fields = ("event_id", "operation_id", "previous_status", "status", "source", "at", "changed", "payload_hash")
     if len(rows) > len(records) or any(tuple(row) != tuple(item[k] for k in fields) for row, item in zip(rows, records)):
         raise ValueError("history_restore_not_exact_prefix")
-    checked_events, previous_results = {}, {}
+    if transition_order(records)['conflicts']:
+        raise ValueError("history_restore_transition_conflict")
+    checked_events = {}
     for item in records:
         if item["payload_hash"] is None:
             raise ValueError("history_restore_unbound_event")
         event_id = item["event_id"]
-        if event_id in previous_results and item["previous_status"] != previous_results[event_id]:
-            raise ValueError("history_restore_transition_conflict")
-        previous_results[event_id] = item["status"]
         if event_id not in checked_events:
             row = db.execute("SELECT payload,payload_hash FROM events WHERE event_id=?", (event_id,)).fetchone()
             try:

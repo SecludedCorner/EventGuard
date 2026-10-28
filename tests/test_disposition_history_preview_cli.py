@@ -68,6 +68,21 @@ class HistoryPreviewCliTests(unittest.TestCase):
         self.assertEqual(self.store.path.read_bytes(), before)
         self.assertEqual((self.store.stats()["pending"], self.store.stats()["receipt_count"]), (1, 0))
 
+    def test_text_preview_exposes_transition_conflict_without_disclosing_ids(self):
+        from test_disposition_history_backup_preview import resign
+        before = self.store.path.read_bytes()
+        value = deepcopy(self.value)
+        first = value['data']['records'][0]
+        value['data']['records'].append(dict(first, operation_id='op-second', previous_status='new', status='handled'))
+        code, output = self.invoke(json.dumps(resign(value)), fmt='text')
+        self.assertEqual(code, 0)  # Successful read-only preview, not restore approval.
+        self.assertIn('衝突，禁止恢復', output)
+        self.assertIn('衝突=1', output)
+        self.assertIn('完整性維持未知', output)
+        self.assertNotIn('evt-preview-cli-fixture', output)
+        self.assertEqual(self.store.path.read_bytes(), before)
+        self.assertEqual((self.store.stats()['pending'], self.store.stats()['receipt_count']), (1, 0))
+
     def test_interactive_stdin_is_rejected_without_waiting(self):
         class Terminal(io.StringIO):
             def isatty(self):

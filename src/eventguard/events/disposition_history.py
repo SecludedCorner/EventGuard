@@ -41,3 +41,20 @@ def has_capacity(total, per_event):
     if any(type(n) is not int or n < 0 for n in (total, per_event)) or per_event > total:
         raise ValueError("invalid_history_count")
     return total < MAX_HISTORY_ENTRIES and per_event < MAX_HISTORY_PER_EVENT
+
+
+def transition_order(records):
+    """Check adjacent per-event results in validated records, not completeness.
+
+    The first state, missing records, provenance and timestamps remain unproven.
+    Preserve supplied order; a wall-clock change cannot reorder operations.
+    """
+    previous, pairs, conflicts = {}, 0, 0
+    for item in records:
+        event_id = item['event_id']
+        if event_id in previous:
+            pairs += 1
+            conflicts += item['previous_status'] != previous[event_id]
+        previous[event_id] = item['status']
+    return {'state': 'conflict' if conflicts else 'consistent' if pairs else 'not_observed',
+            'checked_pairs': pairs, 'conflicts': conflicts}

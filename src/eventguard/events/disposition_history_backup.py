@@ -6,7 +6,7 @@ import hmac
 import json
 import re
 
-from .disposition_history import MAX_HISTORY_ENTRIES, MAX_HISTORY_PER_EVENT, validate_record
+from .disposition_history import MAX_HISTORY_ENTRIES, MAX_HISTORY_PER_EVENT, validate_record, transition_order
 
 MAX_EXPORT_BYTES = 4 * 1024 * 1024
 
@@ -90,7 +90,7 @@ def verify_snapshot(value):
 def preview_identity(db, value, *, namespace):
     """Compare identities only; never authorize or perform a restore.
 
-    Counts do not prove archive authenticity, capacity, transition ordering,
+    Counts do not prove archive authenticity, capacity, complete history,
     target provenance or recoverability. Both snapshots use one read transaction.
     """
     from .schema import validate_event
@@ -136,6 +136,7 @@ def preview_identity(db, value, *, namespace):
     return {"counts": counts, "identity_conflicts": sum(counts[k] for k in
             ("unbound", "event_missing", "event_mismatch", "operation_conflict")),
             "history_order": "exact_prefix" if exact_prefix else "diverged",
+            "transition_order": transition_order(backed_up),
             "target_records": len(existing), "backup_records": len(backed_up),
             "provenance_status": "unknown", "history_completeness": "unknown",
             "capacity_status": "unknown", "recoverability_status": "unknown",

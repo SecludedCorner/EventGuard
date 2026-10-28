@@ -307,9 +307,13 @@ def render(result, command="", operation=""):
         if result.get("restore_performed") is not False or result.get("restore_authorized") is not False:
             return "歷程身分預檢未完成。"
         counts=result.get("counts",{})
+        transitions=result.get("transition_order",{})
         return "\n".join(["歷程身分唯讀預檢：", "未綁定="+text(counts.get("unbound"))+"；事件缺失="+text(counts.get("event_missing"))+"；事件不符="+text(counts.get("event_mismatch")),
                           "操作衝突="+text(counts.get("operation_conflict"))+"；已存在="+text(counts.get("already_present"))+"；未存在="+text(counts.get("absent_operation")),
                           "歷程順序："+({"exact_prefix":"目標為備份的完全前綴","diverged":"目標與備份順序或內容分歧"}.get(result.get("history_order"),"未知")),
+                          "備份相鄰轉換："+({"consistent":"已提供紀錄內相符","conflict":"衝突，禁止恢復","not_observed":"無可比較的相鄰紀錄"}.get(transitions.get("state"),"未知"))+
+                          "；已比對="+text(transitions.get("checked_pairs"))+"；衝突="+text(transitions.get("conflicts")),
+                          "第一筆以前、遺漏紀錄與完整性維持未知；相符不是來源認證。",
                           "未還原、未刪除。此預檢不驗證來源真實性、容量或可還原性。"])
     if command=="events" and operation=="detail":
         return "\n".join(["事件詳情："+text(result.get("event_id")),
