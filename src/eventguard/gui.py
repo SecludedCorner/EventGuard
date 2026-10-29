@@ -20,7 +20,7 @@ OPERATION_NAMES = {"capabilities": "查看能力", "status": "查看狀態", "ov
     "inspect_event": "查看事件", "diagnose_event": "唯讀查證", "receive_event": "接收事件",
     "ack_event": "確認收到", "retry_event": "重試投遞", "report": "匯出報告",
     "background_start": "開始持續監看", "background_status": "查看背景狀態", "background_stop": "暫停監看",
-    "gui_start": "開始監看", "gui_pause": "暫停監看", "gui_inspect": "查看事件",
+    "gui_start": "開始監看", "gui_pause": "暫停監看", "gui_inspect": "查看事件", "gui_investigate": "保存調查",
     "gui_receive_permission": "設定接收開關", "gui_automatic_agent": "設定自動處理"}
 ACTIVITY_STATES = {"running": "執行中／待結果", "completed": "已完成", "blocked": "受阻",
                    "failed": "失敗", "interrupted": "中斷，結果未確認"}
@@ -115,7 +115,7 @@ def view_snapshot(document, *, severity="all", delivery="all"):
 
 class ControllerWorker:
     """Serialize local operations without invoking Tk on a worker thread."""
-    ACTIONS = frozenset({"snapshot", "start", "pause", "set_agent_delivery", "set_automatic_agent", "inspect", "close"})
+    ACTIONS = frozenset({"snapshot", "start", "pause", "set_agent_delivery", "set_automatic_agent", "inspect", "investigate", "close"})
 
     def __init__(self, controller):
         self.controller = controller
@@ -153,10 +153,13 @@ class ControllerWorker:
                 if not isinstance(result, dict):
                     result = {"state": "error", "reason": "desktop_result_invalid"}
             except Exception as error:
+                from .events.store import CapacityError
                 # Do not store raw exception text: it may contain private paths.
                 result = {"state": "error", "reason": "desktop_operation_failed",
                           "error_type": safe_text(type(error).__name__, 80)}
-            if action == "inspect":
+                if action == "investigate" and isinstance(error, CapacityError):
+                    result["reason"] = "investigation_capacity"
+            if action in {"inspect", "investigate"}:
                 result = dict(result, requested_event_id=arguments[0])
             self.results.put((action, result))
             with self._lock:
@@ -323,9 +326,15 @@ class EventGuardWindow:
         detail_frame.grid(row=2, column=0, sticky="nsew", pady=(10, 0))
         detail_frame.rowconfigure(1, weight=1)
         detail_frame.columnconfigure(0, weight=1)
-        self.raw_check = ttk.Checkbutton(detail_frame, text="展開原始結構化資料（唯讀）",
+        detail_actions = ttk.Frame(detail_frame)
+        detail_actions.grid(row=0, column=0, columnspan=2, sticky="ew")
+        detail_actions.columnconfigure(0, weight=1)
+        self.raw_check = ttk.Checkbutton(detail_actions, text="展開原始結構化資料（唯讀）",
                                          variable=self.show_raw, command=self.toggle_raw)
         self.raw_check.grid(row=0, column=0, sticky="w", pady=(0, 5))
+        self.investigate_button = ttk.Button(detail_actions, text="建立／更新保存調查", command=self.investigate, state="disabled")
+        self.investigate_button.grid(row=0, column=1, sticky="e", padx=(8, 0), pady=(0, 5))
+        ttk.Label(detail_frame, text="保存調查只關聯已保存資料；不採集、不呼叫模型、不 ACK。").grid(row=2, column=0, columnspan=2, sticky="w")
         self.detail = tk.Text(detail_frame, height=10, wrap="word", state="disabled", font=("Microsoft JhengHei UI", 10))
         self.detail.grid(row=1, column=0, sticky="nsew")
         detail_scroll = ttk.Scrollbar(detail_frame, orient="vertical", command=self.detail.yview)
@@ -371,6 +380,21 @@ class EventGuardWindow:
         for widget in (self.start_button, self.pause_button, self.refresh_button, self.agent_check,
                        self.automatic_check, self.automatic_browse, self.automatic_path):
             widget.configure(state="disabled" if busy else "normal")
+        self._update_investigate_button()
+
+    def _can_investigate(self):
+        value = self._detail_document or {}
+        event = value.get("event", value)
+        selection = self.events.selection()
+        return (not self._busy and not self._closed and bool(selection) and isinstance(event, dict)
+                and event.get("event_id") == selection[0] == self._last_event)
+
+    def _update_investigate_button(self):
+        self.investigate_button.configure(state="normal" if self._can_investigate() else "disabled")
+
+    def investigate(self):
+        if self._can_investigate() and self._request("investigate", self.events.selection()[0]):
+            self.message.set("正在保存調查；只關聯既有保存資料，不採集、不呼叫模型、不 ACK。")
 
     def _request(self, action, *arguments):
         if self._closed:
@@ -472,6 +496,7 @@ class EventGuardWindow:
         self.detail.delete("1.0", "end")
         self.detail.insert("1.0", text)
         self.detail.configure(state="disabled")
+        self._update_investigate_button()
 
     def _apply_snapshot(self, value):
         self._event_document = value if isinstance(value, dict) else {}
@@ -521,6 +546,7 @@ class EventGuardWindow:
             self._detail_document = None
             self.show_raw.set(False)
             self._render_detail()
+        self._update_investigate_button()
 
     def _drain(self):
         refresh_needed = False
@@ -557,6 +583,15 @@ class EventGuardWindow:
                 if action == "close":
                     self.window.deiconify()
                     self.message.set("尚未確認暫停，視窗會保留。原因：" + safe_text(value.get("reason", value.get("state")), 220))
+                elif action == "investigate":
+                    event_id = value.get("requested_event_id")
+                    confirmed = value.get("state") == "investigation_saved" and value.get("event_id") == event_id
+                    self.message.set("已保存調查；不代表已 ACK、修復或主機安全。" if confirmed else
+                        "調查保存空間或版本容量不足，原調查與事件保留。" if value.get("reason") == "investigation_capacity" else
+                        "保存結果未確認；請查看保存資料，不自動重試。")
+                    if self.events.selection() == (event_id,) and self.events.exists(event_id):
+                        self._last_event = None
+                        self.select_event()
                 elif value.get("state") in {"blocked", "error", "startup_failed", "shutdown_unconfirmed", "stop_not_persisted"}:
                     self.message.set("操作尚未完成：" + safe_text(value.get("reason", value.get("state")), 220))
                 elif action == "start":

@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面保存調查按鈕與失敗呈現
+
+實際Tk新增「建立／更新保存調查」，只在所選事件詳情已核對且非忙碌時啟用；序列worker執行，忙碌時重點不重複保存。結果綁定請求事件，保存後只讀重載；容量不足明示舊案保留，其他未確認結果不宣稱成功／不自動重送。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-investigation-button-20261029-01 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop_investigation --module test_desktop`：2026-10-29 10:09（UTC+8）82/82、0skip、source_unchanged、Job自然退出0／remaining0；真Tk按鈕＋fixture controller驗無選取禁用、明確單次保存／讀回、容量失敗與pending保留，不是完整真Catalog按鈕驗收。`reports/build-desktop-investigation-button-20261029-01`：272檔hash相符、250檔編譯通過。前單元acadbaa已普通同步main／開發ref。下一單元補真Tk→真合成Catalog保存／更新／重開整合；Web／真人／原生待驗不變。
+
 ## 2026-10-29 桌面明確保存調查：控制層
 
 依使用者最新指示續做桌面，瀏覽器待驗保留。原專案乾淨但落後15個已整合commit，已ff-only同步至20f8895；+1246/−28是舊checkout對已推送基準的同步，非新backlog，當時對origin/main差異0。新增DesktopController.investigate沿用EventCatalog已保存metadata調查；活動先落意圖、記錄目標hash，無採集／模型／ACK。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-investigation-controller-20261029-01 --timeout-seconds 180 --module test_desktop_investigation --module test_desktop --module test_activity --module test_event_investigation`：2026-10-29 10:05（UTC+8）64/64、0skip、source_unchanged、Job自然退出0／remaining0；合成資料驗保存／重開、容量失敗舊案不變、活動失敗不保存、缺事件不建立、pending2／receipt0不變。`reports/build-desktop-investigation-controller-20261029-01`：272檔hash相符、250檔編譯通過。只完成控制層，桌面按鈕接線與Tk驗收下一單元；Web／真人／原生關卡仍待驗。

@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面保存按鈕與worker
+
+`reports/verify-desktop-investigation-button-20261029-01` UTC 2026-10-29 02:09:40：82/82、0skip、source_unchanged、Job自然退出0／remaining0。真Tk按鈕＋fixture驗未選取／讀取中／忙碌禁用、雙點只保存一次並只讀重載、容量失敗訊息不洩例外且可再操作，pending不變；控制層真合成SQLite測試沿用同批。`reports/build-desktop-investigation-button-20261029-01`：272檔受測hash相符、250檔編譯通過。acadbaa3b6dae805ac733c22e9886c6fbe9353fe已普通merge／push並核對main／開發ref一致。按鈕尚未與真Catalog合併驗證；Web／真人／原生待驗保留。
+
 ## 2026-10-29：桌面保存調查控制層
 
 `reports/verify-desktop-investigation-controller-20261029-01` UTC 2026-10-29 02:05:42：64/64、0skip、source_unchanged、Job自然退出0／remaining0。全新臨時root的合成事件，真DesktopController／EventCatalog／SQLite驗明確保存與重開、活動目標僅hash、容量失敗舊DB hash保留、活動失敗不啟動保存、缺事件不補造，pending2／receipt0；採集、子程序／模型與ACK哨兵未觸發。`reports/build-desktop-investigation-controller-20261029-01`：272檔受測hash相符、250檔編譯通過。尚未接桌面按鈕，不當UI驗收；Web／真人／原生仍各自待驗。

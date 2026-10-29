@@ -77,6 +77,10 @@ class FixtureController:
         self.pause()
         return {"state": "closed", "can_close": True, "child_exited": True}
 
+    def investigate(self, event_id):
+        self._called("investigate")
+        return {"state": "investigation_saved", "event_id": event_id, "ack_performed": False, "model_calls": 0}
+
 
 class GuiPresentationTests(unittest.TestCase):
     def test_control_characters_bidi_and_command_text_are_only_inert_bounded_text(self):
@@ -611,6 +615,45 @@ class GuiOwnTkWidgetTests(unittest.TestCase):
                 self.assertNotIn('synthetic-example-2', self.ui.detail.get('1.0', 'end'))
             finally:
                 release.set()
+
+    def test_explicit_investigation_button_saves_once_and_reads_back(self):
+        self.assertTrue(self.ui.investigate_button.instate(['disabled']))
+        self.ui.events.selection_set('synthetic-example-1')
+        self.ui.select_event()
+        self.wait_for(lambda: self.ui.investigate_button.instate(['!disabled']))
+        entered, release = threading.Event(), threading.Event()
+        original = self.controller.investigate
+        def save(event_id):
+            entered.set()
+            release.wait(timeout=2)
+            return original(event_id)
+        with patch.object(self.controller, 'investigate', side_effect=save):
+            try:
+                self.ui.investigate_button.invoke()
+                self.wait_for(entered.is_set)
+                self.assertTrue(self.ui.investigate_button.instate(['disabled']))
+                self.ui.investigate_button.invoke()
+                release.set()
+                self.wait_for(lambda: '已保存調查' in self.ui.message.get())
+                self.wait_for(lambda: self.ui.investigate_button.instate(['!disabled']))
+            finally:
+                release.set()
+        self.assertEqual(sum(action == 'investigate' for action, _ in self.controller.calls), 1)
+        self.assertGreaterEqual(sum(action == 'inspect' for action, _ in self.controller.calls), 2)
+        self.assertEqual(self.controller.value['events'][0]['delivery_status'], 'pending')
+
+    def test_investigation_capacity_failure_is_explicit_and_keeps_retry_available(self):
+        from eventguard.events.store import CapacityError
+        self.ui.events.selection_set('synthetic-example-1')
+        self.ui.select_event()
+        self.wait_for(lambda: self.ui.investigate_button.instate(['!disabled']))
+        with patch.object(self.controller, 'investigate', side_effect=CapacityError('private fixture')):
+            self.ui.investigate_button.invoke()
+            self.wait_for(lambda: '容量不足' in self.ui.message.get())
+            self.wait_for(lambda: self.ui.investigate_button.instate(['!disabled']))
+        self.assertNotIn('private fixture', self.ui.message.get())
+        self.assertEqual(self.controller.value['events'][0]['delivery_status'], 'pending')
+        self.assertFalse(any(action in {'ack', 'diagnose', 'start'} for action, _ in self.controller.calls))
 
     def test_window_close_minimizes_and_unconfirmed_exit_keeps_window(self):
         with patch.object(self.window, "iconify") as minimize:
