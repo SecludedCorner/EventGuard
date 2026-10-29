@@ -1,5 +1,10 @@
 # EventGuard 現況
 
+## 2026-10-30 四工具SDK接線完成／新調查目標
+
+P1-AGENT-INVESTIGATION：完成一自有事件receive→讀保存證據→獨立保存分析→ACK及自然退出；目前SDK／CLI command已明確選用四工具、synthetic-only，不改既有三工具。verify-investigation-mcp-20261030-01：33/33／0skip、325語法／來源編譯，Job自然0無殘留／強停，模型0。下一完成四步trace核對與真stdio自然退出，再準備版本／單事件／180秒範圍及產物的真模型批准包；不沿用已消耗舊批准。真人六項最後一次參與，browser政策未驗保留、不換工具繞過；整體AI盯哨未完成。
+
+
 ## 2026-10-30 調查保存閘道已接
 
 saved-investigation-v1明確選用、僅合成；保存有界分析與event/query/payload/evidence綁定後才可ACK。保存失敗／外來query／改寫／證據變動／完成包超限皆不ACK，重啟可續讀；舊三工具不變。verify-queue-investigation-20261030-03四模組34/34／0skip、324語法，build-queue-investigation-20261030-01，Job自然0無殘留／強停，模型0；前次fixture將ok改成同值已修。下一接SDK與有限CLI入口，未真模型驗收。

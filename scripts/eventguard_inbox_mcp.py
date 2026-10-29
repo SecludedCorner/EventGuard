@@ -150,7 +150,10 @@ def _sdk_server(name, validate):
             evidence = getattr(self, "startup_evidence", None)
             if evidence is not None:
                 names = sorted(tool.name for tool in tools)
-                if not set(names) <= {"receive_event", "query_evidence", "ack_event"} or len(names) > 3:
+                allowed = {"receive_event", "query_evidence", "ack_event"}
+                if getattr(getattr(self, "_inbox_backend", None), "investigation", False):
+                    allowed.add("save_investigation")
+                if not set(names) <= allowed or len(names) > len(allowed):
                     raise ValueError("startup_evidence_unexpected_tool_names")
                 evidence.record("tools-listed", tool_names=names, tool_count=len(names), response_prepared=True)
             return tools
@@ -196,7 +199,7 @@ def _sdk_server(name, validate):
     return InboxMCP(name)
 
 
-def build_server(source_dir, state_dir, event_id, allow_live=False, allow_ack=True, *, root=None, exit_after_ack=False):
+def build_server(source_dir, state_dir, event_id, allow_live=False, allow_ack=True, *, root=None, exit_after_ack=False, investigation=False):
     """Legacy three-tool contract stays compatible with acceptance evidence."""
     from eventguard.local_paths import _guard
     project = _guard(ROOT if root is None else root)
@@ -207,7 +210,9 @@ def build_server(source_dir, state_dir, event_id, allow_live=False, allow_ack=Tr
     if type(exit_after_ack) is not bool or exit_after_ack and (not allow_ack or os.name != "nt"):
         raise ValueError("one_shot_event_bound_windows_ack_required")
     from eventguard.queue_inbox import QueueInbox
-    backend = QueueInbox(source_dir, state_dir, event_id=event_id, allow_live=allow_live)
+    if investigation and (allow_live or not allow_ack):
+        raise ValueError("synthetic_investigation_ack_profile_required")
+    backend = QueueInbox(source_dir, state_dir, event_id=event_id, allow_live=allow_live, investigation=investigation)
     def call(method, *args):
         if allow_live:
             from eventguard.agent_access import guard
@@ -218,6 +223,8 @@ def build_server(source_dir, state_dir, event_id, allow_live=False, allow_ack=Tr
     def validate(name, arguments):
         allowed = {"receive_event": set(), "query_evidence": {"event_id"},
                    "ack_event": {"event_id", "query_id", "decision"}}
+        if investigation:
+            allowed["save_investigation"] = {"event_id", "query_id", "report"}
         if name not in allowed or name == "ack_event" and not allow_ack:
             raise ValueError("unknown_inbox_tool")
         if type(arguments) is not dict or set(arguments) != allowed[name]:
@@ -226,6 +233,8 @@ def build_server(source_dir, state_dir, event_id, allow_live=False, allow_ack=Tr
             if field in arguments and (type(arguments[field]) is not str or not _ID.fullmatch(arguments[field])):
                 raise ValueError("invalid_inbox_tool_arguments")
         if name == "ack_event" and (type(arguments["decision"]) is not str or arguments["decision"] not in {"reviewed_metadata", "needs_more_evidence"}):
+            raise ValueError("invalid_inbox_tool_arguments")
+        if name == "save_investigation" and type(arguments["report"]) is not dict:
             raise ValueError("invalid_inbox_tool_arguments")
     server = _sdk_server("EventGuard Bound Minimal Inbox", validate)
     server._inbox_backend = backend
@@ -257,6 +266,11 @@ def build_server(source_dir, state_dir, event_id, allow_live=False, allow_ack=Tr
 
     if allow_ack:
         server.tool()(ack_event)
+    if investigation:
+        @server.tool()
+        def save_investigation(event_id: str, query_id: str, report: dict) -> dict:
+            """Save your bounded summary, finding, fact_keys, all limitations and next_step from saved_evidence. Does not ACK or perform remediation."""
+            return call("save_investigation", event_id, query_id, report)
     return server
 
 
@@ -415,6 +429,7 @@ def main(argv=None):
     parser.add_argument("--exit-after-ack", action="store_true",
                         help="Bound Windows task only: exit after its successful ACK response is flushed.")
     parser.add_argument("--read-only", action="store_true", help="Bound recovery read stage: do not expose an ACK tool.")
+    parser.add_argument("--investigation", action="store_true", help="Synthetic only: expose saved evidence and require a separate durable investigation before ACK.")
     parser.add_argument("--namespace", choices=("test", "live"), default="test")
     parser.add_argument("--allow-live", action="store_true", help="Explicitly allow the configured live event's fixed minimal metadata.")
     args = parser.parse_args(argv)
@@ -443,7 +458,7 @@ def main(argv=None):
 def _run(args, evidence=None):
     try:
         if args.operator_root is not None:
-            if args.state_dir is not None or args.event_id is not None or args.read_only or args.exit_after_ack:
+            if args.state_dir is not None or args.event_id is not None or args.read_only or args.exit_after_ack or args.investigation:
                 raise ValueError("incompatible_operator_scope")
             server = build_operator_server(args.operator_root, args.namespace, args.allow_live)
             from eventguard.runtime import Runtime
@@ -457,6 +472,8 @@ def _run(args, evidence=None):
             if args.state_dir is None or args.event_id is None:
                 raise ValueError("bound_event_scope_required")
             options = {"root": args.project_root}
+            if args.investigation:
+                options["investigation"] = True
             if args.exit_after_ack:
                 options["exit_after_ack"] = True
             server = build_server(args.source_dir, args.state_dir, args.event_id, args.allow_live, not args.read_only,

@@ -88,7 +88,7 @@ def _save_binding(path, value):
         os.fsync(stream.fileno())
 
 
-def command(codex, python, source, state, event_id, evidence, *, allow_live=False, allow_ack=True, root=None):
+def command(codex, python, source, state, event_id, evidence, *, allow_live=False, allow_ack=True, root=None, investigation=False):
     root = ROOT if root is None else _guard(root)
     server_args = ["-B", str(ROOT / "scripts/eventguard_inbox_mcp.py"),
                    "--source-dir", str(source), "--state-dir", str(state),
@@ -101,7 +101,14 @@ def command(codex, python, source, state, event_id, evidence, *, allow_live=Fals
         server_args.append("--read-only")
     else:
         server_args.append("--exit-after-ack")
-    tools = TOOLS if allow_ack else TOOLS[:2]
+    if investigation:
+        if allow_live or not allow_ack:
+            raise ValueError("synthetic_investigation_ack_profile_required")
+        server_args.append("--investigation")
+        from .agent_investigation import TOOLS as investigation_tools
+        tools = investigation_tools
+    else:
+        tools = TOOLS if allow_ack else TOOLS[:2]
     approvals = ",".join(name + '={approval_mode="approve"}' for name in tools)
     config = ('mcp_servers.eventguard_inbox={command=' + json.dumps(str(python))
               + ',args=' + json.dumps(server_args, separators=(",", ":"))
