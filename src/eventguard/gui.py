@@ -201,6 +201,7 @@ class EventGuardWindow:
         self.verified_close = False
         self._busy = False
         self._inspect_after_refresh = None
+        self._snapshot_due = False
         self._deferred_request = None
         self._snapshot = {}
         self._event_document = {}
@@ -319,9 +320,11 @@ class EventGuardWindow:
         ttk.Label(filters, textvariable=self.events_note, wraplength=1000).grid(
             row=1, column=0, columnspan=5, sticky="ew", pady=(5, 0))
         self.events = ttk.Treeview(event_frame, show="headings", height=7,
-                                  columns=("time", "type", "severity", "delivery", "id"))
+                                  columns=("time", "type", "severity", "delivery", "id", "handling"),
+                                  displaycolumns=("time", "type", "severity", "handling", "delivery", "id"))
         for key, label, width in (("time", "事件時間", 200), ("type", "類型", 230),
-                                  ("severity", "嚴重度", 80), ("delivery", "接收狀態", 100), ("id", "事件 ID", 280)):
+                                  ("severity", "嚴重度", 80), ("delivery", "接收狀態", 100),
+                                  ("id", "事件 ID", 200), ("handling", "人工處置", 80)):
             self.events.heading(key, text=label)
             self.events.column(key, width=width, minwidth=60, stretch=True)
         self.events.grid(row=1, column=0, sticky="nsew")
@@ -594,7 +597,6 @@ class EventGuardWindow:
         self._update_investigate_button()
 
     def _drain(self):
-        refresh_needed = False
         while True:
             try:
                 action, value = self.worker.results.get_nowait()
@@ -664,13 +666,14 @@ class EventGuardWindow:
                     self.message.set("自動處理選擇已保存；有事件才啟動專用 agent，無事件由程式等待。")
                 else:
                     self.message.set("接收設定已保存；事件仍先落本機佇列，不會自動呼叫模型。")
-                refresh_needed = True
+                self._snapshot_due = True
         if self._deferred_request is not None and not self.worker.pending:
             action, arguments = self._deferred_request
             if self.worker.submit(action, *arguments):
                 self._deferred_request = None
-        elif refresh_needed:
-            self.refresh()
+        elif self._snapshot_due and not self.worker.pending:
+            if self._request("snapshot"):
+                self._snapshot_due = False
         elif self._inspect_after_refresh is not None and not self.worker.pending:
             event_id, self._inspect_after_refresh = self._inspect_after_refresh, None
             if (self.events.exists(event_id) and self.events.selection() == (event_id,)

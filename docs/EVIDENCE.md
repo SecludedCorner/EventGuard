@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：真Tk人工狀態清單
+
+`reports/verify-desktop-handling-list-20261029-02` UTC05:26:29：68/68、0skip、source_unchanged、Job自然退出0／remaining0／無強停；真Tk欄位＋真合成SQLite確認人工狀態與delivery分列、讀取不改DB、payload不符／缺欄未知、按鈕保存後清單刷新及選取保留。01的失敗找到清單刷新被詳情請求擋掉，已用待刷新旗標修正，非放寬驗收。`reports/build-desktop-handling-list-20261029-01`：277檔hash及255檔編譯通過；無採集／模型／ACK，非真人／Web驗收。
+
 ## 2026-10-29：清單人工狀態唯讀投影
 
 `reports/verify-handling-projection-20261029-02` UTC05:22:53：60/60、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真合成SQLite驗implicit new、保存決定、缺DB不建立、payload／delivery變動、重複與非法身分皆未知，讀取DB bytes守恆；既有真Tk人工處置回歸通過。`reports/build-handling-projection-20261029-01`來源hash及254檔編譯通過。01測試漏關SQLite連線造成cleanup錯誤，已修正；未執行原生採集／模型，尚未完成清單UI顯示。

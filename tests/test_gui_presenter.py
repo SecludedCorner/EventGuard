@@ -119,6 +119,15 @@ class GuiPresenterTests(unittest.TestCase):
         self.assertEqual(row[0], "2026-10-23T04:00:00+00:00")
         self.assertEqual(row[1:4], ("本機監聽端點變化", "注意", "待接手"))
 
+    def test_handling_is_separate_from_delivery_and_missing_is_unknown(self):
+        for state, label in (("new", "新增"), ("read", "已讀"), ("handled", "已處理"),
+                             ("ignored", "忽略"), (None, "未知"), ({}, "未知"), ("ack", "未知")):
+            with self.subTest(state=state):
+                row = event_list_view({"events": [item(handling_status=state)]})["events"][0][1]
+                self.assertEqual((row[3], row[5]), ("待接手", label))
+        row = event_list_view({"events": [item(delivery_status="ack")]})["events"][0][1]
+        self.assertEqual((row[3], row[5]), ("已接收", "未知"))
+
     def test_filters_are_a_local_projection_and_do_not_mutate_the_pending_queue(self):
         document = {"events": [item("pending"), item("received", severity="high", delivery_status="ack"),
                                item("retry", delivery_status="retry"), item("failed", delivery_status="failed")],

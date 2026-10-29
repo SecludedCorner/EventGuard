@@ -16,6 +16,7 @@ DELIVERY_FILTERS = {"所有接收狀態": "all", "待接手": "pending", "待重
                     "投遞失敗": "failed", "已接收": "ack", "未知接收狀態": "unknown"}
 SEVERITY_NAMES = {value: key for key, value in SEVERITY_FILTERS.items() if value != "all"}
 DELIVERY_NAMES = {value: key for key, value in DELIVERY_FILTERS.items() if value != "all"}
+HANDLING_NAMES = {"new": "新增", "read": "已讀", "handled": "已處理", "ignored": "忽略"}
 EVENT_TITLES = {"listener.changed": "本機監聽端點變化", "protection.changed": "防護狀態變化",
                 "persistence.changed": "啟動／服務／排程變化", "coverage.degraded": "來源可見性降低",
                 "monitor_gap": "監看未觀測區間"}
@@ -151,12 +152,14 @@ def event_list_view(document, *, severity="all", delivery="all"):
             continue
         stamp = item.get("observed_at", item.get("occurred_at", item.get("created_at")))
         events.append((event_id, (safe_text(stamp, 80), event_title(item), SEVERITY_NAMES[_severity(item)],
-                                  DELIVERY_NAMES[_delivery(item)], safe_text(event_id, 160))))
+                                  DELIVERY_NAMES[_delivery(item)], safe_text(event_id, 160),
+                                  HANDLING_NAMES.get(safe_text(item.get("handling_status")), "未知"))))
     total = document.get("events_total")
     total = total if type(total) is int and total >= len(supplied) else None
     truncated = document.get("events_truncated") is True or len(supplied) > 100 or total is not None and total > len(supplied)
     note = f"顯示 {len(events)} / 已載入 {loaded}；儲存總數 {total if total is not None else '未知'}。"
     note += "只篩選目前載入的清單（最多 100 件）；不改動事件。"
+    note += " 人工處置不等於接收 ACK 或修復。"
     if truncated:
         note += " 清單已截斷，較早事件仍在本機保存。"
     if loaded < min(len(supplied), 100):
@@ -259,8 +262,7 @@ def revision_summary(value, event_id):
 
 def handling_summary(value):
     """Read-only human handling history, independent of delivery receipts."""
-    states = {"new": "新增", "read": "已讀", "handled": "已處理", "ignored": "忽略"}
-    label = lambda key: states.get(safe_text(key), "未知")
+    label = lambda key: HANDLING_NAMES.get(safe_text(key), "未知")
     lines = ["人工處置狀態：" + label(value.get("status")) + "。這不是投遞 ACK，也不代表已修復。"]
     history = value.get("handling_history")
     if not isinstance(history, dict) or history.get("state") not in ("available", "not_recorded"):

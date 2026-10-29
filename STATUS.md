@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 真Tk清單人工處置與接收分列
+
+清單新增獨立人工處置欄，明示非ACK／修復；缺失或非法投影顯未知。實際Tk＋真合成SQLite驗四狀態顯示、只讀DB bytes守恆、已處理仍待接手、payload變動／缺欄未知，以及按鈕保存後清單／詳情讀回及保留選取。修復詳情請求忙碌造成清單刷新遺失：保留單一待刷新旗標，worker空閒才只讀刷新。`reports/verify-desktop-handling-list-20261029-02`：2026-10-29 13:26（UTC+8）68/68、0skip、source_unchanged、Job自然退出0／remaining0／無強停；01的67/68揭露上述缺陷，已修正。`reports/build-desktop-handling-list-20261029-01`：277檔hash及255檔編譯通過。54f3f2a（+142/−2）已普通同步main／開發ref；本單元亦逐單元保存，未觸發採集／模型／ACK。
+
 ## 2026-10-29 清單人工狀態的唯讀身分投影
 
 Desktop snapshot以最多100件已載入事件核對Catalog保存payload hash及delivery，獨立提供handling_status；缺失、重複、損壞、身分或delivery變動皆unknown，不沿用另一事件的決定，不建立缺失DB或寫入／ACK。`reports/verify-handling-projection-20261029-02`：2026-10-29 13:22（UTC+8）60/60、0skip、source_unchanged、Job自然退出0／remaining0／無強停；`reports/build-handling-projection-20261029-01`受測來源hash及254檔編譯通過。01的58/59為測試連線未關閉，已修正並加非法身分測試，非通過證據。下一單元接實際Tk清單分列與合成閉環；本單元尚非清單UI完成。
