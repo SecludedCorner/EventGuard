@@ -104,7 +104,10 @@ def _validate_snapshot(snapshot, identity):
 
 
 class QueueInbox:
-    def __init__(self, source_dir, state_dir, event_id=None, allow_live=False, limits=None, *, read_only=False):
+    def __init__(self, source_dir, state_dir, event_id=None, allow_live=False, limits=None, *, read_only=False, investigation=False):
+        if type(investigation) is not bool or investigation and allow_live:
+            raise QueueInboxError("synthetic_investigation_profile_required")
+        self.investigation = investigation
         if type(allow_live) is not bool:
             raise QueueInboxError("invalid_live_profile")
         if type(read_only) is not bool:
@@ -128,7 +131,7 @@ class QueueInbox:
         self.marker_path = _guard(self.state_dir / "inbox-state.json")
         self.policy_path = _guard(self.state_dir / "inbox-limits.json")
         marker = {"kind": KIND, "source_key": _digest(os.path.normcase(str(self.source_dir))),
-                  "allow_live": allow_live, "projection": "fixed-minimal-v1"}
+                  "allow_live": allow_live, "projection": "saved-investigation-v1" if investigation else "fixed-minimal-v1"}
         with _REGISTRY_LOCK:
             self._lock = _LOCKS.setdefault(os.path.normcase(str(self.state_dir)), threading.RLock())
         if read_only:
@@ -160,9 +163,9 @@ class QueueInbox:
                 atomic_json(self.policy_path, self.policy, MAX_RECORD_BYTES)
 
     @classmethod
-    def open_readonly(cls, source_dir, state_dir, event_id=None, allow_live=False):
+    def open_readonly(cls, source_dir, state_dir, event_id=None, allow_live=False, *, investigation=False):
         """Read retained receipt evidence without creating state or changing policy."""
-        return cls(source_dir, state_dir, event_id, allow_live, read_only=True)
+        return cls(source_dir, state_dir, event_id, allow_live, read_only=True, investigation=investigation)
 
     @contextmanager
     def _mutation(self):
@@ -431,7 +434,9 @@ class QueueInbox:
                 raise QueueInboxError("inbox_source_identity_conflict")
             if not self.allow_live and event["synthetic"] is not True:
                 raise QueueInboxError("live_event_not_authorized")
-            return {"payload_hash": row["payload_hash"], "snapshot": _projection(event),
+            from .agent_investigation import evidence
+            return {**({"saved_evidence": evidence(event)} if self.investigation else {}),
+                    "payload_hash": row["payload_hash"], "snapshot": _projection(event),
                     "delivery_status": row["delivery_status"], "receipt": row["receipt"]}
         except (ValueError, TypeError, KeyError):
             raise QueueInboxError("inbox_source_event_invalid") from None
@@ -493,23 +498,80 @@ class QueueInbox:
             query = completed["query"] if completed else None
         expected = "query-" + _digest([identity, snapshot["payload_hash"]])[:40]
         if query is not None:
-            if set(query) != {"event_id", "payload_hash", "query_id", "queried_at"} or query.get("event_id") != identity or query.get("payload_hash") != snapshot["payload_hash"] or query.get("query_id") != expected:
+            fields = {"event_id", "payload_hash", "query_id", "queried_at"} | ({"saved_evidence"} if self.investigation else set())
+            if set(query) != fields or query.get("event_id") != identity or query.get("payload_hash") != snapshot["payload_hash"] or query.get("query_id") != expected:
                 raise QueueInboxError("inbox_query_identity_conflict")
             _timestamp(query["queried_at"])
+            if self.investigation:
+                from .agent_investigation import digest
+                observed = query["saved_evidence"]
+                source = self._source_record(identity)
+                if (type(observed) is not dict or observed.get("event_id") != identity
+                        or observed.get("payload_hash") != snapshot["payload_hash"]
+                        or observed.get("evidence_hash") != digest({k: v for k, v in observed.items() if k != "evidence_hash"})
+                        or "saved_evidence" in source and source["saved_evidence"] != observed):
+                    raise QueueInboxError("inbox_evidence_identity_conflict")
         return query, expected
 
     def query_evidence(self, event_id):
         identity = self._bound(event_id)
         with self._mutation():
-            record, _ = self._checked_record(identity)
+            record, source = self._checked_record(identity)
             query, expected = self._query_record(identity, record)
             if query is None:
                 query = {"event_id": identity, "payload_hash": record["payload_hash"],
                          "query_id": expected, "queried_at": _utc()}
+                if self.investigation:
+                    if "saved_evidence" not in source:
+                        raise QueueInboxError("saved_source_evidence_required")
+                    query["saved_evidence"] = source["saved_evidence"]
                 self._immutable(self._path("query", identity), query)
             return {"status": "stored_minimal_snapshot", "event_id": identity,
                     "query_id": query["query_id"], "snapshot": record["snapshot"],
-                    "snapshot_only": True, "system_query_executed": False}
+                    "snapshot_only": True, "system_query_executed": False,
+                    **({"saved_evidence": query["saved_evidence"]} if self.investigation else {})}
+
+    def _investigation_report(self, value, query):
+        from .agent_investigation import report
+        try:
+            candidate = {key: value[key] for key in ("summary", "finding", "limitations", "next_step")}
+            candidate["fact_keys"] = list(value["observations"])
+            checked = report(candidate, query["saved_evidence"], query["query_id"])
+            if checked != value:
+                raise ValueError()
+            return checked
+        except (ValueError, TypeError, KeyError):
+            raise QueueInboxError("inbox_investigation_invalid") from None
+
+    def save_investigation(self, event_id, query_id, report):
+        if not self.investigation:
+            raise QueueInboxError("investigation_profile_required")
+        identity, query_id = self._bound(event_id), _identifier(query_id)
+        with self._mutation():
+            record, _ = self._checked_record(identity)
+            query, _ = self._query_record(identity, record)
+            if query is None or query["query_id"] != query_id:
+                raise QueueInboxError("same_event_query_required")
+            from .agent_investigation import report as validate_report, result_id
+            try:
+                saved = validate_report(report, query["saved_evidence"], query_id)
+            except (ValueError, TypeError, KeyError):
+                raise QueueInboxError("inbox_investigation_invalid") from None
+            previous = self._result_record(identity, record, query)
+            if previous is not None:
+                if previous["investigation"] != saved:
+                    raise QueueInboxError("inbox_immutable_record_conflict")
+                return {**previous, "outbox_acknowledged": self._ack_matches(self._source_record(identity), previous)}
+            result = dict(status="review_recorded", event_id=identity, query_id=query_id,
+                decision="needs_more_evidence", investigation=saved,
+                result_id=result_id(identity, record["payload_hash"], query_id, "needs_more_evidence", saved),
+                recorded_at=_utc(), incident_conclusion="not_assessed", real_agent_wake_verified=False)
+            bundle = dict(kind="inbox-completed-v1", snapshot=record, query=query, result=result,
+                          acked_at=result["recorded_at"])
+            if len(_bytes(bundle)) > STAGE_RESERVE:
+                raise QueueInboxError("inbox_stage_reserve_exceeded")
+            self._immutable(self._path("result", identity), result)
+            return {**result, "outbox_acknowledged": False}
 
     def _result_record(self, identity, snapshot, query):
         result = self._read_json(self._path("result", identity))
@@ -518,12 +580,20 @@ class QueueInbox:
             result = completed["result"] if completed else None
         if result is not None:
             fields = {"status", "event_id", "query_id", "decision", "result_id", "recorded_at", "incident_conclusion", "real_agent_wake_verified"}
+            if self.investigation:
+                fields.add("investigation")
             if (query is None or set(result) != fields or result.get("status") != "review_recorded"
                     or result.get("event_id") != identity or result.get("query_id") != query["query_id"]
                     or result.get("decision") not in DECISIONS or result.get("incident_conclusion") != "not_assessed"
                     or result.get("real_agent_wake_verified") is not False):
                 raise QueueInboxError("inbox_result_invalid")
             expected = "result-" + _digest([identity, snapshot["payload_hash"], query["query_id"], result["decision"]])[:40]
+            if self.investigation:
+                from .agent_investigation import result_id
+                saved = self._investigation_report(result["investigation"], query)
+                if result["decision"] != "needs_more_evidence":
+                    raise QueueInboxError("inbox_investigation_invalid")
+                expected = result_id(identity, snapshot["payload_hash"], query["query_id"], result["decision"], saved)
             if result.get("result_id") != expected:
                 raise QueueInboxError("inbox_result_identity_conflict")
             _timestamp(result["recorded_at"])
@@ -557,6 +627,8 @@ class QueueInbox:
             if result is not None and result["decision"] != decision:
                 raise QueueInboxError("inbox_result_decision_conflict")
             if result is None:
+                if self.investigation:
+                    raise QueueInboxError("saved_investigation_required_before_ack")
                 result = {"status": "review_recorded", "event_id": identity, "query_id": query_id,
                           "decision": decision,
                           "result_id": "result-" + _digest([identity, record["payload_hash"], query_id, decision])[:40],
@@ -601,6 +673,8 @@ class QueueInbox:
             value = dict(record)
             if query is not None:
                 value.update(query_id=query["query_id"], queried_at=query["queried_at"])
+                if self.investigation:
+                    value["saved_evidence"] = query["saved_evidence"]
             if result is not None:
                 value["result"] = result
             return value

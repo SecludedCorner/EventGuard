@@ -1,5 +1,10 @@
 # 證據與時間日誌
 
+## 2026-10-30 調查保存閘道已接
+
+saved-investigation-v1明確選用、僅合成；保存有界分析與event/query/payload/evidence綁定後才可ACK。保存失敗／外來query／改寫／證據變動／完成包超限皆不ACK，重啟可續讀；舊三工具不變。verify-queue-investigation-20261030-03四模組34/34／0skip、324語法，build-queue-investigation-20261030-01，Job自然0無殘留／強停，模型0；前次fixture將ok改成同值已修。下一接SDK與有限CLI入口，未真模型驗收。
+
+
 ## 2026-10-30 agent 調查契約
 
 verify-agent-investigation-contract-20261030-02：21/21、0skip、323語法、source_unchanged，Job自然0／remaining0／無強停；build-agent-investigation-contract-20261030-01核346hash並編譯323。純合成／模型0，非新真收件；契約綁event/payload/evidence/query及report digest，不宣稱安全／入侵／處置。

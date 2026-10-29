@@ -1,5 +1,10 @@
 # EventGuard 接手
 
+## 2026-10-30 調查保存閘道已接
+
+saved-investigation-v1明確選用、僅合成；保存有界分析與event/query/payload/evidence綁定後才可ACK。保存失敗／外來query／改寫／證據變動／完成包超限皆不ACK，重啟可續讀；舊三工具不變。verify-queue-investigation-20261030-03四模組34/34／0skip、324語法，build-queue-investigation-20261030-01，Job自然0無殘留／強停，模型0；前次fixture將ok改成同值已修。下一接SDK與有限CLI入口，未真模型驗收。
+
+
 ## 2026-10-30 接 agent 獨立保存閘道
 
 調查契約21/21／0skip、323編譯；目前只有純契約，尚無新真模型收件。下一接 receive/query/save_investigation/ACK，沿舊保留策略、原子保存及私有Job；保留 browser 政策未驗，不繞路。真人六項延後至所有可自行完成項目做好，再一次參與。
