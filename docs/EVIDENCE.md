@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面備份核對最終整合及遠端
+
+`reports/verify-desktop-history-preview-final-20261029-01` UTC06:13:02：27模組229/229、0skip、source_unchanged、263檔語法通過，Job自然退出0／remaining0／無強停；含真Tk／合成SQLite／本機暫存檔及自有Job API，不與前面重疊定向相加。`reports/build-desktop-history-preview-final-20261029-01`285檔hash及263檔編譯。`reports/release-prep-desktop-history-preview-20261029-01`綁定bff9d16f44a15487ca18c5d57b26cb50e242cefc，365檔可重現，archive SHA256 5d4b13b740163247f009b144cc5416cb854dc0c23eb3db1669548de47571ea39；無tag／release。沒有新增採集、模型或ACK，非真人／Web／原生驗收。
+
+600ea41 `feat(desktop): verify only the last locally created history backup`（相對父commit +130/−4）；bff9d16 `feat(desktop): expose explicit backup identity checks in Tk`（+151/−7），皆逐單元build／相關測試後指定檔案commit、普通push及ff-only整合／push main，直接核對兩ref=bff9d16，兩工作樹與待整合差異0。完整恢復／容量釋放與來源認證未知；後續純文件SHA由Git歷史及忽略的source-commit.json核對。
+
 ## 2026-10-29：備份核對真Tk閉環
 
 `reports/verify-desktop-history-preview-widgets-20261029-03` UTC06:10:19：31/31、0skip、source_unchanged、Job自然退出0／remaining0／無強停。實際Tk→真合成Catalog／備份檔，明確點選才讀、分頁開啟不讀、不披露ID、後來操作顯順序分歧、DB bytes及pending2／receipt0守恆、變檔／錯誤回條清舊成功、新備份未確認禁用。01的52/52含GUI回歸，02的15/15加入新按鈕850×620邊界，03加未確認新備份；重疊不相加。`reports/build-desktop-history-preview-widgets-20261029-01`285檔hash／263檔編譯。完整性／來源／容量／可恢復性均未知，無還原／清理／模型／採集／ACK，非真人或Web驗收。

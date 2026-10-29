@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 備份核對整合229項通過
+
+600ea414461263d560ebec40cf5857b47907af5d `feat(desktop): verify only the last locally created history backup`（+130/−4）及bff9d16f44a15487ca18c5d57b26cb50e242cefc `feat(desktop): expose explicit backup identity checks in Tk`（+151/−7）均各自來源build／相關測試後普通push並ff-only整合main，直接兩遠端ref核對bff9d16，兩工作樹及origin/main...HEAD差異0，未累積500行。`reports/verify-desktop-history-preview-final-20261029-01`：2026-10-29 14:13（UTC+8）27模組229/229、0skip、source_unchanged、263檔語法通過，Job自然退出0／remaining0／無強停；來源build285檔hash及263檔編譯通過。`reports/release-prep-desktop-history-preview-20261029-01`綁定bff9d16完整SHA，365檔可重現，未tag／release；純文件沿用來源build／相關整合並核對引用。
+
+本次完成DESKTOP-HISTORY-PREVIEW，不代表來源認證、完整歷程還原、容量釋放、Web／真人／原生驗收。下一桌面切片為核對讀取時間區間與快照限制，讓計數有時間上下文；平台目標維持active。
+
 ## 2026-10-29 真Tk備份核對入口
 
 新增「核對剛才備份」按鈕與獨立唯讀結果分頁；明確點選才讀檔，開分頁不讀；只在本視窗取得成功備份回條後啟用。結果核對檔名、固定計數／守恆及未知契約，不披露個別ID；檔案變動／錯誤回條清舊成功、新備份未確認禁用核對，不混入事件詳情。`reports/verify-desktop-history-preview-widgets-20261029-03`：2026-10-29 14:10（UTC+8）31/31、0skip、source_unchanged、Job自然退出0／remaining0／無強停；01為52/52，02補後來歷程與最小按鈕邊界15/15，03再驗新備份未確認，非相加。真Tk＋真合成SQLite驗計數／順序分歧／DB bytes及pending2／receipt0守恆，850×620新按鈕未超界。`reports/build-desktop-history-preview-widgets-20261029-01`285檔hash／263檔編譯；600ea41（+130/−4）已普通同步main／開發ref。未還原／清理／釋放容量、未原生查詢／模型／ACK。
