@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：有期限本版Tk與原生工具匹配
+
+reports/desktop-ux-native-policy-20261029-01：source f2f280d、90秒、就緒前已私有Job且membership_verified=true；native-tool-observation UTC10:54:29.665，@oai/sky app40／window5／EventGuard0。未選窗口／未輸入／未存其他標題／未截圖、不調設定或重複輪詢。session-result與guardian-exit：closed/deadline、child_exited true、exit0、remaining0、無強停；worker0model／0scan／無ACK、participant null。原生輸入未完成；這是當次工具返回實證，並非再次缺許可。驗證器與產品來源差異綁定見verify-parent-counts-green-20261029-01/source-commit.json。
+
 ## 2026-10-29：驗證器subtest計數red→green
 
 `reports/verify-parent-counts-red-20261029-01`3tests／2fail，證實失敗subtest與skip可扣掉其他成功parent。改用實際成功callback計數、cleanup晚到失敗撤銷後，`reports/verify-parent-counts-green-20261029-01`UTC10:51:28：33/33、0skip（6模組），source_unchanged、313語法、Job自然0／remaining0／無強停；build-parent-counts-20261029-01為336hash／313編譯。注入suite故意的fail／skip有獨立明細，外層33tests皆pass，不拿注入失敗宣稱產品失敗或把skip隱藏；未更改舊red報告。

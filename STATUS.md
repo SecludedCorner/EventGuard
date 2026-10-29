@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 本版原生窗口核對仍未可用／已自然收尾
+
+`reports/desktop-ux-native-policy-20261029-01`以f2f280d本版啟動90秒專用合成Tk，ready的membership_verified=true；@oai/sky在2026-10-29 18:54:29（UTC+8）返回40apps／5windows、EventGuard匹配0，未猜ID／未輸入／未改設定／未輪詢。native-tool-observation.json僅存目標匹配與數量、不存其他窗口名稱或截圖；guardian與worker均自然exit0／remaining0／無強停，deadline合作關閉，model0／scan0／ACKfalse／participant null。這只證明自有視窗生命周期，原生輸入／真人仍未驗。採用computer-use技能，沒有新權限要求。
+
+下一以已批准合成資料補一條detector→保存→政策→fake CLI→receive/query/保存/ACK閉環，沿既有Job與fake fixture，不啟動真正Codex；正常／低門檻不啟動CLI。驗證器33項受測來源與產品370項來源manifest比較，只有scripts/verify.py及新回歸測試不同，產品本體未變（source-commit.json已記錄）。
+
 ## 2026-10-29 驗證器parent通過數缺陷已修
 
 多subtest失敗／skip原算法會扣除其他成功parent甚至報負值，隔離red 3項中2fail。verify.py現依實際addSuccess計parent，cleanup追加失敗／錯誤撤銷該次成功；不截零、不刪明細或修改wasSuccessful／完整性閘道。`reports/verify-parent-counts-green-20261029-01`（18:51 UTC+8）6模組33/33、0skip、source_unchanged、313語法、Job自然0／remaining0／無強停；注入suite多subtest 2parent／3fail仍保留1成功、2subskip另保留1成功、強制cleanup不算通過。`reports/build-parent-counts-20261029-01`336hash／313來源編譯；歷史red負值保留原貌。產品本體沿用f2bc30d的370項整合，驗證器變更只重驗受影響範圍。下一有界核對本版自有合成Tk窗口能否被原生工具辨識，不能以Tk.invoke替代原生輸入；若工具仍未返回窗口，保存當次退出證據並保留該關卡。

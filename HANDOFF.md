@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 原生工具未返回本版窗口／接合成全鏈
+
+本版90秒合成Tk ready＋Job身分已確認，但sky返回5窗口無EventGuard；已deadline自然0／remaining0／無強停，證據見STATUS。不再輪詢同錯、不問既有權限。下一用實際detector高線索→原子保存→default政策→明示fake CLI驗receive/query/保存/ACK與退出，正常及warning不啟CLI；這補跨模組閉環，不稱真喚醒或真防守。原生／真人／Web等獨立關卡仍未驗。
+
 ## 2026-10-29 通過數已修／接有界原生窗口核對
 
 verify.py不再用subtest失敗數扣parent數，隔離red→green33/33、0skip／313來源編譯，cleanup失敗仍撤銷成功；原產品370項範圍見STATUS。下一讀computer-use技能，僅啟動本版有期限、私有Job內的合成Tk窗口，核對工具是否返回可確認的自有窗口；有才做已批准的合成操作，沒有則保存自然退出與未驗關卡，不猜window ID或改設定／重複輪詢。真人、Web及native採集／24h／reboot等條件保持獨立。

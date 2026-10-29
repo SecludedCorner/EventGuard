@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 目前可執行：SENTRY-DETECTOR-TO-FAKE-AGENT
+
+原生工具當次無目標（本版有限期Tk已自然收尾，見STATUS），停止該路線、不再輪詢。下一補實際detector→state/events原子保存→policy選取→既有明示fake CLI→receive/query/保存/ACK／自然退出；並驗正常與warning不啟CLI，留低門檻事件pending。使用既有fixture／合成權限與私有Job，零真模型／原生採集，不能將fake結果升格真正agent驗收。其他原生／真人／Web／長跑與來源可信根關卡不變，整體active。
+
 ## 2026-10-29 VERIFY-PARENT-COUNTS已驗／接原生輸入有界核對
 
 33/33、0skip／313來源編譯，已修實際red觀測的parent通過數，歷史證據不改。產品功能f2bc30d的34模組370項整合仍有效，下一用本版專用有限期合成Tk窗口核對目前computer-use是否可辨識目標；只能操作工具實際返回且身分可證的自有窗口，不能猜ID、繞設定或擅改系統。若不可辨識，保存本次Job自然退出、保留原生輸入未驗且轉其他已授權工作；不把Tk.invoke當原生或真人。
