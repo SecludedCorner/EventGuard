@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 有限時間合成Tk worker
+
+run_fixture先adopt既有私有Job並驗成員才建立隔離scope／Tk，1–900秒，owner stdin合作取消或deadline請求GUI安全關閉；worker-ready／exit只存固定收據與participant_results=null，不自稱程序已退出。`reports/verify-desktop-fixture-run-20261029-01`：2026-10-29 14:59（UTC+8）47/47、0skip、source_unchanged、guardian Job自然退出0／remaining0／無強停；worker單元明確模擬adopt收據，驗時限／成員前置拒絕及真Tk合作關閉，不能冒稱獨立worker實際Job驗收。`reports/build-desktop-fixture-run-20261029-01`293檔hash／271檔編譯通過。69233b0（+112/−6）已普通同步main／開發ref；下一父程序launcher再驗真Job／自然退出，六任務與人類紀錄未完成。
+
 ## 2026-10-29 產品Tk的合成標示與能力界線
 
 EventGuardWindow由控制器固定旗標辨認合成模式，視窗標題／頁首／準備時間及初始說明明示非主機實測；開始／暫停、接收／自動agent及選CLI控制持續停用，刷新與保存資料功能保留，busy結束不重新啟用。`reports/verify-desktop-fixture-widgets-20261029-02`：2026-10-29 14:53（UTC+8）50/50、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真Tk＋隔離真Catalog／SQLite驗處置→備份→核對、pending4／receipt0、錯誤資料不去標示與同程序重建視窗保留已讀；native API／query／collect／spawn／ACK哨兵未觸發。`reports/build-desktop-fixture-widgets-20261029-01`291檔hash／269檔編譯通過，01亦50項、02加初始說明斷言為最終。d83f3c5（+188/−0）已普通同步main／開發ref；有界Job入口與人類紀錄尚待，非跨程序重啟或真人驗收。

@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：有界合成Tk worker單元
+
+`reports/verify-desktop-fixture-run-20261029-01` UTC06:59:00：47/47、0skip、source_unchanged、guardian Job自然退出0／remaining0／無強停。run_fixture單元mock adopt收據、真Tk驗owner取消合作關閉及GUI worker退出；時限非法／adopt失敗前不建資料或Tk，participant_results保持null。`reports/build-desktop-fixture-run-20261029-01`293檔hash及271檔編譯；不升格為獨立GUI程序真Job驗收，launcher／真人六任務仍待，無採集／模型／ACK。
+
 ## 2026-10-29：產品Tk合成標示及操作閉環
 
 `reports/verify-desktop-fixture-widgets-20261029-02` UTC06:53:10：50/50、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真Tk＋新隔離Catalog／SQLite驗固定合成標示、非主機實測／prepare時間、原生／agent控制busy後仍停用、人工處置→備份→核對、pending4／receipt0、錯誤snapshot不去標示與同程序重建視窗已讀保留；native API／query／collect／spawn／ACK哨兵未觸發。01亦50項、02補初始說明為最終；`reports/build-desktop-fixture-widgets-20261029-01`291檔hash及269檔編譯。尚無真人、跨程序重啟或有界獨立入口證據，不冒稱相關完成。
