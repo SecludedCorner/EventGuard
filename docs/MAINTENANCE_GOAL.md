@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 review寫入來源已驗／接Tk故障呈現
+
+診斷保存交易補共用來源驗證，三red→green，60/60與306來源編譯；Catalog三入口也拒絕錯案。接續真Tk＋合成SQLite故障呈現及受影響投遞／保留整合：來源損壞不能串案、變安全空集合、ACK或啟動模型。前置為目前受測來源，使用既有fixture／guardian權限；無需新原生或帳戶權限，整體AI盯哨active。
+
 ## 2026-10-29 EVENT-ROW-IDENTITY-AUDIT核心已驗／接入口整合
 
 已重現並修核心row／payload ID不符仍過hash的缺口：get／list／人工狀態／ACK／重播拒絕不寫，pump保留錯誤證據、不send、不耗attempt，52/52、0skip及305檔來源編譯。下一針對Catalog／桌面控制層與保留做受影響整合，核對保存結果及其他寫入在交易中是否驗來源；先以合成資料取得證據，不啟動真agent／原生。這是正確交件的前置，完整資安AI盯哨驗收仍active。

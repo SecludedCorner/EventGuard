@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：診斷保存來源核對red→green
+
+18:25（UTC+8）：review-source-identity-red-20261029-01三個保存測試fail、Catalog拒絕已pass；保存入口新增交易內_payload驗證後，`reports/verify-review-source-identity-core-20261029-01`60/60、0skip（7模組），無失敗／語法錯誤，source_unchanged／Job自然exit0／remaining0／無強停。新增4項涵蓋晚到損壞、hash有效異ID、既有結果不覆寫與Catalog三入口；不再直接import TestCase造成重複計數。`reports/build-review-source-identity-core-20261029-01`328hash／306來源編譯；沒有新真接收或防守驗收。
+
 ## 2026-10-29：核心事件身分拒絕red→green
 
 `reports/verify-event-row-identity-red-20261029-01`：5tests／6失敗檢查（get／list為subtests），0error／0skip；原程式會接受hash有效的異ID payload，pump的Mock send被呼叫，無真adapter／模型。修共用_payload後，`reports/verify-event-row-identity-core-20261029-01`6模組52/52、0skip、source_unchanged、305語法；Job自然exit0／remaining0／無強停。一般讀取／人工處置／ACK及已ACK重播拒絕時DB位元組不變；pump不send／attempt0／receipt0，原payload/hash保留並failed。build同名327hash／305編譯；synthetic local_mock receipt，未取得新真agent、防守或主機安全證據。

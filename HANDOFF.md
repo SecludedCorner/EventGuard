@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 review來源寫入已修／接Tk故障呈現
+
+save_review也已在寫入交易中驗row／payload ID與hash，三個red→green且既有保存結果不覆寫，60/60、0skip／306來源編譯，見STATUS。下一用實際Tk與合成SQLite驗損壞來源不顯成另一事件或安全空集合、控制層不送ACK／模型；再做受影響投遞與保留整合。整體資安AI盯哨未完成，其他實機關卡保留。
+
 ## 2026-10-29 row身分缺口已修／接入口整合
 
 5tests／6項red已重現，核心共用_payload綁row ID／payload ID／hash，讀取、人工狀態、ACK／重播與pump已拒絕錯案；52/52、0skip、305檔來源編譯與證據見STATUS。下一驗Catalog／桌面控制層及保留整合，並核對保存調查結果等寫入是否也在交易內驗真實來源；先重現、不先宣稱缺陷。資安AI盯哨仍是最終目標，真人／Web／原生／長跑與防守結果關卡不變。

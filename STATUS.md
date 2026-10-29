@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 保存診斷也在交易內核對事件來源
+
+保存診斷的3個red案例證實：只比對hash欄位會接受調查後損壞payload、hash有效的異ID來源，也會覆寫既有結果。save_review現於BEGIN IMMEDIATE內、建表／覆寫前呼叫共用_payload；來源失配拒絕且DB位元組不變。Catalog detail／list／investigate對異ID均拒絕不寫。`reports/verify-review-source-identity-red-20261029-01`3fail（原fixture類別直接import額外被unittest載入8項，green改module引用避免重複）；`reports/verify-review-source-identity-core-20261029-01`7模組60/60、0skip、source_unchanged、Job自然0／remaining0／無強停。`reports/build-review-source-identity-core-20261029-01`328hash／306編譯。沒有原生／模型；下一驗真Tk對損壞來源的呈現與受影響投遞／保留整合，不用後端拒絕推定UI已驗。
+
 ## 2026-10-29 事件row／payload身分不一致已修
 
 合成SQLite重現hash有效但payload ID不同時，一般get／list、人工處置、ACK／重播及pump未完整拒絕；red 5個test的6個檢查皆fail（passed=-1為subtest計數算法，不能當有效通過數）。新增共用_payload驗row ID＋payload ID＋hash，讀取／人工狀態／ACK在寫入前拒絕，pump保留原payload與hash並標stored_payload_invalid，不送adapter、不耗attempt、不造receipt。這直接保護交給agent的事件身分，不是真模型／原生防守驗收。

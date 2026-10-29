@@ -518,9 +518,10 @@ class EventStore:
         try:
             with self._lock, self._connect() as db:
                 db.execute("BEGIN IMMEDIATE")
-                row = db.execute("SELECT payload_hash FROM events WHERE event_id=?", (event_id,)).fetchone()
-                if row is None or row[0] != payload_hash or result.get("payload_hash") != payload_hash:
+                row = db.execute("SELECT * FROM events WHERE event_id=?", (event_id,)).fetchone()
+                if row is None or row["payload_hash"] != payload_hash or result.get("payload_hash") != payload_hash:
                     raise StoreError("review_source_identity_conflict")
+                self._payload(row)
                 db.execute("""CREATE TABLE IF NOT EXISTS event_reviews(event_id TEXT PRIMARY KEY,payload_hash TEXT NOT NULL,
                     result TEXT NOT NULL,updated_at REAL NOT NULL)""")
                 previous = db.execute("SELECT length(CAST(result AS BLOB)) FROM event_reviews WHERE event_id=?", (event_id,)).fetchone()
