@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 先記住最終核心目標
+
+EventGuard 是資安 AI 盯哨：偵測被偵查或攻擊的蛛絲馬跡，依有效授權喚醒 agent 查證、防守並驗證結果。詳見 AGENTS.md；GUI、人工狀態與 ACK 都不能取代這個閉環或冒稱威脅已排除。當前下一步仍為下節 EVENT-ROW-IDENTITY-AUDIT，服務正確事件交付及處置；文件校正不代表新增執行授權或整體驗收完成。
+
 ## 2026-10-29 pending入口已整合／下一Row ID契約核對
 
 產品69e7ee0兩ref一致，49模組260/260、0skip及304檔來源編譯、Job自然0／無殘留，GUI待確認操作與限制已寫GUI.md，見STATUS／EVIDENCE；原生／真人／Web／完整歷程恢復仍各自待驗。下一先在合成SQLite重現一般EventStore.get_event／list／pump的row ID與payload ID不符但hash有效情境，不能只靠pending Catalog已有額外guard。若可重現，沿核心共用驗證切片修讀取／寫入／ACK／投遞入口，故障資料保留且不送adapter／模型，fixture ACK明示local_mock；若已有完整拒絕證據就直接沿用、不重做。先reproduce再修，不先斷言缺陷，每單元立即普通同步main、兩個500行上限不變，整體active。

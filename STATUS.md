@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 最終目標校正：資安 AI 盯哨
+
+使用者明確確認核心是偵測偵查／攻擊蛛絲馬跡後喚醒 agent 查證、防守；已寫入 AGENTS.md 與 MAINTENANCE_GOAL，GUI／人工處置／可靠性工作須服務此閉環。真接收與防守成效分開驗收，ACK 不代表安全，既有授權不擴大。接續 EVENT-ROW-IDENTITY-AUDIT，不以介面完成結束整體目標。
+
+本單元僅文件，沿用未變動產品來源的 `reports/verify-desktop-pending-final-20261029-01`（260/260、0skip）與 `reports/build-desktop-pending-final-20261029-01`（326hash／304編譯）；另檢查文件差異、引用及既有安全界線保留。沒有新實機、真 agent 或防守成功證據。
+
 ## 2026-10-29 Tk待確認入口整合260項通過
 
 DESKTOP-PENDING-ENTRY已有實際Tk＋101件SQLite驗收：recent100外anchor可到達、原ID明確核對／不回退、100＋1與最後空頁、非預設篩選／選取／item焦點返回、錯scope／offset未知、晚到頁丟棄及來源更新不冒充頁刷新。產品69e7ee05ab5817cc399f8b362645abce9ad1999e已逐單元普通同步main／開發ref，兩工作樹及待整合差異0，沒有累積500行。`reports/verify-desktop-pending-final-20261029-01`：2026-10-29 18:10（UTC+8）49模組260/260、0skip、source_unchanged、304檔語法、Job自然0／remaining0／無強停，含既有兩真Job未確認回條恢復及保留回歸；非全庫／真人。`reports/build-desktop-pending-final-20261029-01`326hash／304編譯；GUI操作已落地，本純文件沿用該build並核對引用。

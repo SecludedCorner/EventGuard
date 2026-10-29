@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：最終目標寫入專案指引
+
+18:18（UTC+8）依使用者本次明示，AGENTS.md 新增「資安 AI 盯哨」核心目標：偵測蛛絲馬跡、證據、真喚醒、調查、授權防守、結果／恢復驗證；同步目前目標及交接，未更動產品程式或擴大權限。文件檢查包含 diff／相對引用及既有工作界線完整保留；沿用未變動產品來源之 pending-final 260/260、0skip 與 build 326hash／304編譯（路徑見 STATUS），不是本次重新執行測試或真 agent 驗收。下一契約核對仍為 EVENT-ROW-IDENTITY-AUDIT，完整目標 active。
+
 ## 2026-10-29：Tk待確認入口49模組整合
 
 `reports/verify-desktop-pending-final-20261029-01` UTC10:10:31：49模組260/260、0skip、source_unchanged、304檔語法、Job自然0／remaining0／無強停。涵蓋新待確認模式／101件分頁／原ID核對／快照範圍／返回／錯頁／晚到回條，既有桌面、Catalog、兩真Job未確認回條恢復、保留與人機ACK分離亦通過；不是真人、原生或Web驗收，數字不與舊235／155相加。`reports/build-desktop-pending-final-20261029-01`326hash／304編譯，產品69e7ee0兩ref一致，工作樹／待整合差異0。
