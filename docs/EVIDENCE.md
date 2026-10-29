@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：待確認頁consumer契約
+
+`reports/verify-gui-pending-page-20261029-01` UTC09:41:23：8/8、0skip、source_unchanged、Job自然0／remaining0／無強停。gui_pending.page以實際worker回條核對scope、頁碼回條、100／128界線與完整列數／has_more、ID／hash／狀態／要求數及重複，真SQLite讀取不變；錯頁／scope／計數／ID／hash／重複等保持None未知，不能當空清單。`reports/build-gui-pending-page-20261029-01`323hash／301編譯；尚非Tk操作或真人／原生輸入驗收，接線下一單元。
+
 ## 2026-10-29：待確認頁唯讀控制層與worker
 
 `reports/verify-desktop-pending-control-20261029-02` UTC09:33:38：61/61、0skip、source_unchanged、Job自然0／remaining0／無強停。合成101事件的真DesktopController.snapshot維持100件且不含舊anchor，pending_requests回live／total1及該anchor，前後DB bytes／pending101／receipt0不變，採集／spawn／ACK哨兵未觸發；固定gui_pending_requests僅記操作metadata。worker回requested_offset，非法129保持error不回原例外文字，thread shutdown已確認。01同61通過，02改每個offset使用獨立worker避免測試提交與pending旗標的短暫競爭，非重跑產品洗數；build-desktop-pending-control-20261029-01為321hash／299編譯。沒有Tk入口或操作驗收，仍待下一切片。

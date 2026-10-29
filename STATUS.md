@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 待確認頁回條驗證前置
+
+gui_pending.page核對namespace／requested_offset／offset、每頁100、事件總數及要求總數≤128、has_more與列數一致，逐列ID／hash／人工及接收狀態／要求數與排序去重；unknown回None，合法空頁另辨。`reports/verify-gui-pending-page-20261029-01`：2026-10-29 17:41（UTC+8）8/8、0skip、source_unchanged、Job自然0／remaining0／無強停，真controller／worker＋101件SQLite回條能找原anchor，錯頁／錯scope／重複／壞列拒絕，DB bytes不變。`reports/build-gui-pending-page-20261029-01`323hash／301編譯。此為實際Tk接線前置，尚無查看／分頁按鈕，不升格UI已驗。
+
 ## 2026-10-29 待確認清單controller／worker前置已驗
 
 新增具固定activity碼的DesktopController.pending_requests，只查本scope live Catalog／每頁100；worker action回requested_offset，合成SAFE加入唯讀入口，未新增原生／模型／ACK。`reports/verify-desktop-pending-control-20261029-02`：2026-10-29 17:33（UTC+8）61/61、0skip、source_unchanged、Job自然0／remaining0／無強停；真controller＋合成101件SQLite證明snapshot仍只100且無anchor，pending_requests能讀回anchor，原DB bytes／pending101／receipt0保留；worker有效／非法offset各新建執行緒驗回條與結束，避免result.put先於pending旗標清除的測試時序競爭。`reports/build-desktop-pending-control-20261029-01`321hash／299編譯；fbe2592兩ref一致。GUI尚無按鈕／分頁／模式處理，下一接實際Tk，不把此worker證據當UI完成。

@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 pending頁consumer驗證已驗／立即接Tk模式
+
+8/8、0skip及301檔來源編譯，gui_pending.page返回合法有界頁或None未知，真worker／SQLite及壞回條已驗，見STATUS。接Tk時使用明確pending／recent模式，四按鈕另列避免原篩選列擠壓；pending普通snapshot只更新來源／計數，不覆蓋快照頁。保存回條後原頁保留快照標示，明確刷新再移除已確認列；返回最近模式恢復原篩選／選取／焦點，晚到pending回條不得覆蓋，busy期間禁止新頁但允許返回。先最小實際Tk切片，再101事件／100＋1及故障驗收；每單元普通同步main。
+
 ## 2026-10-29 pending控制層已驗／下一實際Tk入口
 
 61/61、0skip及299檔來源編譯，DesktopController.pending_requests(offset=0)固定live／100件、worker action與requested_offset／活動metadata及合成SAFE已接，snapshot原100限制不變，見STATUS。下一真正Tk入口尚未寫：新增查看待確認／分頁／返回最近模式，處理pending_requests回條必須先於generic操作分支；嚴格驗namespace、offset、total≤128、request_total≤128、events≤100及每列ID／hash／狀態，不把unknown當空。pending模式中普通snapshot仍刷新來源／計數，但不能覆蓋當頁事件；返回／晚到頁／保存完成刷新不串資料，保留正常清單篩選／選取契約。用≥101件真合成SQLite＋實際Tk驗找到舊anchor、明確同ID核對、不自送／不ACK與兩頁，不用靜態字串取代。每單元立即普通同步main。
