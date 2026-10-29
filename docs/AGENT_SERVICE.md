@@ -1,5 +1,30 @@
 # 選配：事件驅動的專用 agent
 
+## 選用單事件調查：獨立保存後才 ACK
+
+`saved-investigation-v1` 是明確選用、目前只接受自有合成事件的四工具模式。預設持續派送仍沿用下文三工具契約，歷史真收件證據不升格為新調查驗收。
+
+1. `receive_event` 接收指定事件。
+2. `query_evidence` 回傳該事件已保存、經白名單投影的 `saved_evidence`，包括 facts、limitations、payload／evidence hash；不查 Windows。listener 可讀 protocol、port、binding_scope；全介面綁定不代表 Internet 可達。
+3. `save_investigation(event_id, query_id, report)` 獨立保存 agent 撰寫的分析，尚不 ACK。report 必含 `summary`（1–400 可列印字元）、`fact_keys`（實際回傳 facts 的鍵）、完整 `limitations`、`finding=metadata_requires_followup` 與 `next_step=request_authorized_evidence`。
+4. `ack_event(..., decision="needs_more_evidence")` 只接受同事件／query 已保存且內容綁定的報告；成功回條送出後 MCP 自然退出。
+
+報告保存在既有 result／completed 記錄，含事實值、查詢及內容雜湊；不另建佇列。寫入失敗、容量不足、錯誤身分或內容改寫不得跳過保存。ACK 已完成而退出證據失敗時，整體驗收仍失敗，實際 ACK 狀態另列，不能冒稱仍 pending。人類 handled 與 agent ACK 持續分離。
+
+摘要是明示不可信的 agent 評估，hash 證明內容綁定，不是來源認證或安全結論。所有結果維持 `incident_conclusion=not_assessed`、無處置；本模式不代表真實原生覆蓋或防守成功。
+
+準備一個新目錄（不呼叫模型）：
+
+```powershell
+py -3.13 -B scripts/validate_delivery.py investigation --root reports/investigation-NEW --codex-executable "<已核對的原生 codex.exe>"
+```
+
+先讀該目錄 `AUTHORIZATION_REQUEST.md`／`investigation-scope.json`，取得當次有效模型批准，將批准原文、UTC 時間與 scope hash 寫入 `human-approval.json`。未批准時該檔預設 false，不能自行改成批准；fixture 批准不算人類授權。相同命令加 `--execute` 才執行；使用過的目錄不重試，來源／binary／launch 改變需重新準備及核對範圍。
+
+範圍是一件合成 listener、一個 CLI 任務、執行期限180秒、預期四工具各一次；合作退出與證據收尾另計。使用 CLI 既有預設模型，不保證模型內部請求數、token 或費用的硬上限。stdout／stderr 各限4MiB；完成記錄沿用4KiB階段預留。沒有 shell、原生查詢、瀏覽器、其他工具、系統變更或處置。
+
+驗收看 `validation.json`、`stage-1/assessment.json`、原始 trace／capture／MCP持有 HANDLE 退出證據、inbox completed 與來源 SQLite ACK；必須逐項對齊同一 event／query／report ID 並自然退出、無殘留／強停。`--verify-only` 只核對既有資料。實際 SDK／fake CLI 測試不能代替真模型驗收，也不證明獨立模型來源或既有桌面聊天被喚醒。
+
 普通 Python 程式等待原佇列。有符合條件的事件才啟動短期 Codex CLI。
 不續接既有桌面聊天。不建立服務、排程或開機自啟。
 專用原生 Codex CLI 的單事件真收件已通過：receive → query → 保存結果 → ACK 各一次，pending 0；MCP、CLI、supervisor、host、外層驗收程序皆自然 exit 0。證據是 `reports/service-acceptance-eventguard-mcp-exit-20261025-04`，不是既有桌面聊天喚醒。最新完整回歸與適用版本見 [STATUS](../STATUS.md)；本頁命令不構成新增模型或主機採集授權。

@@ -1,5 +1,10 @@
 # EventGuard 工作提醒
 
+## 2026-10-30 最新恢復與一次集中參與
+
+使用者已答覆真人六項：先完成所有可自行完成的工程／驗收，最後一次參與，不重問相同開發權限。當前新範圍為單自有合成事件的真agent調查；四工具接線及fake CLI／真SDK／SQLite／退出已驗，但新真模型尚未批准，舊有限批准不沿用。browser URL政策檢查停止仍保留，不能換工具繞過。可執行開發照常；兩個500行基準與逐單元commit／push／整合main維持。
+
+
 ## 2026-10-30 通知測試的執行環境與證據範圍
 
 受限環境整合344項含notification_icon_unavailable的1skip；同一固定合成通知案例在已核非提升host的私有Job單獨1/1通過，OS接受且自有icon/window關閉，見notification-host-contract-20261030-01。原skip保留，不反覆重跑整套洗成0skip，也不把OS接受等同真人看見、桌面喚醒或agent喚醒。相同自有GUI開發許可不再問，不改設定／提權。

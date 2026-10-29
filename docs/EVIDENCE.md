@@ -1,5 +1,12 @@
 # 證據與時間日誌
 
+## 2026-10-30 調查增量整合、版本與未執行範圍
+
+verify-agent-investigation-integration-20261030-01（f4bd4aa）：14模組90/90／0skip、332語法、87.652秒／source_unchanged、Job自然0／remaining0／無強停。後續9b288b5晚期失敗回報修正另有verify-investigation-late-failure-20261030-01：14/14／0skip、332語法、29.739秒、相同自然退出範圍；build355hash／332編譯。兩scope不可相加或稱全庫，皆模型0。
+
+原生CLI版本／help預檢reports/agent-investigation-preflight-20261030-02與agent-investigation-cli-help-20261030-01，各私有Job自然exit0／remaining0／無強停／完整擷取。現行0.165.0-alpha.1.2，舊路徑消失，binary SHA及Python／SDK見STATUS。reports/investigation-acceptance-eventguard-single-20261030-01已prepare並交叉核code/binary/source/launch/scope，AUTHORIZATION_REQUEST含單事件／單任務180秒及收尾、4MiB輸出、400字／4KiB保存範圍，模型內部token／費用無硬上限保證；human-approval=false、未入列、未啟模型，真調查未驗。SDK/fake CLI／ACK或歷史三工具真收件不能替代本新關卡；browser政策仍未驗、不繞過。
+
+
 ## 2026-10-30 驗收失敗與ACK事實分開
 
 最終核對修正晚期exit proof失敗時仍聲稱pending_preserved=true；investigation改為pending未知、唯讀核實際ACK，verify-only失敗亦保留event/query與ACK事實。verify-investigation-late-failure-20261030-01：14/14／0skip、332語法／來源編譯，Job自然0無殘留／強停，模型0。前版f4bd4aa受影響14模組整合90/90／0skip有獨立證據verify-agent-investigation-integration-20261030-01，非全庫。現有CLI已更新0.165.0-alpha.1.2，--version／exec --help私有Job自然0、模型0，舊路徑已不存在；待批包使用新binary hash。

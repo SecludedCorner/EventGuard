@@ -1,5 +1,17 @@
 # EventGuard 現況
 
+## 2026-10-30 單事件調查已具備接線／等待當次真模型範圍
+
+產品code 9b288b5：新增synthetic-only四工具receive→query保存facts→save_investigation獨立保存不可信分析→ACK，保存失敗不可ACK；hash綁event/query/evidence/report，人工handled獨立。原子保存／保留／重啟與舊三工具相容，不改監看預設，不代表真實防守完成。
+
+- 受影響整合verify-agent-investigation-integration-20261030-01（f4bd4aa）14模組90/90／0skip、332語法；後續晚期失敗回報修正另以verify-investigation-late-failure-20261030-01四模組14/14／0skip、332語法／build355hash覆蓋。皆source_unchanged、Job自然0／remaining0／無強停、模型0；不是全庫測試，數字不相加。
+- 真SDK及明示fake CLI端到端有四步各1、pending0、ACK flush與MCP持有HANDLE自然退出證據；這不是新真模型調查。新增7個test模組與1個明示fake fixture，沒有runtime／私人截圖入Git。
+- reports/agent-investigation-preflight-20261030-02與agent-investigation-cli-help-20261030-01：現行原生CLI 0.165.0-alpha.1.2，Python3.13.3／MCP1.6.0，--version及exec --help皆私有Job自然0無殘留／強停、模型0。舊2993767路徑已消失；現行0ab0e7a8f3779036/codex.exe的SHA256為0c09e45bc76433756eb2d492f6db0ce6f269967e6618f4a6ae73e2fa239694b8，未讀帳戶／秘密／原始sessions。
+- 待批目錄reports/investigation-acceptance-eventguard-single-20261030-01；事件evt-4bdbd2b0b15046c496d09acef0f6a60e；scope hash 76fa237c1a7d252655122de9d5bf8179c95341586729503184023a6f65a6e4a0。AUTHORIZATION_REQUEST／version-metadata與binary/source/launch已核；human-approval=false，enqueued/stages皆空，真模型未執行。僅一事件／一CLI任務／執行期限180秒，收尾另計，預期四工具各1，不重試；CLI預設模型內部請求／token／費用無硬上限保證。
+
+已完成的各單元均<200行、普通推feature並快轉推origin/main；最終SHA由Git核對，不動保留本機main ref。下一只在當次具體模型範圍批准後記原文／UTC／hash再execute並核真調查／退出；失敗保存實際ACK狀態，不自動重試。真人六項依使用者要求最後一次集中參與，browser政策未驗保留不繞過；長跑／reboot／原生身分／可信恢復／真防守等獨立關卡仍未完成。
+
+
 ## 2026-10-30 驗收失敗與ACK事實分開
 
 最終核對修正晚期exit proof失敗時仍聲稱pending_preserved=true；investigation改為pending未知、唯讀核實際ACK，verify-only失敗亦保留event/query與ACK事實。verify-investigation-late-failure-20261030-01：14/14／0skip、332語法／來源編譯，Job自然0無殘留／強停，模型0。前版f4bd4aa受影響14模組整合90/90／0skip有獨立證據verify-agent-investigation-integration-20261030-01，非全庫。現有CLI已更新0.165.0-alpha.1.2，--version／exec --help私有Job自然0、模型0，舊路徑已不存在；待批包使用新binary hash。

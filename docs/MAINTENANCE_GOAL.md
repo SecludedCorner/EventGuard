@@ -1,5 +1,10 @@
 # EventGuard 目前目標
 
+## 2026-10-30 P1-AGENT-INVESTIGATION 接線完成／真模型範圍待批准
+
+新使用者目標：一件自有事件，真agent收件、讀保存證據、保存有引用／缺口的分析再ACK，自然退出；不以handled或舊固定decision代替。工程／SDK／明示fake CLI已驗，產品9b288b5，90/90及後續修正14/14各0skip；新真模型未驗，scope目錄與版本詳STATUS。下一取得具體一次模型範圍批准，記原文UTC/hash再執行已準備investigation case並核真四步／退出，不重用已消耗批准／不自動重試。真人操作依答覆最後一次參與；browser政策／原生／長跑／恢復／真防守各關卡不縮小。這是新可用工程增量，未把舊blocked整體平台goal宣稱complete或自動resume。
+
+
 ## 2026-10-30 四工具SDK接線完成／新調查目標
 
 P1-AGENT-INVESTIGATION：完成一自有事件receive→讀保存證據→獨立保存分析→ACK及自然退出；目前SDK／CLI command已明確選用四工具、synthetic-only，不改既有三工具。verify-investigation-mcp-20261030-01：33/33／0skip、325語法／來源編譯，Job自然0無殘留／強停，模型0。下一完成四步trace核對與真stdio自然退出，再準備版本／單事件／180秒範圍及產物的真模型批准包；不沿用已消耗舊批准。真人六項最後一次參與，browser政策未驗保留、不換工具繞過；整體AI盯哨未完成。
