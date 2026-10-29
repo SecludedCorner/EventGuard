@@ -140,6 +140,19 @@ class GuiPresenterTests(unittest.TestCase):
         self.assertIn("最多 100", view["events_note"])
         self.assertEqual(document, before)
 
+    def test_handling_filter_intersects_and_only_covers_loaded_hundred(self):
+        document = {"events": [item(str(i), handling_status='handled' if i in (0, 100) else None)
+                               for i in range(101)], "events_total": 101}
+        before = copy.deepcopy(document)
+        view = event_list_view(document, handling='handled', delivery='pending')
+        self.assertEqual([e[0] for e in view['events']], ['0'])
+        self.assertEqual((view['events_loaded'], view['events_visible']), (100, 1))
+        self.assertTrue(view['events_truncated'])
+        self.assertEqual(event_list_view(document, handling='new')['events_visible'], 0)
+        self.assertEqual(event_list_view(document, handling='unknown')['events_visible'], 99)
+        self.assertEqual(event_list_view(document, handling='handled', delivery='ack')['events_visible'], 0)
+        self.assertEqual(document, before)
+
     def test_no_matches_and_empty_or_unknown_storage_never_imply_a_safe_host(self):
         for document in ({"events": [item()], "events_total": 1}, {}, {"events": [], "events_total": 0}):
             view = event_list_view(document, severity="critical")

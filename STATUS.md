@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 真Tk人工狀態篩選
+
+人工狀態、嚴重度及接收狀態可取交集，只涵蓋已載入最多100件；含未知選項及一鍵清除。真Tk＋合成SQLite驗交集、計數、隱藏選取清掉詳情、保存後不符篩選移出視圖、清除還原、讀取DB bytes與pending／receipt守恆；pure presenter另驗101件邊界，不宣稱全庫。`reports/verify-desktop-handling-filter-20261029-01`：2026-10-29 13:29（UTC+8）68/68、0skip；補強真Tk未知選項後02為27/27、0skip（13:30），來源產品不變，不相加。皆source_unchanged、Job自然退出0／remaining0／無強停。`reports/build-desktop-handling-filter-20261029-01`：277檔hash及255檔編譯通過。023644a（+89/−9）已普通同步main及開發ref；GUI操作文件同步更新，Web／真人／原生仍各自待驗。
+
 ## 2026-10-29 真Tk清單人工處置與接收分列
 
 清單新增獨立人工處置欄，明示非ACK／修復；缺失或非法投影顯未知。實際Tk＋真合成SQLite驗四狀態顯示、只讀DB bytes守恆、已處理仍待接手、payload變動／缺欄未知，以及按鈕保存後清單／詳情讀回及保留選取。修復詳情請求忙碌造成清單刷新遺失：保留單一待刷新旗標，worker空閒才只讀刷新。`reports/verify-desktop-handling-list-20261029-02`：2026-10-29 13:26（UTC+8）68/68、0skip、source_unchanged、Job自然退出0／remaining0／無強停；01的67/68揭露上述缺陷，已修正。`reports/build-desktop-handling-list-20261029-01`：277檔hash及255檔編譯通過。54f3f2a（+142/−2）已普通同步main／開發ref；本單元亦逐單元保存，未觸發採集／模型／ACK。

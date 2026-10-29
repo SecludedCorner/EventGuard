@@ -10,7 +10,7 @@ import queue
 import threading
 import uuid
 
-from .gui_presenter import (DELIVERY_FILTERS, SEVERITY_FILTERS, detail_text,
+from .gui_presenter import (DELIVERY_FILTERS, SEVERITY_FILTERS, HANDLING_FILTERS, detail_text,
                             event_list_view, event_summary, safe_text, source_success_text, source_gap_text)
 
 
@@ -43,7 +43,7 @@ def state_text(value):
     return STATE_NAMES.get(value, safe_text(value)) if isinstance(value, str) else "未知"
 
 
-def view_snapshot(document, *, severity="all", delivery="all"):
+def view_snapshot(document, *, severity="all", delivery="all", handling="all"):
     """Small pure presentation contract, also testable without a display."""
     value = document if isinstance(document, dict) else {}
     monitoring = value.get("monitoring") is True
@@ -69,7 +69,7 @@ def view_snapshot(document, *, severity="all", delivery="all"):
                               safe_text(item.get("row_count"), 24), state_text(fresh),
                               safe_text(item.get("observed_at"), 80), source_success_text(item),
                               safe_text(item.get("reason"), 180))))
-    event_view = event_list_view(value, severity=severity, delivery=delivery)
+    event_view = event_list_view(value, severity=severity, delivery=delivery, handling=handling)
     agent = value.get("agent_delivery") if isinstance(value.get("agent_delivery"), dict) else {}
     enabled = agent.get("enabled") is True
     connection = "已允許接收；尚未證明有 agent 連線或收到事件。" if enabled else "未開放 agent 接收；事件仍保留，可由人類查看。"
@@ -226,6 +226,7 @@ class EventGuardWindow:
         self.activity_status = tk.StringVar(value="尚未讀取操作紀錄。")
         self.severity_filter = tk.StringVar(value="所有嚴重度")
         self.delivery_filter = tk.StringVar(value="所有接收狀態")
+        self.handling_filter = tk.StringVar(value="所有人工狀態")
         self.events_note = tk.StringVar(value="尚未載入事件；不能以此判定主機安全。")
         self.show_raw = tk.BooleanVar(value=False)
         self._build()
@@ -313,12 +314,17 @@ class EventGuardWindow:
         self.delivery_choice = ttk.Combobox(filters, textvariable=self.delivery_filter, state="readonly",
                                             values=tuple(DELIVERY_FILTERS), width=16)
         self.delivery_choice.grid(row=0, column=3, padx=(6, 12))
+        ttk.Label(filters, text="人工處置").grid(row=0, column=4, sticky="w")
+        self.handling_choice = ttk.Combobox(filters, textvariable=self.handling_filter, state="readonly",
+                                            values=tuple(HANDLING_FILTERS), width=14)
+        self.handling_choice.grid(row=0, column=5, padx=(6, 12))
         self.clear_filters_button = ttk.Button(filters, text="清除篩選", command=self.clear_filters)
-        self.clear_filters_button.grid(row=0, column=4)
+        self.clear_filters_button.grid(row=0, column=6)
         self.severity_choice.bind("<<ComboboxSelected>>", self.filter_events)
         self.delivery_choice.bind("<<ComboboxSelected>>", self.filter_events)
+        self.handling_choice.bind("<<ComboboxSelected>>", self.filter_events)
         ttk.Label(filters, textvariable=self.events_note, wraplength=1000).grid(
-            row=1, column=0, columnspan=5, sticky="ew", pady=(5, 0))
+            row=1, column=0, columnspan=7, sticky="ew", pady=(5, 0))
         self.events = ttk.Treeview(event_frame, show="headings", height=7,
                                   columns=("time", "type", "severity", "delivery", "id", "handling"),
                                   displaycolumns=("time", "type", "severity", "handling", "delivery", "id"))
@@ -511,11 +517,13 @@ class EventGuardWindow:
     def filter_events(self, _event=None):
         self._render_events(view_snapshot(self._event_document,
             severity=SEVERITY_FILTERS.get(self.severity_filter.get(), "all"),
-            delivery=DELIVERY_FILTERS.get(self.delivery_filter.get(), "all")))
+            delivery=DELIVERY_FILTERS.get(self.delivery_filter.get(), "all"),
+            handling=HANDLING_FILTERS.get(self.handling_filter.get(), "all")))
 
     def clear_filters(self):
         self.severity_filter.set("所有嚴重度")
         self.delivery_filter.set("所有接收狀態")
+        self.handling_filter.set("所有人工狀態")
         self.filter_events()
 
     def toggle_raw(self):
@@ -550,7 +558,8 @@ class EventGuardWindow:
         self._event_document = value if isinstance(value, dict) else {}
         view = view_snapshot(value,
             severity=SEVERITY_FILTERS.get(self.severity_filter.get(), "all"),
-            delivery=DELIVERY_FILTERS.get(self.delivery_filter.get(), "all"))
+            delivery=DELIVERY_FILTERS.get(self.delivery_filter.get(), "all"),
+            handling=HANDLING_FILTERS.get(self.handling_filter.get(), "all"))
         self._snapshot = view
         self.headline.set(view["headline"])
         self.counts.set(view["counts"])

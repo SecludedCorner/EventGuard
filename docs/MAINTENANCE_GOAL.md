@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 DESKTOP-HANDLING-FILTER 已驗
+
+人工狀態清單／三篩選交集、未知、保存後刷新／移出及選取守恆均已實作，真Tk與真合成SQLite通過68/68及未知補強27/27、0skip，255檔來源編譯。接續受影響桌面／Catalog／ACK整合及來源可重現保存，不無限重跑未受影響全庫；每單元普通同步main，目標active。Web、真人／原生等獨立關卡仍未完成。
+
 ## 2026-10-29 桌面人工狀態清單已驗／接續篩選
 
 清單唯讀身分投影60/60及真Tk分列68/68、0skip與來源編譯通過，與ACK獨立；修復保存後清單未刷新。下一項DESKTOP-HANDLING-FILTER：只篩選已載入最多100件，人工狀態及delivery可交集、未知明示、清除還原、隱藏選取清掉詳情且不改pending／receipt；真Tk＋合成SQLite驗收後立即commit／push／普通整合main。整體Web、真人／原生等關卡仍待驗，平台目標維持active。

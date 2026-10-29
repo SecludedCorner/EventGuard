@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：真Tk人工狀態篩選與未知
+
+`reports/verify-desktop-handling-filter-20261029-01` UTC05:29:32：68/68、0skip，實際Tk三篩選交集／清除、隱藏選取、保存後移出視圖及pending／receipt守恆；補強未知選項實際點選後`02` UTC05:30:39為27/27、0skip，產品來源未改，不將兩次重疊測試相加。皆source_unchanged、Job自然退出0／remaining0／無強停。presenter驗只篩前100／101截斷；`reports/build-desktop-handling-filter-20261029-01`：277檔hash及255檔編譯通過。無採集／模型／ACK，GUI操作文件描述與本次實作一致，仍非真人比較或Web驗收。
+
 ## 2026-10-29：真Tk人工狀態清單
 
 `reports/verify-desktop-handling-list-20261029-02` UTC05:26:29：68/68、0skip、source_unchanged、Job自然退出0／remaining0／無強停；真Tk欄位＋真合成SQLite確認人工狀態與delivery分列、讀取不改DB、payload不符／缺欄未知、按鈕保存後清單刷新及選取保留。01的失敗找到清單刷新被詳情請求擋掉，已用待刷新旗標修正，非放寬驗收。`reports/build-desktop-handling-list-20261029-01`：277檔hash及255檔編譯通過；無採集／模型／ACK，非真人／Web驗收。

@@ -17,6 +17,7 @@ DELIVERY_FILTERS = {"所有接收狀態": "all", "待接手": "pending", "待重
 SEVERITY_NAMES = {value: key for key, value in SEVERITY_FILTERS.items() if value != "all"}
 DELIVERY_NAMES = {value: key for key, value in DELIVERY_FILTERS.items() if value != "all"}
 HANDLING_NAMES = {"new": "新增", "read": "已讀", "handled": "已處理", "ignored": "忽略"}
+HANDLING_FILTERS = {"所有人工狀態": "all", **{v: k for k, v in HANDLING_NAMES.items()}, "未知人工狀態": "unknown"}
 EVENT_TITLES = {"listener.changed": "本機監聽端點變化", "protection.changed": "防護狀態變化",
                 "persistence.changed": "啟動／服務／排程變化", "coverage.degraded": "來源可見性降低",
                 "monitor_gap": "監看未觀測區間"}
@@ -131,10 +132,11 @@ def _delivery(event):
     return value if isinstance(value, str) and value in DELIVERY_NAMES else "unknown"
 
 
-def event_list_view(document, *, severity="all", delivery="all"):
+def event_list_view(document, *, severity="all", delivery="all", handling="all"):
     """Filter only the first 100 loaded rows; disclose all completeness limits."""
     severity = severity if severity in SEVERITY_FILTERS.values() else "all"
     delivery = delivery if delivery in DELIVERY_FILTERS.values() else "all"
+    handling = handling if handling in HANDLING_FILTERS.values() else "all"
     supplied = document.get("events", [])
     supplied = supplied if isinstance(supplied, list) else []
     loaded, events, seen = 0, [], set()
@@ -148,7 +150,10 @@ def event_list_view(document, *, severity="all", delivery="all"):
             continue
         seen.add(event_id)
         loaded += 1
-        if severity != "all" and _severity(item) != severity or delivery != "all" and _delivery(item) != delivery:
+        human = item.get("handling_status")
+        human = human if isinstance(human, str) and human in HANDLING_NAMES else "unknown"
+        if (severity != "all" and _severity(item) != severity or delivery != "all" and _delivery(item) != delivery
+                or handling != "all" and human != handling):
             continue
         stamp = item.get("observed_at", item.get("occurred_at", item.get("created_at")))
         events.append((event_id, (safe_text(stamp, 80), event_title(item), SEVERITY_NAMES[_severity(item)],
