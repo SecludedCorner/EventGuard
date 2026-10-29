@@ -574,9 +574,11 @@ class EventStore:
         except sqlite3.Error as exc:
             raise self._sqlite_error(exc) from exc
 
-    def _prepare_desktop_request(self, value):
+    def _prepare_desktop_request(self, value, *, namespace):
         """Persist a bound human intent before a later explicit status operation."""
         from ..desktop_requests import begin
+        if namespace not in ("live", "test") or not isinstance(value, dict) or value.get("namespace") != namespace:
+            raise ValueError("desktop_request_namespace_mismatch")
         try:
             with self._lock, self._connect() as db:
                 db.execute("BEGIN IMMEDIATE")
@@ -588,9 +590,11 @@ class EventStore:
         except sqlite3.Error as exc:
             raise self._sqlite_error(exc) from exc
 
-    def _complete_desktop_request(self, value):
+    def _complete_desktop_request(self, value, *, namespace):
         """Resolve after durable operation proof, never merely an attempted call."""
         from ..desktop_requests import complete
+        if namespace not in ("live", "test") or not isinstance(value, dict) or value.get("namespace") != namespace:
+            raise ValueError("desktop_request_namespace_mismatch")
         try:
             with self._lock, self._connect() as db:
                 db.execute("BEGIN IMMEDIATE")

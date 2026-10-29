@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：要求日誌scope與唯讀Catalog契約
+
+`reports/verify-desktop-request-scope-20261029-02` UTC08:29:21：31/31、0skip、source_unchanged、Job自然0／remaining0／無強停。namespace為日誌第五必填欄，caller不符於開交易前拒絕；Catalog.detail同一RO交易回所選事件的已驗hash與要求，缺表available空、namespace或hash不符unknown且DB bytes不變。沿原語／Store回歸確認pending1／receipt0，不執行要求。01兩error是fixture自訂資料目錄漏傳Catalog directory，02修正測試後通過；舊四欄日誌仍拒絕、不自動遷移。`reports/build-desktop-request-scope-20261029-01`309檔hash／287檔編譯。此為controller／Tk接線前置，不等同產品跨程序恢復。
+
 ## 2026-10-29：日誌容量交易與已提交操作核對
 
 `reports/verify-desktop-request-store-20261029-03` UTC08:24:57：14/14、0skip、source_unchanged、Job自然0／remaining0／無強停；EventStore prepare最終容量超限rollback整表及DB bytes，重開讀原ID、滿載原ID核對不新增；complete需匹配既有gui操作的事件／狀態／ID／不可變payload_hash，沒有操作證據或source=cli拒絕且bytes保留，後來read與handled→read兩筆歷程不動、pending1／receipt0。01整合揭露view hash夾delivery欄位，已改為_row驗證後的原payload_hash；02全通但匯入TestCase多收3原語案例，03改只借setup／connect，最終14不重複計數。`reports/build-desktop-request-store-20261029-01`308檔hash／286檔編譯。這仍是內部原語／交易包裝，沒有產品dispatch或Tk持久化；命名空間顯式綁定仍待。

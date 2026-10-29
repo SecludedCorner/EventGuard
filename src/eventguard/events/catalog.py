@@ -196,6 +196,19 @@ class EventCatalog:
         except (OSError, ValueError, StoreError):
             return unknown
 
+    @staticmethod
+    def _pending_desktop_requests(db, event_id, payload_hash, namespace):
+        from ..desktop_requests import pending
+        result = {"state": "unknown", "requests": [], "namespace": namespace,
+                  "event_id": event_id, "payload_hash": payload_hash}
+        try:
+            selected = [v for v in pending(db, namespace=namespace) if v["event_id"] == event_id]
+            if any(v["payload_hash"] != payload_hash for v in selected):
+                return result
+            return dict(result, state="available", requests=selected)
+        except (sqlite3.Error, ValueError, TypeError, KeyError):
+            return result
+
     def detail(self, event_id):
         _identifier(event_id)
         with self._read() as db:
@@ -213,6 +226,7 @@ class EventCatalog:
                     "latest_diagnosis": diagnosis, "latest_diagnosis_is_saved": True,
                     "data_trust": "untrusted_data", "incident_conclusion": "not_assessed", "model_calls": 0,
                     "handling_history": self._saved_handling_history(db, event_id, row["payload_hash"]),
+                    "pending_handling_requests": self._pending_desktop_requests(db, event_id, row["payload_hash"], self.namespace),
                     "investigation_revisions": read_revisions(db, event, diagnosis=diagnosis),
                     "investigation": self._saved_investigation(db, event, row["catalog_source"])}
             if event["event_type"] == "advisory.changed":

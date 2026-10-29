@@ -4,12 +4,13 @@ import re
 from .events.disposition_history import IDENTIFIER, OPERATION, STATUSES
 from .events.store import EventStore
 
-FIELDS = ('event_id', 'status', 'operation_id', 'payload_hash')
+FIELDS = ('namespace', 'event_id', 'status', 'operation_id', 'payload_hash')
 MAX_PENDING = 128
 
 
 def _valid(value):
     if (type(value) is not dict or set(value) != set(FIELDS)
+            or type(value['namespace']) is not str or value['namespace'] not in ('live', 'test')
             or type(value['event_id']) is not str or not IDENTIFIER.fullmatch(value['event_id'])
             or type(value['operation_id']) is not str or not OPERATION.fullmatch(value['operation_id'])
             or type(value['status']) is not str or value['status'] not in STATUSES
@@ -18,18 +19,22 @@ def _valid(value):
     return dict(value)
 
 
-def pending(db):
+def pending(db, *, namespace):
     """Missing table is empty; malformed or overfull evidence is never reset."""
+    if type(namespace) is not str or namespace not in ('live', 'test'):
+        raise ValueError('desktop_request_namespace_invalid')
     exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='desktop_status_requests'").fetchone()
     if not exists:
         return []
     if {row[1] for row in db.execute('PRAGMA table_info(desktop_status_requests)')} != set(FIELDS):
         raise ValueError('desktop_request_schema_invalid')
-    rows = db.execute('SELECT event_id,status,operation_id,payload_hash FROM desktop_status_requests ORDER BY operation_id LIMIT ?',
+    rows = db.execute('SELECT namespace,event_id,status,operation_id,payload_hash FROM desktop_status_requests ORDER BY operation_id LIMIT ?',
                       (MAX_PENDING+1,)).fetchall()
     if len(rows) > MAX_PENDING:
         raise ValueError('desktop_request_capacity')
     values = [_valid(dict(zip(FIELDS, row))) for row in rows]
+    if any(v['namespace'] != namespace for v in values):
+        raise ValueError('desktop_request_namespace_mismatch')
     if (len({v['operation_id'] for v in values}) != len(values)
             or len({(v['event_id'], v['status']) for v in values}) != len(values)):
         raise ValueError('desktop_request_conflict')
@@ -51,7 +56,7 @@ def begin(db, value, *, available_bytes):
     event = EventStore._row(row) if row is not None else None
     if event is None or row['payload_hash'] != value['payload_hash']:
         raise ValueError('desktop_request_event_unverified')
-    values = pending(db)
+    values = pending(db, namespace=value['namespace'])
     for old in values:
         if old['operation_id'] == value['operation_id'] or (old['event_id'], old['status']) == (value['event_id'], value['status']):
             if old != value:
@@ -60,9 +65,9 @@ def begin(db, value, *, available_bytes):
     if len(values) >= MAX_PENDING or available_bytes < db.execute('PRAGMA page_size').fetchone()[0]*8:
         raise ValueError('desktop_request_capacity')
     db.execute('''CREATE TABLE IF NOT EXISTS desktop_status_requests(
-        event_id TEXT NOT NULL, status TEXT NOT NULL, operation_id TEXT PRIMARY KEY,
+        namespace TEXT NOT NULL, event_id TEXT NOT NULL, status TEXT NOT NULL, operation_id TEXT PRIMARY KEY,
         payload_hash TEXT NOT NULL, UNIQUE(event_id,status))''')
-    db.execute('INSERT INTO desktop_status_requests(event_id,status,operation_id,payload_hash) VALUES(?,?,?,?)',
+    db.execute('INSERT INTO desktop_status_requests(namespace,event_id,status,operation_id,payload_hash) VALUES(?,?,?,?,?)',
                tuple(value[key] for key in FIELDS))
     return {'persisted': True, 'replayed': False, 'caller_commit_required': True}
 
@@ -72,13 +77,13 @@ def complete(db, value):
     if not db.in_transaction or db.execute('PRAGMA query_only').fetchone()[0]:
         raise ValueError('desktop_request_transaction_required')
     value = _valid(value)
-    if value not in pending(db):
+    if value not in pending(db, namespace=value['namespace']):
         raise ValueError('desktop_request_completion_unverified')
     exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_disposition_operations'").fetchone()
     row = db.execute('SELECT event_id,status,source,payload_hash FROM event_disposition_operations WHERE operation_id=?',
                      (value['operation_id'],)).fetchone() if exists else None
     if row is None or tuple(row) != (value['event_id'], value['status'], 'gui', value['payload_hash']):
         raise ValueError('desktop_request_completion_unverified')
-    db.execute('DELETE FROM desktop_status_requests WHERE event_id=? AND status=? AND operation_id=? AND payload_hash=?',
+    db.execute('DELETE FROM desktop_status_requests WHERE namespace=? AND event_id=? AND status=? AND operation_id=? AND payload_hash=?',
                tuple(value[key] for key in FIELDS))
     return {'resolved': True, 'caller_commit_required': True, 'ack_performed': False}

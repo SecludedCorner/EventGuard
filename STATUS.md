@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 要求namespace與同交易唯讀投影
+
+要求日誌顯式保存live／test，Store入口比對caller namespace；舊缺欄schema或跨namespace不遷移、不當空表。Catalog.detail在原唯讀交易投影pending_handling_requests，綁同事件payload_hash，錯namespace／錯hash／壞schema保持unknown且不reset，不執行要求。`reports/verify-desktop-request-scope-20261029-02`：2026-10-29 16:29（UTC+8）31/31、0skip、source_unchanged、Job自然0／remaining0／無強停，DB bytes／pending1／receipt0保留。01因新測試漏用fixture自訂directory有2error，修正測試路徑後02通過，未放寬scope。`reports/build-desktop-request-scope-20261029-01`309檔hash／287檔編譯；5d78405兩ref已一致。controller／Tk尚未使用該投影，跨程序未確認恢復未完成。
+
 ## 2026-10-29 要求日誌交易與完成證據閘道
 
 EventStore內部prepare使用BEGIN IMMEDIATE、ACK空間預留及寫後實際容量檢查，失敗整筆rollback含新表；complete只刪除與已落盤gui操作四欄一致的待確認要求，不刪事件或歷程，不回退後來決定。整合發現第一切片誤用含delivery的view hash，已改核對經_row驗證的不可變payload_hash，未放寬身分檢查。`reports/verify-desktop-request-store-20261029-03`：2026-10-29 16:24（UTC+8）14/14、0skip、source_unchanged、Job自然0／remaining0／無強停，晚期容量失敗DB bytes不變、重開保留要求、沒有gui提交證據／其他通道不能清除，後來read及兩筆歷程、pending1／receipt0保留。01有hash錯1error，02修正17pass含重複收集的3原語測試，03去重為最終14；未提交失敗狀態。`reports/build-desktop-request-store-20261029-01`308檔hash／286檔編譯，8f60171（+152/−0）已同步兩ref；namespace仍由caller scope承擔，顯式綁定、controller／Tk與兩程序未確認恢復尚待，不宣稱可用。

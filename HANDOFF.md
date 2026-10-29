@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 namespace與Catalog視圖已驗／接controller
+
+31/31、0skip與287檔來源編譯，日誌顯式namespace、Store入口比對、Catalog.detail同交易hash綁定視圖及unknown守恆已驗，見STATUS。下一controller切片：先根據已保存事件hash構成五欄意圖、prepare交易完成後才呼叫Catalog.set_status；外層活動完成失敗時必須保留意圖，不能在被recorded包住的方法內過早complete。只有最外層確認成功才以匹配gui操作證據清除；任何清除失敗保持結果未確認。先控制層與故障測試，再接Tk恢復ID／壞日誌禁寫及兩真Job，無自動重送。
+
 ## 2026-10-29 交易包裝已驗／下一顯式scope與接線
 
 14/14、0skip與286檔來源編譯通過，prepare預留ACK／寫後容量rollback、complete僅根據已有gui操作證據清除確定要求，後來決定與pending保留，見STATUS。尚無任何產品路徑呼叫：下一步先明確綁namespace（目前只依caller目錄）並提供Catalog只讀待確認視圖，再接controller先prepare→明確set_status→確認完成、失敗保留要求；Tk重開從已驗事件hash恢復原ID但不自送，壞日誌要明示並禁新寫入。最後兩真Job提交後丟回條→重開核對，不用既有正常保存重開測試冒充此情境。每單元立即build／測試／普通同步main，整體active。

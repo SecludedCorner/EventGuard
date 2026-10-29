@@ -19,7 +19,7 @@ class DesktopRequestTests(unittest.TestCase):
         self.store = EventStore(Path(temp.name)/'test')
         event = make_synthetic('listener')
         self.store.enqueue(event)
-        self.value = {'event_id': event['event_id'], 'status': 'handled', 'operation_id': 'pending-op',
+        self.value = {'namespace': 'test', 'event_id': event['event_id'], 'status': 'handled', 'operation_id': 'pending-op',
                       'payload_hash': event_payload_hash(validate_event(self.store.get_event(event['event_id'])))}
 
     def connect(self):
@@ -31,14 +31,14 @@ class DesktopRequestTests(unittest.TestCase):
         before = self.store.path.read_bytes()
         with closing(self.connect()) as db:
             db.execute('PRAGMA query_only=ON')
-            self.assertEqual(pending(db), [])
+            self.assertEqual(pending(db, namespace='test'), [])
         self.assertEqual(self.store.path.read_bytes(), before)
         with closing(self.connect()) as db:
             db.execute('BEGIN IMMEDIATE')
             self.assertFalse(begin(db, self.value, available_bytes=100000)['replayed'])
             db.commit()
         with closing(self.connect()) as db:
-            self.assertEqual(pending(db), [self.value])
+            self.assertEqual(pending(db, namespace='test'), [self.value])
             db.execute('BEGIN IMMEDIATE')
             with patch('eventguard.desktop_requests.MAX_PENDING', 1):
                 self.assertTrue(begin(db, self.value, available_bytes=0)['replayed'])
@@ -70,5 +70,5 @@ class DesktopRequestTests(unittest.TestCase):
             db.commit()
             before = self.store.path.read_bytes()
             with self.assertRaisesRegex(ValueError, 'desktop_request_schema_invalid'):
-                pending(db)
+                pending(db, namespace='test')
             self.assertEqual(self.store.path.read_bytes(), before)
