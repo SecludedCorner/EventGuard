@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 Tk錯案／損壞呈現已驗／接投遞整合
+
+真Tk新增3情境已驗，22/22、0skip／307來源編譯：異ID拒絕不串前案、健康案可開、舊詳情無法寫損壞來源、刷新未知不稱安全；DB位元組／pending／receipt守恆，見STATUS。接續受影響投遞、dispatch、queue、保留與雙pin及既有桌面回條恢復整合；未改原生／真人／Web獨立關卡，AI盯哨仍active。
+
 ## 2026-10-29 review來源寫入已修／接Tk故障呈現
 
 save_review也已在寫入交易中驗row／payload ID與hash，三個red→green且既有保存結果不覆寫，60/60、0skip／306來源編譯，見STATUS。下一用實際Tk與合成SQLite驗損壞來源不顯成另一事件或安全空集合、控制層不送ACK／模型；再做受影響投遞與保留整合。整體資安AI盯哨未完成，其他實機關卡保留。

@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 實際Tk損壞來源拒絕與未知呈現通過
+
+`reports/verify-desktop-corrupt-event-widgets-20261029-02`（18:28 UTC+8）5模組22/22、0skip、source_unchanged、Job自然0／remaining0／無強停；`reports/build-desktop-corrupt-event-widgets-20261029-01`329hash／307檔來源編譯。真Tk＋合成SQLite核對：異ID詳情不沿用前案、寫入停用、健康事件可開；舊詳情來源後損壞不能保存；刷新失敗總數未知且明示未顯示不代表安全。event DB位元組不變、pending2／receipt0，禁scan／model／ACK。01為測試過度要求清單清空後無作用的journal旗標亦重設（實際已無選取且所有寫入停用），02保留使用者行為斷言並僅在錯誤詳情檢查旗標，未改產品或降低拒絕條件。下一接受影響投遞／保留／雙要求回條整合；非原生輸入、真人或真防守。
+
 ## 2026-10-29 保存診斷也在交易內核對事件來源
 
 保存診斷的3個red案例證實：只比對hash欄位會接受調查後損壞payload、hash有效的異ID來源，也會覆寫既有結果。save_review現於BEGIN IMMEDIATE內、建表／覆寫前呼叫共用_payload；來源失配拒絕且DB位元組不變。Catalog detail／list／investigate對異ID均拒絕不寫。`reports/verify-review-source-identity-red-20261029-01`3fail（原fixture類別直接import額外被unittest載入8項，green改module引用避免重複）；`reports/verify-review-source-identity-core-20261029-01`7模組60/60、0skip、source_unchanged、Job自然0／remaining0／無強停。`reports/build-review-source-identity-core-20261029-01`328hash／306編譯。沒有原生／模型；下一驗真Tk對損壞來源的呈現與受影響投遞／保留整合，不用後端拒絕推定UI已驗。

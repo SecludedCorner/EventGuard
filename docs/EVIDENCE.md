@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：錯案來源真Tk呈現驗收
+
+`reports/verify-desktop-corrupt-event-widgets-20261029-02`22/22、0skip（5模組），307語法、source_unchanged、Job自然exit0／remaining0／無強停；3個新增真Tk情境覆蓋錯誤詳情／健康案切換、舊詳情保存拒絕及刷新未知總數。DB位元組、pending2／receipt0守恆，fixture禁止ACK／scan／model。01 21/22：錯誤斷言要求無選取狀態重設內部旗標；02檢查所有實際寫入按鈕停用、舊案文字消失及未知而非安全空集合，錯誤詳情仍要求journal未知。build-desktop-corrupt-event-widgets-20261029-01為329hash／307編譯。不是原生輸入／真人／新agent證據。
+
 ## 2026-10-29：診斷保存來源核對red→green
 
 18:25（UTC+8）：review-source-identity-red-20261029-01三個保存測試fail、Catalog拒絕已pass；保存入口新增交易內_payload驗證後，`reports/verify-review-source-identity-core-20261029-01`60/60、0skip（7模組），無失敗／語法錯誤，source_unchanged／Job自然exit0／remaining0／無強停。新增4項涵蓋晚到損壞、hash有效異ID、既有結果不覆寫與Catalog三入口；不再直接import TestCase造成重複計數。`reports/build-review-source-identity-core-20261029-01`328hash／306來源編譯；沒有新真接收或防守驗收。
