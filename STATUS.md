@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面人工處置及接續增量整合223項通過
+
+人工處置與ACK獨立的四狀態入口、清單身分投影／分列／篩選、保存後刷新、歷史查證摘要及明確歷程備份均有真Tk＋真合成SQLite閉環；修復最小視窗無可見事件列及長回條裁切。各單元已逐筆普通同步main／開發ref，直接遠端核對產品92cc0807052f8cd35d177cdc22fa4c1ff40137c2；兩工作樹及對origin/main差異0，每commit增刪合計皆少於200，無累積500行。完整提交訊息／行數見EVIDENCE最新表。
+
+`reports/verify-desktop-handling-complete-20261029-01`：2026-10-29 13:58（UTC+8）25個受影響模組223/223、0skip、source_unchanged、261檔語法通過，Job自然退出0／remaining0／無強停；`reports/build-desktop-handling-complete-20261029-01`283檔hash相符、261檔編譯。`reports/release-prep-desktop-handling-complete-20261029-01`綁定上述產品SHA，363檔可重現；未建立tag／release，不聲稱CI或真人／原生已通過。純文件本節沿用該來源build／相關整合並檢查引用。平台目標active且最新佇列接續桌面備份身分核對入口；Web／200%／真人／原生輸入／來源覆蓋／24h／reboot及完整歷程還原／容量釋放仍獨立待驗。
+
 ## 2026-10-29 窄視窗長備份回條換行修復
 
 真映射Tk重現850×620長備份回條以固定1000px換行、超過label實際寬度（01）；現隨Configure事件按實際寬度換行，不截掉路徑與未確認／耐久性限制。`reports/verify-desktop-message-layout-20261029-02`：2026-10-29 13:55（UTC+8）46/46、0skip、source_unchanged、Job自然退出0／remaining0／無強停，真Tk→合成備份後驗1080×760／850×620換行寬度／完整label高度、選取列及備份控制仍可見，並回歸相關Tk入口。`reports/build-desktop-message-layout-20261029-01`283檔hash／261檔編譯通過；4a1cab6（+93/−10）已普通同步main／開發ref。非真人、原生輸入或Web200%驗收，無新查詢／模型／ACK。

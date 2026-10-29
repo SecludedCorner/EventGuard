@@ -1,5 +1,24 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面處置／查證／備份最終受影響整合
+
+`reports/verify-desktop-handling-complete-20261029-01` UTC05:58:22：25模組223/223、0skip、source_unchanged、261檔語法無誤，Job自然退出0／remaining0／無強停。真Tk＋真合成SQLite／本機暫存檔及自有Job API，不與前述重疊定向相加；無採集／新模型／ACK，非真人／Web／原生輸入。`reports/build-desktop-handling-complete-20261029-01`283檔hash及261檔編譯通過。`reports/release-prep-desktop-handling-complete-20261029-01`綁定92cc0807052f8cd35d177cdc22fa4c1ff40137c2，363檔可重現，archive SHA256 190aaf99684183b6a496b9e50bc4671614785c330dda23c6977d373b91953a82；非tag／release，目錄項耐久性及完整還原未驗。
+
+下列各單元均先build／相關測試、指定檔案stage，再普通push開發ref與ff-only整合／push main；直接遠端核對產品兩ref為92cc080，兩工作樹及origin/main...HEAD差異0。數字均相對各父commit，包含本次新增檔；沒有以工作樹乾淨掩蓋待整合差異。後續純文件提交另由Git歷史核對。
+
+| SHA | 完整訊息 | +／− |
+| --- | --- | --- |
+| 54f3f2a | feat(desktop): bind loaded handling states to saved event identity | 142／2 |
+| 023644a | feat(desktop): display handling separately and refresh after decisions | 89／9 |
+| d8e6e21 | feat(desktop): filter loaded events by human handling state | 97／10 |
+| ee8c256 | docs(desktop): record verified handling visibility integration [skip ci] | 16／0 |
+| d28d817 | feat(desktop): summarize saved diagnostic gaps without new queries | 120／4 |
+| 65d9d83 | test(desktop): verify saved diagnostic summaries through real Tk | 100／0 |
+| deb4948 | feat(desktop): back up handling history without changing source data | 99／1 |
+| bec37d8 | feat(desktop): add explicit handling history backup controls | 115／3 |
+| 4a1cab6 | fix(desktop): keep selected events visible at minimum window size | 93／10 |
+| 92cc080 | fix(desktop): wrap long operation receipts to the actual window width | 62／1 |
+
 ## 2026-10-29：長備份回條的實際Tk換行
 
 `reports/verify-desktop-message-layout-20261029-02` UTC05:55:40：46/46、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真Tk實際備份後長路徑／限制文字，在1080×760與850×620核對wraplength不超過實際label、完整所需高度、已選事件列及備份控制可見；01重現固定1000px超寬，已修正隨Configure換行。`reports/build-desktop-message-layout-20261029-01`283檔hash及261檔編譯通過；合成資料與自有視窗，非人類／原生輸入／Web200%，沒有採集／模型／ACK。
