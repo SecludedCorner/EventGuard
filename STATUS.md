@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 非提升宿主比較消除兩項來源阻擋
+
+依既有開發授權比較不同工具執行環境，worker先以TOKEN_QUERY確認TokenElevation=0，未提權／UAC／改設定。task-com-root-host-20261029-02的同一Connect/GetFolder成功；原受限環境0x80070003保留。source-coverage-host-20261029-01再單查先前不完整四來源：Defender ok7列／error0、tasks ok220／error0；processes partial585／179error（僅64保留、115未知），listeners partial251／23 ListenerOpenProcess access_denied。總2.721679秒、每query≤5秒／總預算35秒，4內Job與外Job自然0／remaining0／無強停。只保存分類計數及自有Job、無rawfacts／模型／系統變更，不是完整來源或安全PASS，也不據token metadata推論特定拒讀根因。
+
+self-token兩路徑皆非提升／medium／restricted，elevation type不同，見execution-context-sandbox-20261029-02及execution-context-host-20261029-02；01 helper KeyError修正後的新run成功，舊失敗未覆寫。來源碼未變，純證據文件沿用338hash／315來源編譯與Task契約56/56（0skip），新診斷有獨立退出證據。下一在相同非提升宿主環境啟動有限期自有合成Tk驗原生輸入；不重查成功來源，不重問同範圍許可。
+
 ## 2026-10-29 瀏覽器恢復／Web實際操作增量驗收
 
 內建瀏覽器與專用Chrome已成功操作本版localhost合成fixture，舊「全部瀏覽器blocked」已失效，CLAUDE已更新。reports/web-ui-restored-20261029-01驗七卡片、篩選high第二頁／返回，5分鐘deadline自然0；reports/web-ui-zoom-20261029-02唯讀重開同庫，七情境均過（歷史成功＋目前denied、stale、無歷史、not_applicable、ok空結果、partial＋歷史、future歷史未知），800／1280 CSS寬度無全頁橫向溢位，reload與Back／Forward保留篩選／頁碼、Enter往返焦點回evt-anchor、版本展開／summary焦點跨18次真GET仍保留，console error0。新fixture合作停止、兩Job自然exit0／remaining0／無強停；兩次DB位元組未變、pending68／ACK0／model0／native0，無真人結果。

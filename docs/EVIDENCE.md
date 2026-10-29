@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-29：不同非提升執行環境的真來源結果
+
+reports/task-com-root-host-20261029-02：worker先核TokenElevation=0，同root COM查詢ok／.0134秒／自然0／remaining0／無強停；原default unknown未洗掉。reports/source-coverage-host-20261029-01：Defender ok7、tasks ok220均error0；processes partial585／179error、保留64／未保留115；listeners partial251／23error全ListenerOpenProcess access_denied。總2.721679秒、4query與外Job均自然0／無殘留，不保存其他程序身份、名稱、路徑、地址／port或rawfacts；model0／系統變更0。兩路徑self-token結果均非提升／medium／restricted，不能單憑差異推論根因。這是真唯讀覆蓋增量，不代表安全或防守。
+
+來源編譯338hash／315檔及56項定向來源未變，文件沿用既有受測範圍。scope/time/hash及站立授權依據只留reports，不把工具邊界批准當OS提權，不重問同已授權範圍。
+
 ## 2026-10-29：真Web七情境／響應尺寸／版本焦點
 
 web-ui-restored-20261029-01與web-ui-zoom-20261029-02為兩個有限期私有Job，使用同一68事件／1前版合成SQLite，真IAB／Chrome UI讀取並保存DOM與本地原始截圖。七卡片case均pass；800 CSS scrollWidth785、1280為1265，沒有全頁橫向溢位；high/page1重新整理及Back／Forward恢復，Enter返回evt-anchor查看按鈕。固定route計數證實版本summary焦點與open跨18次真detail GET仍保留，非只靠等待推定；console error0。兩Job自然0／remaining0／無強停，DB位元組不變、pending68／receipt0／model0／native0。尚無人類操作量測。

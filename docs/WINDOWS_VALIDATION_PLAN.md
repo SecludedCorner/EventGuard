@@ -1,5 +1,9 @@
 # Phase 7：Windows 可逆狀態與故障恢復驗證計畫
 
+## 2026-10-29 非提升宿主驗收增量
+
+source-coverage-host-20261029-01在worker驗TokenElevation=0後，一次查既有Defender／processes／listeners／tasks metadata；Defender與tasks可讀，另兩仍partial，詳STATUS。每query≤5秒、總35秒、4內Job與外Job自然退出／無殘留，無rawfacts／新模型／系統變更。這與原default結果分開保留，不能混稱完整baseline或防守驗收；同範圍已具開發站立授權，不需再次逐次批准。24h／reboot等未指定範圍仍獨立。
+
 ## 2026-10-29 新包已執行／目前授權與partial結果
 
 使用者已授權本專案必要的一般權限唯讀開發診斷，同範圍不再逐次問；每次保留scope/hash/time與授權依據、私有Job／最小資料及退出回條，詳AGENTS／CLAUDE最新節。這不擴充提權、系統／安全設定、新模型、敏感處置或未指定長時運行。

@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 非提升宿主路徑可讀Defender／tasks
+
+先讀STATUS最新：default與host worker皆核非提升，host root COM成功、既有4來源比較Defender ok7／tasks ok220；processes/listeners仍partial。每個Job自然0／remaining0／無強停，rawfacts/model/system changes0，證據source-coverage-host-20261029-01。不要再稱tasks／Defender全域不可用或重問同範圍；舊受限結果保留、根因未確定。下一沿同非提升宿主路徑做有限期合成Tk原生輸入驗收；其他200%／真人／長跑／可信恢復／真防守關卡獨立未完成。
+
 ## 2026-10-29 Web工具已恢復／特定200%仍待驗
 
 已在真IAB／Chrome跑七來源情境、800/1280 CSS、非預設high第二頁／reload／Back／Forward、Enter返回，以及版本焦點跨18次真GET；兩自有fixture自然0、DB未變／pending68／ACK0，見STATUS與web-ui-zoom-20261029-02。不要再沿舊browser disabled當全域阻擋，也不要重問既有許可。真200%無比例變更證據、管理啟用屬性不支援，明標partial且未繞過。原生資料已實測partial/denied而非未授權；剩餘200%、原生Tk輸入、真人、24h/reboot、恢復可信根與真防守各需真證據。先核具體前置變化，不再重查同native／重跑同fixture。

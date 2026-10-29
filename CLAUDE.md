@@ -1,5 +1,9 @@
 # EventGuard 工作提醒
 
+## 2026-10-29 工具執行邊界不等於OS提升
+
+同一Task root查詢在default工具環境unknown，在host工具環境ok；兩邊worker自查皆TokenElevation=0，未觸發UAC或改token／系統設定。host另驗Defender／tasks可讀，processes／listeners仍partial，見STATUS。後續必要診斷依已授權範圍使用可用路徑、在worker先核非提升，保存scope/hash/time與最小資料，不重問相同許可、不把受限路徑失敗視為全主機不可用，也不推論需管理員或安全。
+
 ## 2026-10-29 瀏覽器實際已恢復，不能沿用舊blocked結論
 
 本次已用內建瀏覽器與專用Chrome分頁完成真localhost合成UI操作，見STATUS／reports/web-ui-zoom-20261029-02；七來源情境、800／1280 CSS寬度、篩選／頁碼／Back／Forward、鍵盤返回及版本焦點跨18次真詳情讀取已驗。相同已授權範圍不要再問或反覆探測。

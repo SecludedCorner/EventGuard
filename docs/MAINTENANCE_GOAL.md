@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 執行環境比較已解兩個來源阻擋
+
+HOST-CONTEXT-COVERAGE已驗：非提升host root COM成功，Defender ok7／tasks ok220；原default結果仍保留，processes/listeners仍partial，見STATUS／source-coverage-host-20261029-01。沒有新模型、系統設定或OS提權。下一最高可執行為DESKTOP-NATIVE-HOST：同非提升環境啟動有限期自有合成Tk，只有工具返回匹配窗口才做原生輸入並驗人工狀態與ACK獨立；無窗口則保留缺口、不猜ID或重複輪詢。其他獨立真環境關卡不因本次ok改DONE。
+
 ## 2026-10-29 Web可執行驗收已補／剩餘獨立關卡
 
 原一般browser blocked已由真IAB／Chrome操作消除：七來源情境、800/1280 CSS、high/page1保存／reload／Back／Forward、Enter返回及版本summary/open跨18次真GET已驗，兩Job自然0／DB未變／ACK0，見STATUS。真200%仍false（shortcut比例不變、工具無目標／啟用屬性不支援），不把viewport當zoom。已清理自有分頁／尺寸override與程序。
