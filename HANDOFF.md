@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 視圖驗證器已驗／立即接Tk恢復
+
+30/30、0skip與292檔來源編譯，gui_requests.recover(real Catalog detail)可得原map，錯形／scope／hash回None，available空回{}，見STATUS。下一Tk在_show_detail驗證並恢復所選事件keys；讀取不能清掉仍有丟回條的本視窗keys（後端可能已成功清日誌），要合併且衝突禁寫，不自送。ControllerWorker的set_status改用存在的set_status_durable（legacy fixture明確補對應介面），durable回條request_pending=true或未知時保留ID；壞日誌禁人工寫入仍可閱讀。新增真Tk／SQLite重建窗口及容量故障契約，再補兩真Job故障路徑。
+
 ## 2026-10-29 durable控制層通過／接Tk
 
 18/18、0skip與290檔來源編譯，set_status_durable先意圖commit→hash綁定recorded操作→外層確認才complete，提交後活動／清除失敗留ID，見STATUS。下一Tk切片需走durable控制層；detail pending_handling_requests須核對事件／namespace／hash／最多128與每欄，available才恢復原ID，unknown禁新人工寫入但保留唯讀；收到request_pending=true不得清記憶體ID，返回／重開不自送。現有合成controller whitelist也需接新方法，容量失敗現在會合理新增意圖，測試改驗原事件／歷程／pending守恆並證明意圖保留，不能再把DB bytes無變當完整契約。最後補兩真Job未確認重開，不停在控制層。

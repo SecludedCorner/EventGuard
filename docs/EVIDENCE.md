@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：Tk原ID恢復前的嚴格視圖驗證
+
+`reports/verify-desktop-request-view-20261029-01` UTC08:40:39：30/30、0skip、source_unchanged、Job自然0／remaining0／無強停。gui_requests.recover只投影經同事件／namespace／原hash核對且無重複的有界要求；缺值／錯誤與available空分開。真Catalog、真durable controller提交後活動失敗的原ID可投影，DB bytes不變、pending1／receipt0；非原事件、namespace、hash、unknown、錯list／重複ID及空值拒絕。`reports/build-desktop-request-view-20261029-01`314hash／292編譯；無dispatch／模型／採集／ACK，Tk接線待下一單元。
+
 ## 2026-10-29：durable控制層與外層活動回條
 
 `reports/verify-desktop-request-control-20261029-01` UTC08:37:41：18/18、0skip、source_unchanged、Job自然0／remaining0／無強停。真controller／SQLite在_set_status_bound開始前已讀到原意圖；activity.complete在狀態commit後失敗不清意圖，新controller只於明確set_status_durable同ID重試才核對，讀回後來read／兩筆歷程、pending1／receipt0。prepare容量失敗哨兵證明未dispatch；complete持久化失敗固定completion_unconfirmed並保留ID，下一次明確重試才清除。`reports/build-desktop-request-control-20261029-01`312hash／290編譯。GUI尚未改呼叫，不冒稱真Tk或兩程序故障已驗。

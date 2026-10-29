@@ -221,7 +221,7 @@ class EventCatalog:
             event = EventStore._row(row)
             from .investigation_revision_read import read_revisions
             diagnosis = self._saved_diagnosis(db, event)
-            result = {**self._summary(row, event), "namespace": self.namespace, "event": event_view(event),
+            result = {**self._summary(row, event), "namespace": self.namespace, "payload_hash": row["payload_hash"], "event": event_view(event),
                     "interpretation": review(event), "guidance": event_guidance(event),
                     "latest_diagnosis": diagnosis, "latest_diagnosis_is_saved": True,
                     "data_trust": "untrusted_data", "incident_conclusion": "not_assessed", "model_calls": 0,

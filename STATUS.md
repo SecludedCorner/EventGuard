@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 Tk待確認視圖驗證前置
+
+Catalog.detail加原payload_hash；gui_requests.recover核對同事件／namespace／hash、固定五欄、最多128及重複ID，available空回空map、unknown或錯形回None，不混成安全空集合。`reports/verify-desktop-request-view-20261029-01`：2026-10-29 16:40（UTC+8）30/30、0skip、source_unchanged、Job自然0／remaining0／無強停；真Catalog的提交後未確認視圖可讀原ID、讀前後DB bytes／pending1／receipt0守恆，錯身分／namespace／hash／重複要求均unknown。`reports/build-desktop-request-view-20261029-01`314hash／292編譯；cb66959已同步兩ref。Tk尚未呼叫此驗證器，下一單元接線，非已完成GUI恢復。
+
 ## 2026-10-29 durable控制層已接先意圖後活動完成
 
 新增set_status_durable及內部hash綁定的recorded方法：先提交意圖，再執行含activity.begin／complete的狀態動作，最外層確認成功才刪除匹配要求；活動完成或要求清除失敗保持未確認／原ID。`reports/verify-desktop-request-control-20261029-01`：2026-10-29 16:37（UTC+8）18/18、0skip、source_unchanged、Job自然0／remaining0／無強停，真合成SQLite驗實際操作前已可讀意圖、提交後活動失敗跨controller重建原ID明確重試不回退較新read、prepare失敗不dispatch、清除失敗保留、pending1／receipt0。`reports/build-desktop-request-control-20261029-01`312hash／290編譯；b713f2e兩ref已一致。GUI仍走既有set_status，下一切片接durable路徑及原ID恢復，不把控制層當Tk已驗。
