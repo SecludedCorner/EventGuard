@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 DESKTOP-DIAG-SUMMARY 可執行接續
+
+桌面人工狀態／清單158/158整合已驗及逐單元普通同步main。下一個可執行缺口是已保存查證在Tk摘要只有時間，需展開raw JSON才可分辨partial／拒讀／截斷。驗收：沿用Catalog已驗證的診斷事件身分與hash，歷史觀察時間／結果／來源coverage／截斷分列，缺失或不符維持未知，不推導安全、修復或新增關聯；pure projection後以真Tk＋真合成SQLite驗讀取守恆，無新查詢／模型／ACK。依賴既有review schema及detail只讀路徑；下一動作核對契約並實作有界摘要，每單元立即普通同步main，Web／真人／原生待驗保留。
+
 ## 2026-10-29 DESKTOP-HANDLING-FILTER 已驗
 
 人工狀態清單／三篩選交集、未知、保存後刷新／移出及選取守恆均已實作，真Tk與真合成SQLite通過68/68及未知補強27/27、0skip，255檔來源編譯。接續受影響桌面／Catalog／ACK整合及來源可重現保存，不無限重跑未受影響全庫；每單元普通同步main，目標active。Web、真人／原生等獨立關卡仍未完成。

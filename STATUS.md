@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面人工狀態／清單整合158項通過
+
+54f3f2a（+142/−2）、023644a（+89/−9）、d8e6e21（+97/−10）已各自build／相關測試後commit、普通push並ff-only整合main，兩遠端直接核對d8e6e214285e3b9bf1643e25e6ecbc700e3cddfa，工作樹與對origin/main差異0。`reports/verify-desktop-handling-visible-final-20261029-01`於2026-10-29 13:32（UTC+8）158/158、0skip、source_unchanged、255檔語法通過，Job自然退出0／remaining0／無強停；包含13個受影響模組及真Tk／合成SQLite，非真人／Web／原生驗收。來源build277檔hash相符；`reports/release-prep-desktop-handling-visible-20261029-01`綁定上述SHA，357檔可重現，未發布。get_goal回讀active，桌面優先與完整待驗保留。下一個桌面缺口：目前另存查證只顯時間，需唯讀摘要分開歷史結果／可見性／截斷及未知，先核對保存契約，不新增查詢或ACK。
+
 ## 2026-10-29 真Tk人工狀態篩選
 
 人工狀態、嚴重度及接收狀態可取交集，只涵蓋已載入最多100件；含未知選項及一鍵清除。真Tk＋合成SQLite驗交集、計數、隱藏選取清掉詳情、保存後不符篩選移出視圖、清除還原、讀取DB bytes與pending／receipt守恆；pure presenter另驗101件邊界，不宣稱全庫。`reports/verify-desktop-handling-filter-20261029-01`：2026-10-29 13:29（UTC+8）68/68、0skip；補強真Tk未知選項後02為27/27、0skip（13:30），來源產品不變，不相加。皆source_unchanged、Job自然退出0／remaining0／無強停。`reports/build-desktop-handling-filter-20261029-01`：277檔hash及255檔編譯通過。023644a（+89/−9）已普通同步main及開發ref；GUI操作文件同步更新，Web／真人／原生仍各自待驗。
