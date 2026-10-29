@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 未確認要求閉環整合235項通過
+
+產品638b5e1b3c431329bb23eee447ed05b343a081d9已逐單元普通push開發分支、ff-only整合／push main及直接核對兩ref，工作樹／待整合差異0；GUI文件已更新原ID落盤、consumer確認、重開不自送與unknown禁寫。`reports/verify-desktop-request-final-20261029-01`：2026-10-29 16:56（UTC+8）42模組235/235、0skip、source_unchanged、295檔語法通過、Job自然0／remaining0／無強停，涵蓋桌面、Catalog、歷程、durable控制層、真Tk與兩真Job成功回條丟失重開；非全庫或真人。`reports/build-desktop-request-final-20261029-01`317hash／295檔來源編譯；本純文件沿用該build並檢查操作／引用。
+
+下一DESKTOP-REQUEST-CONFIRMATION-FAILURE：消費者已收到保存回條、要求清理回條再失敗的真Tk分支仍缺直接故障證據（目前只有控制層），需明示保存回條已收到、清理結果未知而非重新宣稱未保存，原ID不自送／不回退；同步補容量故障的原事件hash／完整歷程守恆。完整目標active，真人／原生輸入／Web200%／原生覆蓋／24h／reboot及歷程恢復可信根／容量釋放仍各自未驗。
+
 ## 2026-10-29 兩真程序的成功回條丟失／恢復閉環
 
 第一私有Job真Tk按鈕保存handled後故意丟成功回條，原ID留日誌，另一明示合成操作改read後自然退出；第二私有Job真Tk同scope先唯讀恢復原ID（初始DB hash不變、0自動save），明確按原handled只重播核對，consumer確認清要求，read／兩筆歷程／pending4／receipt0保留。舊ready／exit／原handle guardian bytes不變，新attempt無資料副本。`reports/verify-desktop-request-process-20261029-01`：2026-10-29 16:52（UTC+8）6/6、0skip、source_unchanged、外Job及兩程序自然0／remaining0／無強停，含新窗口與正常重開／scope拒絕回歸。各desktop-ux-request-*留request-probe／request-guardian，第二attempt的cross-process-proof.json索引兩root；均automated_fixture、participant_results=null。`reports/build-desktop-request-process-20261029-01`317hash／295編譯；6bdcab3兩ref一致。接續更新過時in-session操作文件、受影響整合與來源保存，不升格真人／原生驗收。

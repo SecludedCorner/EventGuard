@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 235項整合已驗／接確認清理故障分支
+
+產品638b5e1兩遠端ref一致，42模組235/235、0skip、295檔來源編譯及Job自然0／無殘留／強停，見STATUS／EVIDENCE。GUI操作已改為持久化／consumer確認／原ID恢復，不再宣稱只限本視窗；仍無真人或原生輸入結果。下一DESKTOP-REQUEST-CONFIRMATION-FAILURE：真Tk分別在confirm_status_receipt清理前失敗、清理成功後丟回條，驗已收到保存回條的事實與清理未知分列、不顯示最終成功／未保存、原ID明確重試／不自送／不回退後來決定；清理失敗只有controller證據不能冒稱元件已驗。容量故障原事件hash與完整歷程亦補守恆，不只比較狀態／筆數。每單元立即普通同步main，整體active及獨立待驗清單保留。
+
 ## 2026-10-29 兩真程序未確認恢復已驗／接整合保存
 
 6/6、0skip與295檔來源編譯；第一真Job／Tk成功後丟回條自然退出，第二同DB初始hash一致、讀回原ID不自送，明確核對只重播、不回退較新read，consumer確認後待確認1→0、pending4／receipt0及舊收據保留，見STATUS／EVIDENCE。下一修GUI文內「識別僅限本視窗」過時文字、跑受影響桌面／Catalog／history整合並保存可重現來源，不重跑無變動全庫。完整目標active，真人／Web200%／原生／恢復可信根與容量仍獨立待驗。

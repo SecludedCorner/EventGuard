@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-29：要求持久化受影響整合235項
+
+`reports/verify-desktop-request-final-20261029-01` UTC08:56:58：42模組235/235、0skip、source_unchanged、295檔語法、Job自然0／remaining0／無強停。含namespace／不可變hash交易閘道、先意圖後操作、Tk已收到才確認、壞日誌禁寫且可讀、同窗口／新窗口／兩真Job原ID明確核對、不回退read、pending／receipt及舊證據守恆；合成／自動化分別標示，不代替原生或真人。`reports/build-desktop-request-final-20261029-01`317hash／295編譯，產品638b5e1兩遠端ref一致、兩工作樹／待整合差異0。
+
+本批提交：4ea33f9 namespace +212/−132（含CRLF保存失誤）、14ad6f4 LF原語測試 +82/−74、4fc7b70 LF交易測試 +56/−48，修正後才main；b713f2e寫入hash +61/−3、cb66959控制層 +118/−0、576ea28視圖驗證 +85/−1、50f813e等consumer確認 +57/−5、6bdcab3 Tk +145/−27、638b5e1兩程序故障 +154/−0。未改寫歷史、未超500待整合行數；344行換行誤提交已明示修正，不拿該數字當功能增量。完成回條清理失敗真Tk分支另列下一單元，不冒稱全故障驗收完成。
+
 ## 2026-10-29：兩真Job／Tk丟成功回條後恢復原ID
 
 `reports/verify-desktop-request-process-20261029-01` UTC08:52:27：6/6、0skip、source_unchanged、Job自然0／remaining0／無強停。desktop_request_process_probe第一程序實際Tk保存後丟成功回條、保留ID並於合成CLI較新read後自然退出，第二程序同scope先讀原ID／初始DB SHA相同、0自動重送，再實際按原handled；同ID只核對舊操作，最終read／兩筆歷程／pending4／receipt0不變、待確認1→0。兩個原handle managed／child_exited／exit0／remaining0／無強停，各request-guardian／request-probe及第二cross-process-proof.json留desktop-ux-request-*；原三收據bytes不變、無clone，採集／spawn／ACK哨兵未觸發，全部明示automated_fixture非真人。`reports/build-desktop-request-process-20261029-01`317hash／295編譯。不同case cohort不相加，不替代原生輸入／Web200%／長時實機。

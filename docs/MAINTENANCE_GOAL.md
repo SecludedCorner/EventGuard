@@ -1,5 +1,11 @@
 # EventGuard 目前目標
 
+## 2026-10-29 最新可執行：DESKTOP-REQUEST-CONFIRMATION-FAILURE
+
+DESKTOP-REQUEST-DURABILITY主路徑已接Tk與原ID重開：先意圖commit、namespace／hash綁定實際交易、consumer已收到後才清理，兩真Job成功回條丟失→自然退出→同DB原ID核對已驗，42模組235項／0skip及295檔來源編譯；產品638b5e1逐單元普通同步main。下方「未接UI」為歷史，不再當現況。
+
+下一真實觸點：Tk在保存回條已收到、確認要求清理回條卻失敗時，需分清已知保存與未知清理；目前此故障只有controller證據。以真Tk＋合成SQLite注入清理前失敗／清理成功後丟回條，驗不冒稱未保存或最終核對完成、保留原ID、不自送、不回退較新決定、切換事件不串回條；容量失敗亦核對原event hash及完整歷程不變，待確認意圖新增單獨明示。每單元build／相關測試後立即普通同步main、兩個500行基準不變。真人／原生輸入／Web200%、原生覆蓋／24h／reboot及完整歷程恢復可信根／容量仍獨立未驗，完整目標active，不以235項升格整體DONE。
+
 ## 2026-10-29 最新可執行：DESKTOP-REQUEST-DURABILITY
 
 容量與活動失敗分列、提交後未確認／同ID不回退已驗67項；事件所屬未確認提示與in-session限制、最小視窗及跨程序保存讀回回歸已驗13項。仍缺未確認operation_id跨程序保存，不能因提示已清楚就當恢復完成。
