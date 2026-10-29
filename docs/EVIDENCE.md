@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：兩個真GUI程序保存／讀回閉環
+
+`reports/verify-desktop-process-reopen-20261029-01` UTC07:50:43：8/8、0skip、source_unchanged，Job自然退出0／remaining0／無強停。test_desktop_fixture_process_reopen啟動兩個私有Job的真Tk程序：第一個invoke已處理與保存調查，第二個重開同scope並核對實際Text／Treeview、同case_id／DB hash，舊worker-ready／worker-exit／probe-guardian bytes不變、新attempt無DB副本。每個probe-result及原handle guardian回條留各desktop-ux-probe-*，pending4／receipt0，禁止採集／模型子程序／ACK的哨兵未觸發。明示自動化fixture及participant_results=null，不是原生輸入或真人測試。`reports/build-desktop-process-reopen-20261029-01`304檔hash／282檔來源編譯；正式CLI未加自動保存旗標。
+
 ## 2026-10-29：原scope／新attempt重開接線
 
 `reports/verify-desktop-launcher-reopen-20261029-01` UTC07:45:12：12/12、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真Job／Tk新attempt讀同原scope，DB bytes與原guardian-exit／worker-exit／session-result三收據不變，新attempt無複製DB；active controller owner由另一child拒絕、缺scope不建DB，拒絕worker狀態blocked／程序exit2仍如實unconfirmed。兩launch間由controller保存handled／case，不升格第一GUI內保存證據；後續補完整GUI跨程序閉環。`reports/build-desktop-launcher-reopen-20261029-01`302檔hash／280檔編譯；無原生採集／模型／ACK／真人結果。

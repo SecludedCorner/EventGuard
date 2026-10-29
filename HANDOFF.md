@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 跨程序真Tk保存／讀回已驗
+
+8/8、0skip與282檔來源編譯通過；測試owned probe第一真Tk按鈕保存handled／case、第二真Tk同scope Text／Treeview讀回，DB hash／舊收據／pending4／receipt0保留，兩Job自然退出，見STATUS／EVIDENCE。回呼僅測試使用且明示automated_fixture_actions，不冒充真人；下一步補兩個GUI owner同時開啟的拒絕／退出證據，再更新GUI重開操作與受影響整合。目標仍active，真人與原生等獨立待驗不變。
+
 ## 2026-10-29 launcher重開route已驗
 
 --name新attempt＋--reopen-from原始scope，12/12、0skip及280檔來源編譯通過，舊收據／DB保留、active owner與缺資料拒絕，見STATUS。這輪save在兩launch間用controller做；下一步測試專用on_ready seam／owned probe，以第一真Job的真Tk按鈕保存handled與調查，第二真Job的真Tk檢視同一scope讀回，兩程序自然退出／pending／ACK及原收據獨立核對，不加CLI自動改資料旗標或冒充真人。

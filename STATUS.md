@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 第一真Tk保存、第二真Tk同資料讀回
+
+測試專用on_ready回呼由獨立owned probe操作實際Tk按鈕；第一程序標handled並保存調查，合作退出後第二程序讀原scope，實際Text／Treeview核對已處理與同case，DB hash及舊三收據不變，沒有複製新DB；pending4／receipt0，採集／spawn／ACK哨兵未觸發。ready／exit明示automated_fixture_actions，非真人操作，正式CLI不提供自動改資料旗標。`reports/verify-desktop-process-reopen-20261029-01`：2026-10-29 15:50（UTC+8）8/8、0skip、source_unchanged、Job自然退出0／remaining0／無強停，含兩個真Job／Tk及非法scope／active owner回歸。`reports/build-desktop-process-reopen-20261029-01`304檔hash／282檔編譯。5a3f393（+88/−11）已普通同步main／開發ref；完整GUI並行owner拒絕及操作文件仍接續。
+
 ## 2026-10-29 新attempt接原scope的真Job／Tk
 
 launcher --reopen-from只接原始desktop-ux-*名稱，每次--name仍新attempt；資料讀原scope，worker-ready／exit、guardian及任務紀錄留新attempt，不覆寫舊證據；worker拒絕重用既有ready／exit。初始化拒絕回固定scope碼，不記原始例外。`reports/verify-desktop-launcher-reopen-20261029-01`：2026-10-29 15:45（UTC+8）12/12、0skip、source_unchanged、Job自然退出0／remaining0／無強停；真Job／Tk新程序保留原DB bytes與舊三收據、active owner／缺scope拒絕且無替代DB。保存狀態／調查由兩次launch間的controller完成，第一GUI內保存→第二GUI讀回仍待下一單元。`reports/build-desktop-launcher-reopen-20261029-01`302檔hash／280檔編譯；d344989（+91/−9）已普通同步main／開發ref，未真人／原生採集／模型／ACK。

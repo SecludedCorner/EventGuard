@@ -18,10 +18,12 @@ def _owner_eof(cancel):
     cancel.set()
 
 
-def run_fixture(root, seconds, job_name, *, cancel=None, reopen_root=None):
+def run_fixture(root, seconds, job_name, *, cancel=None, reopen_root=None, on_ready=None):
     """Do not create any scope/window until membership in the owner Job is proven."""
     if type(seconds) is not int or not 1 <= seconds <= 900:
         raise ValueError('desktop_fixture_duration_invalid')
+    if on_ready is not None and not callable(on_ready):
+        raise ValueError('desktop_fixture_callback_invalid')
     keeper = adopt_current_job(job_name)
     membership = keeper.receipt()
     output = Runtime(root)
@@ -71,7 +73,10 @@ def run_fixture(root, seconds, job_name, *, cancel=None, reopen_root=None):
         atomic_json(output.path('worker-ready.json'), {
             'synthetic': True, 'fixture_root': 'reports/desktop-ux-session',
             'scope_parent': (reopen_root or root).name, 'reopened': reopen_root is not None,
+            'automated_fixture_actions': on_ready is not None,
             'model_calls': 0, 'membership_verified': membership['kind'] == 'eventguard-private-job-keeper-v1'})
+        if on_ready is not None:
+            on_ready(app, controller, output.root)
         window.mainloop()
         state = 'closed' if app.verified_close else 'shutdown_unconfirmed'
     except Exception as error:
@@ -88,6 +93,7 @@ def run_fixture(root, seconds, job_name, *, cancel=None, reopen_root=None):
             except Exception:
                 pass
     result = {'kind': 'desktop-synthetic-session-v1', 'synthetic': True, 'state': state, 'reason': reason,
+        'automated_fixture_actions': on_ready is not None,
         'scope_parent': (reopen_root or root).name, 'reopened': reopen_root is not None,
         'gui_worker_exited': app is None or not app.worker.thread.is_alive(), 'model_calls': 0,
         'machine_scan_executed': False, 'ack_performed': False, 'participant_results': None}
