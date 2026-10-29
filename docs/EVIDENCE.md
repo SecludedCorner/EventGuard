@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-29：實際唯讀來源診斷，非合成
+
+使用者最新直接授權已記AGENTS／CLAUDE一般開發規則，具體原文回條不提交。windows-listener-diagnostics-20261029-01原12hash重核後執行1次：250列／身分缺122／partial，error23全部typed ListenerOpenProcess access_denied，分組完整不代表baseline完整；query .378848秒、內自然0／外自然2、remaining0／無強停，13/13交叉核對只驗回條一致。查源已用QUERY_LIMITED_INFORMATION，不推定管理員／owner／sandbox。
+
+source-coverage-readonly-20261029-01補其餘六來源各1次、listeners不重跑：defender denied、processes partial、startup/services/versions ok、tasks unknown（TaskGetFolder object_unavailable）。processes error306只留64，242原因未知不外推；已在coverage-summary補retained/unretained與grouping_complete。總3.427407秒／每query5秒預算，六內與外Job自然0／remaining0／無強停；只存分類／計數及自有Job，無私人原始facts／模型／系統變更。versions僅本Python既有metadata，不能當全軟體版本覆蓋。這是新的實機partial證據，不是完整來源／主機安全／真agent防守驗收。
+
 ## 2026-10-29：當前來源原生診斷準備，不是執行
 
 windows-listener-diagnostics-20261029-01預設prepare成功、12source hash與manifest/template一致，query_started=false／approved=false／human-approval.json不存在；NEXT_DIAGNOSTIC綁7ef2c7b與一次5秒query／30秒總預算、無模型／其他來源／系統改動。具名批准問項已發出但尚未執行，不把準備稱原生重驗。7ef2c7b來源包release-prep-sentry-checkpoint-20261029-01可重現417檔、SHA256 cd173b84d76271e2417a957df844238aa50ab9407c240b45cc66d79c62d6b8c5；370項來源與最新50項manifest只差verify.py及兩測試，產品位元組相同（最新source-commit.json）。沒有新模型或原生採集、tag或release。

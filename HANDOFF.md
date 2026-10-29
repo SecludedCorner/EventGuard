@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 已授權唯讀原生開發／來源實測partial
+
+同範圍開發診斷不再問，見AGENTS／CLAUDE最新節；仍不提權／模型／系統變更。listeners新包已執行：250列、缺身分122、23 OpenProcess access_denied、baseline仍不過，兩層自然退出；13/13只驗回條。其餘六來源單次實查：defender denied、processes partial（306error僅64prefix）、startup/services/versions ok、tasks unknown／TaskGetFolder object_unavailable；不重查listeners，見STATUS與本機reports。下一先核TaskGetFolder COM呼叫契約並合成重現；不先宣稱bug／權限根因，不盲目重跑或繞限制。其他真人／Web／長跑／恢復與真防守關卡保留。
+
 ## 2026-10-29 listeners包已準備／待本次範圍答覆
 
 原生準備root為reports/windows-listener-diagnostics-20261029-01，12hash綁7ef2c7b、未批准／未query，詳STATUS／WINDOWS_VALIDATION_PLAN；這是新增一次採集，不能用舊授權或等待時間當同意。若本次問項明確獲准，再記同run授權與當時時間、核hash、由私有Job執行既定一次5秒query／30秒總預算；若不准或無答覆，原樣保留待驗。其他外部關卡無變化就不反覆fixture或輪詢。完整AI盯哨仍active；來源包417檔與370／33／50項證據分開綁定。

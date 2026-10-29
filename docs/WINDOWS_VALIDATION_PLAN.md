@@ -1,5 +1,11 @@
 # Phase 7：Windows 可逆狀態與故障恢復驗證計畫
 
+## 2026-10-29 新包已執行／目前授權與partial結果
+
+使用者已授權本專案必要的一般權限唯讀開發診斷，同範圍不再逐次問；每次保留scope/hash/time與授權依據、私有Job／最小資料及退出回條，詳AGENTS／CLAUDE最新節。這不擴充提權、系統／安全設定、新模型、敏感處置或未指定長時運行。
+
+reports/windows-listener-diagnostics-20261029-01已單次執行，四表250列且計數一致，身分缺122，error23筆均ListenerOpenProcess access_denied；source partial、baseline_incomplete，不能稱PASS／安全。內自然0、外validator自然2，均remaining0／無強停；13/13只是回條一致。本次typed分類完整不代表已定位owner／必需管理員／sandbox根因。源碼已使用最小QUERY_LIMITED_INFORMATION，不能靠放寬或提權洗綠。其他六來源的單次有界開發查核另存source-coverage-readonly-20261029-01，不將診斷範圍混作此listeners單次批准。
+
 ## 2026-10-29 現行來源已重新prepare（尚未批准／執行）
 
 新的專用目錄為`reports/windows-listener-diagnostics-20261029-01`，綁7ef2c7b來源、12檔hash及本次manifest，query_started=false，template approved=false；執行程序保存在該目錄AUTHORIZATION_REQUEST與NEXT_DIAGNOSTIC。舊20261028包維持superseded，不改歷史或重用已用完的單次批准。

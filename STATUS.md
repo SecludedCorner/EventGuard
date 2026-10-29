@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-10-29 開發授權已記錄／實際原生診斷完成且保留缺口
+
+使用者已直接授權本專案必要一般權限唯讀原生診斷與自有介面驗收，不再逐次詢問；AGENTS／CLAUDE最新節已落地。系統／帳戶／安全設定、提權、新模型、敏感處置、重開機與未指定長時運行不因此新增授權。授權原文與每次scope/hash/time只存忽略的reports，不提交回條。
+
+windows-listener-diagnostics-20261029-01已執行一次：四表ok共250列、table_counts_consistent，必要程序身分缺122列，source partial／baseline_incomplete；error23筆全部分類為object／ListenerOpenProcess／access_denied，無截斷／未知／遺漏。error23不等於122列或唯一owner數，不能推論需管理員或sandbox根因。程式已用0x1000 QUERY_LIMITED_INFORMATION，無多取權限可降。query .378848秒、內Job自然0／外validator自然2（完整性未過），兩者remaining0／無強停，13/13只為收據一致，不是baseline PASS。
+
+依本次既有授權另一次補其餘6來源：reports/source-coverage-readonly-20261029-01，總3.427407秒、每來源query≤5秒／總45秒預算，僅分類計數。defender denied1列／1error；processes partial611列／306error，僅64已保留（63 access_denied＋1 object_unavailable）、242未保留不外推；startup ok21、services ok315、tasks unknown0／TaskGetFolder object_unavailable1、versions ok1（僅既定本Python版本metadata，非全軟體盤點）。6內Job與外Job均自然0／remaining0／無強停、model0；listeners沿用前次不重查。沒有rawfacts／系統變更或安全結論；真環境partial不可被合成或0exit洗綠。純文件沿用314檔來源編譯與50項、產品來源仍與370項相同。下一核對TaskGetFolder既有呼叫契約，先合成重現；無缺陷便保留未知，不靠重複原生查詢或提權求PASS。
+
 ## 2026-10-29 原生診斷前置已準備，等待本次具名批准
 
 `reports/windows-listener-diagnostics-20261029-01`已用7ef2c7b來源prepare，12檔hash與manifest/template綁定核對通過；query_started=false、approved=false、尚無human-approval.json。只允一次listeners四表及既有必要程序建立時間查核，query5秒／總預算30秒，保存固定分類／計數與自有Job摘要，不保存其他listener facts；無模型／其他來源／系統改動。已提出本次具體範圍問項；不重用2026-10-27已用完的批准、不執行--execute。舊20261028準備包仍superseded，詳見WINDOWS_VALIDATION_PLAN。
