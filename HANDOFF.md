@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 保留缺陷已整合／接待確認入口
+
+產品1f987f7兩ref一致，24模組155/155、0skip、297檔來源編譯與Job自然0／無殘留，見STATUS／EVIDENCE；STORAGE_RETENTION已補人工event／receipt pin與receiver保護界線。下一DESKTOP-PENDING-ENTRY：先以101件以上合成事件確認最近100件會隱藏更早的未確認anchor；提供Catalog有界唯讀待確認事件清單（同事件多要求合併、最多128件、每頁≤100，namespace／hash／缺失／壞日誌unknown不略過），再接controller／實際Tk可找到並以原ID明確核對、切回最近清單與刷新不串資料。不得擴大原100件上限、讀頁不採集／模型／ACK；先後端切片再UI，每單元普通同步main。真人／Web／原生與恢復可信根仍獨立待驗，整體active。
+
 ## 2026-10-29 混合pin驗收已過／接受影響整合
 
 36/36、0skip及297檔來源編譯，人工／receiver pin交集、receipt上限不重算、各自釋放與byte trim已驗，見STATUS／EVIDENCE。接續保留／inbox／desktop／兩程序要求恢復受影響整合及可重現來源保存；不再重跑無變動全庫。GUI已明示未確認要求即使ACK仍保留原event／receipt、上限不擴大，兩種確認互不授權。完整歷程恢復可信根／容量、真人／Web／原生各自仍待驗，不以本修正升格完成。

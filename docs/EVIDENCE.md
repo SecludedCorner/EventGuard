@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：保留／inbox／桌面整合155項
+
+`reports/verify-desktop-retention-integration-20261029-01` UTC09:20:40：24模組155/155、0skip、source_unchanged、297檔語法、Job自然0／remaining0／無強停。outbox/inbox／MCP／日誌保留、原ID控制層與真Tk／兩程序、人工歷程及調查修訂受影響範圍均過；不同範圍不與既有235或56相加。`reports/build-desktop-retention-integration-20261029-01`319hash／297編譯；產品1f987f7兩ref直接一致、工作樹／待整合差異0。source35de80a→e3f6824保留修正+123/−10、1f987f7交集測試+90/−0，未累積500、未改上限／系統／帳戶／模型。STORAGE_RETENTION修正政策說明，仍不宣稱真人／實機或完整歷程恢復。
+
 ## 2026-10-29：收據上限與雙重pin分離
 
 `reports/verify-desktop-request-receipt-pins-20261029-01` UTC09:16:30：36/36、0skip、source_unchanged、Job自然0／remaining0／無強停。人工＋receiver-finalization同一收據不重複算pin，上限2時保留該收據＋最新一般收據；finalize_receiver只解除receiver保護，人工要求仍使原event／receipt免TTL；complete_desktop_request只解除人工保護，receiver receipt仍留，原event可依既有TTL到期。byte reclaim只清eligible，不釋放任一pin；既有inbox重啟／finalization故障／保留回歸皆過。`reports/build-desktop-request-receipt-pins-20261029-01`319hash／297編譯。全部是合成local_mock收據，不是模型、真receiver或原生採集；不把獨立確認混成ACK。

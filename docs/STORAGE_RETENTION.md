@@ -21,11 +21,11 @@ Get-Content -Raw reports/history-backup-example.json | .\EventGuard.cmd --format
 
 | 區域 | 預設／可設定硬上限 | 清理與恢復 |
 | --- | --- | --- |
-| outbox | 1,000 件、8 MiB；ACKed payload 7 天；receipt 30 天／4,000 件 | TTL、筆數或位元組壓力只清 ACKed payload／其 review；receipt 另有保留窗及壓力輪替 |
+| outbox | 1,000 件、8 MiB；ACKed payload 7 天；receipt 30 天／4,000 件 | TTL、筆數或位元組壓力只清未被保護的 ACKed payload／其 review；receipt 另有保留窗及壓力輪替，未確認人工要求與 receiver-finalization 保護各自獨立 |
 | inbox | 1,000 active、1,000 completed、合計 8 MiB；completed 30 天 | ACK 後合併成一份完成回條；先耐久保存，再清重複 triple；滿載輪替舊 completed |
 | dispatcher | 128 active、128 completed、合計 256 KiB；completed 30 天 | active／completed 各用一半 byte 預算，先存 compact proof 再移除 active entry |
 
-數量／位元組上限可以調小，不能改成無限。保留秒數可為 0–31,536,000；0 表示下一次清理即可到期，不代表停用上限。TTL 是最長保留目標，壓力與筆數限制可提前輪替已完成資料；清理採惰性執行，不新增背景計時器。
+數量／位元組上限可以調小，不能改成無限。保留秒數可為 0–31,536,000；0 表示下一次清理即可到期，不代表停用上限。TTL 與壓力／筆數輪替只適用可清理資料，不能越過未完成工作保護；清理採惰性執行，不新增背景計時器。
 
 outbox 政策保存在 SQLite `meta.storage_policy`，ACK 使用的預設 EventStore opener 會繼承，不會擅自放寬已設定上限。monitor 啟動及後續 evaluation 會清理。`status` 的 namespaces 顯示實際政策、大小、receipt 數及輪替計數；CLI 與可選 agent 的共用 status 都可讀到，不會因查 status 啟動模型。
 
@@ -40,6 +40,10 @@ inbox 政策由 dispatcher 從專案設定套用，保存於專用 state 的 `in
 ## 永不自動丟棄的資料
 
 pending、retry 與未 ACK failed 不因年齡、筆數或 byte 壓力清除。舊版「failed 七天後清除」已移除。滿載新增失敗時，evaluation 的事件與 detector state 一起回滾；先前 event ID／hash 保留。consumer 恢復並有真正耐久接收 ACK 後，已 ACK 資料才可讓出容量。
+
+桌面已落盤、尚未由 consumer 明確確認的人工要求另有最多128筆的有界日誌；其引用的原事件與收據即使已ACK仍受保護，不因TTL、件數或byte壓力移除。要求以namespace／原event hash／status／operation_id綁定，閱讀／重開不自動執行；容量滿時拒絕新增而不清掉要求，壞schema不當空表，清理整筆rollback。明確確認且已有匹配gui操作證據後才解除此保護，恢復原政策，並非授權刪處置歷程。
+
+同一收據同時有人工與receiver-finalization保護只計一份；完成其中一方不解除另一方。人工保護涵蓋原event與receipt，receiver既有保護只涵蓋receipt，各自界線不混同。這是合成SQLite／Tk保留與恢復證據，不是新真agent ACK、原生覆蓋或24h保證。
 
 未確認 child exit、只有失敗 trace、用完嘗試預算、沒有有效交付／ACK 證據的 dispatcher entry 都不輪替，也不重置三次上限。這些情況需要查明既有證據，不能靠清帳本重新啟動模型。沒有 consumer 或全是未解決資料時，持續背壓是正確行為，不能宣稱總能自動排空。
 

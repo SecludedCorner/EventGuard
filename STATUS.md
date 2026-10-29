@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 保留修正受影響整合155項通過
+
+產品1f987f794434297b2778becbac3ef28680c83403兩遠端ref一致、兩工作樹／對origin/main待整合差異0；e3f6824修正+123/−10、1f987f7交集證據+90/−0，皆逐單元build／測試後普通同步main。`reports/verify-desktop-retention-integration-20261029-01`：2026-10-29 17:20（UTC+8）24模組155/155、0skip、source_unchanged、297檔語法通過、Job自然0／remaining0／無強停，涵蓋outbox/inbox／MCP／日誌／Tk／兩程序恢復、處置歷程及調查修訂；不是全庫或真人。`reports/build-desktop-retention-integration-20261029-01`319hash／297檔編譯；STORAGE_RETENTION已補人工pin、與receiver保護分離及未知清理rollback，本純文件沿用該build。
+
+下一具體桌面缺口：DesktopController.snapshot及GUI僅載入最近100件，未確認要求可引用更早事件（MAX_PENDING128），目前沒有獨立待確認入口；不能把清單未顯示當成沒有要求。先用101件以上合成資料驗證，再做有界唯讀清單／分頁與實際Tk入口，維持100件每頁、原ID明確核對、不自送／不ACK。完整目標active，真人／Web／原生及完整歷程恢復仍各自待驗。
+
 ## 2026-10-29 人工與receiver收據保護交集已驗
 
 `reports/verify-desktop-request-receipt-pins-20261029-01`：2026-10-29 17:16（UTC+8）36/36、0skip、source_unchanged、Job自然0／remaining0／無強停。合成SQLite驗雙重pin只計一份收據、上限仍保留最新一般收據；receiver finalize後人工原事件／收據仍保留，人工確認後receiver receipt仍保留；各自釋放後才恢復原TTL。byte壓力只清一般事件／收據、不解除任一pin。receiver既有pin只保護收據，payload TTL仍由人工pin等原契約處理，沒有擴大為雙方都鎖整個event。`reports/build-desktop-request-receipt-pins-20261029-01`319hash／297編譯；e3f6824兩ref已一致。本輪純補交集證據與操作文件，不是agent或實機ACK驗收；下一做受影響保留／桌面整合。

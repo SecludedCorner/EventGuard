@@ -1,5 +1,11 @@
 # EventGuard 目前目標
 
+## 2026-10-29 最新可執行：DESKTOP-PENDING-ENTRY
+
+DESKTOP-REQUEST-RETENTION已修ACK事件／receipt在人工要求未確認時仍被清理的缺陷，red兩例皆fail、修正後TTL／count／byte／unknown及雙pin交集驗證通過，24模組155項／0skip及297檔來源編譯，產品1f987f7普通同步main。這不是歷程還原／容量釋放或新真ACK驗收。
+
+下一已辨識觸點：桌面最近清單只載入100件，原ID保留不代表其較早事件仍可於介面找到，目前無獨立待確認入口。先以≥101件合成事件核對，再做Catalog／controller唯讀待確認清單：最多128件不同事件、每頁≤100、穩定分頁、同事件多要求合併，逐筆綁namespace／event hash，任何遺失／錯誤保持unknown，不過濾成安全空集合。實際Tk須能找到不在最近100件的anchor、明確原ID核對、不自送／不ACK，返回一般清單與刷新不串事件；不調大原上限或用字串測試冒充操作。後端→Tk邏輯切片，每單元build／相關測試後普通同步main，兩個500行基準。真人／Web200%／原生及完整歷程恢復可信根仍獨立未驗，整體active。
+
 ## 2026-10-29 可執行缺陷：DESKTOP-REQUEST-RETENTION
 
 增量契約核對重現未確認人工要求的ACK事件會被TTL／容量輪替移除；red兩例皆fail，已新增event及receipt保護，滿額不放寬上限、壞日誌不當空，30項／0skip與296檔來源編譯通過（見STATUS），非增加展示或重跑既有成果。接續驗混合收據壓力與receiver-finalization／人工pin交集，各自確認只能釋放自己的保護；使用合成SQLite/local_mock ACK，不觸發真agent／原生。之後做受影響保留／桌面整合，逐單元普通同步main；真人／Web／原生及完整恢復來源信任根仍獨立未驗，整體active。
