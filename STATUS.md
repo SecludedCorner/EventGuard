@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 核對快照時間／衝突／返回整合173項通過
+
+9e92d4a（+108/−0）、c586bd7（+79/−0）、f3394df（+90/−0）已各自build／相關測試、指定檔案commit／普通push及ff-only整合／push main；直接兩遠端ref核對f3394dfc18b67663cf6ba6780b2c6a2ca93a6446，兩工作樹及origin/main...HEAD差異0，單筆與待整合皆未累積500行。`reports/verify-desktop-preview-context-final-20261029-01`：2026-10-29 14:33（UTC+8）21個受影響模組173/173、0skip、source_unchanged、266檔語法通過，Job自然退出0／remaining0／無強停；`reports/build-desktop-preview-context-final-20261029-01`288檔hash相符、266檔編譯。此為本次桌面／Catalog／ACK分離整合，選取模組與前版229不同，不相加或冒充全庫回歸。`reports/release-prep-desktop-preview-context-20261029-01`綁定上述產品SHA，368檔可重現，無tag／release；純文件沿用來源build／相關整合並核對引用。
+
+完成時間上下文、已知轉換衝突與返回焦點產品缺口；下一項沿P2 UX-HUMAN準備安全桌面合成任務入口，真人仍需實際參與，不以自動化填寫人類結果。Web200%／真人／原生覆蓋／24h／reboot及恢復可信根／容量釋放仍未達成；原生診斷舊準備包已失效，未重跑。
+
 ## 2026-10-29 核對分頁返回／焦點與捲動
 
 獨立核對結果加捲軸及返回事件入口；明確核對後Tk焦點指向唯讀結果，返回保留事件／篩選並回到核對按鈕，忙碌時返回事件清單。01的47/48揭露分頁映射前focus_set無效，補齊idle幾何後移焦；`reports/verify-desktop-preview-navigation-20261029-02`：2026-10-29 14:28（UTC+8）48/48、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真Tk＋真合成SQLite驗返回不重讀、DB bytes守恆、核對未完成先返回後晚到結果不切頁，及既有最小視窗／長回條回歸。`reports/build-desktop-preview-navigation-20261029-01`288檔hash／266檔編譯通過。c586bd7（+79/−0）已普通同步main／開發ref；Tk focus-lastfor是應用焦點目標，不冒稱原生鍵盤／真人驗收。

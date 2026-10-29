@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-29：核對上下文最終整合與普通遠端保存
+
+`reports/verify-desktop-preview-context-final-20261029-01` UTC06:33:23：21個受影響模組173/173、0skip、source_unchanged、266檔語法通過，Job自然退出0／remaining0／無強停；真Tk／合成SQLite、檔案及自有Job API，沒有採集／模型／ACK。選取模組不同於前版229，不相加、不作全庫或真人／原生驗收。`reports/build-desktop-preview-context-final-20261029-01`288檔hash／266檔編譯。`reports/release-prep-desktop-preview-context-20261029-01`綁定f3394dfc18b67663cf6ba6780b2c6a2ca93a6446，368檔可重現，archive SHA256 b95ad172933aeca690bb8f34865b2ebed7450e1cfef7eb68c84c132854518ac0，非tag／release。
+
+9e92d4a `feat(desktop): disclose backup verification read intervals`（相對父commit +108/−0）；c586bd7 `fix(desktop): surface known history transition conflicts`（+79/−0）；f3394df `feat(desktop): preserve event context when leaving backup checks`（+90/−0），皆逐單元build／相關測試後指定檔案commit、普通push及ff-only整合／push main，直接兩ref核對f3394df，兩工作樹與待整合差異0。完整恢復／來源可信根、Web／真人／原生關卡未驗；下一項準備安全真人桌面合成入口，不捏造參與者結果。
+
 ## 2026-10-29：返回事件上下文與Tk焦點
 
 `reports/verify-desktop-preview-navigation-20261029-02` UTC06:28:15：48/48、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真映射Tk＋合成SQLite驗明確進入核對焦點目標、捲軸可見、返回保留事件及篩選／詳情、不增加核對讀取、DB bytes守恆；核對pending時先返回、晚到結果不搶頁。01的47/48找到映射前焦點仍在舊Text，已先完成idle幾何再focus_set，未放寬斷言。`reports/build-desktop-preview-navigation-20261029-01`288檔hash／266檔編譯；focus-lastfor不證明OS鍵盤／真人操作，沒有採集／模型／ACK。
