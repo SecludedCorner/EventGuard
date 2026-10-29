@@ -285,7 +285,13 @@ class EventGuardWindow:
             row=2, column=0, columnspan=2, sticky="w", pady=(3, 0))
         automatic_frame.columnconfigure(0, weight=1)
         agent.columnconfigure(0, weight=1)
-        ttk.Label(outer, textvariable=self.message, wraplength=1000).grid(row=4, column=0, sticky="ew", pady=(0, 8))
+        message_label = ttk.Label(outer, textvariable=self.message, wraplength=1000)
+        message_label.grid(row=4, column=0, sticky="ew", pady=(0, 8))
+        def wrap_message(event):
+            width = max(80, event.width-4)
+            if event.width > 1 and int(message_label.cget("wraplength")) != width:
+                message_label.configure(wraplength=width)
+        message_label.bind("<Configure>", wrap_message)
         source_frame = ttk.Frame(notebook, padding=8)
         source_frame.columnconfigure(0, weight=1)
         source_frame.rowconfigure(0, weight=1)

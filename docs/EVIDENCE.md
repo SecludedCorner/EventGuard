@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：長備份回條的實際Tk換行
+
+`reports/verify-desktop-message-layout-20261029-02` UTC05:55:40：46/46、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真Tk實際備份後長路徑／限制文字，在1080×760與850×620核對wraplength不超過實際label、完整所需高度、已選事件列及備份控制可見；01重現固定1000px超寬，已修正隨Configure換行。`reports/build-desktop-message-layout-20261029-01`283檔hash及261檔編譯通過；合成資料與自有視窗，非人類／原生輸入／Web200%，沒有採集／模型／ACK。
+
 ## 2026-10-29：映射Tk最小視窗事件列修復
 
 `reports/verify-desktop-handling-layout-20261029-04` UTC05:52:29：50/50、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真映射Tk精確client1080×760／850×620，完整已選資料列及詳情文字可見、三篩選／保存／處置／備份控制未超出任何祖先邊界、Tk Tab路徑可達及自動設定分頁幾何。02找到最小視窗無事件列、03仍裁選取列6px；移設定分頁及縮放see修復，未提高最小尺寸。01只驗框線不充分，04為最終；`reports/build-desktop-handling-layout-20261029-01`282檔hash及260檔編譯通過。非人類／原生輸入或Web200%驗收，無採集／模型／ACK。

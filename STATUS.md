@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 窄視窗長備份回條換行修復
+
+真映射Tk重現850×620長備份回條以固定1000px換行、超過label實際寬度（01）；現隨Configure事件按實際寬度換行，不截掉路徑與未確認／耐久性限制。`reports/verify-desktop-message-layout-20261029-02`：2026-10-29 13:55（UTC+8）46/46、0skip、source_unchanged、Job自然退出0／remaining0／無強停，真Tk→合成備份後驗1080×760／850×620換行寬度／完整label高度、選取列及備份控制仍可見，並回歸相關Tk入口。`reports/build-desktop-message-layout-20261029-01`283檔hash／261檔編譯通過；4a1cab6（+93/−10）已普通同步main／開發ref。非真人、原生輸入或Web200%驗收，無新查詢／模型／ACK。
+
 ## 2026-10-29 最小桌面視窗的事件列可見性修復
 
 實際映射Tk視窗發現850×620事件列不可見（02），移出自動agent設定後列仍被裁6px（03）；現將控制放獨立設定分頁，Treeview縮放時see已選事件，未提高最小尺寸或放寬驗收。`reports/verify-desktop-handling-layout-20261029-04`：2026-10-29 13:52（UTC+8）50/50、0skip、source_unchanged、Job自然退出0／remaining0／無強停；精確核對1080×760／850×620 client、完整已選列、詳情文字行、三篩選／保存／四處置／備份控制全部祖先邊界、Tk Tab路徑及自動設定分頁幾何。01僅框線測試不足，04為最終。`reports/build-desktop-handling-layout-20261029-01`282檔hash／260檔編譯通過；bec37d8（+115/−3）已普通同步main／開發ref，非真人／原生輸入／Web縮放驗收。
