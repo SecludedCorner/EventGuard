@@ -1,5 +1,10 @@
 # EventGuard 現況
 
+## 2026-10-30 有限調查驗收入口已可用
+
+validate_delivery.py新增investigation case：一合成high listener／一任務180秒；準備只產生未批准scope，execute先核當次批准再入列，四步trace／durable report／ACK及MCP持有HANDLE自然退出皆為必要。verify-investigation-acceptance-20261030-01：11/11／0skip、332語法／編譯；明示fake CLI透過真SDK stdio／SQLite、四步各1／pending0、MCP與CLI私有Job自然0無殘留／強停，重跑被拒。模型0，不冒充新真agent；下一最終受影響整合、CLI版本只讀預檢及實際待批包，真人最後一次參與。
+
+
 ## 2026-10-30 單事件真模型範圍閘道
 
 新增準備／核對helper，綁合成事件、CLI binary、source、launch、四工具、單任務180秒與不重試；human-approval預設false，實際批准原文／UTC／hash一致且24小時內才可使用一次，來源改動即失效。verify-investigation-scope-20261030-01：5/5／0skip、330語法／編譯，Job自然0無殘留／強停，純fixture批准、模型0。下一接有限validate_delivery入口與端到端合成驗收，再準備實際待批目錄；CLI預設模型內部請求／token／費用沒有硬上限保證。

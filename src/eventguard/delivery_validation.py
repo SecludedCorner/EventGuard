@@ -32,7 +32,7 @@ from .queue_inbox import QueueInbox
 from .synthetic import make_synthetic
 
 KIND = "eventguard-queue-acceptance-v1"
-COUNTS = {"single": 1, "continuous": 2, "batch": 3, "recovery": 1, "service": 1}
+COUNTS = {"single": 1, "continuous": 2, "batch": 3, "recovery": 1, "service": 1, "investigation": 1}
 SERVICE_TIMEOUT = 180
 SERVICE_IDLE_SECONDS = 2
 SERVICE_POLL_SECONDS = .1
@@ -61,7 +61,7 @@ def prepare(root, case):
     manifest = {"kind": KIND, "case": case, "created_at": utc(),
                 "events": [make_synthetic("listener") for _ in range(COUNTS[case])],
                 "enqueued": [], "stages": []}
-    if case == "service":
+    if case in {"service", "investigation"}:
         # Exercise the real default admission policy without changing it.
         manifest["events"][0]["severity"] = "high"
         # The producer and EventStore share the same canonical event contract,
@@ -87,12 +87,17 @@ def stage(root, manifest, event_id, codex, *, read_only=False):
     token = uuid.uuid4().hex
     row = {"event_id": event_id, "name": directory.name, "attempt_id": token,
            "read_only": read_only, "started_at": utc()}
+    investigation = manifest["case"] == "investigation"
+    if investigation:
+        row["investigation"] = True
     manifest["stages"].append(row)
     # Persist ownership BEFORE starting a child; incomplete stages cannot be retried silently.
     write_json(root / "manifest.json", manifest)
     args = command(codex, sys.executable, root / "source", root / "inbox", event_id,
-                   directory, allow_ack=not read_only)
+                   directory, allow_ack=not read_only, **({"investigation": True} if investigation else {}))
     prompt = READ_PROMPT if read_only else PROMPT
+    if investigation:
+        from .agent_investigation import PROMPT as prompt
     event = next(event for event in manifest["events"] if event["event_id"] == event_id)
     capture_code = capture(args, directory, token, prompt, timeout_seconds=180)
     try:
@@ -124,14 +129,22 @@ def verify_stage(root, row):
     if len(raw) > CAPTURE_LIMIT:
         raise ValueError("acceptance_trace_too_large")
     trace = [json.loads(line) for line in raw.splitlines()]
-    inbox = QueueInbox(root / "source", root / "inbox", event_id=row["event_id"])
+    investigation = row.get("investigation") is True
+    inbox = QueueInbox.open_readonly(root / "source", root / "inbox", event_id=row["event_id"], investigation=investigation)
     evidence = inbox.evidence(row["event_id"])
     acked = inbox.acknowledged(row["event_id"])
     # Replay verification must use the prior read-only snapshot, not later ACK state.
     if row["read_only"] and evidence:
         evidence = {k: v for k, v in evidence.items() if k != "result"}
-    checked = assess_delivery(trace, evidence, row["event_id"], receipt.get("codex_exit_code"),
-                              False if row["read_only"] else acked, require_ack=not row["read_only"])
+    if investigation:
+        from .investigation_evidence import assess
+        from .mcp_lifecycle import assess_mcp_exit
+        checked = assess(trace, evidence, row["event_id"], receipt.get("codex_exit_code"), acked)
+        lifecycle = assess_mcp_exit(directory, row["attempt_id"], investigation=True)
+        checked.update(passed=checked["passed"] and lifecycle["passed"], mcp_server_exit=lifecycle)
+    else:
+        checked = assess_delivery(trace, evidence, row["event_id"], receipt.get("codex_exit_code"),
+                                  False if row["read_only"] else acked, require_ack=not row["read_only"])
     checked.update(child_exited=True, forcibly_terminated=False, read_only=row["read_only"])
     return checked
 
@@ -156,7 +169,7 @@ def verify(root, manifest):
     expected = [e["event_id"] for e in manifest["events"]]
     assessments = [verify_stage(root, row) for row in manifest["stages"]]
     completed = [r for r in assessments if not r["read_only"]]
-    inbox = QueueInbox(root / "source", root / "inbox")
+    inbox = QueueInbox.open_readonly(root / "source", root / "inbox", investigation=manifest["case"] == "investigation")
     acked = [identity for identity in expected if inbox.acknowledged(identity)]
     received = [r["event_id"] for r in completed]
     wanted = Counter(expected)
@@ -624,6 +637,11 @@ def execute(root, manifest, codex):
         raise ValueError("existing_mcp_sdk_required")
     if manifest["stages"] or manifest["enqueued"]:
         raise ValueError("existing_execution_refused_inspect_evidence")
+    if manifest["case"] == "investigation":
+        from .investigation_scope import require_approval
+        require_approval(root, manifest, native)
+        if EventStore(root / "source").stats()["pending"]:
+            raise ValueError("dedicated_empty_investigation_source_required")
     if manifest["case"] == "service":
         return execute_service(root, manifest, native)
     if manifest["case"] == "batch":
@@ -657,6 +675,12 @@ def main(argv=None):
             raise ValueError("existing_acceptance_evidence_required")
         manifest = prepare(root, args.case)
         if not args.execute and not args.verify_only:
+            if args.case == "investigation":
+                from .investigation_scope import prepare as prepare_scope
+                native = shutil.which(str(args.codex_executable))
+                if not native:
+                    raise ValueError("native_codex_required")
+                prepare_scope(root, manifest, native)
             print(json.dumps({"state": "prepared_only_no_model_invoked", "case": args.case,
                               "count": len(manifest["events"])}))
             return 0
