@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 Tk接入durable與consumer確認
+
+Worker的set_status走durable；匹配保存回條後另核對confirm_status_receipt，匹配完成才清ID。detail用嚴格recover合併已保存ID，不自送；壞日誌或識別衝突停用人工寫入，既有詳情仍可讀。合成SAFE同步加入兩方法。`reports/verify-desktop-request-tk-20261029-03`：2026-10-29 16:49（UTC+8）55/55、0skip、source_unchanged、Job自然0／remaining0／無強停；真Tk＋SQLite成功回條丟失後重建窗口讀原ID、未點前0save／0confirm且DB bytes不變，明確同ID核對不回退較新read、兩筆歷程／pending2／receipt0；壞schema按鈕及直接呼叫都禁寫，正常兩真Job重開回歸亦過。01的泛字串斷言過寬1fail，02修為事件標籤53pass，03補窗口重建／壞日誌為最終55。`reports/build-desktop-request-tk-20261029-01`315hash／293編譯。真正兩程序丟成功回條→重開故障路徑仍待下一單元，不以同程序窗口重建代替。
+
 ## 2026-10-29 成功回條到達consumer前仍保留意圖
 
 補上controller成功返回後、Tk收到前仍可能丟回條的缺口：set_status_durable即使成功也保留要求，新增confirm_status_receipt只在consumer確認收到後，依原gui操作證據清除，不改狀態／ACK。取代前節僅等外層活動回條就清除的中間實作。`reports/verify-desktop-request-consumer-20261029-01`：2026-10-29 16:43（UTC+8）15/15、0skip、source_unchanged、Job自然0／remaining0／無強停；新controller唯讀可找回成功但未確認的原ID、錯要求不能清除、較新read不回退、pending1／receipt0。`reports/build-desktop-request-consumer-20261029-01`314hash／292編譯；576ea28兩ref已一致。Tk下一切片必須接消費回條確認，而非直接pop記憶體識別。

@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 Tk兩階段回條已接／兩真Job故障閉環下一項
+
+55/55、0skip及293檔來源編譯，worker durable→Tk匹配保存回條→confirm_status_receipt→匹配完成才pop；新窗口原ID恢復不自送、壞日誌禁寫且仍可讀，見STATUS。下一沿tests/desktop_fixture_process_probe新增明示automated的丟成功回條／重開核對phase：第一真Job在實際Tk按鈕成功後丟回條，自然退出仍有日誌；第二真Job同scope先讀原ID且不重送，再明確核對、不回退中間較新決定，consumer確認後原ID清除，兩程序原handle／pending／ACK／舊證據獨立守恆。不要用既有正常save/read的兩程序測試冒充故障已驗。
+
 ## 2026-10-29 consumer確認協定已驗／接Tk兩階段
 
 15/15、0skip與292檔來源編譯，成功controller返回仍保留意圖，confirm_status_receipt只驗／清除原要求不改狀態／ACK，見STATUS。Tk需在已匹配set_status回條後另送confirm_status_receipt，收到desktop_request_confirmed且同key／ID才pop並顯示最終核對；確認失敗仍保留，不自動重送狀態。讀detail恢復keys及unknown禁寫沿gui_requests.recover，合成SAFE增加兩方法。先最小Tk接線／實際元件與SQLite，再兩真Job丟成功回條→自然退出→重開核對，不能以控制器重建代替。

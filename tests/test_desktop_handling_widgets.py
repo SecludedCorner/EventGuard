@@ -43,14 +43,14 @@ class DesktopHandlingWidgetTests(unittest.TestCase):
 
     def test_lost_reply_retry_replays_original_key_without_reverting_later_human_state(self):
         self.select(self.anchor)
-        original, keys = self.controller.set_status, []
+        original, keys = self.controller.set_status_durable, []
         def save(event_id, status, operation_id):
             keys.append(operation_id)
             value = original(event_id, status, operation_id)
             if len(keys) == 1:
                 raise OSError('synthetic lost reply after commit')
             return value
-        with patch.object(self.controller, 'set_status', side_effect=save):
+        with patch.object(self.controller, 'set_status_durable', side_effect=save):
             self.ui.handling_buttons['handled'].invoke()
             self.wait_for(lambda: '結果未確認' in self.ui.message.get())
             self.wait_for(lambda: self.ui.handling_buttons['handled'].instate(['!disabled']))
@@ -78,14 +78,16 @@ class DesktopHandlingWidgetTests(unittest.TestCase):
             self.assertIn('備份不釋放容量', self.ui.message.get())
             self.assertNotIn('操作紀錄無法建立', self.ui.message.get())
             self.wait_for(lambda: self.ui.handling_buttons['handled'].instate(['!disabled']))
-        self.assertEqual(self.store.path.read_bytes(), before)
+        self.assertEqual(self.catalog.detail(self.anchor)['status'], 'read')
+        self.assertTrue(self.catalog.detail(self.anchor)['pending_handling_requests']['requests'])
         with patch('eventguard.activity.begin', side_effect=activity.ActivityError('activity_storage_unavailable')):
             self.ui.handling_buttons['handled'].invoke()
             self.wait_for(lambda: '人工狀態未保存' in self.ui.message.get())
             self.assertIn('操作紀錄無法建立，尚未執行狀態變更', self.ui.message.get())
             self.assertNotIn('容量不足', self.ui.message.get())
             self.wait_for(lambda: self.ui._detail_document.get('state') == 'error')
-        self.assertEqual(self.store.path.read_bytes(), before)
+        self.assertEqual(self.catalog.detail(self.anchor)['status'], 'read')
+        self.assertTrue(self.catalog.detail(self.anchor)['pending_handling_requests']['requests'])
         self.select(self.anchor)
         self.assertEqual(self.ui._detail_document['status'], 'read')
         self.assertEqual(len(self.catalog.detail(self.anchor)['handling_history']['entries']), 1)
@@ -93,11 +95,11 @@ class DesktopHandlingWidgetTests(unittest.TestCase):
 
     def test_activity_completion_failure_after_commit_is_uncertain_and_retry_does_not_revert(self):
         self.select(self.anchor)
-        original, keys = self.controller.set_status, []
+        original, keys = self.controller.set_status_durable, []
         def save(event_id, status, operation_id):
             keys.append(operation_id)
             return original(event_id, status, operation_id)
-        with patch.object(self.controller, 'set_status', side_effect=save), patch(
+        with patch.object(self.controller, 'set_status_durable', side_effect=save), patch(
                 'eventguard.activity.complete', side_effect=activity.ActivityError('activity_storage_unavailable')):
             self.ui.handling_buttons['handled'].invoke()
             self.wait_for(lambda: '結果未確認' in self.ui.message.get())
@@ -109,7 +111,7 @@ class DesktopHandlingWidgetTests(unittest.TestCase):
         self.catalog.set_status(self.anchor, 'read', source='cli', operation_id='op-after-activity-failure')
         self.ui._last_event = None
         self.select(self.anchor)
-        with patch.object(self.controller, 'set_status', side_effect=save):
+        with patch.object(self.controller, 'set_status_durable', side_effect=save):
             self.ui.handling_buttons['handled'].invoke()
             self.wait_for(lambda: '人工狀態已核對' in self.ui.message.get())
             self.wait_for(lambda: not self.ui._busy and self.ui._detail_document.get('status') == 'read')
@@ -119,20 +121,20 @@ class DesktopHandlingWidgetTests(unittest.TestCase):
 
     def test_uncertain_request_stays_visible_only_on_its_event_and_states_window_limit(self):
         self.select(self.anchor)
-        original, calls = self.controller.set_status, []
+        original, calls = self.controller.set_status_durable, []
         def lose_reply(*args):
             calls.append(args)
             original(*args)
             raise OSError('synthetic reply lost')
-        with patch.object(self.controller, 'set_status', side_effect=lose_reply):
+        with patch.object(self.controller, 'set_status_durable', side_effect=lose_reply):
             self.ui.handling_buttons['handled'].invoke()
             self.wait_for(lambda: '結果未確認' in self.ui.message.get())
             self.wait_for(lambda: not self.ui._busy and self.ui._detail_document.get('status') == 'handled')
             self.assertIn('未確認要求：已處理', self.ui.handling_status.get())
-            self.assertIn('同識別重試僅限本視窗；重開後先查保存歷程', self.ui.handling_status.get())
+            self.assertIn('未確認要求不自動重送；重開後先查保存歷程', self.ui.handling_status.get())
             saved = self.store.path.read_bytes()
             self.select(self.member)
-            self.assertNotIn('未確認要求', self.ui.handling_status.get())
+            self.assertNotIn('未確認要求：', self.ui.handling_status.get())
             self.select(self.anchor)
             self.assertIn('未確認要求：已處理', self.ui.handling_status.get())
             self.assertTrue(self.ui.handling_buttons['handled'].instate(['!disabled']))
@@ -142,12 +144,12 @@ class DesktopHandlingWidgetTests(unittest.TestCase):
 
     def test_switching_selection_during_save_keeps_decisions_bound_to_requested_event(self):
         self.select(self.anchor)
-        original, entered, release = self.controller.set_status, threading.Event(), threading.Event()
+        original, entered, release = self.controller.set_status_durable, threading.Event(), threading.Event()
         def save(*args):
             entered.set()
             release.wait(timeout=2)
             return original(*args)
-        with patch.object(self.controller, 'set_status', side_effect=save):
+        with patch.object(self.controller, 'set_status_durable', side_effect=save):
             try:
                 self.ui.handling_buttons['handled'].invoke()
                 self.wait_for(entered.is_set)

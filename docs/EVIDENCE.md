@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：實際Tk原ID恢復與unknown禁寫
+
+`reports/verify-desktop-request-tk-20261029-03` UTC08:49:15：55/55、0skip、source_unchanged、Job自然0／remaining0／無強停。新窗口同SQLite恢復成功但丟回條的原ID，首次讀取0save／0confirm、DB bytes不變；之後明確按原狀態才原ID重播及consumer確認，保留後來read／兩筆歷程／pending2／receipt0。壞日誌schema仍可讀已處理詳情，但四按鈕及直接set_status禁寫，bytes不變。容量／活動故障現在允許新增待確認意圖，仍明確驗原人工read／原歷程不變且意圖保留，不能沿用整DB無變作新契約。01字串斷言誤把固定提示算成事件專屬標籤，02修正53pass，03新增兩項實際Tk為最終55；不同輪不相加。`reports/build-desktop-request-tk-20261029-01`315hash／293編譯，非原生輸入／真人；兩OS程序未確認重開待驗。
+
 ## 2026-10-29：成功回條仍可能在Tk消費前遺失
 
 `reports/verify-desktop-request-consumer-20261029-01` UTC08:43:37：15/15、0skip、source_unchanged、Job自然0／remaining0／無強停。durable成功也留日誌，consumer再明確confirm_status_receipt；新controller.inspect在禁止dispatch哨兵下仍讀到原ID，錯status確認拒絕且DB bytes不變，後來CLI改read後原ID明確重試不回退、再確認才清除，pending1／receipt0。活動完成失敗、prepare失敗、確認清除持久化失敗亦守恆。`reports/build-desktop-request-consumer-20261029-01`314hash／292編譯；GUI尚未接線，不升格兩程序Tk故障已驗。

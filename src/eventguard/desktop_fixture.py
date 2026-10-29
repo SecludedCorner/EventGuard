@@ -14,7 +14,7 @@ from .runtime import Runtime, InstanceLock, atomic_json
 from .synthetic import make_synthetic
 
 
-SAFE = frozenset({'inspect', 'investigate', 'set_status', 'backup_history', 'preview_history_backup'})
+SAFE = frozenset({'inspect', 'investigate', 'set_status', 'set_status_durable', 'confirm_status_receipt', 'backup_history', 'preview_history_backup'})
 BLOCKED = frozenset({'start', 'pause', 'set_agent_delivery', 'set_automatic_agent', 'acknowledge', 'ack_event', 'collect', 'diagnose'})
 
 

@@ -65,7 +65,9 @@ class FixtureController:
     def inspect(self, event_id):
         self._called("inspect")
         event = next(item for item in self.value["events"] if item["event_id"] == event_id)
-        return {"event": copy.deepcopy(event), "status": self.human_status.get(event_id, "new"), "scope": "synthetic", "incident_conclusion": "not_assessed",
+        return {"event": copy.deepcopy(event), "event_id": event_id, "namespace": "test", "payload_hash": '0'*64,
+                "pending_handling_requests": {"state": "available", "namespace": "test", "event_id": event_id, "payload_hash": '0'*64, "requests": []},
+                "status": self.human_status.get(event_id, "new"), "scope": "synthetic", "incident_conclusion": "not_assessed",
                 "guidance": {"observation": "保存的合成監聽觀察，不代表外部可達或惡意。",
                              "binding_facts": {"protocol": "TCP", "port": 43210},
                              "next_steps": ["核對保存的 port 與綁定範圍。"],
@@ -86,6 +88,13 @@ class FixtureController:
         self._called('set_status')
         self.human_status[event_id] = status
         return {'state': 'event_status_updated', 'event_id': event_id, 'status': status, 'ack_performed': False}
+
+    def set_status_durable(self, event_id, status, operation_id):
+        return dict(self.set_status(event_id, status, operation_id), request_pending=True, request_operation_id=operation_id)
+
+    def confirm_status_receipt(self, event_id, status, operation_id):
+        return {'state': 'desktop_request_confirmed', 'event_id': event_id, 'request_pending': False,
+                'request_operation_id': operation_id, 'ack_performed': False}
 
 
 class GuiPresentationTests(unittest.TestCase):

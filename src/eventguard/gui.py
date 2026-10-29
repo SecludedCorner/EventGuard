@@ -118,7 +118,7 @@ def view_snapshot(document, *, severity="all", delivery="all", handling="all"):
 
 class ControllerWorker:
     """Serialize local operations without invoking Tk on a worker thread."""
-    ACTIONS = frozenset({"snapshot", "start", "pause", "set_agent_delivery", "set_automatic_agent", "inspect", "investigate", "set_status", "backup_history", "preview_history_backup", "close"})
+    ACTIONS = frozenset({"snapshot", "start", "pause", "set_agent_delivery", "set_automatic_agent", "inspect", "investigate", "set_status", "confirm_status_receipt", "backup_history", "preview_history_backup", "close"})
 
     def __init__(self, controller):
         self.controller = controller
@@ -152,7 +152,7 @@ class ControllerWorker:
                 return
             action, arguments = request
             try:
-                result = getattr(self.controller, action)(*arguments)
+                result = getattr(self.controller, "set_status_durable" if action == "set_status" else action)(*arguments)
                 if not isinstance(result, dict):
                     result = {"state": "error", "reason": "desktop_result_invalid"}
             except Exception as error:
@@ -164,9 +164,9 @@ class ControllerWorker:
                     result["reason"] = "investigation_capacity"
                 if action == "set_status" and isinstance(error, CapacityError):
                     result["reason"] = "event_status_capacity"
-            if action in {"inspect", "investigate", "set_status"}:
+            if action in {"inspect", "investigate", "set_status", "confirm_status_receipt"}:
                 result = dict(result, requested_event_id=arguments[0])
-            if action == "set_status":
+            if action in {"set_status", "confirm_status_receipt"}:
                 result.update(requested_status=arguments[1], requested_operation_id=arguments[2])
             if action in {"backup_history", "preview_history_backup"}:
                 result.update(requested_filename=arguments[0])
@@ -213,6 +213,7 @@ class EventGuardWindow:
         self._event_document = {}
         self._detail_document = None
         self._pending_status = {}  # Bounded, in-session keys for explicit uncertain retries.
+        self._request_journal_known = False
         self._last_event = None
         self._timers = set()
         self.window.title("EventGuard — 合成固定情境（非主機實測）" if self.synthetic_fixture else "EventGuard — 本機唯讀監看")
@@ -463,19 +464,21 @@ class EventGuardWindow:
         self.history_preview_button.configure(state="normal" if not self._busy and not self._closed and self._confirmed_backup_name else "disabled")
         value = self._detail_document or {}
         status = value.get("status")
-        ready = self._can_investigate() and isinstance(status, str) and status in HUMAN_STATES
+        detail_ready = self._can_investigate() and isinstance(status, str) and status in HUMAN_STATES
+        ready = detail_ready and self._request_journal_known
         event_id = self._last_event
         for key, button in self.handling_buttons.items():
             enabled = ready and (key != status or (event_id, key) in self._pending_status)
             button.configure(state="normal" if enabled else "disabled")
-        message = "人工狀態：" + (HUMAN_STATES[status] if ready else "未知") + "；與 ACK 獨立，不代表修復。"
+        message = "人工狀態：" + (HUMAN_STATES[status] if detail_ready else "未知") + "；與 ACK 獨立，不代表修復。"
         pending = [HUMAN_STATES[key] for key in HUMAN_STATES if (event_id, key) in self._pending_status] if ready else []
         if pending:
             message += " 未確認要求：" + "、".join(pending) + "；點選原狀態僅以原識別核對。"
-        self.handling_status.set(message + " 同識別重試僅限本視窗；重開後先查保存歷程。")
+        self.handling_status.set(message + (" 未確認要求不自動重送；重開後先查保存歷程與待核對識別。" if self._request_journal_known else
+                                          " 待確認要求日誌未知，人工寫入停用；既有資料仍可閱讀。"))
 
     def set_status(self, status):
-        if not isinstance(status, str) or status not in HUMAN_STATES or not self._can_investigate():
+        if not isinstance(status, str) or status not in HUMAN_STATES or not self._can_investigate() or not self._request_journal_known:
             return
         current = (self._detail_document or {}).get("status")
         if not isinstance(current, str) or current not in HUMAN_STATES:
@@ -624,6 +627,16 @@ class EventGuardWindow:
             self.message.set("目前操作進行中；完成後可再選「暫停並結束」。")
 
     def _show_detail(self, value):
+        from .gui_requests import recover
+        recovered = recover(value)
+        self._request_journal_known = recovered is not None
+        if recovered is not None:
+            merged = dict(self._pending_status)
+            if any(key in merged and merged[key] != op for key, op in recovered.items()) or len(merged.keys() | recovered.keys()) > 128:
+                self._request_journal_known = False
+            else:
+                merged.update(recovered)
+                self._pending_status = merged
         self._detail_document = value
         self.show_raw.set(False)
         self._render_detail()
@@ -754,17 +767,30 @@ class EventGuardWindow:
                         "調查保存空間或版本容量不足，原調查與事件保留。" if value.get("reason") == "investigation_capacity" else
                         "保存結果未確認；請查看保存資料，不自動重試。")
                     self._refresh_selected_detail(event_id)
+                elif action == "confirm_status_receipt":
+                    event_id, status = value.get("requested_event_id"), value.get("requested_status")
+                    key = (event_id, status)
+                    confirmed = (key in self._pending_status and self._pending_status[key] == value.get("requested_operation_id") == value.get("request_operation_id")
+                                 and value.get("state") == "desktop_request_confirmed" and value.get("event_id") == event_id
+                                 and value.get("request_pending") is False and value.get("ack_performed") is False)
+                    if confirmed:
+                        self._pending_status.pop(key, None)
+                    self.message.set("人工狀態已核對（事件：" + safe_text(event_id, 160) + "）；不是 ACK 或修復。" if confirmed else
+                                     "人工狀態回條核對結果未確認；原識別保留，不自動重送。")
+                    self._refresh_selected_detail(event_id)
                 elif action == "set_status":
                     event_id, status = value.get("requested_event_id"), value.get("requested_status")
                     key = (event_id, status)
                     correlated = self._pending_status.get(key) == value.get("requested_operation_id")
                     confirmed = (correlated and value.get("state") == "event_status_updated" and value.get("event_id") == event_id
-                                 and isinstance(value.get("status"), str) and value["status"] in HUMAN_STATES and value.get("ack_performed") is False)
+                                 and isinstance(value.get("status"), str) and value["status"] in HUMAN_STATES and value.get("ack_performed") is False
+                                 and value.get("request_pending") is True and value.get("request_operation_id") == value.get("requested_operation_id"))
                     if confirmed:
-                        self._pending_status.pop(key, None)
-                        self.message.set("人工狀態已核對（事件：" + safe_text(event_id, 160) + "）：" + HUMAN_STATES[value["status"]] + "；不是 ACK 或修復。")
+                        self._request("confirm_status_receipt", event_id, status, value["requested_operation_id"])
+                        self.message.set("人工狀態保存回條已收到，正在核對要求紀錄；不 ACK 或重送狀態。")
+                        self._snapshot_due = True
+                        continue
                     elif correlated and (value.get("reason") == "event_status_capacity" or value.get("operation_started") is False):
-                        self._pending_status.pop(key, None)
                         self.message.set("人工狀態未保存：處置歷程或資料庫容量不足；原資料與 pending 保留。備份不釋放容量，不自動重試或刪除歷程。"
                             if value.get("reason") == "event_status_capacity" else
                             "人工狀態未保存：操作紀錄無法建立，尚未執行狀態變更；原資料與 pending 保留。不自動重試。")
