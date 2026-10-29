@@ -1,5 +1,10 @@
 # EventGuard 現況
 
+## 2026-10-30 agent 調查契約增量
+
+新增 synthetic-only saved-investigation-v1：安全投影保存證據、400字有界不可信分析、事實引用及完整限制，與既有三工具分開。verify-agent-investigation-contract-20261030-02：21/21、0skip、323語法／來源編譯、Job自然0無殘留／強停，model_calls=0；尚未接線或真模型驗收。下一接四步保存閘道，真人操作全部可自動工作完成後一次安排。
+
+
 ## 2026-10-30 連續三次外部驗收前置未變／保存阻塞點
 
 continuation-impasse-audit-20261030-01～03連續三個goal turns均無產品進度，未假稱verified wait：沒有本輪已啟動的活體程序可等候。HEAD與兩遠端核對皆7ce9d61、工作區乾淨，344個受測來源hash未變；真人六任務仍0筆metrics，參與時間僅問一次尚未回覆。沒有重跑測試／原生query／瀏覽器或新模型，也未以文件保存冒充工程進度。
