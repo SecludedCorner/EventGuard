@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：映射Tk最小視窗事件列修復
+
+`reports/verify-desktop-handling-layout-20261029-04` UTC05:52:29：50/50、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真映射Tk精確client1080×760／850×620，完整已選資料列及詳情文字可見、三篩選／保存／處置／備份控制未超出任何祖先邊界、Tk Tab路徑可達及自動設定分頁幾何。02找到最小視窗無事件列、03仍裁選取列6px；移設定分頁及縮放see修復，未提高最小尺寸。01只驗框線不充分，04為最終；`reports/build-desktop-handling-layout-20261029-01`282檔hash及260檔編譯通過。非人類／原生輸入或Web200%驗收，無採集／模型／ACK。
+
 ## 2026-10-29：歷程備份真Tk／合成SQLite
 
 `reports/verify-desktop-history-backup-widgets-20261029-01` UTC05:45:50：67/67、0skip、source_unchanged、Job自然退出0／remaining0／無強停。實際Tk按鈕→真控制層／合成SQLite／本機暫存檔，驗明確點選才備份、忙碌重點只一份、hash／live範圍相符、DB bytes及pending2／receipt0守恆；真檔名碰撞不覆寫、錯誤回條不假報成功、不自動重試。`reports/build-desktop-history-backup-widgets-20261029-01`281檔hash及259檔編譯通過。備份檔含敏感識別不提交；無清理／還原／原生採集／模型／ACK，目錄項耐久性未驗，非真人或Web驗收。

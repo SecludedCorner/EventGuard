@@ -265,25 +265,27 @@ class EventGuardWindow:
         self.refresh_button.grid(row=0, column=3, padx=(6, 0))
         ttk.Label(outer, textvariable=self.counts).grid(row=1, column=0, sticky="w", pady=(10, 4))
         ttk.Label(outer, textvariable=self.updated, foreground="#53606d").grid(row=2, column=0, sticky="w")
+        notebook = ttk.Notebook(outer)
+        notebook.grid(row=5, column=0, sticky="nsew")
         agent = ttk.Frame(outer)
         agent.grid(row=3, column=0, sticky="ew", pady=(12, 8))
         self.agent_check = ttk.Checkbutton(agent, text="允許 agent 接收事件（不自動呼叫模型）",
                                            variable=self.agent_enabled, command=self.change_agent_delivery)
         self.agent_check.grid(row=0, column=0, sticky="w")
         ttk.Label(agent, textvariable=self.agent_status, foreground="#53606d").grid(row=1, column=0, sticky="w", pady=(3, 0))
-        self.automatic_check = ttk.Checkbutton(agent, text="自動交給專用 agent（會使用模型額度）",
+        automatic_frame = ttk.Frame(notebook, padding=8)
+        self.automatic_check = ttk.Checkbutton(automatic_frame, text="自動交給專用 agent（會使用模型額度）",
             variable=self.automatic_enabled, command=self.change_automatic_agent)
-        self.automatic_check.grid(row=2, column=0, columnspan=2, sticky="w", pady=(6, 0))
-        self.automatic_path = ttk.Entry(agent, textvariable=self.automatic_executable, width=72)
-        self.automatic_path.grid(row=3, column=0, sticky="ew", pady=(3, 0))
-        self.automatic_browse = ttk.Button(agent, text="選擇 codex.exe", command=self.choose_codex)
-        self.automatic_browse.grid(row=3, column=1, padx=(6, 0))
-        ttk.Label(agent, textvariable=self.automatic_status, foreground="#53606d", wraplength=1000).grid(
-            row=4, column=0, columnspan=2, sticky="w", pady=(3, 0))
+        self.automatic_check.grid(row=0, column=0, columnspan=2, sticky="w", pady=(6, 0))
+        self.automatic_path = ttk.Entry(automatic_frame, textvariable=self.automatic_executable, width=72)
+        self.automatic_path.grid(row=1, column=0, sticky="ew", pady=(3, 0))
+        self.automatic_browse = ttk.Button(automatic_frame, text="選擇 codex.exe", command=self.choose_codex)
+        self.automatic_browse.grid(row=1, column=1, padx=(6, 0))
+        ttk.Label(automatic_frame, textvariable=self.automatic_status, foreground="#53606d", wraplength=760).grid(
+            row=2, column=0, columnspan=2, sticky="w", pady=(3, 0))
+        automatic_frame.columnconfigure(0, weight=1)
         agent.columnconfigure(0, weight=1)
         ttk.Label(outer, textvariable=self.message, wraplength=1000).grid(row=4, column=0, sticky="ew", pady=(0, 8))
-        notebook = ttk.Notebook(outer)
-        notebook.grid(row=5, column=0, sticky="nsew")
         source_frame = ttk.Frame(notebook, padding=8)
         source_frame.columnconfigure(0, weight=1)
         source_frame.rowconfigure(0, weight=1)
@@ -342,6 +344,7 @@ class EventGuardWindow:
         event_scroll.grid(row=1, column=1, sticky="ns")
         self.events.configure(yscrollcommand=event_scroll.set)
         self.events.bind("<<TreeviewSelect>>", self.select_event)
+        self.events.bind("<Configure>", self.reveal_selected_event)
         detail_frame = ttk.Frame(event_frame)
         detail_frame.grid(row=2, column=0, sticky="nsew", pady=(10, 0))
         detail_frame.rowconfigure(1, weight=1)
@@ -394,6 +397,7 @@ class EventGuardWindow:
         ttk.Label(activity_frame, text="只記錄經 EventGuard 的操作；不讀聊天思考、提示、完整命令列或其他程式歷史。入口標籤不是身分驗證。",
                   wraplength=1000).grid(row=2, column=0, sticky="w", pady=(8, 0))
         notebook.add(activity_frame, text="操作紀錄")
+        notebook.add(automatic_frame, text="自動 agent 設定")
         ttk.Label(outer, text="關閉視窗只會最小化，監看會繼續。要完全離開，請選「應用程式 → 暫停並結束」。",
                   foreground="#53606d", wraplength=1000).grid(row=6, column=0, sticky="ew", pady=(10, 0))
 
@@ -530,6 +534,11 @@ class EventGuardWindow:
             self._inspect_after_refresh = None
             if not self._request("inspect", event_id):
                 self._inspect_after_refresh = event_id
+
+    def reveal_selected_event(self, _event=None):
+        selection = self.events.selection()
+        if selection and self.events.exists(selection[0]):
+            self.events.see(selection[0])
 
     def filter_events(self, _event=None):
         self._render_events(view_snapshot(self._event_document,

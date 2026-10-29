@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 最小桌面視窗的事件列可見性修復
+
+實際映射Tk視窗發現850×620事件列不可見（02），移出自動agent設定後列仍被裁6px（03）；現將控制放獨立設定分頁，Treeview縮放時see已選事件，未提高最小尺寸或放寬驗收。`reports/verify-desktop-handling-layout-20261029-04`：2026-10-29 13:52（UTC+8）50/50、0skip、source_unchanged、Job自然退出0／remaining0／無強停；精確核對1080×760／850×620 client、完整已選列、詳情文字行、三篩選／保存／四處置／備份控制全部祖先邊界、Tk Tab路徑及自動設定分頁幾何。01僅框線測試不足，04為最終。`reports/build-desktop-handling-layout-20261029-01`282檔hash／260檔編譯通過；bec37d8（+115/−3）已普通同步main／開發ref，非真人／原生輸入／Web縮放驗收。
+
 ## 2026-10-29 桌面歷程備份真Tk入口完成
 
 真Tk按鈕明示本安裝live／敏感識別只留本機與不釋放容量，明確點選才寫檔；忙碌防重點，回條核對要求檔名／live／fsync及未刪歷程／未ACK，不符或失敗明示未確認、不自動重試。`reports/verify-desktop-history-backup-widgets-20261029-01`：2026-10-29 13:45（UTC+8）67/67、0skip、source_unchanged、Job自然退出0／remaining0／無強停，真Tk→真合成SQLite驗只產一份可驗hash備份、DB bytes及pending2／receipt0守恆、真實檔名碰撞不覆寫與錯誤回條不報成功。`reports/build-desktop-history-backup-widgets-20261029-01`：281檔hash／259檔編譯通過。deb4948（+99/−1）已普通同步main／開發ref；完整容量恢復仍未完成，備份不等於還原／耐久性或來源認證。
