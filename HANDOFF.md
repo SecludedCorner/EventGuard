@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 pending Tk 101件閉環已驗／接整合文件
+
+10/10、0skip及304檔來源編譯，真Tk＋101件SQLite找舊anchor／原ID明確核對／兩頁／非預設篩選返回／unknown／晚到頁及忙讀刷新已驗，見STATUS／EVIDENCE。下一更新GUI操作文件的待確認入口與快照／本頁篩選／刷新語意，做受影響GUI／controller／Catalog／保留／兩真Job整合及可重現來源保存；不再重跑無變動全庫。人類成績仍null，原生／Web／長時與完整歷程恢復可信根仍各自待驗，完整目標active。
+
 ## 2026-10-29 Tk pending首切片已驗／接101件與故障
 
 49/49、0skip及303檔來源編譯，PendingView四控制／reply模式／snapshot隔離／返回原選取及最小尺寸已驗，見STATUS。下一用test_desktop_pending_control的101件live fixture建立真Tk（原fixture只2件）：找不在recent100的anchor，讀不自送、明確原ID核對、不回退較新決定；另造101個pending事件驗100＋1前後頁、最後空頁／unknown／錯offset，pending普通刷新不可蓋頁、返回恢復非預設篩選／選取，讀頁中返回後晚到回條不可套用。保留故障前後DB／payload／pending／ACK與worker退出證據；不重跑無變動全庫，每單元立即普通同步main。

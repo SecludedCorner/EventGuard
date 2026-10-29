@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：101件SQLite與實際Tk pending入口
+
+`reports/verify-desktop-pending-widgets-20261029-02` UTC09:54:47：10/10、0skip、source_unchanged、Job自然0／remaining0／無強停。直接操作pending／前後頁／返回／刷新／handled元件：recent100外anchor可到達，讀回原ID時0save／DB bytes不變，較新read後同ID明確核對只重播、兩筆歷程／pending101／receipt0。101個pending事件分100＋1、前後頁集合一致不重複、bytes不變；非預設severity／delivery／handling與原選取返回恢復。錯scope未知／禁寫且可明確重試，返回後晚到頁丟棄，snapshot忙讀期間刷新停用、完成恢復，無自動處置／模型／ACK。01上一頁仍disabled時invoke導致1fail，02等實際元件啟用後通過並新增故障驗收；build-desktop-pending-widgets-20261029-01為326hash／304編譯。非原生輸入或真人結果。
+
 ## 2026-10-29：Tk待確認模式與返回初驗
 
 `reports/verify-gui-pending-controls-20261029-02` UTC09:47:51：49/49、0skip、source_unchanged、Job自然0／remaining0／無強停。實際pending按鈕＋真SQLite只顯示anchor，普通snapshot不覆蓋頁，返回恢復原member與詳情，DB bytes不變／pending2／receipt0；新增四控制與既有操作在1080×760／850×620均可見。01在最小尺寸兩項首列bbox超界，修為依Treeview標題font metrics及rowheight保留最小區域，02通過，未削弱幾何斷言。`reports/build-gui-pending-controls-20261029-01`325hash／303編譯。101件／100＋1及壞頁／晚到回條另待，不冒稱完整元件／原生／真人完成。

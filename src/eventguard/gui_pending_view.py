@@ -24,6 +24,7 @@ class PendingView:
         if not hasattr(self, 'pending_button'):
             return
         ready = not self._closed and not self._busy and not self.worker.pending
+        self.refresh_button.configure(state='disabled' if self._busy or (self._pending_mode and self.worker.pending) else 'normal')
         value = self._pending_page or {}
         enabled = (ready, ready and self._pending_mode and self._pending_offset > 0,
                    ready and self._pending_mode and value.get('has_more') is True, self._pending_mode and not self._closed)

@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 101件真Tk待確認入口／兩頁與晚到回條
+
+`reports/verify-desktop-pending-widgets-20261029-02`：2026-10-29 17:54（UTC+8）10/10、0skip、source_unchanged、Job自然0／remaining0／無強停。真Tk＋101件SQLite從recent100外找anchor、讀原ID0save、明確核對不回退較新read／不增歷程，刷新清已確認列並返回原非預設三篩選／選取；101個pending anchor透過實際上一頁／下一頁分100＋1、無重複及bytes守恆。錯scope頁清成unknown且禁人工寫入，明確重試可恢復；讀頁中返回後晚到頁不套用。pending模式的snapshot讀取時暫停刷新按鈕，避免點擊被忙碌read吞掉，完成後恢復。01未等待上一頁按鈕實際啟用就invoke造成1fail，02改按元件狀態等待並補故障為最終10。`reports/build-desktop-pending-widgets-20261029-01`326hash／304編譯；f11ebfe兩ref一致。新入口合成元件已驗，尚需受影響整合／操作文件與來源保存；不升格原生／真人／Web完成。
+
 ## 2026-10-29 實際Tk待確認模式首切片
 
 新增查看待確認／上一頁／下一頁／返回最近控制，採已驗回條契約；pending模式保留有界頁快照，一般snapshot只更新來源／計數，明確刷新才換頁；返回恢復原篩選／可見選取／焦點，離開後晚到頁不套用。`reports/verify-gui-pending-controls-20261029-02`：2026-10-29 17:47（UTC+8）49/49、0skip、source_unchanged、Job自然0／remaining0／無強停，真Tk＋SQLite驗按鈕讀取、來源刷新不覆蓋頁、返回原事件、DB bytes／pending2／receipt0守恆及四新控制在850×620可見。01最小視窗2fail為事件首列被截，依標題字型metrics＋rowheight保留最小空間後02通過，沒有提高最小視窗或放寬測試。`reports/build-gui-pending-controls-20261029-01`325hash／303編譯；015b7f2兩ref一致。≥101件／兩頁／舊ID明確核對及故障仍待下一單元，不能用此首切片升格全UI驗收。
