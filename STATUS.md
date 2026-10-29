@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 事件row／payload身分不一致已修
+
+合成SQLite重現hash有效但payload ID不同時，一般get／list、人工處置、ACK／重播及pump未完整拒絕；red 5個test的6個檢查皆fail（passed=-1為subtest計數算法，不能當有效通過數）。新增共用_payload驗row ID＋payload ID＋hash，讀取／人工狀態／ACK在寫入前拒絕，pump保留原payload與hash並標stored_payload_invalid，不送adapter、不耗attempt、不造receipt。這直接保護交給agent的事件身分，不是真模型／原生防守驗收。
+
+`reports/verify-event-row-identity-red-20261029-01`保存失敗；修正後`reports/verify-event-row-identity-core-20261029-01`（18:22 UTC+8）6模組52/52、0skip、source_unchanged、Job自然0／remaining0／無強停；`reports/build-event-row-identity-core-20261029-01`327hash／305檔來源編譯。下一接受影響Catalog／控制層與保留整合，核對保存結果等其他寫入入口，不能用共用helper已存在推定所有路徑完成。
+
 ## 2026-10-29 最終目標校正：資安 AI 盯哨
 
 使用者明確確認核心是偵測偵查／攻擊蛛絲馬跡後喚醒 agent 查證、防守；已寫入 AGENTS.md 與 MAINTENANCE_GOAL，GUI／人工處置／可靠性工作須服務此閉環。真接收與防守成效分開驗收，ACK 不代表安全，既有授權不擴大。接續 EVENT-ROW-IDENTITY-AUDIT，不以介面完成結束整體目標。

@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：核心事件身分拒絕red→green
+
+`reports/verify-event-row-identity-red-20261029-01`：5tests／6失敗檢查（get／list為subtests），0error／0skip；原程式會接受hash有效的異ID payload，pump的Mock send被呼叫，無真adapter／模型。修共用_payload後，`reports/verify-event-row-identity-core-20261029-01`6模組52/52、0skip、source_unchanged、305語法；Job自然exit0／remaining0／無強停。一般讀取／人工處置／ACK及已ACK重播拒絕時DB位元組不變；pump不send／attempt0／receipt0，原payload/hash保留並failed。build同名327hash／305編譯；synthetic local_mock receipt，未取得新真agent、防守或主機安全證據。
+
 ## 2026-10-29：最終目標寫入專案指引
 
 18:18（UTC+8）依使用者本次明示，AGENTS.md 新增「資安 AI 盯哨」核心目標：偵測蛛絲馬跡、證據、真喚醒、調查、授權防守、結果／恢復驗證；同步目前目標及交接，未更動產品程式或擴大權限。文件檢查包含 diff／相對引用及既有工作界線完整保留；沿用未變動產品來源之 pending-final 260/260、0skip 與 build 326hash／304編譯（路徑見 STATUS），不是本次重新執行測試或真 agent 驗收。下一契約核對仍為 EVENT-ROW-IDENTITY-AUDIT，完整目標 active。

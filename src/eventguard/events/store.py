@@ -451,10 +451,18 @@ class EventStore:
         return bool(self._commit_batch([clean]))
 
     @staticmethod
-    def _row(row):
-        event = validate_event(json.loads(row["payload"]))
-        if row["payload_hash"]!=event_payload_hash(event):
+    def _payload(row):
+        try:
+            event = validate_event(json.loads(row["payload"]))
+        except (ValueError, TypeError):
+            raise StoreError("stored_event_identity_mismatch") from None
+        if row["event_id"] != event["event_id"] or row["payload_hash"] != event_payload_hash(event):
             raise StoreError("stored_event_identity_mismatch")
+        return event
+
+    @staticmethod
+    def _row(row):
+        event = EventStore._payload(row)
         event.update(delivery_status=row["delivery_status"], attempts=row["attempts"],
                      next_retry_at=row["next_retry_at"], delivery_reason=row["reason"],
                      created_at=_iso(row["created_at"]), updated_at=_iso(row["updated_at"]),
@@ -717,7 +725,7 @@ class EventStore:
     def _ack(self, db, event_id, receipt, now, receiver_finalization=False):
         clean = validate_receipt(event_id, receipt)
         encoded = json.dumps(clean, ensure_ascii=False, separators=(",", ":"))
-        row = db.execute("SELECT payload_hash,delivery_status,receipt,updated_at FROM events WHERE event_id=?",(event_id,)).fetchone()
+        row = db.execute("SELECT * FROM events WHERE event_id=?",(event_id,)).fetchone()
         if not row:
             previous = db.execute("SELECT receipt,payload_hash,acked_at FROM receipts WHERE event_id=?",(event_id,)).fetchone()
             if previous and json.loads(previous[0]) != clean:
@@ -725,6 +733,7 @@ class EventStore:
             if previous and receiver_finalization:
                 self._pin_receipt(db,event_id,encoded,previous["payload_hash"],previous["acked_at"])
             return previous is not None
+        self._payload(row)
         if row["delivery_status"] == "ack":
             if json.loads(row["receipt"]) != clean:
                 raise StoreError("ack_receipt_identity_conflict")
@@ -823,10 +832,8 @@ class EventStore:
                         AND (lease_until IS NULL OR lease_until<=?) ORDER BY created_at,event_id LIMIT 100""",(MAX_ATTEMPTS,current,current)).fetchall()
                 for row in rows:
                     try:
-                        clean_event=validate_event(json.loads(row["payload"]))
-                        if event_payload_hash(clean_event)!=row["payload_hash"]:
-                            raise ValueError("payload identity differs")
-                    except (ValueError,TypeError):
+                        clean_event=self._payload(row)
+                    except (ValueError,TypeError,StoreError):
                         with self._connect() as db:
                             db.execute("UPDATE events SET delivery_status='failed',reason='stored_payload_invalid',updated_at=?,next_retry_at=NULL WHERE event_id=? AND delivery_status IN ('pending','retry')",(current,row["event_id"]))
                         result["failed"]+=1
