@@ -1,5 +1,11 @@
 # EventGuard 目前目標
 
+## 2026-10-29 合成盯哨全鏈已驗／剩餘必要關卡
+
+SENTRY-DETECTOR-TO-FAKE-AGENT已跑實際detector→保存→預設policy→明示fake CLI receive/query/保存/ACK與自然退出，50/50／0skip、314來源編譯；正常／warning各0 CLI，高1 CLI，pending警告保留。產品370項與驗證器33項範圍另記，不能相加當真環境成功。
+
+下一以實際前置為準：原生輸入需工具返回可確認自有窗口（本版90秒未返回且已自然退出）；UX-HUMAN需人類六任務結果；Web需隔離瀏覽器200%／焦點證據；native listeners精確診斷、24h／reboot各需新具名授權／環境；HISTORY-RECOVERY缺可信來源根與無損容量契約，不自行建憑證或刪歷程；inbound偵查缺連線／封包遙測，allowed_actions為空且真防守／恢復結果未驗。未具備的關卡保持未完成，不重複fixture／輪詢替代；有可重現產品缺陷或前置變化再選可執行單元，整體AI盯哨仍active。
+
 ## 2026-10-29 目前可執行：SENTRY-DETECTOR-TO-FAKE-AGENT
 
 原生工具當次無目標（本版有限期Tk已自然收尾，見STATUS），停止該路線、不再輪詢。下一補實際detector→state/events原子保存→policy選取→既有明示fake CLI→receive/query/保存/ACK／自然退出；並驗正常與warning不啟CLI，留低門檻事件pending。使用既有fixture／合成權限與私有Job，零真模型／原生採集，不能將fake結果升格真正agent驗收。其他原生／真人／Web／長跑與來源可信根關卡不變，整體active。

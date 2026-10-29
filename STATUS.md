@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 detector到fake CLI合成盯哨閉環通過
+
+`reports/verify-sentry-detection-dispatch-20261029-01`（18:59 UTC+8）4模組50/50、0skip、source_unchanged、314語法、Job自然0／remaining0／無強停；`reports/build-sentry-detection-dispatch-20261029-01`337hash／314來源編譯。新增實際detector→預設規則→原子state/events保存→policy選取→既有明示fake CLI→receive/query/保存結果/ACK／自然退出整合；正常0 CLI、高線索1 CLI、warning-only0 CLI，warning保留pending。生命週期證據明標synthetic/fake、model0／real_agent_woken false；沒有新真模型或防守驗收，不與370項或33項相加。
+
+目前具體剩餘條件：原生輸入工具未返回自有窗口；真人六任務結果仍null；Web200%／焦點未由Tk替代；listeners精確原生重驗、24h／reboot需新具名範圍與實際環境；歷程正式恢復缺可信來源根／無損容量契約；inbound偵查沒有連線／封包遙測，有限metadata線索不能叫全攻擊偵測；allowed_actions仍空，真防守處置與結果／恢復未驗。這些未DONE、整體AI盯哨仍active。下一只核對這些具體前置與既有佇列，不靠新增重複fixture或輪詢同工具延長工程。
+
 ## 2026-10-29 本版原生窗口核對仍未可用／已自然收尾
 
 `reports/desktop-ux-native-policy-20261029-01`以f2f280d本版啟動90秒專用合成Tk，ready的membership_verified=true；@oai/sky在2026-10-29 18:54:29（UTC+8）返回40apps／5windows、EventGuard匹配0，未猜ID／未輸入／未改設定／未輪詢。native-tool-observation.json僅存目標匹配與數量、不存其他窗口名稱或截圖；guardian與worker均自然exit0／remaining0／無強停，deadline合作關閉，model0／scan0／ACKfalse／participant null。這只證明自有視窗生命周期，原生輸入／真人仍未驗。採用computer-use技能，沒有新權限要求。

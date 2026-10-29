@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：detector實際輸出到明示fake CLI
+
+`reports/verify-sentry-detection-dispatch-20261029-01`UTC10:59:23，4模組50/50、0skip、source_unchanged、314語法、13.228s，guardian自然exit0／remaining0／無強停；build同名337hash／314編譯。新增1條跨模組整合實際跑detector／configured rules／SQLite／policy／QueueInbox與fake CLI trace驗證，receive/query/保存結果/ACK同event與query ID、capture_complete／summary passed、fake自有child自然0；正常及warning各0 CLI、高1 CLI，最終pending1／ack1／receipt1。lifecycle-evidence明標fake CLI、0model／非真喚醒。不是新原生或真防守證據，歷史真接線證據另保留。
+
 ## 2026-10-29：有期限本版Tk與原生工具匹配
 
 reports/desktop-ux-native-policy-20261029-01：source f2f280d、90秒、就緒前已私有Job且membership_verified=true；native-tool-observation UTC10:54:29.665，@oai/sky app40／window5／EventGuard0。未選窗口／未輸入／未存其他標題／未截圖、不調設定或重複輪詢。session-result與guardian-exit：closed/deadline、child_exited true、exit0、remaining0、無強停；worker0model／0scan／無ACK、participant null。原生輸入未完成；這是當次工具返回實證，並非再次缺許可。驗證器與產品來源差異綁定見verify-parent-counts-green-20261029-01/source-commit.json。

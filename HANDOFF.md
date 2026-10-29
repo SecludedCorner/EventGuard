@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 合成detector到fake CLI閉環已驗／核對外部關卡
+
+50/50、0skip／314來源編譯與自然退出已驗，見STATUS。這次事件來自實際detector而非手造source event，正常與warning不啟CLI、高線索一次fake閉環且低線索pending保留；不叫真agent／實機攻擊驗收。接手先核對已列外部條件是否變化：原生工具窗口、真人結果、Web焦點／200%、新具名native／24h／reboot範圍、恢復可信來源及防守處置授權／結果。沒有變化便保留未驗，不重跑同fixture或同工具，不新增憑證／模型／系統處置。
+
 ## 2026-10-29 原生工具未返回本版窗口／接合成全鏈
 
 本版90秒合成Tk ready＋Job身分已確認，但sky返回5窗口無EventGuard；已deadline自然0／remaining0／無強停，證據見STATUS。不再輪詢同錯、不問既有權限。下一用實際detector高線索→原子保存→default政策→明示fake CLI驗receive/query/保存/ACK與退出，正常及warning不啟CLI；這補跨模組閉環，不稱真喚醒或真防守。原生／真人／Web等獨立關卡仍未驗。
