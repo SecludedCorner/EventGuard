@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 原生診斷前置已準備，等待本次具名批准
+
+`reports/windows-listener-diagnostics-20261029-01`已用7ef2c7b來源prepare，12檔hash與manifest/template綁定核對通過；query_started=false、approved=false、尚無human-approval.json。只允一次listeners四表及既有必要程序建立時間查核，query5秒／總預算30秒，保存固定分類／計數與自有Job摘要，不保存其他listener facts；無模型／其他來源／系統改動。已提出本次具體範圍問項；不重用2026-10-27已用完的批准、不執行--execute。舊20261028準備包仍superseded，詳見WINDOWS_VALIDATION_PLAN。
+
+`reports/release-prep-sentry-checkpoint-20261029-01`為7ef2c7b來源包417檔／reproducible／SHA256 cd173b84d76271e2417a957df844238aa50ab9407c240b45cc66d79c62d6b8c5，非release。manifest交叉比對370項整合與最新50項來源，僅verify.py及兩新測試不同，產品來源位元組未變；source-commit.json已綁定，驗證器另33項。這次純文件沿用該build／測試並核對新包，不重跑未變動全庫。待原生直接批准才建立同run有效時間授權紀錄、再次核hash並在私有Job執行；未收到答覆不當成批准。其他真人／Web／長跑／恢復／真防守缺口見前節，整體active。
+
 ## 2026-10-29 detector到fake CLI合成盯哨閉環通過
 
 `reports/verify-sentry-detection-dispatch-20261029-01`（18:59 UTC+8）4模組50/50、0skip、source_unchanged、314語法、Job自然0／remaining0／無強停；`reports/build-sentry-detection-dispatch-20261029-01`337hash／314來源編譯。新增實際detector→預設規則→原子state/events保存→policy選取→既有明示fake CLI→receive/query/保存結果/ACK／自然退出整合；正常0 CLI、高線索1 CLI、warning-only0 CLI，warning保留pending。生命週期證據明標synthetic/fake、model0／real_agent_woken false；沒有新真模型或防守驗收，不與370項或33項相加。

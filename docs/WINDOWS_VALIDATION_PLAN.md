@@ -1,5 +1,11 @@
 # Phase 7：Windows 可逆狀態與故障恢復驗證計畫
 
+## 2026-10-29 現行來源已重新prepare（尚未批准／執行）
+
+新的專用目錄為`reports/windows-listener-diagnostics-20261029-01`，綁7ef2c7b來源、12檔hash及本次manifest，query_started=false，template approved=false；執行程序保存在該目錄AUTHORIZATION_REQUEST與NEXT_DIAGNOSTIC。舊20261028包維持superseded，不改歷史或重用已用完的單次批准。
+
+只申請一次listeners native baseline：TCP/UDP、IPv4/IPv6及既有必要程序建立時間查核，query最多5秒、總工作預算30秒；只存固定狀態／計數／既有錯誤分類與自有Job退出摘要，不存PID／名稱／路徑／位址／port原始facts，不新增來源／socket／registry／系統變更／模型或持續權限。具名直接答覆獲准後才記同run的human-approval.json與有效時間、核hash並由私有Job執行；尚未執行、不把準備或合成測試當完整baseline成功，更不代表安全或防守完成。
+
 ## 2026-10-28 計數完整性修復與舊準備包失效（最新）
 
 P0-LISTENER-COUNTS-003已修正四表status=ok但返回列數不足／錯protocol／錯IP family仍可能complete的缺陷。新增逐表table_counts_consistent，不降低身分或退出要求；原重現5failure entries保留，修後52/52定向通過，無native/model。這不解釋或消除舊111列身分缺失。

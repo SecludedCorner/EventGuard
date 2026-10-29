@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：當前來源原生診斷準備，不是執行
+
+windows-listener-diagnostics-20261029-01預設prepare成功、12source hash與manifest/template一致，query_started=false／approved=false／human-approval.json不存在；NEXT_DIAGNOSTIC綁7ef2c7b與一次5秒query／30秒總預算、無模型／其他來源／系統改動。具名批准問項已發出但尚未執行，不把準備稱原生重驗。7ef2c7b來源包release-prep-sentry-checkpoint-20261029-01可重現417檔、SHA256 cd173b84d76271e2417a957df844238aa50ab9407c240b45cc66d79c62d6b8c5；370項來源與最新50項manifest只差verify.py及兩測試，產品位元組相同（最新source-commit.json）。沒有新模型或原生採集、tag或release。
+
 ## 2026-10-29：detector實際輸出到明示fake CLI
 
 `reports/verify-sentry-detection-dispatch-20261029-01`UTC10:59:23，4模組50/50、0skip、source_unchanged、314語法、13.228s，guardian自然exit0／remaining0／無強停；build同名337hash／314編譯。新增1條跨模組整合實際跑detector／configured rules／SQLite／policy／QueueInbox與fake CLI trace驗證，receive/query/保存結果/ACK同event與query ID、capture_complete／summary passed、fake自有child自然0；正常及warning各0 CLI、高1 CLI，最終pending1／ack1／receipt1。lifecycle-evidence明標fake CLI、0model／非真喚醒。不是新原生或真防守證據，歷史真接線證據另保留。

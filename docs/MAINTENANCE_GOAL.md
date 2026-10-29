@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 當前具體待辦：P2-OS-DIAG-002本次批准
+
+7ef2c7b已prepare reports/windows-listener-diagnostics-20261029-01並核12hash，未批准／未採集；已提出一次listeners四表及既有必要程序時間查核、query5秒／總預算30秒的具名問項。下一只依本次直接答覆處理：獲准才記錄同run時間授權、重核hash與私有Job執行一次，未回覆不等批准，不重用舊包／舊次數。原生工具窗口、真人六任務、Web200%／焦點、24h／reboot、可信歷程恢復、inbound偵查遙測與真防守結果等其餘條件仍獨立未完成，完整AI盯哨active；不靠反覆同fixture或新增展示取代這些缺口。
+
 ## 2026-10-29 合成盯哨全鏈已驗／剩餘必要關卡
 
 SENTRY-DETECTOR-TO-FAKE-AGENT已跑實際detector→保存→預設policy→明示fake CLI receive/query/保存/ACK與自然退出，50/50／0skip、314來源編譯；正常／warning各0 CLI，高1 CLI，pending警告保留。產品370項與驗證器33項範圍另記，不能相加當真環境成功。

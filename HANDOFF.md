@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 listeners包已準備／待本次範圍答覆
+
+原生準備root為reports/windows-listener-diagnostics-20261029-01，12hash綁7ef2c7b、未批准／未query，詳STATUS／WINDOWS_VALIDATION_PLAN；這是新增一次採集，不能用舊授權或等待時間當同意。若本次問項明確獲准，再記同run授權與當時時間、核hash、由私有Job執行既定一次5秒query／30秒總預算；若不准或無答覆，原樣保留待驗。其他外部關卡無變化就不反覆fixture或輪詢。完整AI盯哨仍active；來源包417檔與370／33／50項證據分開綁定。
+
 ## 2026-10-29 合成detector到fake CLI閉環已驗／核對外部關卡
 
 50/50、0skip／314來源編譯與自然退出已驗，見STATUS。這次事件來自實際detector而非手造source event，正常與warning不啟CLI、高線索一次fake閉環且低線索pending保留；不叫真agent／實機攻擊驗收。接手先核對已列外部條件是否變化：原生工具窗口、真人結果、Web焦點／200%、新具名native／24h／reboot範圍、恢復可信來源及防守處置授權／結果。沒有變化便保留未驗，不重跑同fixture或同工具，不新增憑證／模型／系統處置。
