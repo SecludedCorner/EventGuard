@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 人工狀態控制層與桌面目標
+
+最新任務目標及完成條件已寫MAINTENANCE_GOAL頂部，保留舊Web待驗。人工set_status控制層固定gui來源及明確operation_id，54/54、0skip、來源編譯252檔通過，pending／receipt守恆，詳見STATUS。下一步接真Tk四狀態按鈕、同ID未確認重試與回條；不可把handled當ACK或將保存state當修復。平台目標卡仍舊Web blocked，工具沒有edit/resume方法；後續有界用支援UI核對，不因此停工程。
+
 ## 2026-10-29 桌面已整合版本與立即接續
 
 桌面保存調查控制層／按鈕／真合成SQLite閉環、讀取失敗未知及操作文件已逐單元普通同步main與開發ref至ce557888581a230b3ea8f12e39c60f058dec02aa；最終121/121、0skip、Job自然退出無殘留，353檔來源包可重現，見STATUS。原專案已同步，後續在原專案開發，整合checkout保持乾淨；兩個500行比較基準均為0。下一個已授權桌面單元為人工處置狀態入口，詳見MAINTENANCE_GOAL頂部；Web、真人、原生輸入與採集仍獨立待驗，不重問同範圍權限或輪詢瀏覽器。

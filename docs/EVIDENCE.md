@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面人工狀態控制層
+
+`reports/verify-desktop-handling-controller-20261029-01` UTC 2026-10-29 04:58:37：54/54、0skip、source_unchanged、Job自然退出0／remaining0。真臨時SQLite驗new／read／handled／ignored、gui歷程、同operation_id重播不回退較新決定、容量與活動失敗不改DB、非法狀態／key拒絕，pending1／receipt0；採集／spawn模型／ACK哨兵未觸發。`reports/build-desktop-handling-controller-20261029-01`：274檔受測hash相符、252檔編譯。只完成控制層，不當Tk按鈕／Web／真人／原生驗收；桌面目標檔更新與平台卡實際狀態分別記錄。
+
 ## 2026-10-29：桌面最終整合與可重現來源
 
 `reports/verify-desktop-save-final-20261029-01` UTC 2026-10-29 02:33:00：10個受影響模組121/121、0skip、source_unchanged、251檔語法無誤，Job自然退出0／remaining0／無強停，fixture／合成Tk及標明的自有Windows Job API，未原生採集／模型／ACK。`reports/release-prep-desktop-investigation-20261029-01`：ce557888581a230b3ea8f12e39c60f058dec02aa，353檔可重現，archive SHA256 ea6f876554ceffcd395b17b2c060b573dfe22832aa2787d8d76efd18f75f942e。直接ls-remote兩ref一致，工作樹及對origin/main差異0；各單元增刪見STATUS，不把普通push或此包當release／CI／真人／Web／原生通過。

@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面人工狀態控制層
+
+DesktopController.set_status固定source=gui並要求明確operation_id，沿用Catalog交易與有界操作歷程；活動先保存意圖且目標只hash，不採集／模型／ACK。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-handling-controller-20261029-01 --timeout-seconds 180 --module test_desktop_handling --module test_desktop --module test_disposition_history_integration --module test_activity`：2026-10-29 12:58（UTC+8）54/54、0skip、source_unchanged、Job自然退出0／remaining0。真合成SQLite驗四狀態／gui歷程、同ID重播不覆蓋後來決定、容量／活動失敗保留舊DB、非法狀態／缺key拒絕，pending1／receipt0不變。`reports/build-desktop-handling-controller-20261029-01`：274檔hash相符、252檔編譯。目標檔已更新桌面A–C閉環，平台卡仍舊Web blocked，不冒稱已恢復；Tk按鈕為下一單元，既有Web／真人／原生待驗保留。
+
 ## 2026-10-29 桌面增量最終整合121項通過
 
 控制層acadbaa（+94/−2）、按鈕13d9d94（+101/−4）、真Tk閉環1940a3b（+143/−1）、操作文件caa19c5（+26/−10）、讀取失敗ce55788（+44/−0）均逐單元build／測試後commit／普通push開發ref，再普通ff-only整合main，未累積超過500行。直接遠端核對兩ref=ce557888581a230b3ea8f12e39c60f058dec02aa，原專案與整合工作樹乾淨／對origin/main差異0。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-save-final-20261029-01 --timeout-seconds 180`加該目錄summary所列10個`--module`，2026-10-29 10:33（UTC+8）121/121、0skip、source_unchanged、251檔語法通過，Job自然退出0／remaining0／無強停；不與前述重疊定向相加。`reports/release-prep-desktop-investigation-20261029-01`綁定ce55788完整SHA，353檔可重現，未建立tag／release。真人／Web／原生及原生輸入待驗保留；純文件本節沿用該版本來源build／相關測試並核對引用，不停止已授權桌面工作。

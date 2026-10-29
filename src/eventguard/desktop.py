@@ -28,7 +28,7 @@ def recorded(operation):
             from .activity import call
             enabled = args[0] if args else kwargs.get("enabled")
             result = call(self.root, "human_gui", operation, "live",
-                          lambda: method(self, *args, **kwargs), args[0] if operation in {"gui_inspect", "gui_investigate"} and args else None,
+                          lambda: method(self, *args, **kwargs), args[0] if operation in {"gui_inspect", "gui_investigate", "gui_set_status"} and args else None,
                           allow_unrecorded_stop=operation in {"gui_receive_permission", "gui_automatic_agent"}
                           and enabled is False)
             if isinstance(result, dict) and result.get("activity_warning"):
@@ -349,6 +349,17 @@ class DesktopController:
             saved = EventCatalog(self.root, "live").investigate(event_id)
             return {"state": "investigation_saved", "event_id": event_id, "investigation": saved,
                     "system_query_executed": False, "model_calls": 0, "ack_performed": False}
+
+    @recorded("gui_set_status")
+    def set_status(self, event_id, status, operation_id):
+        """Save a human decision with an explicit idempotency key, never ACK."""
+        from .events.disposition_history import OPERATION
+        if type(operation_id) is not str or OPERATION.fullmatch(operation_id) is None:
+            raise ValueError("invalid_history_identity")
+        with self._lock:
+            from .events.catalog import EventCatalog
+            result = EventCatalog(self.root, "live").set_status(event_id, status, source="gui", operation_id=operation_id)
+            return dict(result, state="event_status_updated", system_query_executed=False)
 
     def snapshot(self):
         """Read one saved overview; no collector, model or scheduling operation."""
