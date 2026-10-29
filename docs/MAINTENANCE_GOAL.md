@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 Task替代已驗拒讀／核對Web驗收工具
+
+COM root與PowerShell tasks兩條既有唯讀路徑均未取得資料，沒有可重現程式缺陷，已保存scope／固定碼／自然退出；停止同路線，保留原生來源未驗，不繞過設定或提權。下一僅一次核對目前已授權瀏覽器工具是否能對專用合成localhost頁執行200%／焦點驗收；能用才啟動私有Job／有限期fixture，不能用就保留待驗，不重複輪詢。其他真人／長跑／恢復可信根／真防守關卡獨立保留。
+
 ## 2026-10-29 目前可執行：TASK-PROVIDER-ALTERNATIVE
 
 Task COM root marshalling56/56／0skip及315編譯，真root仍0x80070003／unknown，無已重現程式缺陷；不重複同COM查詢。下一最低成本替代是既有PowerShell tasks只讀metadata一次（一般權限、≤5秒query、有私有Job、只存固定碼／計數），先核既有查詢不讀Definition／XML／Actions。若有效才設計保留primary失敗證據的最小fallback切片；若亦不可用則保存結果、保留任務來源未驗，不繞環境限制。其他關卡獨立保留。

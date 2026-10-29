@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 Task兩路徑不可用／保留來源缺口
+
+COM root契約56/56／0skip、真root0x80070003仍unknown；既有PowerShell tasks替代也provider_access_denied，皆有自然退出／無殘留，見STATUS。沒有已重現程式錯誤，不再重查／提權／改系統。下一有界核對瀏覽器Web驗收條件；未恢復則保留200%／焦點關卡，不能重問既有權限或把Tk替代。完整AI盯哨仍未完成。
+
 ## 2026-10-29 Task COM root契約未重現bug／接替代provider
 
 56/56／0skip、315編譯與真root-only HRESULT 0x80070003已保存，參數／旗標／所有權合成核對無缺陷，不改production或猜根因；詳STATUS。下一用既有PowerShell tasks metadata一次、有界且不存私密facts的替代provider核對；同屬已授權唯讀開發，不重問，保留COM unknown與來源差異，不提權／改設定。

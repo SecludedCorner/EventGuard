@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：tasks最低成本替代亦未取得資料
+
+tasks-provider-alternative-20261029-01：既有PowerShell tasks metadata單次5秒query／15秒總預算，provider_result denied／provider_access_denied／error1，數字HRESULT -2146233088不推論根因；row1為失敗占位、不是1個task。原COM root unknown/0x80070003另保留。兩層自有Job自然0／remaining0／無強停；未讀Definition/XML/Actions、無rawfacts／模型／系統變更。收據交叉核對通過不代表來源可讀；不再重查同條件，不改產品fallback來洗綠。
+
 ## 2026-10-29：Task root合成marshalling＋真HRESULT
 
 verify-task-com-root-contract-20261029-01為56/56、0skip／315語法、source_unchanged、Job自然0／無殘留；build338hash／315編譯。task-com-root-contract-20261029-01只Connect/GetFolder，不枚舉／XML／Actions，真回0x80070003／unknown，.010494秒／Job自然0／無強停，無模型。root字串依[Microsoft GetFolder](https://learn.microsoft.com/en-us/windows/desktop/api/taskschd/nf-taskschd-itaskservice-getfolder)，呼叫依[IDispatch Invoke](https://learn.microsoft.com/windows/win32/api/oaidl/nf-oaidl-idispatch-invoke)；[Win32 error 3](https://learn.microsoft.com/openspecs/windows_protocols/ms-erref/18d8fbe8-a967-4f1c-ae50-99ca8e491d2d)為PATH_NOT_FOUND，不能推論無task／需管理員或自行修系統。只保存固定碼，沒有解碼provider錯誤描述。

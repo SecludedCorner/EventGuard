@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 Task替代provider亦拒讀，停止同路線重查
+
+`reports/tasks-provider-alternative-20261029-01`以既有PowerShell固定Get-ScheduledTask metadata（不讀Definition／XML／Actions）查一次，回denied／provider_access_denied、error1、占位row1不等於1個task；內query與外Job自然0／remaining0／無強停，無模型／設定變更。COM root先前unknown/0x80070003與此provider denied各自保留，沒有可重現程式缺陷或成功空集合證據，不以放寬／提權／反覆查詢求PASS。純文件沿用315來源編譯與56項定向；下一僅有界核對既有瀏覽器工具能否驗收Web200%／焦點，不把工具錯誤當未授權或阻擋其他工作。
+
 ## 2026-10-29 Task COM契約已驗／原生root仍unknown
 
 `reports/verify-task-com-root-contract-20261029-01`4模組56/56、0skip、source_unchanged、Job自然0／remaining0／無強停；build同名338hash／315來源編譯。新增3項直接跑Dispatch marshalling，核單一BSTR root、DISPATCH_METHOD、VARIANT清理、回傳參考移交及非法路徑不Invoke，未改產品。`reports/task-com-root-contract-20261029-01`另一次root-only真查核 .010494秒，GetFolder回HRESULT -2147024893（0x80070003），仍unknown、不是0個task；未枚舉／讀XML／Actions，Job自然0／無殘留。root文字與Invoke對照Microsoft文件，尚未重現程式缺陷。下一以既有PowerShell tasks唯讀metadata做一次有界替代路徑核對，不改設定／提權、不洗綠COM失敗。
