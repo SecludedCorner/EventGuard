@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-30 最新保存點與真200%特定能力待驗
+
+桌面原生操作已完成、產品來源未改；8b5f14c已普通推開發分支並快轉推origin/main，兩ref直接核對一致，兩工作區乾淨。下一Web200%只做一次新的具體能力檢查：reports/web-ui-native-zoom-20261030-01用同68件合成資料有限期重開，但Chrome visibility能力在建tab前回unavailable，未建新tab、未輸入、未改設定，不重試同失敗。已合作收尾：web thread退出、DB bytes不變、pending68／receipt0、Job自然0／remaining0／無強停、native/model0。只保留真200%未驗，不再稱瀏覽器／原生Tk全不可用；不以viewport或既有合成測試代替。
+
+目前無新已重現產品bug；剩餘是processes／listeners原生身分partial、200%所需專用可見窗口能力、真人六任務／合法競品資料、24h／reboot具體環境、歷程來源信任根與無損容量契約、inbound偵查遙測、真agent防守與恢復結果。這些非DONE；不自行提權／改設定、新建憑證／新模型或刪歷程求完成。純狀態更新沿用本版338hash／315來源編譯及56/56定向（0skip），不把10項原生操作檢查與測試總數相加。目標仍active，不新增排程或會話外運作承諾。
+
 ## 2026-10-30 桌面原生輸入與人工處置／ACK獨立已驗
 
 reports/desktop-ux-native-host-20261029-02由非提升host啟動，使用受支援CUA選取唯一自有合成Tk，真滑鼠點事件頁→listener→已讀→已處理→清除→已處理篩選（2列），畫面全程顯待接手／ACK獨立；不是Tk.invoke或callback。合作點應用程式→暫停並結束後，SQLite唯讀核對listener handled／2操作、四件全pending／receipt0；10項收尾與守恆檢查全過，Job自然0／remaining0／無強停、GUI worker已退出、scan/model0。七來源合成狀態亦實際可見，真人metrics仍null，無真防守結論。

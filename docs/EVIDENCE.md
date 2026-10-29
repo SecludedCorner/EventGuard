@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-30：真200%可見能力檢查與安全收尾
+
+reports/web-ui-native-zoom-20261030-01/browser-capability-result.json明記Chrome visibility unavailable／建tab前失敗，true_zoom_200_verified=false，不是使用者未許可或全域browser blocked。只核一次；專用fixture合作停止，worker與guardian均證明thread退出／自然0／remaining0／無強停，DB bytes未變／pending68／receipt0／native/model0，無新分頁或輸入；未存其他分頁metadata或內容。既有Web實際七情境／焦點與新Tk原生操作成功範圍保留，各自不替代真200%。
+
 ## 2026-10-30：原生CUA實際操作Tk及落盤核對
 
 reports/desktop-ux-native-host-20261029-02/acceptance-summary.json記錄9個真滑鼠動作，未用invoke／fixture自動動作：事件選取、read→handled、篩選顯2件handled但仍pending、合作選單退出。SQLite mode=ro核listener handled、兩項操作、pending4／receipts0；10檢查全過，Job自然0／remaining0／forcibly_terminated=false、GUI worker exited、model/scan0、participant null。handled-proof.jpg與handled-filter-proof.jpg僅本機合成截圖，hash在summary，未進Git。這只驗工程操作與合成資料，非人類可用性／真防守。

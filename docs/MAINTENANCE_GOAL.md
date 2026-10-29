@@ -1,5 +1,11 @@
 # EventGuard 目前目標
 
+## 2026-10-30 當前剩餘關卡（以此為準）
+
+GUI-UX-200新的可見Chrome能力在建tab前unavailable，已合作結束唯一fixture，DB不變／ACK0；不是一般browser權限或Tk輸入阻擋。原生Tk已用真CUA完成、host Defender／tasks可讀，不重做相同成果；processes／listeners身分仍partial，無證據支持提權或安全結論。
+
+目前已完成單元都在origin/main，沒有未保存產品修改或新可重現bug。剩餘外部／契約前置為：特定200%可見窗口、真人六任務及合法比較資料、具體24h／reboot環境與範圍、來源可信根與無損恢復容量決策、入站偵查遙測、真agent防守／恢復驗收。完整AI盯哨維持active；僅前置變更或新缺陷證據才接續對應單元，不用重複fixture／文件代替進度，不增加模型、系統設定或憑證。
+
 ## 2026-10-30 DESKTOP-NATIVE-HOST 已達本單元驗收
 
 實際CUA滑鼠操作read／handled／篩選及合作退出，SQLite核4pending／ACK0、2人工操作，10收尾檢查全過，原生輸入工程關卡已完成；不是人類六任務或主機防守驗收。來源碼未變／既有編譯與56項沿用，見STATUS。下一GUI-UX-200檢查可見專用browser窗口能否由已可用CUA驗真比例，不再沿舊window／browser失敗作全域阻擋；不能改系統／帳戶或用viewport假裝zoom。

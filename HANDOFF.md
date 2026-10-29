@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-30 最新增量保存與剩餘外部驗收
+
+8b5f14c兩遠端一致、工作區乾淨；原生Tk操作已通過，host Defender／tasks可讀，processes／listeners仍partial。下一200%的一次Chrome visibility檢查在建tab前unavailable，未輸入或改設定；web-ui-native-zoom-20261030-01已合作自然退出／DB不變／ACK0，不反覆重試。沒有新產品缺陷可重現，完整目標仍缺真200%、真人、長跑／reboot、可信無損恢復、inbound遙測與真防守效果；各項前置未具備時不要再重跑同fixture或重問已授權一般開發。所有runtime／截圖只在忽略的reports，無排程或新模型。
+
 ## 2026-10-30 Tk原生操作關卡已補
 
 native-host-02用CUA實際點已讀→已處理及handled篩選，SQLite核pending4／receipt0／listener handled2操作，合作選單退出、Job自然0／無殘留，見STATUS及desktop-ux-native-host-20261029-02。01舊timeout保存；新路徑已可用，不再報全域原生窗口阻擋或重問同許可。沒有真人metrics／新模型／掃描。下一有界核真Web200%可見專用窗口；完整目標其餘真人／長跑／可信恢復／真防守獨立保留。
