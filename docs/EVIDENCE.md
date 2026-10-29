@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-30：完整錯誤輸入的固定分類與狀態修正
+
+verify-error-classifications-red-20261030-01四項均未過（2fail/2error），含prefix後不同失敗及壞紀錄假ok；舊結果保留。修正後verify-error-classifications-core-20261030-03六模組70/70／0skip，339hash／316編譯、source_unchanged／Job自然0／remaining0／無強停。合成80筆核64明細仍有16 field/unknown計入、invalid分類無PRIVATE內容、空成功／explicit timeout不串意義；native deadline兩分支核總數守恆。分類只有有限stage/status/count，沒有新host資料或新查詢。WindowsCollectors上傳／持久化接續單元尚未DONE；原生partial不變安全。
+
 ## 2026-10-30：真200%可見能力檢查與安全收尾
 
 reports/web-ui-native-zoom-20261030-01/browser-capability-result.json明記Chrome visibility unavailable／建tab前失敗，true_zoom_200_verified=false，不是使用者未許可或全域browser blocked。只核一次；專用fixture合作停止，worker與guardian均證明thread退出／自然0／remaining0／無強停，DB bytes未變／pending68／receipt0／native/model0，無新分頁或輸入；未存其他分頁metadata或內容。既有Web實際七情境／焦點與新Tk原生操作成功範圍保留，各自不替代真200%。

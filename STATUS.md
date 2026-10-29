@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-30 COLLECTOR-ERROR-CLASS-001 核心修正已驗
+
+red四案重現：64筆以後的錯誤狀態未參與推導，且單一壞紀錄[None]被當ok空集合。contract.payload現用完整錯誤輸入推導狀態、保留原64筆明細上限，額外只計固定stage/status（最多60組），未知分類計數不含任意reason/operation/名稱；clean_errors也拒絕非字串分類而不崩潰。native budget增加timeout時同步總數／分類，不丟prefix後錯誤。verify-error-classifications-core-20261030-03六模組70/70、0skip、source_unchanged／Job自然0／remaining0／無強停；build同範圍339hash／316來源編譯。無原生採集／模型；不能把分類完整稱來源完整或安全。下一CLASS-002驗WindowsCollectors傳輸、歷史快照與失敗回退，舊provider無摘要保持缺口，不外推原生179error的未知115筆。
+
 ## 2026-10-30 最新保存點與真200%特定能力待驗
 
 桌面原生操作已完成、產品來源未改；8b5f14c已普通推開發分支並快轉推origin/main，兩ref直接核對一致，兩工作區乾淨。下一Web200%只做一次新的具體能力檢查：reports/web-ui-native-zoom-20261030-01用同68件合成資料有限期重開，但Chrome visibility能力在建tab前回unavailable，未建新tab、未輸入、未改設定，不重試同失敗。已合作收尾：web thread退出、DB bytes不變、pending68／receipt0、Job自然0／remaining0／無強停、native/model0。只保留真200%未驗，不再稱瀏覽器／原生Tk全不可用；不以viewport或既有合成測試代替。

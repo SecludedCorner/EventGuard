@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
 from typing import Protocol
 
 
@@ -48,13 +49,13 @@ def evidence(stage, reason_code, *, exception_type="UnknownError", win32_error=N
 def clean_errors(values):
     if not isinstance(values, list):
         return []
-    return [evidence(item.get("stage", "provider") if item.get("stage") in STAGES else "provider",
+    return [evidence(item.get("stage") if isinstance(item.get("stage"), str) and item.get("stage") in STAGES else "provider",
                      item.get("reason_code", "unknown_failure"),
                      exception_type=item.get("exception_type", "UnknownError"),
                      win32_error=item.get("win32_error"), hresult=item.get("hresult"),
                      provider_code=item.get("provider_code"), category=item.get("category"),
                      operation=item.get("operation", "collect"),
-                     status=item.get("status") if item.get("status") in STATUSES else "unknown")
+                     status=item.get("status") if isinstance(item.get("status"), str) and item.get("status") in STATUSES else "unknown")
             for item in values[:MAX_ERRORS] if isinstance(item, dict)]
 
 
@@ -72,18 +73,39 @@ def error_from_exception(error, stage, operation, reason=None):
                     hresult=hr, operation=operation, status=status)
 
 
+def error_classifications(errors):
+    """Count every error using at most 60 fixed stage/status combinations.
+
+    No operation, reason text, numeric identifier or object metadata is copied.
+    Unknown classifications are counted, never inferred from the retained prefix.
+    """
+    groups, unclassified = Counter(), 0
+    for error in errors:
+        stage = error.get("stage") if isinstance(error, dict) else None
+        status = error.get("status") if isinstance(error, dict) else None
+        valid_stage = isinstance(stage, str) and stage in STAGES
+        valid_status = isinstance(status, str) and status in STATUSES and status != "ok"
+        unclassified += not (valid_stage and valid_status)
+        groups[(stage if valid_stage else "unknown", status if valid_status else "unknown")] += 1
+    return {"total_count": sum(groups.values()), "unclassified_count": unclassified,
+            "groups": [dict(stage=stage, status=status, count=count)
+                       for (stage, status), count in sorted(groups.items())]}
+
+
 def payload(rows=None, errors=None, *, truncated=False, status=None, checks=None):
     rows, raw_errors = list(rows or []), list(errors or [])
+    classifications = error_classifications(raw_errors)
     errors = clean_errors(raw_errors)
     if status is None:
         # Missing optional Run/RunOnce keys are a complete observation, not denial.
         states = [r.get("status", "unknown") for r in rows
                   if not (r.get("kind") == "registry_missing" and r.get("status") == "not_applicable")]
-        states += [e["status"] for e in errors]
+        states += [group["status"] for group in classifications["groups"]]
         bad = [s for s in states if s != "ok"]
         status = "ok" if not bad else bad[0] if len(set(bad)) == 1 and not any(s == "ok" for s in states) else "partial"
     if truncated and status == "ok":
         status = "partial"
     return {"status": status, "rows": rows, "truncated": bool(truncated),
             "errors": errors, "error_count": len(raw_errors), "errors_truncated": len(raw_errors) > MAX_ERRORS,
+            "error_classifications": classifications,
             "checks": list(checks or [])[:64]}

@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-30 COLLECTOR-ERROR-CLASS-001 已實作
+
+payload完整錯誤狀態與固定分類計數已修，70/70／0skip與316來源編譯，見STATUS。下一CLASS-002將可驗證的有限分類帶過WindowsCollectors／attempt與保存／讀回；舊provider未提供或總數矛盾必須unknown、不按64prefix外推、不放寬來源partial。無新native/model，兩個500行基準／逐單元main整合續用。
+
 ## 2026-10-30 最新增量保存與剩餘外部驗收
 
 8b5f14c兩遠端一致、工作區乾淨；原生Tk操作已通過，host Defender／tasks可讀，processes／listeners仍partial。下一200%的一次Chrome visibility檢查在建tab前unavailable，未輸入或改設定；web-ui-native-zoom-20261030-01已合作自然退出／DB不變／ACK0，不反覆重試。沒有新產品缺陷可重現，完整目標仍缺真200%、真人、長跑／reboot、可信無損恢復、inbound遙測與真防守效果；各項前置未具備時不要再重跑同fixture或重問已授權一般開發。所有runtime／截圖只在忽略的reports，無排程或新模型。

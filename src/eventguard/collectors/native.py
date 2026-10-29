@@ -10,7 +10,7 @@ import socket
 import sys
 import time
 
-from .contract import LIMITS, error_from_exception, evidence, payload
+from .contract import LIMITS, error_classifications, error_from_exception, evidence, payload
 from .winapi import (BOOL, DWORD, LONG, HANDLE, LPDWORD, LPWSTR, FILETIME, GUID,
                      MAX_BUFFER, NativeError, dll, filetime_iso, fixed_local_path,
                      function, last_error, process_created_at)
@@ -87,9 +87,19 @@ class NativeBackend:
                 result["status"] = "cancelled"
             elif time.monotonic() >= deadline:
                 result["status"] = "timeout"
-                result["errors"] = [evidence("policy", "native_budget_exceeded", exception_type="CollectorDeadline", status="timeout")] + result["errors"][:63]
+                deadline_error = evidence("policy", "native_budget_exceeded", exception_type="CollectorDeadline", status="timeout")
+                result["errors"] = [deadline_error] + result["errors"][:63]
                 result["error_count"] = result.get("error_count", 0) + 1
                 result["errors_truncated"] = result["error_count"] > 64
+                summary = result["error_classifications"]
+                summary["total_count"] += 1
+                for group in summary["groups"]:
+                    if (group["stage"], group["status"]) == ("policy", "timeout"):
+                        group["count"] += 1
+                        break
+                else:
+                    summary["groups"] += error_classifications([deadline_error])["groups"]
+                summary["groups"].sort(key=lambda group: (group["stage"], group["status"]))
             return result
         except (NativeError, OSError, NotImplementedError, AttributeError) as error:
             record = self._failure(error, section_id)
