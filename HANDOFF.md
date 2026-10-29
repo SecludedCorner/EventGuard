@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 綁定寫入hash已驗／接controller外層完成
+
+32/32、0skip與288檔來源編譯通過，Catalog→Store expected_payload_hash在真正狀態交易內核對，合法payload被置換也不能寫到新證據，見STATUS。接controller時將意圖原hash傳入此參數；外層activity完成回條未確認必須留下日誌，只有全部成功才complete，不提前清除。再接Tk原ID恢復／unknown禁寫及真Job兩程序故障驗收；整體active。
+
 ## 2026-10-29 namespace切片換行修正已驗
 
 兩測試檔已用分別的新commit恢復原LF，不amend／重寫歷史；最終31/31、0skip、309hash／287編譯與diff --check通過，見STATUS。整合最終SHA到main後接前節controller工作；命令已改為native失敗明確exit，避免檢查失敗仍提交。原生／真人等獨立待驗不變。

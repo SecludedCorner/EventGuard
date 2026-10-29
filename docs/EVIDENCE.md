@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：要求意圖到狀態寫入的身分競態
+
+`reports/verify-desktop-request-identity-20261029-02` UTC08:35:38：32/32、0skip、source_unchanged、Job自然0／remaining0／無強停。新expected_payload_hash可選參數由Catalog傳入Store，BEGIN IMMEDIATE內在任何處置／歷程寫入前比對；fixture在前讀後寫間換成另一合法事件payload及相應hash，固定event_status_identity_changed拒絕，人工狀態new／無歷程／pending1／receipt0。合法hash與原ID仍保持不回退後來決定；非法hash不寫DB。01fixture severity=low不合法有1error，02改info通過，無放寬schema。`reports/build-desktop-request-identity-20261029-01`310hash／288編譯。
+
 ## 2026-10-29：LF修正保留歷史
 
 namespace切片4ea33f9因兩測試檔CRLF產生344行diff，相關31/31通過但差異檢查有換行告警，shell仍續行提交／push，未main；明示此保存錯誤，不重寫歷史或以總行數當產品增量。第一檔test_desktop_requests轉回LF後reports/verify-desktop-request-lf-core-20261029-01原語3/3、0skip／source_unchanged、Job自然0／remaining0／無強停，build同名309hash／287編譯；下一筆修另一檔，使用明確失敗即exit的命令。

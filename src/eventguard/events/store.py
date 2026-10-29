@@ -624,7 +624,7 @@ class EventStore:
         except sqlite3.Error as exc:
             raise self._sqlite_error(exc) from exc
 
-    def set_disposition(self, event_id, status, *, source="unknown", operation_id=None):
+    def set_disposition(self, event_id, status, *, source="unknown", operation_id=None, expected_payload_hash=None):
         """Save a person's handling state without altering receipt or evidence.
 
         A handling state never means a source event was delivered or repaired.
@@ -634,6 +634,8 @@ class EventStore:
             raise ValueError("invalid_event_identifier")
         if type(status) is not str or status not in {"new", "read", "handled", "ignored"}:
             raise ValueError("invalid_event_status")
+        if expected_payload_hash is not None and (type(expected_payload_hash) is not str or re.fullmatch(r"[a-f0-9]{64}", expected_payload_hash) is None):
+            raise ValueError("invalid_expected_payload_hash")
         from .disposition_history_store import HistoryCapacityError, record_attempt
         operation_id = uuid.uuid4().hex if operation_id is None else operation_id
         try:
@@ -646,6 +648,8 @@ class EventStore:
                 # current payload/hash while this write transaction owns the
                 # lock, before creating or updating any handling state.
                 self._row(event_row)
+                if expected_payload_hash is not None and event_row["payload_hash"] != expected_payload_hash:
+                    raise StoreError("event_status_identity_changed")
                 exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_dispositions'").fetchone()
                 previous = db.execute("SELECT status,updated_at FROM event_dispositions WHERE event_id=?", (event_id,)).fetchone() if exists else None
                 previous_status = previous["status"] if previous else "new"

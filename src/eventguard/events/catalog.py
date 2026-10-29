@@ -345,12 +345,13 @@ class EventCatalog:
         EventStore(self.directory).save_investigation(event_id, anchor["payload_hash"], case)
         return self.detail(event_id)["investigation"]
 
-    def set_status(self, event_id, status, *, source="unknown", operation_id=None):
+    def set_status(self, event_id, status, *, source="unknown", operation_id=None, expected_payload_hash=None):
         _identifier(event_id)
         if type(status) is not str or status not in STATUSES:
             raise ValueError("invalid_event_status")
         # Check existence and payload identity without initializing an empty DB.
         # The write transaction checks existence again against concurrent prune.
         self.detail(event_id)
-        result = EventStore(self.directory).set_disposition(event_id, status, source=source, operation_id=operation_id)
+        result = EventStore(self.directory).set_disposition(event_id, status, source=source, operation_id=operation_id,
+                                                          expected_payload_hash=expected_payload_hash)
         return dict(result, namespace=self.namespace, ack_performed=False, model_calls=0)

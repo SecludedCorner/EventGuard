@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 人工狀態寫入交易的原hash閘道
+
+Catalog.set_status／Store.set_disposition接受可選expected_payload_hash，實際BEGIN IMMEDIATE內驗原payload後比對；不符在建立處置／歷程前拒絕，預備日誌與實際寫入可綁同事件證據。未傳參數的既有CLI／Web語意不變。`reports/verify-desktop-request-identity-20261029-02`：2026-10-29 16:35（UTC+8）32/32、0skip、source_unchanged、Job自然0／remaining0／無強停；真合成SQLite在Catalog讀後置換合法payload／hash，狀態仍new、無處置歷程、pending1／receipt0；合法hash重播不回退較新決定。01測試誤用不支援的low severity，改合法info後02通過。`reports/build-desktop-request-identity-20261029-01`310hash／288編譯；4fc7b70兩ref一致。controller／Tk持久化接線仍待。
+
 ## 2026-10-29 換行修正完成／namespace最終來源驗證
 
 第二檔test_desktop_request_store恢復原LF；`reports/verify-desktop-request-lf-final-20261029-01`：2026-10-29 16:32（UTC+8）31/31、0skip、source_unchanged、Job自然0／remaining0／無強停，`reports/build-desktop-request-lf-final-20261029-01`309hash／287編譯，git diff --check通過。產品namespace／Catalog功能不變，整檔換行修正採兩個新commit保留既有歷史，後續以此來源整合main，不掩飾344行保存失誤；controller／Tk仍待接線。
