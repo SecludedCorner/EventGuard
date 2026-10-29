@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：安全桌面合成scope
+
+`reports/verify-desktop-fixture-20261029-04` UTC06:47:39：29/29、0skip、source_unchanged、Job自然退出0／remaining0／無強停，真合成SQLite驗新scope／既有拒絕、安裝sentinel未觸及、7來源／4synthetic、真人工狀態／另存拒讀查證、pending4／receipt0、混入多件及相同總數非合成皆拒絕；OperatorAPI／native query／collect／spawn／ACK哨兵未觸發。01為28項初版、02加入執行時檢查29項，03補強插錯測試位置失敗，04移正為最終；不相加。`reports/build-desktop-fixture-20261029-01`290檔hash及268檔編譯。真人入口／任務紀錄與Tk合成標示未完成，沒有真人參與結果。
+
 ## 2026-10-29：核對上下文最終整合與普通遠端保存
 
 `reports/verify-desktop-preview-context-final-20261029-01` UTC06:33:23：21個受影響模組173/173、0skip、source_unchanged、266檔語法通過，Job自然退出0／remaining0／無強停；真Tk／合成SQLite、檔案及自有Job API，沒有採集／模型／ACK。選取模組不同於前版229，不相加、不作全庫或真人／原生驗收。`reports/build-desktop-preview-context-final-20261029-01`288檔hash／266檔編譯。`reports/release-prep-desktop-preview-context-20261029-01`綁定f3394dfc18b67663cf6ba6780b2c6a2ca93a6446，368檔可重現，archive SHA256 b95ad172933aeca690bb8f34865b2ebed7450e1cfef7eb68c84c132854518ac0，非tag／release。

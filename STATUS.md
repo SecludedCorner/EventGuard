@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 隔離桌面合成控制器
+
+DesktopFixtureController只新建reports/desktop-ux-* scope，既有scope拒絕，不讀安裝live；內部data/live沿用桌面Catalog契約但僅含4件合成事件。七來源固定prepare時點、拒讀／部分／未知／過期分列，另存合成拒讀／截斷查證；採集、模型／agent設定、ACK與未知API均不代理，允許人工狀態／保存調查／本地備份核對。每次讀寫前有界檢查事件數及synthetic，混入非合成或多件即拒絕。`reports/verify-desktop-fixture-20261029-04`：2026-10-29 14:47（UTC+8）29/29、0skip、source_unchanged、Job自然退出0／remaining0／無強停，API／spawn／collector／ACK哨兵未觸發，安裝sentinel及pending4／receipt0保留；03為補強測試插錯位置，已移正，未提交失敗狀態。`reports/build-desktop-fixture-20261029-01`290檔hash／268檔編譯通過；尚未接合成banner、真人入口／任務紀錄，不宣稱真人已驗。
+
 ## 2026-10-29 核對快照時間／衝突／返回整合173項通過
 
 9e92d4a（+108/−0）、c586bd7（+79/−0）、f3394df（+90/−0）已各自build／相關測試、指定檔案commit／普通push及ff-only整合／push main；直接兩遠端ref核對f3394dfc18b67663cf6ba6780b2c6a2ca93a6446，兩工作樹及origin/main...HEAD差異0，單筆與待整合皆未累積500行。`reports/verify-desktop-preview-context-final-20261029-01`：2026-10-29 14:33（UTC+8）21個受影響模組173/173、0skip、source_unchanged、266檔語法通過，Job自然退出0／remaining0／無強停；`reports/build-desktop-preview-context-final-20261029-01`288檔hash相符、266檔編譯。此為本次桌面／Catalog／ACK分離整合，選取模組與前版229不同，不相加或冒充全庫回歸。`reports/release-prep-desktop-preview-context-20261029-01`綁定上述產品SHA，368檔可重現，無tag／release；純文件沿用來源build／相關整合並核對引用。

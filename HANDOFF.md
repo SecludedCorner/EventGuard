@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 真人合成驗收控制器已驗
+
+DesktopFixtureController新scope＋真Catalog／SQLite、限定安全方法、原生／模型／設定／ACK拒絕、執行時synthetic檢查，29/29、0skip及268檔來源編譯通過，見STATUS。固定prepare時點的合成來源不代表主機當前；內部data/live位於新reports scope，不讀安裝live。下一步接真Tk穩定合成標示與操作／重開視窗／退出安全閉環，再接有界Job啟動與六任務匿名紀錄；不能把控制器測試當真人結果。
+
 ## 2026-10-29 桌面核對上下文已保存／接續真人驗收前置
 
 產品f3394dfc18b67663cf6ba6780b2c6a2ca93a6446已逐單元普通同步main／開發ref，173/173受影響整合、0skip、Job自然退出無殘留、266檔來源編譯及368檔可重現來源包，見STATUS。原生診斷準備舊hash已superseded，不重用舊批准；Web／真人／原生關卡仍未完成。
