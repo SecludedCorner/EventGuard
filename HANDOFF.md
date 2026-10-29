@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-30 本批錯誤分類與桌面能力已保存
+
+CLASS-001～004完成：eb1433b產品最終26模組288/288／0skip、319來源編譯，422檔來源包可重現，詳STATUS。單元逐個普通推開發分支並快轉推origin/main，兩個500行基準均維持；沒有runtime或私人截圖入Git。下一從現有具體關卡前置變化或新可重現缺陷接續，保留真200%、真人、原生身分partial、24h/reboot、可信無損恢復、入站偵查與真防守／恢復效果的獨立缺口。不要因純分類／合成、ACK／handled、commit或來源包成功宣稱AI盯哨全部完成，也不重問既有一般開發許可或重跑同fixture。
+
 ## 2026-10-30 CLASS-004已驗／接本批最終整合
 
 PS COMMON固定分類已接，實際interpreter合成測68/68／0skip、319來源編譯，無主機查詢／新模型。1b53a44產品已286項整合及一次非提升processes/listeners分類查核：175error全量174denied＋1unknown（僅64明細），23listener denied，兩來源仍partial；詳STATUS及native acceptance-crosscheck的頂層重複errata。下一26模組受影響整合含PS新測試，通過後保存本批證據／來源包並保持兩ref一致，不能把合成、分類完整或包裝成正式交付／真防守。

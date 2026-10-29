@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-30：本批最終288項與來源包
+
+verify-error-classification-final-20261030-01綁eb1433b，共26模組288/288／0skip，38.025秒／source_unchanged／319語法，Job自然0／remaining0／無強停；build342hash／319編譯。含實際Tk＋合成資料、真PowerShell interpreter的固定合成helpers、API與保存投影、既有Web讀取與明示fake CLI，未新啟真模型／原生採集，非完整庫或正式防守驗收。分段70／83／118／68與舊286均保留各自scope，不相加。
+
+release-prep-error-classification-final-20261030-01：eb1433b、422檔／reproducible、archive SHA256 b44e390338f6b8bb54b1863d5b4cb9ee27c2c32c81229e9a9773a9115ce18002。僅來源候選包，排除reports／runtime／授權／私人截圖，沒有tag／release／部署。另一次真原生查核的scope／errata見上節，仍partial而非安全PASS；證據只存忽略的reports。
+
 ## 2026-10-30：PowerShell契約與獨立新版原生分類
 
 verify-powershell-error-counts-core-20261030-01為68/68／0skip／319語法、source_unchanged、Job自然0／remaining0／無強停，build342hash／319編譯。既有interpreter實跑固定合成80錯誤、兩壞分類、成功空集合，只有COMMON helpers不呼叫主機查詢；inner Job自然0／無殘留由測試逐筆核對。未把interpreter成功當Defender或實機來源成功。
