@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 固定corpus已驗／接事件agent門檻說明
+
+10案detector→保存→dispatch資格已跑，81/81／0skip與309來源編譯，命令與逐案證據見ENGINEERING_PLAN／STATUS。只有雙防護關閉／來源timeout符合預設high／critical，wildcard listener及新增持久化仍warning；沒有inbound掃描遙測，該案未觀測不當TN。下一桌面事件詳情唯讀呈現政策資格／未達門檻原因，與接收權限、真喚醒、ACK、防守效果分離；不為提高數字擅改嚴重度或授權。
+
 ## 2026-10-29 身分修正已整合／接既有偵測corpus
 
 e72ac22產品23模組275/275、0skip／307編譯／Job自然0，受影響投遞、queue、ingress、保留與桌面恢復已驗，精確來源包與限制見STATUS。下一執行ENGINEERING_PLAN既有P2-DETECT-001，固定合成真值及可觀測欄位，分列規則命中、良性誤報／漏報、未觀測和dispatch資格；不得把policy選中或metadata異常當攻擊定論／真喚醒。其他真人／原生／Web／長跑／歷程可信根關卡未完成。

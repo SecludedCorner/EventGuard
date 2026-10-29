@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 P2-DETECT-001初版固定corpus落地
+
+新增scripts/validate_detection.py與10個固定合法合成案例，實際detector→預設configured rules→原子保存state/events→唯讀dispatch資格；不改門檻、不receive／ACK／啟動agent。`reports/verify-detection-corpus-20261029-02`5模組81/81、0skip／source_unchanged／Job自然0／remaining0／無強停；`reports/build-detection-corpus-20261029-02`332hash／309編譯。`reports/detection-corpus-20261029-03/detection-summary.json`逐案10/10，metadata規則預期7命中、FP0／FN0、良性無事件2、未觀測1另列不當TN；不是攻擊TP／偵測率。只有雙防護關閉與來源timeout兩案符合預設high／critical資格；warning的全介面監聽／新增持久化不會因此自動喚醒。inbound掃描無連線／封包遙測，明示未觀測。
+
+獨立CLI03受私有Job、自然exit0／remaining0／無強停；01包裝finish原因碼不在allowlist，報告產生但退出回條缺失，已保留wrapper-failure且不稱生命周期通過；02修包裝成功，03再綁明確DEFAULT_POLICY並存policy。此為有限corpus前置，非全攻擊覆蓋。下一改善桌面事件對「為何目前未達agent政策門檻」的唯讀說明，使用既有資料且不修改門檻／權限，不把資格冒充真喚醒；實機／真人／Web等既有關卡不變。
+
 ## 2026-10-29 事件身分／桌面／投遞整合275項通過
 
 `reports/verify-event-identity-integration-20261029-01`（18:31 UTC+8）23模組275/275、0skip、source_unchanged、307語法、Job自然exit0／remaining0／無強停；含core身分、診斷保存、真Tk故障、dispatch／fake CLI、queue／ingress、保留／雙pin及兩真Job回條恢復。`reports/build-event-identity-integration-20261029-01`329hash／307編譯。產品e72ac22兩ref一致，三單元+100/-8、+76/-2、+83/-0皆逐單元同步main；範圍不累加為全庫／真agent。來源包`reports/release-prep-event-identity-20261029-01`409檔、reproducible，SHA256 3519a4d61ad05352a8ec6ff96963e1697eb5eb70c9f7ca6362f04b370ec06835；非exe／release。

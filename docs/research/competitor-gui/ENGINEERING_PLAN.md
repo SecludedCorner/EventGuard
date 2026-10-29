@@ -1,5 +1,11 @@
 # EventGuard 競品研究對照與開工規格
 
+## 2026-10-29 P2-DETECT-001初版有限corpus
+
+已落地`scripts/validate_detection.py`及`tests/fixtures/detection-sentry.json`：10個固定合成metadata案例，detector→預設規則→原子SQLite保存→唯讀dispatch資格。執行`py -3.13 -B scripts/validate_detection.py --root reports/detection-corpus-NEW`；只接受專案reports新目錄、不覆寫舊證據，不啟動child／scan／model。原生Windows獨立驗收的包裝子程序仍須依既有Job規則啟動。
+
+報告逐案列事件／severity、policy資格、pending／receipt與來源守恆；7個預期規則事件、FP0／FN0、良性無事件2、未觀測1（無inbound連線／封包遙測的掃描）僅此資料集，不是攻擊真值或產品偵測率。全介面監聽／新增持久化為warning，預設high／critical門檻不會因此喚醒；雙防護關閉／timeout有資格也不是授權、真接收或防守完成。定向81/81、0skip與309來源編譯，證據見STATUS；未做競品比較或擴大原生覆蓋。
+
 日期：2026-10-28（台北）；產品來源基準 `f86254bb0393b606b1202b370efa18b35f649e8e`。
 `f1ed1e07f884e961e96aaffa3cbf9cf51544578d` 只新增研究文件，產品來源 240 個 hash 未變。
 本頁是 [MAINTENANCE_GOAL](../../MAINTENANCE_GOAL.md) 既有佇列的規格附件，不建立第二個工作追蹤器。

@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 目前可執行：DESKTOP-AGENT-QUALIFICATION
+
+P2-DETECT-001初版10案固定corpus已落地，81/81／0skip及309來源編譯（有限metadata規則，不是攻擊偵測率）；預設僅high／critical，warning線索不自動喚醒、未觀測掃描另列。下一於桌面事件詳情用既有事件與可核對政策呈現資格及不符原因；不調門檻、不改權限，不把policy符合稱agent已收件。先純契約／控制層，再實際Tk合成驗收；政策未知保持未知。各單元build／測試後普通同步main，整體AI盯哨active。
+
 ## 2026-10-29 目前可執行：P2-DETECT-001合成corpus
 
 事件row身分修正、診斷交易來源與實際Tk故障呈現已完成受影響整合275/275、0skip及307來源編譯（見STATUS）。下一依既有競品ENGINEERING_PLAN的偵測軸：固定每條既有規則的可觀測欄位、合法合成良性／異常真值；以實際detector→保存→dispatch政策資格核對命中、FP／FN與未觀測分母。此切片無新採集／模型／攻擊樣本，不改觸發門檻或把warning改high；選中只表示policy資格，不是喚醒授權。原生與防守實際效果仍需各自驗收，整體AI盯哨active。

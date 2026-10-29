@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：固定偵測corpus與dispatch資格
+
+`reports/verify-detection-corpus-20261029-02`UTC10:37:58：81/81、0skip、309語法、source_unchanged、Job自然0／remaining0／無強停；build同名332hash／309編譯。`reports/detection-corpus-20261029-03`10/10逐案、corpus SHA256 36bc976bb9be5d949722fdf4f4672b195c8efece1afa46d3d3a96e7ebe0de66f，metadata-rule TP7／FP0／FN0／TN2／unobserved1，不是攻擊偵測率。policy資格2、receipt全0，source在選取前後位元組相同，report含明確預設policy；同目錄guardian-exit自然0／remaining0／無強停。01包裝原因碼錯，缺退出證據；02包裝修後成功、03綁最終policy來源，未覆寫舊報告。無模型／主機採集／真喚醒，不把無遙測掃描當TN。
+
 ## 2026-10-29：身分修正受影響整合與來源保存
 
 23模組275/275、0skip、source_unchanged、307語法，`reports/verify-event-identity-integration-20261029-01` UTC10:31:57，98.166s；guardian自然0／remaining0／無強停。含實際Tk與合成SQLite、fake CLI投遞、queue／ingress、保留／雙pin及兩真Job恢復；沒有新原生採集／模型／真agent。build-event-identity-integration-20261029-01為329hash／307來源編譯。受測產品e72ac2246b6bfd8b7107bda4118525eb3b14aed0來源包release-prep-event-identity-20261029-01可重現、409檔、SHA256 3519a4d61ad05352a8ec6ff96963e1697eb5eb70c9f7ca6362f04b370ec06835，未發布／tag。各數字僅此範圍，不與52／60／22相加。

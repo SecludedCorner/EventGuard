@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "scope": "synthetic_metadata_rules_not_attack_detection",
+  "cases": [
+    {"id":"normal","observable":true,"expect":[],"eligible":false,"stages":[[{"id":"defender","status":"ok","rows":[{"property":"AntivirusEnabled","value":true,"status":"ok"},{"property":"RealTimeProtectionEnabled","value":true,"status":"ok"}]}]]},
+    {"id":"protection-two-disabled","observable":true,"expect":[["protection.changed","high"]],"eligible":true,"stages":[[{"id":"defender","status":"ok","rows":[{"property":"AntivirusEnabled","value":false,"status":"ok"},{"property":"RealTimeProtectionEnabled","value":false,"status":"ok"}]}]]},
+    {"id":"protection-one-disabled","observable":true,"expect":[["protection.changed","warning"]],"eligible":false,"stages":[[{"id":"defender","status":"ok","rows":[{"property":"AntivirusEnabled","value":true,"status":"ok"},{"property":"RealTimeProtectionEnabled","value":false,"status":"ok"}]}]]},
+    {"id":"wildcard-listener","observable":true,"expect":[["listener.changed","warning"]],"eligible":false,"stages":[[{"id":"listeners","status":"ok","rows":[{"protocol":"TCP","address":"0.0.0.0","port":18080,"pid":42,"status":"ok"}]}]]},
+    {"id":"benign-loopback","observable":true,"expect":[],"eligible":false,"stages":[[{"id":"listeners","status":"ok","rows":[{"protocol":"TCP","address":"127.0.0.1","port":18080,"pid":42,"status":"ok"}]}]]},
+    {"id":"benign-inventory","observable":true,"expect":[["persistence.changed","info"]],"eligible":false,"stages":[[{"id":"startup","status":"ok","rows":[{"name":"FixtureApp","status":"ok"}]}]]},
+    {"id":"persistence-added","observable":true,"expect":[["persistence.changed","warning"]],"eligible":false,"stages":[[{"id":"startup","status":"ok","rows":[]}],[{"id":"startup","status":"ok","rows":[{"name":"FixtureNew","status":"ok"}]}]]},
+    {"id":"collection-timeout","observable":true,"expect":[["coverage.degraded","high"]],"eligible":true,"stages":[[{"id":"listeners","status":"timeout","rows":[]}]]},
+    {"id":"collection-denied","observable":true,"expect":[["coverage.degraded","warning"]],"eligible":false,"stages":[[{"id":"listeners","status":"denied","rows":[]}]]},
+    {"id":"scan-without-telemetry","observable":false,"expect":[],"eligible":false,"stages":[[{"id":"listeners","status":"ok","rows":[]}]]}
+  ],
+  "limitations": ["No inbound connection or packet telemetry; scan-without-telemetry is unobserved, never a true negative.", "Metadata changes and policy eligibility do not prove attacks, authorization or actual agent wake."]
+}
