@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-30 SOURCE-SUCCESS-CONTRADICTIONS已修／接Operator
+
+發現既有legacy ok＋錯誤非零仍顯成功，已以67/67／0skip與320來源編譯修source_status／桌面stale呈現；原始狀態、歷史成功與檔案不改。下一同一缺陷跨入口檢查Operator overview/status：有錯誤不能current_coverage=ok，malformed為unknown，原始結果另存且freshness不混淆；沿七來源合成資料與定向build，逐單元普通推兩ref。真200%工具policy路線不重試；其餘獨立環境缺口保留。
+
 ## 2026-10-30 200%本turn操作已被工具停止
 
 原生新建專用空白Chrome窗口成功，但CUA因無法可靠判定目前URL以執行政策而停止本turn介面控制；不是使用者未授權。停止輸入且不以其他工具繞過；未啟動fixture或模型。新窗口（ID僅存本機reports）關閉未確認，下一在工具正常可用時fresh inventory核對並優先合作關閉；本turn不繼續UI。真200%及原有真人／實機長跑／可信恢復／真防守關卡仍未DONE，不把窗口建立或舊合成測試當縮放驗收。產品342來源hash未變，沿用288項／0skip及319編譯。

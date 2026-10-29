@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-30：legacy成功與錯誤矛盾的呈現修正
+
+verify-source-success-contradictions-red-20261030-01三項皆fail（含5個malformed subtest），修後core-20261030-01七模組67/67／0skip、320語法、source_unchanged／Job自然0／remaining0／無強停；build343hash／320編譯。七來源原始saved_status=ok不改寫，但80錯誤顯partial／success=null，最後真成功仍為先前時間；invalid count／errors／flags或coverage status衝突為unknown，讀取hash不變。真Tk stale列顯部分可讀／過期，不再可讀。沒有模型／採集／ACK；Operator另一入口接續，非全庫／實機安全完成。
+
 ## 2026-10-30：原生新視窗與URL政策停止
 
 reports/web-ui-native-window-policy-20261030-01/browser-tool-result.json：原生建立一個專用New Tab窗口（（ID僅存本機reports）），初次立即清單尚未列出、後續核對確認存在，沒有重複Ctrl+N。CUA選取該自有窗口即回政策停止：無法可靠辨識目前browser URL。所有介面輸入即停止、沒有替代工具繞過；未導覽、啟動fixture／採集／模型／ACK或保存私人內容。空白視窗關閉未確認，清理待正常工具可用後fresh inventory核對，不猜handle。真200%未DONE，342來源hash仍匹配288項及319編譯的原版。

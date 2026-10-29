@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-30 SOURCE-SUCCESS-CONTRADICTIONS 核心與真Tk已修
+
+red三項／七個失敗檢查重現legacy保存ok卻error_count80或格式矛盾仍顯成功，過期桌面也沿原ok顯可讀。source_status現保留saved_status與歷史成功，新增evidence_status：明確錯誤／截斷為partial、壞型別或衝突coverage為unknown；fresh success不再成立，桌面過期列亦用核對後結果。缺選用舊欄仍相容，不寫回舊資料。verify-source-success-contradictions-core-20261030-01七模組67/67／0skip、source_unchanged／Job自然0／remaining0／無強停，build343hash／320來源編譯；含七來源／舊成功保留、壞coverage讀前後hash不變、真Tk過期partial。無native/model／ACK。下一把同契約接Operator coverage/current_coverage，避免另一入口沿舊ok；沿合成測試不重試瀏覽器政策停止。
+
+先前專用空白Chrome窗口唯讀核對已不在目前清單，未輸入／未稱由本agent關閉，followup-observation-20261030-02保留；真200%仍未驗。上一goal turn的新證據是政策停止，本次直接修已重現產品缺口，不把UI阻擋當整個專案停止理由。
+
 ## 2026-10-30 真200%替代路徑被介面工具政策停止
 
 web-ui-native-window-policy-20261030-01未重試visibility API：受支援原生Ctrl+N建立唯一專用空白Chrome視窗，未讀既有頁面內容、未啟動fixture或導覽；CUA綁定時明示無法可靠辨識Windows目前browser URL以執行政策，停止本turn Computer Use。已停止所有app輸入，沒有用其他工具繞過，不稱使用者未授權。真200%仍未驗；新空白視窗（ID僅存本機reports）尚未確認關閉，沒有本次EventGuard worker／server殘留可收尾。

@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-30 legacy來源成功矛盾已修／接Operator
+
+67/67／0skip、320來源編譯；source_status保留原始ok，另以evidence_status呈現錯誤partial／壞資料unknown，桌面stale亦用核對後狀態，真Tk有證據。下一Operator coverage與current_coverage沿同契約，保持namespace／stale／保存原狀，不新掃描／模型。自有空白窗口唯讀查已不在清單，沒有輸入或聲稱由agent關閉，仍不重試已停的browser route。詳STATUS，兩個500行基準續用。
+
 ## 2026-10-30 最新介面停止條件與空白窗口
 
 真200%原生替代路徑已建立專用空白Chrome窗口（ID僅存本機reports），但CUA因不能可靠辨識URL執行政策而停止本turn所有Computer Use。未開始fixture／導覽／採集／模型／ACK；沒有換工具繞過。窗口尚未確認關閉，只有該空白窗口待清理，沒有本次EventGuard worker/server。工具正常允許後先fresh inventory核自有窗口並合作關閉，不重問既有開發許可／不自動重試本turn被停止的輸入；詳STATUS。產品來源未變，288/288與319編譯scope保留，整體仍未完成。

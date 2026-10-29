@@ -74,6 +74,29 @@ def _suggestion(source_id, status, reasons):
     return "目前結果未知。查看階段與錯誤碼。若持續失敗，將原因碼交給管理者。"
 
 
+def effective_collection_status(status, coverage):
+    """Keep old metadata readable without promoting contradictory success.
+
+    Missing optional legacy fields are supported. Explicit malformed fields or
+    conflicting coverage status cannot establish success. No evidence is rewritten.
+    """
+    if not isinstance(status, str) or status not in STATUSES:
+        return 'unknown'
+    if status != 'ok':
+        return status
+    if not isinstance(coverage, dict) or coverage.get('status', 'ok') != 'ok':
+        return 'unknown'
+    if 'errors' in coverage and not isinstance(coverage['errors'], list):
+        return 'unknown'
+    if 'error_count' in coverage and (type(coverage['error_count']) is not int or not 0 <= coverage['error_count'] <= 2**31-1):
+        return 'unknown'
+    if any(key in coverage and type(coverage[key]) is not bool for key in ('truncated', 'errors_truncated')):
+        return 'unknown'
+    if coverage.get('errors') or coverage.get('error_count') or coverage.get('truncated') or coverage.get('errors_truncated'):
+        return 'partial'
+    return 'ok'
+
+
 def source_status(root, namespace="live"):
     """Return seven bounded status rows from this namespace's persisted evidence.
 
@@ -125,13 +148,16 @@ def source_status(root, namespace="live"):
         coverage = section.get("coverage", {})
         coverage = coverage if isinstance(coverage, dict) else {}
         saved_status = section.get("status") if section.get("status") in STATUSES else "unknown"
-        reasons = _reasons(coverage, saved_status) if section else []
+        evidence_status = effective_collection_status(saved_status, section.get('coverage', {}))
+        reasons = _reasons(coverage, evidence_status) if section else []
+        if saved_status == 'ok' and evidence_status != 'ok':
+            reasons.append(_reason('source_success_evidence_inconsistent', evidence_status))
         age = (now - observed).total_seconds() if observed is not None else None
         interval = intervals.get(source_id)
         max_age = (interval + timeout if type(interval) in (int, float) and
                    type(timeout) in (int, float) and interval > 0 and timeout > 0 else None)
         freshness = "unknown" if age is None or age < 0 or max_age is None else "fresh" if age <= max_age else "stale"
-        status = saved_status if freshness == "fresh" else "stale" if freshness == "stale" else "unknown"
+        status = evidence_status if freshness == "fresh" else "stale" if freshness == "stale" else "unknown"
         if not section and not read_error:
             status = "not_collected"
         if read_error:
@@ -152,7 +178,7 @@ def source_status(root, namespace="live"):
                      "last_success_at": success_at.isoformat(timespec="seconds") if success_at is not None else None,
                      "last_success_state": "known" if success_at is not None else "unknown",
                      "last_saved_at": saved_at if _timestamp(saved_at) is not None else None,
-                     "saved_status": saved_status, "status": status, "success": success,
+                     "saved_status": saved_status, "evidence_status": evidence_status, "status": status, "success": success,
                      "freshness": freshness, "age_seconds": round(age, 3) if age is not None and age >= 0 else None,
                      "max_age_seconds": max_age, "row_count": row_count if type(row_count) is int and row_count >= 0 else None,
                      "reasons": reasons, "suggestion": (

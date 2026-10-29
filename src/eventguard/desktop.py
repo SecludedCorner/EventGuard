@@ -449,7 +449,7 @@ class DesktopController:
                 # Keep the last result separate from freshness, but never use a
                 # formerly successful result when the saved observation is unknown.
                 observed_state = ("not_observed" if state == "not_collected" else
-                                  item["saved_status"] if state == "stale" else state)
+                                  item.get('evidence_status', item["saved_status"]) if state == "stale" else state)
                 sources.append({"source_id": source, "status": observed_state,
                     "row_count": item["row_count"], "observed_at": item["last_collected_at"],
                     "freshness": {"state": item["freshness"]},
