@@ -454,6 +454,7 @@ class DesktopController:
                     "row_count": item["row_count"], "observed_at": item["last_collected_at"],
                     "freshness": {"state": item["freshness"]},
                     "last_success_at": item["last_success_at"], "last_success_state": item["last_success_state"],
+                    **{key: item.get(key) for key in ('error_count', 'retained_error_count', 'error_classifications')},
                     **evidence, "current_coverage": observed_state if item["freshness"] == "fresh" else "unknown"})
             scope_matches = (monitor.get("scope_matches") is not False
                              and monitor.get("namespace") in (None, "live"))

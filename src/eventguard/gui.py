@@ -12,7 +12,7 @@ import uuid
 from .gui_pending_view import PendingView
 
 from .gui_presenter import (DELIVERY_FILTERS, SEVERITY_FILTERS, HANDLING_FILTERS, detail_text,
-                            event_list_view, event_summary, history_preview_text, safe_text, source_success_text, source_gap_text)
+                            event_list_view, event_summary, history_preview_text, safe_text, source_success_text, source_gap_text, source_error_text)
 
 
 SOURCE_NAMES = {"defender": "Defender 防護", "listeners": "監聽端點", "processes": "程序",
@@ -70,7 +70,7 @@ def view_snapshot(document, *, severity="all", delivery="all", handling="all"):
         rows.append((source, (title, state_text(item.get("status", "not_observed")),
                               safe_text(item.get("row_count"), 24), state_text(fresh),
                               safe_text(item.get("observed_at"), 80), source_success_text(item),
-                              safe_text(item.get("reason"), 180))))
+                              safe_text(item.get("reason"), 180), source_error_text(item))))
     event_view = event_list_view(value, severity=severity, delivery=delivery, handling=handling)
     agent = value.get("agent_delivery") if isinstance(value.get("agent_delivery"), dict) else {}
     enabled = agent.get("enabled") is True
@@ -305,10 +305,11 @@ class EventGuardWindow(PendingView):
         source_frame.columnconfigure(0, weight=1)
         source_frame.rowconfigure(0, weight=1)
         self.sources = ttk.Treeview(source_frame, show="headings", height=8,
-                                   columns=("source", "coverage", "count", "freshness", "time", "success", "reason"))
+                                   columns=("source", "coverage", "count", "freshness", "time", "success", "reason", "errors"))
         for key, label, width in (("source", "來源", 130), ("coverage", "可見性", 110), ("count", "筆數", 65),
                                   ("freshness", "新鮮度", 90), ("time", "最後觀察時間", 220),
-                                  ("success", "最後成功時間（歷史）", 220), ("reason", "原因", 260)):
+                                  ("success", "最後成功時間（歷史）", 220), ("reason", "原因", 260),
+                                  ("errors", "保存錯誤計數（非安全判定）", 500)):
             self.sources.heading(key, text=label)
             self.sources.column(key, width=width, minwidth=50, stretch=key in {"time", "reason"})
         self.sources.grid(row=0, column=0, sticky="nsew")

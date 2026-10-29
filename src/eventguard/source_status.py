@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import re
 
-from .collectors.contract import SECTION_IDS, STATUSES, clean_errors
+from .collectors.contract import SECTION_IDS, STATUSES, clean_errors, verified_error_classifications
 from .runtime import Runtime
 
 SOURCE_NAMES = {
@@ -159,6 +159,11 @@ def source_status(root, namespace="live"):
                          _suggestion(source_id, "stale", reasons) + " " + _suggestion(source_id, saved_status, reasons)
                          if status == "stale" and saved_status in {"denied", "unknown"}
                          else _suggestion(source_id, status, reasons))})
+        count = coverage.get('error_count')
+        count = count if type(count) is int and 0 <= count <= 2**31-1 else None
+        retained = clean_errors(coverage.get('errors'))
+        rows[-1].update(error_count=count, retained_error_count=len(retained),
+            error_classifications=verified_error_classifications(coverage.get('error_classifications'), count, retained))
     return {"schema_version": "1.0", "namespace": namespace, "sources": rows,
             "read_only": True, "system_query_executed": False, "model_calls": 0,
             "incident_conclusion": "not_assessed", "data_trust": "untrusted_data"}

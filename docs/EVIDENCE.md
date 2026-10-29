@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-30：桌面七來源錯誤計數元件
+
+verify-desktop-error-counts-core-20261030-02為118/118、0skip／318語法，source_unchanged／Job自然0／remaining0／無強停，build341hash／318編譯。實際Tk processes列核部分可讀、錯誤80、保留明細64、field/unknown16與object/denied64；Runtime保存資料讀前後hash相同，legacy無摘要顯未知、不補造成80拒讀。額外bool／負值／樣本數大於總數／任意文字不顯核對成功或PRIVATE。新欄是合成元件驗證，不冒充本版原生滑鼠或真人量測；舊原生179error未保留115筆的原因仍未知。
+
 ## 2026-10-30：分類摘要跨collector／診斷／Runtime保存投影
 
 verify-error-classification-propagation-core-20261030-03為83/83、0skip／317語法、source_unchanged、Job自然0／remaining0／無強停；build340hash／317編譯。合成80錯誤保留64明細，但全量固定分類穿過attempt／coverage／既有診斷operation與Runtime快照；invalid row核81總數，額外PRIVATE欄位不輸出。缺欄／bool總數／負值／重複／未知stage／總數矛盾／超60組／prefix下界矛盾各為null未知。legacy宣告80error卻ok空資料保持partial；未按樣本比例推估。red與誤用query_services的失敗另保留，修測試沿allowlisted operation，不改產品界線。非新實機或來源完整驗收。

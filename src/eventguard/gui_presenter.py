@@ -76,6 +76,28 @@ def source_success_text(item, *, now=None):
         return "未知／尚無成功紀錄"
 
 
+def source_error_text(item):
+    """Saved counts only; the detail prefix cannot establish all classifications."""
+    from .collectors.contract import verified_error_classifications
+    total, retained = item.get('error_count'), item.get('retained_error_count')
+    number = lambda n: str(n) if type(n) is int and 0 <= n <= 2**31-1 else '未知'
+    prefix = '錯誤 ' + number(total) + '；保留明細 ' + number(retained) + '；'
+    summary = verified_error_classifications(item.get('error_classifications'), total, [])
+    if summary is None or type(retained) is not int or not 0 <= retained <= min(64, summary['total_count']):
+        return prefix + '全量分類未知'
+    stages = {'launch': '啟動', 'provider': '提供者', 'object': '物件', 'field': '欄位', 'policy': '政策', 'unknown': '未知階段'}
+    statuses = {'denied': '拒讀', 'unknown': '未知', 'error': '失敗', 'timeout': '逾時', 'partial': '部分',
+                'cancelled': '取消', 'not_applicable': '不適用', 'busy': '忙碌', 'not_requested': '未要求'}
+    groups = summary['groups']
+    text = prefix + '全量計數已核對；' + '；'.join(
+        stages[g['stage']] + '／' + statuses[g['status']] + ' ' + str(g['count']) for g in groups[:3])
+    if len(groups) > 3:
+        text += '；另 ' + str(len(groups)-3) + ' 組'
+    if summary['unclassified_count']:
+        text += '；分類未明 ' + str(summary['unclassified_count'])
+    return text
+
+
 def source_gap_text(sources):
     """Count saved source gaps; categories may overlap, never infer safety."""
     counts = dict(fresh=0, denied=0, partial=0, failed=0, stale=0, unknown=0, na=0)

@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-30 CLASS-003 桌面入口已驗
+
+118/118／0skip與318來源編譯，七來源追加保存錯誤計數欄、保留原status／freshness／reason，水平捲軸可讀。合成80總數、64明細、16未知分開，legacy／矛盾摘要保持未知，真Tk與檔案不變有證據。下一受影響整合collector／診斷／Runtime／source_status／桌面，不新增native/model，不回填歷史原生未知分類；詳STATUS。
+
 ## 2026-10-30 CLASS-002 pipeline已驗
 
 83/83／0skip及317來源編譯，完整固定分類經驗證後過attempt／collector／診斷API／Runtime保存讀回，無摘要或矛盾為null；詳STATUS。下一CLASS-003只接operator來源呈現：保留sample_occurrences與全量分組不同意義，不讓摘要蓋過partial或變安全，舊資料照常unknown。無native/model、每單元push/main與兩個500行基準。

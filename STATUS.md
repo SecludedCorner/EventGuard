@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-30 CLASS-003 桌面保存錯誤計數已實作
+
+七來源新增「保存錯誤計數（非安全判定）」欄，沿既有水平捲軸查看；來源status／歷史成功／新鮮度不被分類摘要蓋掉。顯錯誤總數、保留明細及最多3組固定stage/status，更多組明列數量；缺摘要／計數矛盾為全量分類未知，不將64樣本當80個同原因。source_status→DesktopController→真Tk元件同一份保存資料，view也核對retained≤min(64,total)。verify-desktop-error-counts-core-20261030-02九模組118/118／0skip、source_unchanged／Job自然0／remaining0／無強停；build341hash／318來源編譯。合成80總數／64明細／16 field未知有元件與讀前後檔案hash不變證據；無原生採集／模型／ACK、新欄尚非真人或原生輸入驗收。下一完成受影響collector／Runtime／來源UI／診斷整合，舊原生報告不回填分類。
+
 ## 2026-10-30 COLLECTOR-ERROR-CLASS-002 傳輸與持久化已驗
 
 WindowsCollectors現驗摘要總數、最多60組固定stage/status、正整數／唯一組及保留prefix下界；錯型別／重複／矛盾／缺摘要為null未知，不按prefix外推。invalid row追加錯誤同步總數／分類，attempt、coverage_metadata、既有診斷API與Runtime保存／讀回均保留核對後的摘要；legacy只報error_count但ok／無明細也降為partial。verify-error-classification-propagation-core-20261030-03七模組83/83、0skip／source_unchanged／Job自然0／remaining0／無強停，build340hash／317來源編譯；前次API測試誤用不存在operation已改沿既有query_persistence_diff(kind=services)，未擴API。只有合成資料、無native/model。下一CLASS-003接operator來源摘要，分清完整分類與64筆樣本、缺／錯摘要保持unknown；不把error分類核對當資料認證、來源完整或安全。
