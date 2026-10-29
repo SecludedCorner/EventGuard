@@ -1,5 +1,11 @@
 # EventGuard 目前目標
 
+## 2026-10-29 最新可執行：EVENT-ROW-IDENTITY-AUDIT
+
+DESKTOP-PENDING-ENTRY實際Tk／101件合成SQLite及49模組260項整合已驗（0skip／304檔來源編譯）：較早anchor／原ID明確核對、100＋1與空末頁、返回／快照／錯scope及晚到頁均有證據，GUI操作已落地，產品69e7ee0逐單元普通同步main。這不是原生輸入、真人、Web200%或完整平台完成。
+
+下一具體資料契約：pending Catalog已核對row ID與payload ID，核心_row／pump既有實作主要核hash，需獨立驗一般讀取／處置／ACK／投遞在「hash有效但row ID不符」時是否也拒絕。先合成SQLite重現、保存拒絕／adapter未呼叫／DB與pending／receipt證據，尚未重現前不宣稱缺陷；有缺口才沿共用核心驗證做最小修正，不能靠新入口guard冒稱全路徑安全，也不建立程序關聯或安全結論。相關測試／build後逐單元普通同步main，兩個500行上限；真人／Web／原生／完整歷程恢復可信根與容量關卡仍獨立未達成，完整目標active。
+
 ## 2026-10-29 最新可執行：DESKTOP-PENDING-ENTRY
 
 DESKTOP-REQUEST-RETENTION已修ACK事件／receipt在人工要求未確認時仍被清理的缺陷，red兩例皆fail、修正後TTL／count／byte／unknown及雙pin交集驗證通過，24模組155項／0skip及297檔來源編譯，產品1f987f7普通同步main。這不是歷程還原／容量釋放或新真ACK驗收。

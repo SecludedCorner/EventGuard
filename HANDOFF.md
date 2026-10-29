@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 pending入口已整合／下一Row ID契約核對
+
+產品69e7ee0兩ref一致，49模組260/260、0skip及304檔來源編譯、Job自然0／無殘留，GUI待確認操作與限制已寫GUI.md，見STATUS／EVIDENCE；原生／真人／Web／完整歷程恢復仍各自待驗。下一先在合成SQLite重現一般EventStore.get_event／list／pump的row ID與payload ID不符但hash有效情境，不能只靠pending Catalog已有額外guard。若可重現，沿核心共用驗證切片修讀取／寫入／ACK／投遞入口，故障資料保留且不送adapter／模型，fixture ACK明示local_mock；若已有完整拒絕證據就直接沿用、不重做。先reproduce再修，不先斷言缺陷，每單元立即普通同步main、兩個500行上限不變，整體active。
+
 ## 2026-10-29 pending快照標示已驗／接最後整合保存
 
 11/11、0skip與304檔來源編譯，來源／計數更新與獨立pending快照caption分列、返回正常caption及原item焦點已驗，見STATUS。下一GUI文件落地查看／前後頁／返回、每頁篩選與清理後明確刷新；做受影響桌面／Catalog／保留／兩真Job整合並保存可重現來源，不重跑無變動全庫。pending入口的實際Tk合成能力已具證據，但完整目標仍缺真人／原生／Web200%及歷程恢復可信根等，不能標平台完成。

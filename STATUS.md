@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 Tk待確認入口整合260項通過
+
+DESKTOP-PENDING-ENTRY已有實際Tk＋101件SQLite驗收：recent100外anchor可到達、原ID明確核對／不回退、100＋1與最後空頁、非預設篩選／選取／item焦點返回、錯scope／offset未知、晚到頁丟棄及來源更新不冒充頁刷新。產品69e7ee05ab5817cc399f8b362645abce9ad1999e已逐單元普通同步main／開發ref，兩工作樹及待整合差異0，沒有累積500行。`reports/verify-desktop-pending-final-20261029-01`：2026-10-29 18:10（UTC+8）49模組260/260、0skip、source_unchanged、304檔語法、Job自然0／remaining0／無強停，含既有兩真Job未確認回條恢復及保留回歸；非全庫／真人。`reports/build-desktop-pending-final-20261029-01`326hash／304編譯；GUI操作已落地，本純文件沿用該build並核對引用。
+
+下一契約核對：pending Catalog有額外row ID／payload ID比對，但核心EventStore._row與pump既有路徑主要核hash，需以hash有效、row ID不符的合成資料獨立查證一般讀取／投遞是否同樣拒絕；尚未重現，不先宣稱缺陷或完成。真人／原生輸入／Web200%／原生覆蓋／24h／reboot及完整歷程恢復可信根／容量仍各自未驗，完整目標active。
+
 ## 2026-10-29 更新時間與pending快照範圍分列
 
 pending模式header標明更新屬來源／計數，待確認頁為獨立讀取快照；切入即標、普通snapshot更新不冒充頁刷新，返回恢復原正常標示，不補造頁面讀取時間。`reports/verify-desktop-pending-caption-20261029-01`：2026-10-29 18:04（UTC+8）11/11、0skip、source_unchanged、Job自然0／remaining0／無強停；實際Tk驗snapshot後仍原pending頁且caption分列、返回標示及原item焦點／非預設篩選／選取恢復，850×620與長回條幾何回歸通過。`reports/build-desktop-pending-caption-20261029-01`326hash／304編譯；890487a兩ref一致。接受影響整合與GUI操作文件，保留原生／真人及Web獨立待驗。

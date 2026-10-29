@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-29：Tk待確認入口49模組整合
+
+`reports/verify-desktop-pending-final-20261029-01` UTC10:10:31：49模組260/260、0skip、source_unchanged、304檔語法、Job自然0／remaining0／無強停。涵蓋新待確認模式／101件分頁／原ID核對／快照範圍／返回／錯頁／晚到回條，既有桌面、Catalog、兩真Job未確認回條恢復、保留與人機ACK分離亦通過；不是真人、原生或Web驗收，數字不與舊235／155相加。`reports/build-desktop-pending-final-20261029-01`326hash／304編譯，產品69e7ee0兩ref一致，工作樹／待整合差異0。
+
+本批提交：015b7f2頁驗證 +96/−0；f11ebfe Tk模式 +169/−8；c0f513c 101件／刷新 +164/−0；890487a頁邊界 +53/−14；69e7ee0快照範圍 +25/−1。皆指定檔案、build／測試後普通push及ff-only整合main，無force／amend／tag／release；操作文件純更新沿用受測來源。一般Store row／payload ID一致性另列待查，不用此pending API專屬檢查冒稱全路徑已驗。
+
 ## 2026-10-29：來源更新不等於pending頁刷新
 
 `reports/verify-desktop-pending-caption-20261029-01` UTC10:04:05：11/11、0skip、source_unchanged、Job自然0／remaining0／無強停。真Tk pending頁普通snapshot後仍原anchor，updated標籤明示來源／計數與獨立快照；返回正常標示與原事件item焦點、非預設篩選／選取恢復，沒有新造snapshot時間。最小尺寸及長訊息回歸通過，read/write／pending／receipt守恆沿新入口各案例核對。`reports/build-desktop-pending-caption-20261029-01`326hash／304編譯；Tk item焦點不冒充原生鍵盤／真人操作。
