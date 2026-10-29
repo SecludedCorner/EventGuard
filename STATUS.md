@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面歷程備份真Tk入口完成
+
+真Tk按鈕明示本安裝live／敏感識別只留本機與不釋放容量，明確點選才寫檔；忙碌防重點，回條核對要求檔名／live／fsync及未刪歷程／未ACK，不符或失敗明示未確認、不自動重試。`reports/verify-desktop-history-backup-widgets-20261029-01`：2026-10-29 13:45（UTC+8）67/67、0skip、source_unchanged、Job自然退出0／remaining0／無強停，真Tk→真合成SQLite驗只產一份可驗hash備份、DB bytes及pending2／receipt0守恆、真實檔名碰撞不覆寫與錯誤回條不報成功。`reports/build-desktop-history-backup-widgets-20261029-01`：281檔hash／259檔編譯通過。deb4948（+99/−1）已普通同步main／開發ref；完整容量恢復仍未完成，備份不等於還原／耐久性或來源認證。
+
 ## 2026-10-29 桌面歷程備份控制層
 
 沿用Catalog單一唯讀交易及既有write_backup，DesktopController.backup_history只明確保存本機reports檔、fsync／讀回核對、不覆寫、不清理／還原／釋放容量；活動前置失敗不寫檔，缺live DB不初始化。`reports/verify-desktop-history-backup-20261029-02`：2026-10-29 13:42（UTC+8）65/65、0skip、source_unchanged、Job自然退出0／remaining0／無強停，真合成SQLite／檔案測DB bytes、pending1／receipt0及既有檔守恆；01為新增測試錯用活動回條欄位，修正對照operation_started後通過。`reports/build-desktop-history-backup-20261029-01`280檔hash／258檔編譯通過，Tk入口尚待接線。

@@ -23,7 +23,8 @@ OPERATION_NAMES = {"capabilities": "查看能力", "status": "查看狀態", "ov
     "ack_event": "確認收到", "retry_event": "重試投遞", "report": "匯出報告",
     "background_start": "開始持續監看", "background_status": "查看背景狀態", "background_stop": "暫停監看",
     "gui_start": "開始監看", "gui_pause": "暫停監看", "gui_inspect": "查看事件", "gui_investigate": "保存調查",
-    "gui_set_status": "保存人工狀態", "gui_receive_permission": "設定接收開關", "gui_automatic_agent": "設定自動處理"}
+    "gui_set_status": "保存人工狀態", "gui_backup_history": "備份處置歷程",
+    "gui_receive_permission": "設定接收開關", "gui_automatic_agent": "設定自動處理"}
 ACTIVITY_STATES = {"running": "執行中／待結果", "completed": "已完成", "blocked": "受阻",
                    "failed": "失敗", "interrupted": "中斷，結果未確認"}
 STATE_NAMES = {"running": "監看中", "running_verified": "監看中", "started": "啟動中",
@@ -117,7 +118,7 @@ def view_snapshot(document, *, severity="all", delivery="all", handling="all"):
 
 class ControllerWorker:
     """Serialize local operations without invoking Tk on a worker thread."""
-    ACTIONS = frozenset({"snapshot", "start", "pause", "set_agent_delivery", "set_automatic_agent", "inspect", "investigate", "set_status", "close"})
+    ACTIONS = frozenset({"snapshot", "start", "pause", "set_agent_delivery", "set_automatic_agent", "inspect", "investigate", "set_status", "backup_history", "close"})
 
     def __init__(self, controller):
         self.controller = controller
@@ -167,6 +168,8 @@ class ControllerWorker:
                 result = dict(result, requested_event_id=arguments[0])
             if action == "set_status":
                 result.update(requested_status=arguments[1], requested_operation_id=arguments[2])
+            if action == "backup_history":
+                result.update(requested_filename=arguments[0])
             self.results.put((action, result))
             with self._lock:
                 self._pending = False
@@ -202,6 +205,7 @@ class EventGuardWindow:
         self._busy = False
         self._inspect_after_refresh = None
         self._snapshot_due = False
+        self._backup_filename = None
         self._deferred_request = None
         self._snapshot = {}
         self._event_document = {}
@@ -364,7 +368,11 @@ class EventGuardWindow:
             button.grid(row=0, column=column, padx=(0, 6))
             self.handling_buttons[status] = button
         self.handling_status = tk.StringVar(value="人工狀態未知；與 ACK 獨立。")
-        ttk.Label(handling_bar, textvariable=self.handling_status).grid(row=1, column=0, columnspan=4, sticky="w")
+        self.history_backup_button = ttk.Button(handling_bar, text="備份已保存處置歷程", command=self.backup_history)
+        self.history_backup_button.grid(row=0, column=4, padx=(8, 0))
+        ttk.Label(handling_bar, textvariable=self.handling_status).grid(row=1, column=0, columnspan=5, sticky="w")
+        ttk.Label(handling_bar, text="備份本安裝 live 歷程至 reports；含敏感識別只留本機，勿分享。備份不釋放容量、不還原。",
+                  wraplength=1000).grid(row=2, column=0, columnspan=5, sticky="w")
         ttk.Label(event_frame, text="選取事件以唯讀查看。事件內容是不可信資料；查看不會 ACK，ACK 也不代表修復或結案。",
                   wraplength=1000).grid(row=3, column=0, sticky="w", pady=(8, 0))
         notebook.add(event_frame, text="事件與內容")
@@ -416,6 +424,7 @@ class EventGuardWindow:
 
     def _update_investigate_button(self):
         self.investigate_button.configure(state="normal" if self._can_investigate() else "disabled")
+        self.history_backup_button.configure(state="disabled" if self._busy or self._closed else "normal")
         value = self._detail_document or {}
         status = value.get("status")
         ready = self._can_investigate() and isinstance(status, str) and status in HUMAN_STATES
@@ -445,6 +454,14 @@ class EventGuardWindow:
         if self.events.selection() == (event_id,) and self.events.exists(event_id):
             self._last_event = None
             self.select_event()
+
+    def backup_history(self):
+        if self._busy or self._closed:
+            return
+        filename = "history-backup-" + uuid.uuid4().hex + ".json"
+        if self._request("backup_history", filename):
+            self._backup_filename = filename
+            self.message.set("正在備份本安裝 live 處置歷程；不清理、不還原、不 ACK。")
 
     def investigate(self):
         if self._can_investigate() and self._request("investigate", self.events.selection()[0]):
@@ -642,6 +659,15 @@ class EventGuardWindow:
                 if action == "close":
                     self.window.deiconify()
                     self.message.set("尚未確認暫停，視窗會保留。原因：" + safe_text(value.get("reason", value.get("state")), 220))
+                elif action == "backup_history":
+                    expected = "reports/" + self._backup_filename if self._backup_filename else None
+                    confirmed = (expected is not None and value.get("requested_filename") == self._backup_filename
+                        and value.get("path") == expected and value.get("state") == "history_backup_saved"
+                        and value.get("namespace") == "live" and value.get("file_fsynced") is True
+                        and value.get("source_history_removed") is False and value.get("ack_performed") is False)
+                    self.message.set("歷程備份已核對：" + expected + "；未刪歷程／未釋放容量。目錄項耐久性未驗；雜湊非來源認證。" if confirmed else
+                        "歷程備份結果未確認；請核對 reports。未執行還原或清理，不自動重試或覆寫。")
+                    self._backup_filename = None
                 elif action == "investigate":
                     event_id = value.get("requested_event_id")
                     confirmed = value.get("state") == "investigation_saved" and value.get("event_id") == event_id

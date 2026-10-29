@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：歷程備份真Tk／合成SQLite
+
+`reports/verify-desktop-history-backup-widgets-20261029-01` UTC05:45:50：67/67、0skip、source_unchanged、Job自然退出0／remaining0／無強停。實際Tk按鈕→真控制層／合成SQLite／本機暫存檔，驗明確點選才備份、忙碌重點只一份、hash／live範圍相符、DB bytes及pending2／receipt0守恆；真檔名碰撞不覆寫、錯誤回條不假報成功、不自動重試。`reports/build-desktop-history-backup-widgets-20261029-01`281檔hash及259檔編譯通過。備份檔含敏感識別不提交；無清理／還原／原生採集／模型／ACK，目錄項耐久性未驗，非真人或Web驗收。
+
 ## 2026-10-29：桌面歷程備份控制層與前版診斷整合
 
 `reports/verify-desktop-history-backup-20261029-02` UTC05:42:48：65/65、0skip、source_unchanged、Job自然退出0／remaining0／無強停；真合成SQLite／檔案驗備份hash／讀回、來源DB bytes、pending1／receipt0守恆、不覆寫與非法檔名／活動失敗／缺DB拒絕。01新增測試錯用state欄位，改驗既有operation_started=False契約；`reports/build-desktop-history-backup-20261029-01`280檔hash及258檔編譯通過。僅控制層，Tk按鈕未完成，無刪除／還原／容量釋放／原生／模型／ACK。
