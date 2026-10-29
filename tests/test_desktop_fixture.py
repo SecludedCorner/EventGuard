@@ -24,6 +24,7 @@ class DesktopFixtureTests(unittest.TestCase):
 
     def test_fresh_scope_real_catalog_and_blocked_capabilities(self):
         fixture = DesktopFixtureController(self.project, 'desktop-ux-test')
+        self.addCleanup(fixture.close)
         before = fixture.store.path.read_bytes()
         snapshot = fixture.snapshot()
         self.assertTrue(snapshot['synthetic_fixture'])
@@ -47,6 +48,7 @@ class DesktopFixtureTests(unittest.TestCase):
         sentinel.mkdir(parents=True)
         (sentinel/'eventguard.sqlite3').write_bytes(b'not synthetic: must not open')
         fixture = DesktopFixtureController(self.project, 'desktop-ux-existing')
+        self.addCleanup(fixture.close)
         before = fixture.store.path.read_bytes()
         with self.assertRaises(FileExistsError):
             DesktopFixtureController(self.project, 'desktop-ux-existing')
@@ -57,6 +59,7 @@ class DesktopFixtureTests(unittest.TestCase):
 
     def test_extra_or_non_synthetic_content_refused_before_ui_operations(self):
         fixture = DesktopFixtureController(self.project, 'desktop-ux-changed')
+        self.addCleanup(fixture.close)
         event = make_synthetic('listener')
         event['synthetic'] = False
         fixture.store.enqueue(event)

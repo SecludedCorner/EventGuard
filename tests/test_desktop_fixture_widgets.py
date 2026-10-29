@@ -38,6 +38,7 @@ class DesktopFixtureWidgetTests(unittest.TestCase):
         self.ui.dispose()
         self.ui.worker.shutdown(wait=True)
         self.assertFalse(self.ui.worker.thread.is_alive())
+        self.controller.close()
         try:
             self.window.destroy()
         except self.ui.tk.TclError:

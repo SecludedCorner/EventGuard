@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 既有排他鎖已接scope
+
+InstanceLock持有／close／準備失敗釋放及第二owner拒絕，9/9、0skip及276檔來源編譯通過，見STATUS；既有GUI與真Job launcher回歸亦通過。下一步在鎖內做既有scope唯讀schema／四synthetic預檢，再接reopen，不建立／修補缺失DB、不重seed，不讀安裝live或覆寫舊收據。
+
 ## 2026-10-29 真人合成入口準備已保存／接續跨程序重開
 
 產品95f90b2bdc920a0e7067620d9f34a32aaccb6cc8已逐單元普通同步main／開發ref，185/185、0skip、275檔來源編譯與377檔可重現來源包，見STATUS／EVIDENCE。明確launcher、真Job deadline／EOF自然退出、六任務及未認證自報CLI均可用，操作見GUI文末；沒有真人結果，不能自行填成績或宣稱超越競品。

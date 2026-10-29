@@ -9,7 +9,7 @@ from .desktop import DesktopController
 from .diagnostics.review import review
 from .events.catalog import EventCatalog
 from .events.store import EventStore
-from .runtime import Runtime, atomic_json
+from .runtime import Runtime, InstanceLock, atomic_json
 from .synthetic import make_synthetic
 
 
@@ -34,6 +34,16 @@ class DesktopFixtureController:
         self.root = runtime.path(Path('reports')/name)
         self.root.mkdir(exist_ok=False)
         self.closed = False
+        self._scope_lock = InstanceLock(Runtime(self.root))
+        if not self._scope_lock.acquire():
+            raise ValueError('desktop_fixture_already_owned')
+        try:
+            self._prepare(now)
+        except BaseException:
+            self._scope_lock.release()
+            raise
+
+    def _prepare(self, now):
         stamp = now or datetime.now(timezone.utc)
         self.stamp = stamp.isoformat(timespec='seconds')
         self.store = EventStore(self.root/'data/live')
@@ -99,5 +109,6 @@ class DesktopFixtureController:
 
     def close(self):
         self.closed = True
+        self._scope_lock.release()
         return {'state': 'closed', 'synthetic_fixture': True, 'can_close': True,
                 'model_calls': 0, 'system_query_executed': False, 'ack_performed': False}

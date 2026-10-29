@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：合成scope排他鎖
+
+`reports/verify-desktop-fixture-lock-20261029-01` UTC07:27:47：9/9、0skip、source_unchanged、Job自然退出0／remaining0／無強停；真OS-backed InstanceLock驗持有時第二取得拒絕、close及prepare失敗釋放、DB bytes守恆；真Tk／真Job launcher回歸。`reports/build-desktop-fixture-lock-20261029-01`298檔hash／276檔編譯。鎖metadata非驗收收據，不停止其他程序，既有scope唯讀預檢與跨程序重開尚待，未原生採集／模型／ACK。
+
 ## 2026-10-29：真人桌面合成入口前置最終整合
 
 `reports/verify-desktop-ux-fixture-final-20261029-01` UTC07:16:43：26個受影響模組185/185、0skip、source_unchanged、275檔語法通過，Job自然退出0／remaining0／無強停。獨立真Windows Job／合成Tk deadline及owner_eof均原handle自然exit0／Job0／無強停，索引同目錄launcher-scenarios.json；另有真Tk／SQLite控制與紀錄路由，未執行原生採集／模型／ACK。`reports/build-desktop-ux-fixture-final-20261029-01`297檔hash及275檔編譯；`reports/release-prep-desktop-ux-fixture-20261029-01`綁定95f90b2bdc920a0e7067620d9f34a32aaccb6cc8，377檔可重現，archive SHA256 43f5abad287b0183344fdf0c09981eb1834144287210f8426f2bf49d50f5c4ac，非tag／release／真人驗收。

@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 合成scope排他生命週期
+
+沿用Runtime.InstanceLock，合成控制器準備前取得scope鎖、正常close及準備失敗均釋放；不用PID強停或新機制，暫時monitor-owner只作既有鎖metadata，不作不可變驗收收據。`reports/verify-desktop-fixture-lock-20261029-01`：2026-10-29 15:27（UTC+8）9/9、0skip、source_unchanged、Job自然退出0／remaining0／無強停；第二owner在持有期間拒絕、close後可取得、失敗清自身鎖、DB bytes守恆，真Tk／真Job launcher回歸通過。`reports/build-desktop-fixture-lock-20261029-01`298檔hash／276檔編譯；重開讀取及新attempt仍待，不把此步當跨程序保留已驗。
+
 ## 2026-10-29 真人桌面合成入口前置整合185項通過
 
 隔離控制器、固定合成標示／停用原生控制、有界真Job／Tk launcher、六任務與exclusive未認證自報入口已逐單元build／相關測試後指定檔案commit、普通push及ff-only整合／push main；產品兩ref直接核對95f90b2bdc920a0e7067620d9f34a32aaccb6cc8，兩工作樹及待整合差異0，每筆增刪少於200、未累積500行。提交訊息／行數見EVIDENCE最新段。`reports/verify-desktop-ux-fixture-final-20261029-01`：2026-10-29 15:16（UTC+8）26模組185/185、0skip、source_unchanged、275檔語法通過、Job自然退出0／remaining0／無強停；含獨立真Job合成Tk deadline／owner_eof原handle收據，索引同目錄launcher-scenarios.json。`reports/build-desktop-ux-fixture-final-20261029-01`297檔hash／275檔編譯；`reports/release-prep-desktop-ux-fixture-20261029-01`綁定上述產品SHA、377檔可重現，未tag／release，純文件沿用該來源build／整合並檢查引用。
