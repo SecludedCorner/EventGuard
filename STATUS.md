@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面預設agent政策條件呈現已實測
+
+詳情顯示預設政策符合／不符與固定原因；明示快照不是自訂dispatcher、due／lease、接收權限、啟動同意或真喚醒／防守證據。錯ID、缺欄位或未知保持unknown且不輸出任意原因文字。`reports/verify-desktop-agent-policy-widgets-20261029-01`（18:44 UTC+8）6模組36/36、0skip、source_unchanged、Job自然0／remaining0／無強停；真Tk＋SQLite驗warning、高severity及handled後原因更新，來源讀取不寫DB、pending3／receipt0、錯案／未知不顯符合。`reports/build-desktop-agent-policy-widgets-20261029-01`335hash／312來源編譯。操作已寫GUI.md；接受影響整合，不新增原生／模型，整體AI盯哨仍未驗收完成。
+
 ## 2026-10-29 預設agent政策唯讀契約落地（UI待接）
 
 Catalog詳情新增default_agent_policy，只核對預設severity／event type／人工狀態及pending／retry，符合與否不代表排程到期、接收授權、實際dispatcher自訂政策、已喚醒或防守成效。錯誤metadata／政策維持unknown；沒有新動作或門檻變更。`reports/verify-agent-policy-view-20261029-01`5模組61/61、0skip、source_unchanged、Job自然0／remaining0／無強停；真SQLite以high/new、warning/new、high/handled與select_pending逐案核對一致，詳情讀取DB位元組／pending／receipt不變。`reports/build-agent-policy-view-20261029-01`334hash／311來源編譯。此單元只有資料契約，尚不能稱桌面呈現已完成；接Tk文字與實際操作。

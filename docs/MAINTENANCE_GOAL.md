@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 DESKTOP-AGENT-QUALIFICATION真Tk已驗／接整合
+
+預設條件快照已接桌面詳情並真Tk＋合成SQLite操作通過，36/36／0skip與312來源編譯；不符原因、條件符合但未證喚醒、錯案未知、人工handled與ACK獨立均已驗。接既有core／Catalog／UI／dispatch／queue／corpus及桌面回條保留整合；不改門檻／授權或把未觀測掃描當安全。驗收範圍保留原生／真人／Web／長跑／完整恢復來源可信根，各自仍未DONE。
+
 ## 2026-10-29 DESKTOP-AGENT-QUALIFICATION資料契約已驗
 
 61/61／0skip、311來源編譯；Catalog已提供預設政策條件快照及固定排除原因，並與真SQLite選取比對，未改任何門檻／權限。下一接實際Tk呈現與合成操作：warning指出未選嚴重度，high符合仍聲明非授權或實際喚醒，人工handled另列排除、unknown／錯ID不確定化；自訂dispatcher、due／lease另待核對。UI未實作前不標此項DONE。

@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：真Tk agent預設政策說明
+
+`reports/verify-desktop-agent-policy-widgets-20261029-01`UTC10:44:17：6模組36/36、0skip、312語法、source_unchanged、Job自然0／remaining0／無強停；build同名335hash／312編譯。真Tk新增3情境：warning與high分列、high人工handled後排除且pending3／receipt0、錯案／未知快照不顯符合。讀取與錯案測試DB位元組不變；fixture禁止child／scan／ACK，沒有真agent或正式防守結果。預設條件未涵蓋自訂dispatcher、due／lease或啟動權限；GUI文字明示範圍。
+
 ## 2026-10-29：預設agent政策條件唯讀快照
 
 `reports/verify-agent-policy-view-20261029-01`UTC10:41:29，61/61、0skip（5模組），source_unchanged、311語法、Job自然0／remaining0／無強停；build同名334hash／311編譯。Catalog詳情同一事件的預設政策條件分列severity／type／人工狀態／delivery排除，與真SQLite選取在已到期無lease案例一致；讀取保留DB位元組、pending1／receipt0。ACK與未知metadata／政策不報條件符合。不包含due／lease／真正啟動授權或自訂dispatcher設定，尚未接UI。

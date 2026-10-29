@@ -445,6 +445,8 @@ def event_summary(value):
     lines.extend(["", "保存前版調查（只讀）",
                   *revision_summary(value.get("investigation_revisions"), event.get("event_id"))])
     lines.extend(["", "人工處置與操作歷程（只讀）", *handling_summary(value)])
+    from .agent_policy_view import text as policy_text
+    lines.extend(["", *policy_text(value.get("default_agent_policy"), event.get("event_id"))])
     lines.extend(["", "建議的唯讀查證（僅文字，不會執行）"])
     steps = guidance.get("next_steps")
     if isinstance(steps, list) and any(isinstance(item, str) for item in steps[:6]):

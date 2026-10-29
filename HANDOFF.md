@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 Tk預設政策說明已驗／接整合
+
+36/36、0skip／312編譯，真Tk完成預設條件與原因、warning／high／人工handled更新、錯案未知及讀取不寫；GUI.md已補操作，見STATUS。下一針對Catalog／UI新增欄位、dispatch／queue／corpus與桌面回條／保留整合，保留原生／真人／Web／長跑及完整恢復可信根關卡。不能把預設條件符合叫agent已喚醒或防守成功。
+
 ## 2026-10-29 預設政策資料已驗／接Tk呈現
 
 default_agent_policy唯讀契約61/61、0skip／311編譯，詳情不寫DB，見STATUS。下一Tk顯示明確「預設條件」，原因用固定詞彙且綁event ID；符合仍不代表due／lease／接收授權／真喚醒／防守成功，自訂dispatcher條件也不在此快照。未知／錯案回條呈現未知；實際Tk核對warning、高severity與人工handled變化，不啟動模型／ACK。
