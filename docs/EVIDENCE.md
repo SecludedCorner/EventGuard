@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：收據上限與雙重pin分離
+
+`reports/verify-desktop-request-receipt-pins-20261029-01` UTC09:16:30：36/36、0skip、source_unchanged、Job自然0／remaining0／無強停。人工＋receiver-finalization同一收據不重複算pin，上限2時保留該收據＋最新一般收據；finalize_receiver只解除receiver保護，人工要求仍使原event／receipt免TTL；complete_desktop_request只解除人工保護，receiver receipt仍留，原event可依既有TTL到期。byte reclaim只清eligible，不釋放任一pin；既有inbox重啟／finalization故障／保留回歸皆過。`reports/build-desktop-request-receipt-pins-20261029-01`319hash／297編譯。全部是合成local_mock收據，不是模型、真receiver或原生採集；不把獨立確認混成ACK。
+
 ## 2026-10-29：人工未確認要求的事件／收據保留修正
 
 `reports/verify-desktop-request-retention-red-20261029-01`：兩個合成回歸皆fail，TTL刪原ACK事件、件數壓力未拒絕新事件而移除anchor；不是模擬PASS。加入pending journal guard後`reports/verify-desktop-request-retention-20261029-02` UTC09:12:11：30/30、0skip、source_unchanged、Job自然0／remaining0／無強停，包含既有outbox/inbox/ledger保留與修訂測試。合成local_mock ACK後人工要求仍pending，TTL／count／byte輪替保留原event與receipt，確認gui操作回條後TTL恢復；壞日誌拋固定retention_unverified並rollback、DB bytes不變。收據TTL／limit／byte trim皆排除仍被人工要求引用的收據，未提高容量或刪歷程。`reports/build-desktop-request-retention-20261029-01`318hash／296編譯；不是實機、真receiver或24h證據，混合pin交集下一單元另驗。

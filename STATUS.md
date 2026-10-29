@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 人工與receiver收據保護交集已驗
+
+`reports/verify-desktop-request-receipt-pins-20261029-01`：2026-10-29 17:16（UTC+8）36/36、0skip、source_unchanged、Job自然0／remaining0／無強停。合成SQLite驗雙重pin只計一份收據、上限仍保留最新一般收據；receiver finalize後人工原事件／收據仍保留，人工確認後receiver receipt仍保留；各自釋放後才恢復原TTL。byte壓力只清一般事件／收據、不解除任一pin。receiver既有pin只保護收據，payload TTL仍由人工pin等原契約處理，沒有擴大為雙方都鎖整個event。`reports/build-desktop-request-receipt-pins-20261029-01`319hash／297編譯；e3f6824兩ref已一致。本輪純補交集證據與操作文件，不是agent或實機ACK驗收；下一做受影響保留／桌面整合。
+
 ## 2026-10-29 修正未確認人工要求被ACK清理移除
 
 重現TTL／件數壓力會清掉仍有人工未確認要求的ACK原事件，導致原ID無法核對；現將此事件及收據加入保留條件，TTL、件數／位元組輪替與收據上限皆沿用，不改上限、不把人工要求當ACK。日誌壞schema／欄位不明則整筆清理rollback，不reset成空。`reports/verify-desktop-request-retention-red-20261029-01`原2例皆fail證明缺陷；修正後`reports/verify-desktop-request-retention-20261029-02`：2026-10-29 17:12（UTC+8）30/30、0skip、source_unchanged、Job自然0／remaining0／無強停，TTL保留原event／receipt／ID、明確確認後原TTL可清理，滿額拒絕新事件bytes不變、byte回收不動pin、壞日誌不部分刪除。`reports/build-desktop-request-retention-20261029-01`318hash／296編譯。只在合成SQLite直接產生local_mock ACK，不是agent驗收或實機清理；35de80a兩ref已一致，下一驗receiver-finalization與人工pin交集及混合收據壓力。

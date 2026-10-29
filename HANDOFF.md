@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 混合pin驗收已過／接受影響整合
+
+36/36、0skip及297檔來源編譯，人工／receiver pin交集、receipt上限不重算、各自釋放與byte trim已驗，見STATUS／EVIDENCE。接續保留／inbox／desktop／兩程序要求恢復受影響整合及可重現來源保存；不再重跑無變動全庫。GUI已明示未確認要求即使ACK仍保留原event／receipt、上限不擴大，兩種確認互不授權。完整歷程恢復可信根／容量、真人／Web／原生各自仍待驗，不以本修正升格完成。
+
 ## 2026-10-29 新保留缺陷已修／接混合pin驗收
 
 恢復後查出ACK的event／receipt可被TTL／壓力清理，即使人工要求未確認；red兩例失敗，修正後30/30、0skip及296檔編譯通過，見STATUS。desktop_requests.retention_guard驗有界日誌後排除事件／收據引用，schema未知不清，原上限不變；滿額寧拒新事件，明確確認後恢復原TTL。下一個相關切片驗收據上限／byte trim中混合人工pin與一般收據、receiver-finalization pin與人工pin重疊／分別釋放，不把兩種確認混為ACK或互相釋放。只用合成SQLite/local_mock，保留原真人／Web／原生等待驗。
