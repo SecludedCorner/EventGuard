@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 瀏覽器恢復／Web實際操作增量驗收
+
+內建瀏覽器與專用Chrome已成功操作本版localhost合成fixture，舊「全部瀏覽器blocked」已失效，CLAUDE已更新。reports/web-ui-restored-20261029-01驗七卡片、篩選high第二頁／返回，5分鐘deadline自然0；reports/web-ui-zoom-20261029-02唯讀重開同庫，七情境均過（歷史成功＋目前denied、stale、無歷史、not_applicable、ok空結果、partial＋歷史、future歷史未知），800／1280 CSS寬度無全頁橫向溢位，reload與Back／Forward保留篩選／頁碼、Enter往返焦點回evt-anchor、版本展開／summary焦點跨18次真GET仍保留，console error0。新fixture合作停止、兩Job自然exit0／remaining0／無強停；兩次DB位元組未變、pending68／ACK0／model0／native0，無真人結果。
+
+真200%仍未證實：兩browser快捷鍵未改比例，原生工具無專用目標窗口，管理API啟用分頁屬性不支援；未繞過、未稱CSS寬度等於200%。acceptance-summary明標partial／overall_complete=false，13檢查含誠實未驗標記，不是全部Web通過；截圖只存本機reports。338source hashes與315編譯受測來源相同，純文件沿用56項與產品370項各自範圍，不重跑無變動全庫。剩餘是真200%、原生Tk輸入、真人六任務、受限制原生來源、24h／reboot、恢復可信根／容量與真防守結果，授權本身不再當阻擋，完整AI盯哨仍active。
+
 ## 2026-10-29 Task替代provider亦拒讀，停止同路線重查
 
 `reports/tasks-provider-alternative-20261029-01`以既有PowerShell固定Get-ScheduledTask metadata（不讀Definition／XML／Actions）查一次，回denied／provider_access_denied、error1、占位row1不等於1個task；內query與外Job自然0／remaining0／無強停，無模型／設定變更。COM root先前unknown/0x80070003與此provider denied各自保留，沒有可重現程式缺陷或成功空集合證據，不以放寬／提權／反覆查詢求PASS。純文件沿用315來源編譯與56項定向；下一僅有界核對既有瀏覽器工具能否驗收Web200%／焦點，不把工具錯誤當未授權或阻擋其他工作。

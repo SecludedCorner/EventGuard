@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-29：真Web七情境／響應尺寸／版本焦點
+
+web-ui-restored-20261029-01與web-ui-zoom-20261029-02為兩個有限期私有Job，使用同一68事件／1前版合成SQLite，真IAB／Chrome UI讀取並保存DOM與本地原始截圖。七卡片case均pass；800 CSS scrollWidth785、1280為1265，沒有全頁橫向溢位；high/page1重新整理及Back／Forward恢復，Enter返回evt-anchor查看按鈕。固定route計數證實版本summary焦點與open跨18次真detail GET仍保留，非只靠等待推定；console error0。兩Job自然0／remaining0／無強停，DB位元組不變、pending68／receipt0／model0／native0。尚無人類操作量測。
+
+acceptance-summary與browser-evidence明列真200% false／overall partial；快捷鍵未改比例，專用目標未返回、啟用分頁屬性不支援，未用CSS viewport冒充200%。所有新頁籤已關、viewport override已reset；source-proof.jpg與source-proof-viewport.jpg僅本機合成證據，不提交Git。338來源hash匹配315檔來源編譯，產品碼未因驗收改動。這消除舊一般browser blocked，但不是整體Web／實機AI防守完成。
+
 ## 2026-10-29：tasks最低成本替代亦未取得資料
 
 tasks-provider-alternative-20261029-01：既有PowerShell tasks metadata單次5秒query／15秒總預算，provider_result denied／provider_access_denied／error1，數字HRESULT -2146233088不推論根因；row1為失敗占位、不是1個task。原COM root unknown/0x80070003另保留。兩層自有Job自然0／remaining0／無強停；未讀Definition/XML/Actions、無rawfacts／模型／系統變更。收據交叉核對通過不代表來源可讀；不再重查同條件，不改產品fallback來洗綠。

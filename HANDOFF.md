@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 Web工具已恢復／特定200%仍待驗
+
+已在真IAB／Chrome跑七來源情境、800/1280 CSS、非預設high第二頁／reload／Back／Forward、Enter返回，以及版本焦點跨18次真GET；兩自有fixture自然0、DB未變／pending68／ACK0，見STATUS與web-ui-zoom-20261029-02。不要再沿舊browser disabled當全域阻擋，也不要重問既有許可。真200%無比例變更證據、管理啟用屬性不支援，明標partial且未繞過。原生資料已實測partial/denied而非未授權；剩餘200%、原生Tk輸入、真人、24h/reboot、恢復可信根與真防守各需真證據。先核具體前置變化，不再重查同native／重跑同fixture。
+
 ## 2026-10-29 Task兩路徑不可用／保留來源缺口
 
 COM root契約56/56／0skip、真root0x80070003仍unknown；既有PowerShell tasks替代也provider_access_denied，皆有自然退出／無殘留，見STATUS。沒有已重現程式錯誤，不再重查／提權／改系統。下一有界核對瀏覽器Web驗收條件；未恢復則保留200%／焦點關卡，不能重問既有權限或把Tk替代。完整AI盯哨仍未完成。

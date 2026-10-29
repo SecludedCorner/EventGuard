@@ -1,5 +1,11 @@
 # 本機頁面操作與驗收界線
 
+## 2026-10-29 最新增量驗收：瀏覽器已可用，200%未證實
+
+真IAB／專用Chrome搭配隔離test namespace已驗七來源卡片：歷史成功不蓋目前denied／stale，無歷史／不適用／partial／future時間保持區分，ok空結果不當安全。800／1280 CSS寬度無全頁橫向溢位；high第二頁、reload、Back／Forward及Enter返回同一事件焦點已驗。保存前版展開／summary焦點跨18次實際詳情讀取仍保留，兩fixture DB未變／pending68／ACK0／模型0／原生採集0，Job自然退出。程序、DOM、固定route計數與合成截圖只存本機reports/web-ui-zoom-20261029-02。
+
+真200%未取得比例變更證據，工具shortcut及啟用屬性有能力限制；CSS viewport不等於瀏覽器200%，acceptance-summary仍partial，不宣稱整體UX驗收完成或真人量測。舊一般瀏覽器blocked不能繼續套用，也不因局部未驗重問許可／改設定；剩餘真人、原生輸入及真環境關卡分開保留。
+
 在專案目錄執行：
 
 ```powershell

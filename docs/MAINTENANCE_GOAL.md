@@ -1,5 +1,11 @@
 # EventGuard 目前目標
 
+## 2026-10-29 Web可執行驗收已補／剩餘獨立關卡
+
+原一般browser blocked已由真IAB／Chrome操作消除：七來源情境、800/1280 CSS、high/page1保存／reload／Back／Forward、Enter返回及版本summary/open跨18次真GET已驗，兩Job自然0／DB未變／ACK0，見STATUS。真200%仍false（shortcut比例不變、工具無目標／啟用屬性不支援），不把viewport當zoom。已清理自有分頁／尺寸override與程序。
+
+完整AI盯哨仍active：原生來源實測有partial／denied／Task root unknown（不是缺開發許可），原生Tk輸入工具未返回自有窗口；真人六任務仍無參與者資料；真200%、24h／reboot、完整歷程恢復可信根／無損容量、inbound偵查遙測與真agent防守／恢復結果各未達成。無可重現程式缺陷時不為延長工程增加重複fixture／展示或輪詢；有具體前置或新缺陷才接下一單元，不提權、改系統、新模型或新增憑證來繞過關卡。
+
 ## 2026-10-29 Task替代已驗拒讀／核對Web驗收工具
 
 COM root與PowerShell tasks兩條既有唯讀路徑均未取得資料，沒有可重現程式缺陷，已保存scope／固定碼／自然退出；停止同路線，保留原生來源未驗，不繞過設定或提權。下一僅一次核對目前已授權瀏覽器工具是否能對專用合成localhost頁執行200%／焦點驗收；能用才啟動私有Job／有限期fixture，不能用就保留待驗，不重複輪詢。其他真人／長跑／恢復可信根／真防守關卡獨立保留。
