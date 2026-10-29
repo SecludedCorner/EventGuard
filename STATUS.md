@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 事件身分／桌面／投遞整合275項通過
+
+`reports/verify-event-identity-integration-20261029-01`（18:31 UTC+8）23模組275/275、0skip、source_unchanged、307語法、Job自然exit0／remaining0／無強停；含core身分、診斷保存、真Tk故障、dispatch／fake CLI、queue／ingress、保留／雙pin及兩真Job回條恢復。`reports/build-event-identity-integration-20261029-01`329hash／307編譯。產品e72ac22兩ref一致，三單元+100/-8、+76/-2、+83/-0皆逐單元同步main；範圍不累加為全庫／真agent。來源包`reports/release-prep-event-identity-20261029-01`409檔、reproducible，SHA256 3519a4d61ad05352a8ec6ff96963e1697eb5eb70c9f7ca6362f04b370ec06835；非exe／release。
+
+下一沿ENGINEERING_PLAN既有P2-DETECT-001建立固定合法合成corpus，逐規則量測可觀測命中／良性誤報／漏報與未觀測分母，另列dispatch資格。這是盯哨偵測效果的離線前置，不能把規則或policy選中叫真喚醒／攻擊偵測率；正常監看及測試不啟動模型，真人／Web／原生／長跑／恢復可信根關卡保留。
+
 ## 2026-10-29 實際Tk損壞來源拒絕與未知呈現通過
 
 `reports/verify-desktop-corrupt-event-widgets-20261029-02`（18:28 UTC+8）5模組22/22、0skip、source_unchanged、Job自然0／remaining0／無強停；`reports/build-desktop-corrupt-event-widgets-20261029-01`329hash／307檔來源編譯。真Tk＋合成SQLite核對：異ID詳情不沿用前案、寫入停用、健康事件可開；舊詳情來源後損壞不能保存；刷新失敗總數未知且明示未顯示不代表安全。event DB位元組不變、pending2／receipt0，禁scan／model／ACK。01為測試過度要求清單清空後無作用的journal旗標亦重設（實際已無選取且所有寫入停用），02保留使用者行為斷言並僅在錯誤詳情檢查旗標，未改產品或降低拒絕條件。下一接受影響投遞／保留／雙要求回條整合；非原生輸入、真人或真防守。

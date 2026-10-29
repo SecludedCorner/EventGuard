@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：身分修正受影響整合與來源保存
+
+23模組275/275、0skip、source_unchanged、307語法，`reports/verify-event-identity-integration-20261029-01` UTC10:31:57，98.166s；guardian自然0／remaining0／無強停。含實際Tk與合成SQLite、fake CLI投遞、queue／ingress、保留／雙pin及兩真Job恢復；沒有新原生採集／模型／真agent。build-event-identity-integration-20261029-01為329hash／307來源編譯。受測產品e72ac2246b6bfd8b7107bda4118525eb3b14aed0來源包release-prep-event-identity-20261029-01可重現、409檔、SHA256 3519a4d61ad05352a8ec6ff96963e1697eb5eb70c9f7ca6362f04b370ec06835，未發布／tag。各數字僅此範圍，不與52／60／22相加。
+
 ## 2026-10-29：錯案來源真Tk呈現驗收
 
 `reports/verify-desktop-corrupt-event-widgets-20261029-02`22/22、0skip（5模組），307語法、source_unchanged、Job自然exit0／remaining0／無強停；3個新增真Tk情境覆蓋錯誤詳情／健康案切換、舊詳情保存拒絕及刷新未知總數。DB位元組、pending2／receipt0守恆，fixture禁止ACK／scan／model。01 21/22：錯誤斷言要求無選取狀態重設內部旗標；02檢查所有實際寫入按鈕停用、舊案文字消失及未知而非安全空集合，錯誤詳情仍要求journal未知。build-desktop-corrupt-event-widgets-20261029-01為329hash／307編譯。不是原生輸入／真人／新agent證據。

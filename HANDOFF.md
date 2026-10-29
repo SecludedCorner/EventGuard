@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 身分修正已整合／接既有偵測corpus
+
+e72ac22產品23模組275/275、0skip／307編譯／Job自然0，受影響投遞、queue、ingress、保留與桌面恢復已驗，精確來源包與限制見STATUS。下一執行ENGINEERING_PLAN既有P2-DETECT-001，固定合成真值及可觀測欄位，分列規則命中、良性誤報／漏報、未觀測和dispatch資格；不得把policy選中或metadata異常當攻擊定論／真喚醒。其他真人／原生／Web／長跑／歷程可信根關卡未完成。
+
 ## 2026-10-29 Tk錯案／損壞呈現已驗／接投遞整合
 
 真Tk新增3情境已驗，22/22、0skip／307來源編譯：異ID拒絕不串前案、健康案可開、舊詳情無法寫損壞來源、刷新未知不稱安全；DB位元組／pending／receipt守恆，見STATUS。接續受影響投遞、dispatch、queue、保留與雙pin及既有桌面回條恢復整合；未改原生／真人／Web獨立關卡，AI盯哨仍active。
