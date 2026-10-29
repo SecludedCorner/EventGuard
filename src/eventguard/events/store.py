@@ -574,6 +574,31 @@ class EventStore:
         except sqlite3.Error as exc:
             raise self._sqlite_error(exc) from exc
 
+    def _prepare_desktop_request(self, value):
+        """Persist a bound human intent before a later explicit status operation."""
+        from ..desktop_requests import begin
+        try:
+            with self._lock, self._connect() as db:
+                db.execute("BEGIN IMMEDIATE")
+                available = max(0, self.max_bytes - self._used_bytes(db) - self.ack_reserve_bytes)
+                result = begin(db, value, available_bytes=available)
+                if not result["replayed"] and self._used_bytes(db) + self.ack_reserve_bytes > self.max_bytes:
+                    raise CapacityError("desktop_request_capacity_pending_preserved")
+                return {**result, "caller_commit_required": False}
+        except sqlite3.Error as exc:
+            raise self._sqlite_error(exc) from exc
+
+    def _complete_desktop_request(self, value):
+        """Resolve after durable operation proof, never merely an attempted call."""
+        from ..desktop_requests import complete
+        try:
+            with self._lock, self._connect() as db:
+                db.execute("BEGIN IMMEDIATE")
+                result = complete(db, value)
+                return {**result, "caller_commit_required": False}
+        except sqlite3.Error as exc:
+            raise self._sqlite_error(exc) from exc
+
     def _restore_history(self, value, *, namespace):
         """Internal restore building block; caller must independently verify provenance.
 

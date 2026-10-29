@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 要求日誌交易與完成證據閘道
+
+EventStore內部prepare使用BEGIN IMMEDIATE、ACK空間預留及寫後實際容量檢查，失敗整筆rollback含新表；complete只刪除與已落盤gui操作四欄一致的待確認要求，不刪事件或歷程，不回退後來決定。整合發現第一切片誤用含delivery的view hash，已改核對經_row驗證的不可變payload_hash，未放寬身分檢查。`reports/verify-desktop-request-store-20261029-03`：2026-10-29 16:24（UTC+8）14/14、0skip、source_unchanged、Job自然0／remaining0／無強停，晚期容量失敗DB bytes不變、重開保留要求、沒有gui提交證據／其他通道不能清除，後來read及兩筆歷程、pending1／receipt0保留。01有hash錯1error，02修正17pass含重複收集的3原語測試，03去重為最終14；未提交失敗狀態。`reports/build-desktop-request-store-20261029-01`308檔hash／286檔編譯，8f60171（+152/−0）已同步兩ref；namespace仍由caller scope承擔，顯式綁定、controller／Tk與兩程序未確認恢復尚待，不宣稱可用。
+
 ## 2026-10-29 未確認要求日誌原語，尚未接UI
 
 desktop_requests提供caller交易內的有界pending讀取／begin，不dispatch、不commit、不ACK；最多128筆，綁已保存事件hash／狀態／operation_id，原ID重播即使容量滿仍可核對，不同ID占用同要求拒絕；缺表唯讀不初始化、schema錯／容量不足不重建。`reports/verify-desktop-request-core-20261029-02`：2026-10-29 16:21（UTC+8）16/16、0skip、source_unchanged、Job自然0／remaining0／無強停；合成SQLite驗commit後重開保留ID、錯hash／容量拒絕後DB bytes不變、衝突不覆寫、pending1／receipt0。01因測試拿enqueue前而非落盤後hash有2error，已修正fixture，未提交失敗狀態。`reports/build-desktop-request-core-20261029-01`307檔hash／285檔編譯；fff3dd7（+70/−2）已同步兩ref。此原語尚未接EventStore容量收尾、controller／Tk或完成清除，不能宣稱跨程序未確認恢復已可用。

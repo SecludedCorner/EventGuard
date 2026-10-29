@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：日誌容量交易與已提交操作核對
+
+`reports/verify-desktop-request-store-20261029-03` UTC08:24:57：14/14、0skip、source_unchanged、Job自然0／remaining0／無強停；EventStore prepare最終容量超限rollback整表及DB bytes，重開讀原ID、滿載原ID核對不新增；complete需匹配既有gui操作的事件／狀態／ID／不可變payload_hash，沒有操作證據或source=cli拒絕且bytes保留，後來read與handled→read兩筆歷程不動、pending1／receipt0。01整合揭露view hash夾delivery欄位，已改為_row驗證後的原payload_hash；02全通但匯入TestCase多收3原語案例，03改只借setup／connect，最終14不重複計數。`reports/build-desktop-request-store-20261029-01`308檔hash／286檔編譯。這仍是內部原語／交易包裝，沒有產品dispatch或Tk持久化；命名空間顯式綁定仍待。
+
 ## 2026-10-29：未確認要求日誌第一切片
 
 `reports/verify-desktop-request-core-20261029-02` UTC08:21:11：16/16、0skip、source_unchanged、Job自然0／remaining0／無強停。新desktop_requests原語需caller的write transaction／ACK預留與最終容量驗證；begin只插入有界要求，pending只讀，不觸發任何原要求。合成SQLite驗缺表讀取不改DB、保存commit後重開同ID、同ID在滿額仍冪等、錯事件hash／無空間拒絕及rollback bytes守恆、換ID與schema多欄拒絕不重置，pending1／receipt0。01兩error源於fixture使用enqueue前hash，02改用落盤事件hash通過；未降低身分標準。`reports/build-desktop-request-core-20261029-01`307檔hash／285檔來源編譯。未接產品呼叫路徑，worker／Tk與跨程序未確認恢復仍待。

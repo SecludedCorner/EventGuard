@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 交易包裝已驗／下一顯式scope與接線
+
+14/14、0skip與286檔來源編譯通過，prepare預留ACK／寫後容量rollback、complete僅根據已有gui操作證據清除確定要求，後來決定與pending保留，見STATUS。尚無任何產品路徑呼叫：下一步先明確綁namespace（目前只依caller目錄）並提供Catalog只讀待確認視圖，再接controller先prepare→明確set_status→確認完成、失敗保留要求；Tk重開從已驗事件hash恢復原ID但不自送，壞日誌要明示並禁新寫入。最後兩真Job提交後丟回條→重開核對，不用既有正常保存重開測試冒充此情境。每單元立即build／測試／普通同步main，整體active。
+
 ## 2026-10-29 日誌原語已驗／接續交易包裝
 
 16/16、0skip與285檔來源編譯通過，desktop_requests.pending／begin有界、hash綁定、原ID重播及衝突／schema拒絕已驗，見STATUS／EVIDENCE。仍未接產品；下一步沿EventStore既有BEGIN IMMEDIATE／_used_bytes／_ack_reserve把begin包成先持久化意圖的交易，新增僅匹配原四欄且已有確定結果才移除的完成操作；容量或完成持久化失敗保留要求、不宣稱確定未開始。之後接controller／Tk及兩真Job未確認重開，每切片build／測試後立即普通同步main，無自動重送、ACK或日誌授權。

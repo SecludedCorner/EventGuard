@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from eventguard.desktop_requests import begin, pending
 from eventguard.events.store import EventStore, event_payload_hash
+from eventguard.events.schema import validate_event
 from eventguard.synthetic import make_synthetic
 
 
@@ -19,7 +20,7 @@ class DesktopRequestTests(unittest.TestCase):
         event = make_synthetic('listener')
         self.store.enqueue(event)
         self.value = {'event_id': event['event_id'], 'status': 'handled', 'operation_id': 'pending-op',
-                      'payload_hash': event_payload_hash(self.store.get_event(event['event_id']))}
+                      'payload_hash': event_payload_hash(validate_event(self.store.get_event(event['event_id'])))}
 
     def connect(self):
         db = sqlite3.connect(self.store.path)
