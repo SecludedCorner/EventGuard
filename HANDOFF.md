@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 pending頁邊界已驗／接標示與整合
+
+9/9、0skip及304檔來源編譯，真Tk最後一件核對→空第2頁→回前頁100、錯offset／namespace未知且可重試已驗，見STATUS。整合前核對global updated標籤：pending頁不被普通snapshot覆蓋，但來源／計數仍更新，目前「最後更新」未區分範圍；應明示來源／計數更新不代表待確認頁已刷新，不補造讀取時間，返回恢復正常標示。完成後操作文件＋受影響GUI／Catalog／保留／兩程序整合，不重跑無變動全庫；完整目標active及真人／原生等獨立待驗保持。
+
 ## 2026-10-29 pending Tk 101件閉環已驗／接整合文件
 
 10/10、0skip及304檔來源編譯，真Tk＋101件SQLite找舊anchor／原ID明確核對／兩頁／非預設篩選返回／unknown／晚到頁及忙讀刷新已驗，見STATUS／EVIDENCE。下一更新GUI操作文件的待確認入口與快照／本頁篩選／刷新語意，做受影響GUI／controller／Catalog／保留／兩真Job整合及可重現來源保存；不再重跑無變動全庫。人類成績仍null，原生／Web／長時與完整歷程恢復可信根仍各自待驗，完整目標active。

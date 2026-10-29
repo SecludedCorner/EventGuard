@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：真Tk最後空頁與錯頁回條
+
+`reports/verify-desktop-pending-boundaries-20261029-02` UTC09:59:50：9/9、0skip、source_unchanged、Job自然0／remaining0／無強停。第2頁單件使用原ID明確核對後刷新，該頁空／total100，再按上一頁回100件且不含已核對ID；pending101／receipt0不變，沒有自動處置。錯namespace／offset均未知、空tree且寫入停用，不假報零要求，明確重試可讀原anchor。01新測試插錯try/finally位置造成SyntaxError，guardian仍自然exit1／無殘留，02修正後通過；build-desktop-pending-boundaries-20261029-01為326hash／304編譯。不同測試範圍不與前10項相加。
+
 ## 2026-10-29：101件SQLite與實際Tk pending入口
 
 `reports/verify-desktop-pending-widgets-20261029-02` UTC09:54:47：10/10、0skip、source_unchanged、Job自然0／remaining0／無強停。直接操作pending／前後頁／返回／刷新／handled元件：recent100外anchor可到達，讀回原ID時0save／DB bytes不變，較新read後同ID明確核對只重播、兩筆歷程／pending101／receipt0。101個pending事件分100＋1、前後頁集合一致不重複、bytes不變；非預設severity／delivery／handling與原選取返回恢復。錯scope未知／禁寫且可明確重試，返回後晚到頁丟棄，snapshot忙讀期間刷新停用、完成恢復，無自動處置／模型／ACK。01上一頁仍disabled時invoke導致1fail，02等實際元件啟用後通過並新增故障驗收；build-desktop-pending-widgets-20261029-01為326hash／304編譯。非原生輸入或真人結果。

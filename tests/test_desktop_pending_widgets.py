@@ -65,11 +65,14 @@ class DesktopPendingWidgetTests(unittest.TestCase):
         self.assertEqual(self.ui.events.selection(), (recent['event_id'],))
         self.assertEqual((self.store.stats()['pending'], self.store.stats()['receipt_count']), (101, 0))
 
-    def test_actual_next_previous_buttons_cover_101_pending_anchors(self):
+    def prepare_all_pending(self):
         for event in self.store.list_events(limit=100):
             value = {'namespace': 'live', 'event_id': event['event_id'], 'status': 'handled',
                      'operation_id': 'page-'+event['event_id'], 'payload_hash': event_payload_hash(validate_event(event))}
             self.store._prepare_desktop_request(value, namespace='live')
+
+    def test_actual_next_previous_buttons_cover_101_pending_anchors(self):
+        self.prepare_all_pending()
         before = self.store.path.read_bytes()
         self.open_page()
         first = set(self.ui.events.get_children())
@@ -86,24 +89,25 @@ class DesktopPendingWidgetTests(unittest.TestCase):
         self.assertEqual(set(self.ui.events.get_children()), first)
         self.assertEqual(self.store.path.read_bytes(), before)
 
-    def test_wrong_scope_page_is_unknown_not_empty_and_explicit_retry_recovers(self):
+    def test_wrong_context_page_is_unknown_not_empty_and_explicit_retry_recovers(self):
         original = self.controller.pending_requests
         def wrong(offset=0):
             result = original(offset)
-            result['namespace'] = 'test'
+            result[fault] = 'test' if fault == 'namespace' else 100
             return result
         before = self.store.path.read_bytes()
-        with patch.object(self.controller, 'pending_requests', side_effect=wrong), patch.object(
-                self.controller, 'set_status_durable', side_effect=AssertionError('no automatic replay')):
-            self.ui.pending_button.invoke()
-            self.wait_for(lambda: self.ui._pending_expected is None and self.ui.pending_button.instate(['!disabled']))
-            self.assertIsNone(self.ui._pending_page)
-            self.assertEqual(self.ui.events.get_children(), ())
-            self.assertIn('未知', self.ui.events_note.get())
-            self.assertTrue(all(b.instate(['disabled']) for b in self.ui.handling_buttons.values()))
-            self.assertTrue(self.ui.pending_next.instate(['disabled']))
-        self.open_page()
-        self.assertEqual(self.ui.events.get_children(), (self.anchor,))
+        for fault in ('namespace', 'offset'):
+            with patch.object(self.controller, 'pending_requests', side_effect=wrong), patch.object(
+                    self.controller, 'set_status_durable', side_effect=AssertionError('no automatic replay')):
+                self.ui.pending_button.invoke()
+                self.wait_for(lambda: self.ui._pending_expected is None and self.ui.pending_button.instate(['!disabled']))
+                self.assertIsNone(self.ui._pending_page)
+                self.assertEqual(self.ui.events.get_children(), ())
+                self.assertIn('未知', self.ui.events_note.get())
+                self.assertTrue(all(b.instate(['disabled']) for b in self.ui.handling_buttons.values()))
+                self.assertTrue(self.ui.pending_next.instate(['disabled']))
+            self.open_page()
+            self.assertEqual(self.ui.events.get_children(), (self.anchor,))
         self.assertEqual(self.store.path.read_bytes(), before)
 
     def test_snapshot_read_does_not_eat_a_pending_refresh_click(self):
@@ -124,6 +128,29 @@ class DesktopPendingWidgetTests(unittest.TestCase):
                 self.wait_for(lambda: self.ui.refresh_button.instate(['!disabled']))
             finally:
                 release.set()
+
+    def test_last_page_can_become_empty_after_confirmation_then_return_to_previous(self):
+        self.prepare_all_pending()
+        self.open_page()
+        self.wait_for(lambda: self.ui.pending_next.instate(['!disabled']))
+        self.ui.pending_next.invoke()
+        self.wait_for(lambda: self.ui._pending_offset == 100 and self.ui._pending_page is not None and self.ui.pending_button.instate(['!disabled']))
+        identity = self.ui.events.get_children()[0]
+        self.select(identity)
+        original = self.ui._pending_status[(identity, 'handled')]
+        with patch.object(self.controller, 'set_status_durable', wraps=self.controller.set_status_durable) as save:
+            self.ui.handling_buttons['handled'].invoke()
+            self.wait_for(lambda: '人工狀態已核對' in self.ui.message.get() and self.ui.pending_button.instate(['!disabled']))
+            self.assertEqual(save.call_args.args[2], original)
+        self.ui.refresh_button.invoke()
+        self.wait_for(lambda: self.ui._pending_page is not None and self.ui._pending_page['total'] == 100 and self.ui.pending_previous.instate(['!disabled']))
+        self.assertEqual(self.ui.events.get_children(), ())
+        self.assertIn('本頁無事件', self.ui.events_note.get())
+        self.ui.pending_previous.invoke()
+        self.wait_for(lambda: self.ui._pending_offset == 0 and self.ui._pending_page is not None)
+        self.assertEqual(len(self.ui.events.get_children()), 100)
+        self.assertFalse(self.ui.events.exists(identity))
+        self.assertEqual((self.store.stats()['pending'], self.store.stats()['receipt_count']), (101, 0))
 
     def test_return_during_read_discards_late_page_without_automatic_state_calls(self):
         recent = self.store.list_events(limit=100)[0]['event_id']

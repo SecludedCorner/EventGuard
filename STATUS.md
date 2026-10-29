@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 pending最後空頁與錯offset真Tk補驗
+
+`reports/verify-desktop-pending-boundaries-20261029-02`：2026-10-29 17:59（UTC+8）9/9、0skip、source_unchanged、Job自然0／remaining0／無強停。實際Tk在第2頁明確核對最後1件後刷新得空頁、總數100，仍可回前頁100件且無已確認事件；原ID／pending101／receipt0保持。錯namespace及錯offset都unknown並禁寫，明確重試回復，未默默套舊頁。01測試新方法誤插try/finally中導致載入SyntaxError／worker-summary缺失，未提交失敗來源；02修正位置及共用資料準備helper後通過。`reports/build-desktop-pending-boundaries-20261029-01`326hash／304編譯；c0f513c兩ref一致。接續來源／計數更新與待確認快照的標示核對、受影響整合及操作文件，仍不冒稱原生／真人完成。
+
 ## 2026-10-29 101件真Tk待確認入口／兩頁與晚到回條
 
 `reports/verify-desktop-pending-widgets-20261029-02`：2026-10-29 17:54（UTC+8）10/10、0skip、source_unchanged、Job自然0／remaining0／無強停。真Tk＋101件SQLite從recent100外找anchor、讀原ID0save、明確核對不回退較新read／不增歷程，刷新清已確認列並返回原非預設三篩選／選取；101個pending anchor透過實際上一頁／下一頁分100＋1、無重複及bytes守恆。錯scope頁清成unknown且禁人工寫入，明確重試可恢復；讀頁中返回後晚到頁不套用。pending模式的snapshot讀取時暫停刷新按鈕，避免點擊被忙碌read吞掉，完成後恢復。01未等待上一頁按鈕實際啟用就invoke造成1fail，02改按元件狀態等待並補故障為最終10。`reports/build-desktop-pending-widgets-20261029-01`326hash／304編譯；f11ebfe兩ref一致。新入口合成元件已驗，尚需受影響整合／操作文件與來源保存；不升格原生／真人／Web完成。
