@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 原生輸入局部待驗，合成窗口已自然退出
+
+`reports/desktop-ux-native-input-20261029-01`由launcher在私有Job啟動180秒合成Tk，ready確認membership且automated_fixture_actions=false；目前computer-use/26.1023.51421初始化成功，但list_apps／list_windows皆未列EventGuard，後者回6窗口而目標0，不猜ID或跨程序注入。到期worker closed／deadline、原handle exit0／remaining0／無強停，模型／掃描／ACK均false；native-input-observation.json保存當次限制，沒有真人成績。原生輸入是局部待驗，不等同Tk元件未實作或整體blocked。4a70b85（+38/−1）已同步兩ref。接續人工狀態失敗回饋：現行容量與未開始活動錯誤共用一句，需分列並保留提交後未確認語意；沿用197項整合／283檔build作本純文件來源證據。
+
 ## 2026-10-29 跨程序重開整合197項通過
 
 DESKTOP-FIXTURE-REOPEN工程驗收已完成：同原scope真Tk保存／退出／第二真Tk讀回、開啟中另一Job拒絕及退出後可重開、非法scope不修補，舊證據及pending／ACK保留。產品9a441b91f336182daccf794452226b4aa9d50663已普通同步main／開發ref，兩工作樹及對origin/main差異0。`reports/verify-desktop-reopen-final-20261029-01`：2026-10-29 15:59（UTC+8）32模組197/197、0skip、source_unchanged、283檔語法通過、Job自然0／remaining0／無強停；範圍為桌面、Catalog、fixture與相關備份預檢，非全庫／真人。`reports/build-desktop-reopen-final-20261029-01`305檔hash／283檔編譯；`reports/release-prep-desktop-reopen-20261029-01`綁上述產品SHA，385檔可重現來源包，未tag／release。GUI文末已提供原scope與新attempt操作；純文件沿用本次來源build並檢查引用。

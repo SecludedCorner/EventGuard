@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 原生輸入局部待驗／接續失敗原因回饋
+
+當版computer-use未返回已ready的自有合成窗口；180秒私有Job已自然0／remaining0／無強停，證據見STATUS，不留背景程序、不繞過或重複輪詢。下一可執行DESKTOP-HANDLING-FAILURE：容量不足與活動意圖紀錄失敗目前畫面共用泛稱，分列實際原因及未開始／提交後未確認；真Tk＋合成SQLite驗DB／pending守恆，提交後活動完成紀錄失敗保留同operation_id，不自動重送。仍守每單元build／測試後普通同步main及兩個500行基準。
+
 ## 2026-10-29 同scope重開已整合／接續原生桌面輸入
 
 產品9a441b9兩遠端ref一致，197/197、0skip、283檔來源編譯及385檔可重現來源包，見STATUS／EVIDENCE；GUI已提供--reopen-from原始scope與每次新--name，新attempt只存新收據，不覆寫舊資料或成績。下一具體動作讀目前computer-use技能並列工具可見窗口，只操作本工具有界Job合成視窗；若可選取則驗原生點選／鍵盤保存與退出，否則記錄當次實際工具狀態，不繞過限制、不把Tk.invoke升格原生／真人。目標active及完整待驗清單保留，每單元立即普通同步main、兩個500行基準不變。

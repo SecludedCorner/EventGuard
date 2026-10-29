@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：原生桌面輸入當次工具狀態
+
+`reports/desktop-ux-native-input-20261029-01` UTC08:06啟動180秒，worker-ready的私有Job membership=true／automated_fixture_actions=false；computer-use當版list_apps目標0、list_windows共6／目標0，未選取任何窗口或輸入，不保存他人標題／畫面。native-input-observation.json與guardian-start／exit、worker-ready／exit、session-result留原目錄；deadline合作退出後父程序原handle核對natural_exit／exit0／remaining0／無強停，worker thread已退出，模型0／採集false／ACKfalse／participant_results=null。原生輸入未驗，不拿此次期限退出冒充成功；不重試瀏覽器或更改設定。
+
 ## 2026-10-29：同scope重開整合與來源保存
 
 產品9a441b91f336182daccf794452226b4aa9d50663兩遠端ref直接一致，工作樹及待整合差異0；本批7fe016f `test(desktop): prove saved handling survives two real Tk processes` +141/−1、9a441b9 `test(desktop): reject a second process while a Tk scope is open` +70/−0，均逐單元build／測試後指定檔案stage、普通push及ff-only整合／push main，未累積500行。

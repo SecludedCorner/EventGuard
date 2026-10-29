@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 最新可執行：DESKTOP-HANDLING-FAILURE
+
+原生輸入當版工具未返回自有合成窗口，已保存當次0目標觀察與期限自然退出收據，保留獨立待驗，不反覆輪詢。接續現有人工處置故障語意缺口：畫面容量不足與活動意圖建立失敗混成一句，使用者無法判斷原因；分列容量／未開始，並以真Tk＋合成SQLite驗活動完成紀錄在提交後失敗仍為結果未確認、同operation_id重試不重複、不回退新決定，pending／ACK保留。不新增還原、清理或自動重試，不以此替代真人／Web／原生／恢復可信根驗收，整體目標active。
+
 ## 2026-10-29 最新接續：DESKTOP-NATIVE-INPUT
 
 DESKTOP-FIXTURE-REOPEN已具第一真Tk按鈕保存／自然退出／第二真Tk同DB讀回與並行owner拒絕、舊證據／pending／ACK守恆；197項受影響整合、0skip及283檔來源編譯通過，產品9a441b9已普通同步main。下方fresh-only或跨程序未提供為歷史，現行明確操作見GUI文末。
