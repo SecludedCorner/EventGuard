@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：原scope／新attempt重開接線
+
+`reports/verify-desktop-launcher-reopen-20261029-01` UTC07:45:12：12/12、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真Job／Tk新attempt讀同原scope，DB bytes與原guardian-exit／worker-exit／session-result三收據不變，新attempt無複製DB；active controller owner由另一child拒絕、缺scope不建DB，拒絕worker狀態blocked／程序exit2仍如實unconfirmed。兩launch間由controller保存handled／case，不升格第一GUI內保存證據；後續補完整GUI跨程序閉環。`reports/build-desktop-launcher-reopen-20261029-01`302檔hash／280檔編譯；無原生採集／模型／ACK／真人結果。
+
 ## 2026-10-29：鎖內重驗的controller重開
 
 `reports/verify-desktop-fixture-reopen-20261029-01` UTC07:37:08：12/12、0skip、source_unchanged、Job自然退出0／remaining0／無強停；同一scope先關controller再reopen，handled／保存case／DB bytes／marker一致，pending4／receipt0，_prepare哨兵證明未seed。active owner及缺scope拒絕，模擬鎖內重驗失敗後自身鎖釋放可再開。`reports/build-desktop-fixture-reopen-20261029-01`301檔hash及279檔編譯；不冒稱兩個GUI程序／真人／原生驗收，launcher接線仍待。

@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 launcher重開route已驗
+
+--name新attempt＋--reopen-from原始scope，12/12、0skip及280檔來源編譯通過，舊收據／DB保留、active owner與缺資料拒絕，見STATUS。這輪save在兩launch間用controller做；下一步測試專用on_ready seam／owned probe，以第一真Job的真Tk按鈕保存handled與調查，第二真Job的真Tk檢視同一scope讀回，兩程序自然退出／pending／ACK及原收據獨立核對，不加CLI自動改資料旗標或冒充真人。
+
 ## 2026-10-29 同scope控制器重開已驗
 
 12/12、0skip及279檔來源編譯通過，reopen先預檢、鎖內重驗／唯讀store、不seed，handled／case／DB bytes／marker及pending保留，見STATUS。下一步launcher每次仍新建attempt目錄、指定原始合成scope，worker輸出改存新attempt而資料留原scope；原生能力仍停用、不覆寫原收據。接真Job／GUI跨程序驗保存與並行拒絕，不能用controller測試代替。

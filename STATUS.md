@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 新attempt接原scope的真Job／Tk
+
+launcher --reopen-from只接原始desktop-ux-*名稱，每次--name仍新attempt；資料讀原scope，worker-ready／exit、guardian及任務紀錄留新attempt，不覆寫舊證據；worker拒絕重用既有ready／exit。初始化拒絕回固定scope碼，不記原始例外。`reports/verify-desktop-launcher-reopen-20261029-01`：2026-10-29 15:45（UTC+8）12/12、0skip、source_unchanged、Job自然退出0／remaining0／無強停；真Job／Tk新程序保留原DB bytes與舊三收據、active owner／缺scope拒絕且無替代DB。保存狀態／調查由兩次launch間的controller完成，第一GUI內保存→第二GUI讀回仍待下一單元。`reports/build-desktop-launcher-reopen-20261029-01`302檔hash／280檔編譯；d344989（+91/−9）已普通同步main／開發ref，未真人／原生採集／模型／ACK。
+
 ## 2026-10-29 控制器明確重開同一scope
 
 DesktopFixtureController(reopen=True)先唯讀預檢、取得原InstanceLock再於鎖內重驗；以SavedFixtureStore讀取，來源僅依保存prepare時間及固定情境重建，不重seed／改marker／開新DB，仍封鎖原生能力。`reports/verify-desktop-fixture-reopen-20261029-01`：2026-10-29 15:37（UTC+8）12/12、0skip、source_unchanged、Job自然退出0／remaining0／無強停；同scope handled與case、DB bytes及marker保留、pending4／receipt0，active owner／缺scope拒絕，鎖內資料變動失敗後釋放可再開。`reports/build-desktop-fixture-reopen-20261029-01`301檔hash／279檔編譯；6ca8c1c（+148/−0）已普通同步main。這是控制器閉環，launcher第二程序／新attempt尚待，不升格跨程序GUI已驗。
