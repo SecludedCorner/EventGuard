@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 通過數已修／接有界原生窗口核對
+
+verify.py不再用subtest失敗數扣parent數，隔離red→green33/33、0skip／313來源編譯，cleanup失敗仍撤銷成功；原產品370項範圍見STATUS。下一讀computer-use技能，僅啟動本版有期限、私有Job內的合成Tk窗口，核對工具是否返回可確認的自有窗口；有才做已批准的合成操作，沒有則保存自然退出與未驗關卡，不猜window ID或改設定／重複輪詢。真人、Web及native採集／24h／reboot等條件保持獨立。
+
 ## 2026-10-29 整合370項已驗／接測試證據計數缺陷
 
 f2bc30d受影響整合34模組370/370、0skip／312來源編譯，來源包與限制見STATUS，非完整實機／AI防守驗收。下一VERIFY-PARENT-COUNTS：本批red的5個parent／6失敗subchecks會報passed=-1，修verify.py實際成功parent計數，隔離注入suite驗多subtest失敗／skip及cleanup失敗，所有失敗明細保留；不重跑無變動全庫或啟動新模型。既有外部實機／人類關卡保留。

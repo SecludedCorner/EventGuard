@@ -94,6 +94,36 @@ def suite_completed(value):
             and value.get("stopped_early") is False and value.get("stop_requested") is False)
 
 
+class PassingResult(unittest.TextTestResult):
+    """Count successful parent callbacks, not failure/skip subtest records."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.passed_tests = 0
+        self._successful_case = None
+
+    def startTest(self, test):
+        self._successful_case = None
+        super().startTest(test)
+
+    def addSuccess(self, test):
+        super().addSuccess(test)
+        self.passed_tests += 1
+        self._successful_case = test
+
+    def _retract_success(self, test):
+        if self._successful_case is test:
+            self.passed_tests -= 1
+            self._successful_case = None
+
+    def addFailure(self, test, error):
+        self._retract_success(test)
+        super().addFailure(test, error)
+
+    def addError(self, test, error):
+        self._retract_success(test)
+        super().addError(test, error)
+
+
 def worker(output, guardian_name, scope="full", modules=()):
     evidence, residuals, syntax = [], [], []
     baseline = {}
@@ -103,7 +133,7 @@ def worker(output, guardian_name, scope="full", modules=()):
             ast.parse(file.read_text(encoding="utf-8"), filename=str(file.relative_to(ROOT)))
         except SyntaxError as error:
             syntax.append({"file": str(file.relative_to(ROOT)), "line": error.lineno})
-    class Result(unittest.TextTestResult):
+    class Result(PassingResult):
         def addSuccess(self, test):
             if hasattr(test, "evidence"):
                 evidence.append({"test": test.id(), **test.evidence})
@@ -149,7 +179,7 @@ def worker(output, guardian_name, scope="full", modules=()):
              "tests_run": result.testsRun, "expected_tests": expected_tests,
              "stopped_early": bool(result.shouldStop or result.testsRun != expected_tests),
              "stop_requested": (output / "guardian-stop.request").exists(),
-             "passed": result.testsRun-len(result.failures)-len(result.errors)-len(result.skipped),
+             "passed": result.passed_tests,
              "failures": [test.id() for test, _ in result.failures], "errors": [test.id() for test, _ in result.errors],
              "skipped": [{"test": test.id(), "reason": reason} for test, reason in result.skipped],
              "python_files": len(files), "syntax_errors": syntax, "duration_seconds": round(time.monotonic()-tick, 3),

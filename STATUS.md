@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 驗證器parent通過數缺陷已修
+
+多subtest失敗／skip原算法會扣除其他成功parent甚至報負值，隔離red 3項中2fail。verify.py現依實際addSuccess計parent，cleanup追加失敗／錯誤撤銷該次成功；不截零、不刪明細或修改wasSuccessful／完整性閘道。`reports/verify-parent-counts-green-20261029-01`（18:51 UTC+8）6模組33/33、0skip、source_unchanged、313語法、Job自然0／remaining0／無強停；注入suite多subtest 2parent／3fail仍保留1成功、2subskip另保留1成功、強制cleanup不算通過。`reports/build-parent-counts-20261029-01`336hash／313來源編譯；歷史red負值保留原貌。產品本體沿用f2bc30d的370項整合，驗證器變更只重驗受影響範圍。下一有界核對本版自有合成Tk窗口能否被原生工具辨識，不能以Tk.invoke替代原生輸入；若工具仍未返回窗口，保存當次退出證據並保留該關卡。
+
 ## 2026-10-29 資安盯哨政策與桌面受影響整合370項通過
 
 產品f2bc30d兩ref一致；`reports/verify-sentry-policy-integration-20261029-01`（18:48 UTC+8）34模組370/370、0skip、source_unchanged、312語法、Job自然0／remaining0／無強停。含本批身分修正、診斷交易、實際Tk、預設政策、10案corpus、fake CLI／queue／ingress／保留與兩真Job回條恢復；不與先前數字相加。`reports/build-sentry-policy-integration-20261029-01`335hash／312編譯；`reports/release-prep-sentry-policy-20261029-01`415檔來源包可重現、SHA256 8a2777b47524a75fbb3f39e38f5a6f6d08edbdc569bd805ebf6433225d738b13，未建exe／tag／release。

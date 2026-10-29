@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：驗證器subtest計數red→green
+
+`reports/verify-parent-counts-red-20261029-01`3tests／2fail，證實失敗subtest與skip可扣掉其他成功parent。改用實際成功callback計數、cleanup晚到失敗撤銷後，`reports/verify-parent-counts-green-20261029-01`UTC10:51:28：33/33、0skip（6模組），source_unchanged、313語法、Job自然0／remaining0／無強停；build-parent-counts-20261029-01為336hash／313編譯。注入suite故意的fail／skip有獨立明細，外層33tests皆pass，不拿注入失敗宣稱產品失敗或把skip隱藏；未更改舊red報告。
+
 ## 2026-10-29：政策／偵測corpus受影響整合370項
 
 `reports/verify-sentry-policy-integration-20261029-01`UTC10:48:30，34模組370/370、0skip、source_unchanged、312語法、114.786s，guardian自然0／remaining0／無強停。build同名335hash／312來源編譯；受測f2bc30d來源包release-prep-sentry-policy-20261029-01可重現、415檔、SHA256 8a2777b47524a75fbb3f39e38f5a6f6d08edbdc569bd805ebf6433225d738b13。沒有新模型／原生或真防守驗收，不把預設資格、有限corpus或fake CLI當真喚醒。下一修red報告已證實的subtest通過數負值，不改寫歷史失敗證據。
