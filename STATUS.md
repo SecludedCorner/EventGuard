@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 換行修正紀錄（一）
+
+4ea33f9的namespace產品／測試通過，但寫檔把兩個測試檔轉CRLF，且命令未在diff --check失敗後停止，錯誤造成+212/−132（344行、未超500）整檔差異；已推開發ref，尚未main，保留歷史不amend。先單獨將test_desktop_requests恢復原LF，原語3/3、0skip、Job自然0／remaining0／無強停（reports/verify-desktop-request-lf-core-20261029-01），build同名309hash／287編譯通過。後續native命令加明確exit檢查；另一測試檔下一筆修正後才整合main。
+
 ## 2026-10-29 要求namespace與同交易唯讀投影
 
 要求日誌顯式保存live／test，Store入口比對caller namespace；舊缺欄schema或跨namespace不遷移、不當空表。Catalog.detail在原唯讀交易投影pending_handling_requests，綁同事件payload_hash，錯namespace／錯hash／壞schema保持unknown且不reset，不執行要求。`reports/verify-desktop-request-scope-20261029-02`：2026-10-29 16:29（UTC+8）31/31、0skip、source_unchanged、Job自然0／remaining0／無強停，DB bytes／pending1／receipt0保留。01因新測試漏用fixture自訂directory有2error，修正測試路徑後02通過，未放寬scope。`reports/build-desktop-request-scope-20261029-01`309檔hash／287檔編譯；5d78405兩ref已一致。controller／Tk尚未使用該投影，跨程序未確認恢復未完成。

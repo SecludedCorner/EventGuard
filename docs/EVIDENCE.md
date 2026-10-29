@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：LF修正保留歷史
+
+namespace切片4ea33f9因兩測試檔CRLF產生344行diff，相關31/31通過但差異檢查有換行告警，shell仍續行提交／push，未main；明示此保存錯誤，不重寫歷史或以總行數當產品增量。第一檔test_desktop_requests轉回LF後reports/verify-desktop-request-lf-core-20261029-01原語3/3、0skip／source_unchanged、Job自然0／remaining0／無強停，build同名309hash／287編譯；下一筆修另一檔，使用明確失敗即exit的命令。
+
 ## 2026-10-29：要求日誌scope與唯讀Catalog契約
 
 `reports/verify-desktop-request-scope-20261029-02` UTC08:29:21：31/31、0skip、source_unchanged、Job自然0／remaining0／無強停。namespace為日誌第五必填欄，caller不符於開交易前拒絕；Catalog.detail同一RO交易回所選事件的已驗hash與要求，缺表available空、namespace或hash不符unknown且DB bytes不變。沿原語／Store回歸確認pending1／receipt0，不執行要求。01兩error是fixture自訂資料目錄漏傳Catalog directory，02修正測試後通過；舊四欄日誌仍拒絕、不自動遷移。`reports/build-desktop-request-scope-20261029-01`309檔hash／287檔編譯。此為controller／Tk接線前置，不等同產品跨程序恢復。
