@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面snapshot失敗與可恢復未知
+
+`reports/verify-desktop-snapshot-failure-20261029-03` UTC 2026-10-29 02:30:02：61/61、0skip、source_unchanged、Job自然退出0／remaining0，真Tk驗舊來源／事件清除、筆數及設定狀態未知、詳情保存禁用、重讀恢復且原fixture設定／pending不變；01原程式重現1失敗，02／03通過。`reports/build-desktop-snapshot-failure-20261029-02`：273檔受測hash相符、251檔編譯。原生輸入另有2次有界fixture，工具inventory未暴露目標，click／keyboard=0，未冒稱通過；reports/desktop-ui-acceptance-20261029-01與02的guardian-exit均自然0／remaining0／未強停。回條不含私人視窗清單／截圖，不影響既有真Tk元件證據或新增採集／模型／ACK。
+
 ## 2026-10-29：桌面無每日quota操作說明
 
 `reports/verify-desktop-guide-no-quota-20261029-01` UTC 2026-10-29 02:19:22：17/17、0skip、source_unchanged、Job自然退出0／remaining0。沿用現行無每日quota／automation測試；GUI及CONNECT_AGENT的舊每日預算、翌日恢復與初始化前置已改為當次任務上限與有效授權，沒有產品或帳戶設定變更／模型呼叫。來源依src/desktop.py與agent_dispatch.py，純文件另檢查本地連結／diff並沿用來源build。1940a3b80b0f785fa3858739895fc0b45fe3f00e已普通整合main並核對兩ref。

@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面狀態讀取失敗明示未知
+
+修正snapshot例外只顯錯誤但保留舊資料：七來源／筆數／事件與詳情改為未知或清空，依賴舊詳情的保存禁用；接收及自動狀態明示未知，不宣稱已撤銷權限／停止，未變更保存設定。恢復讀取後可重新顯示原事件。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-snapshot-failure-20261029-03 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop_investigation_widgets --module test_desktop_source_consistency`：2026-10-29 10:30（UTC+8）61/61、0skip、source_unchanged、Job自然退出0／remaining0；01先重現1失敗，02／03通過，最終為03。`reports/build-desktop-snapshot-failure-20261029-02`：273檔hash相符、251檔編譯通過。caa19c5已同步main／開發ref。另原生點選有界2次，CUA未列專用fixture視窗，未送點選／鍵盤；01／02兩自有子程序皆合作自然exit0／remaining0／未強停，回條在reports/desktop-ui-acceptance-20261029-01及02。此局部待驗不阻止桌面開發，Web／真人／原生採集仍各自待驗。
+
 ## 2026-10-29 桌面操作文件移除過期每日預算說明
 
 GUI／CONNECT_AGENT依現行程式修正：沒有每日五次quota或預算初始化前置；桌面dispatcher仍有當次預設5個任務與waiting_task_limit，不因跨日自動恢復，模型帳戶／授權界線保留。這是修正文檔，不是修改或執行模型限制。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-guide-no-quota-20261029-01 --timeout-seconds 180 --module test_application_no_quota --module test_communication_no_quota --module test_agent_automation`：2026-10-29 10:19（UTC+8）17/17、0skip、source_unchanged、Job自然退出0／remaining0；純文件核對src/desktop.py的run參數與dispatcher上限語意、本地引用及diff，沿用當前來源build。1940a3b已普通同步main與開發ref，桌面保存閉環已驗；Web、真人與原生待驗保留。

@@ -280,6 +280,30 @@ class GuiOwnTkWidgetTests(unittest.TestCase):
         self.evidence = {"scope": "real own Tk widgets + fixture controller; no collector/model",
                          "source_rows": 7, "model_calls": 0}
 
+    def test_failed_snapshot_clears_old_source_event_and_detail_then_recovers(self):
+        import copy
+        self.ui.events.selection_set('synthetic-example-1')
+        self.ui.select_event()
+        self.wait_for(lambda: self.ui.investigate_button.instate(['!disabled']))
+        before = copy.deepcopy(self.controller.value)
+        with patch.object(self.controller, 'snapshot', side_effect=OSError('private fixture')):
+            self.ui.refresh()
+            self.wait_for(lambda: '狀態讀取失敗' in self.ui.message.get())
+            self.assertIn('未知', self.ui.headline.get())
+            self.assertIn('未知', self.ui.counts.get())
+            self.assertIn('未知／尚無觀察 7', self.ui.source_gaps.get())
+            self.assertIn('未知', self.ui.agent_status.get())
+            self.assertIn('未知', self.ui.automatic_status.get())
+            self.assertEqual(self.ui.events.get_children(), ())
+            self.assertTrue(self.ui.investigate_button.instate(['disabled']))
+            self.assertNotIn('synthetic-example-1', self.ui.detail.get('1.0', 'end'))
+            self.assertNotIn('private fixture', self.ui.message.get())
+        self.ui.refresh()
+        self.wait_for(lambda: self.ui.events.exists('synthetic-example-1'))
+        self.assertIn('部分可讀 1', self.ui.source_gaps.get())
+        self.assertEqual(self.controller.value, before)
+        self.assertFalse(any(action in {'ack', 'diagnose', 'start', 'investigate', 'set_agent_delivery'} for action, _ in self.controller.calls))
+
     def test_real_detail_widget_displays_saved_case_and_replaces_it_with_unknown(self):
         event = copy.deepcopy(self.controller.value["events"][0])
         document = {"event": event, "investigation": {"case": {

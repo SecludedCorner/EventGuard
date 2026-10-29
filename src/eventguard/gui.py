@@ -557,6 +557,9 @@ class EventGuardWindow:
                 break
             if action == "snapshot":
                 if value.get("state") == "error":
+                    self._apply_snapshot({})
+                    self.agent_status.set("接收設定目前未知；讀取失敗不代表已撤銷接收權限。")
+                    self.automatic_status.set("自動處理狀態目前未知；未確認是否執行或停止。")
                     self.message.set("狀態讀取失敗：" + safe_text(value.get("reason"), 160))
                 else:
                     self._apply_snapshot(value)
