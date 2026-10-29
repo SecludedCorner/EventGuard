@@ -1,6 +1,6 @@
 # 接通人類、聊天工具與事件觸發 agent
 
-2026-10-26 入口更新：目前操作以 [AGENT_SERVICE](AGENT_SERVICE.md) 為準，含已通過的單事件真 CLI、結果／ACK 查閱與有限啟動方式。現行 App／agent service 不設每日五次限制、不讀寫歷史預算；下方保留舊 GUI／watch 相容流程，不能把其 `budget initialize` 當成目前通訊的前置條件，也不應為此修改舊帳本。原生採集、桌面喚醒與長時運轉仍各按最新範圍驗收。
+2026-10-29 核對：服務入口以 [AGENT_SERVICE](AGENT_SERVICE.md) 為準，含已通過的單事件真 CLI、結果／ACK 查閱與有限啟動方式。本頁另列桌面／watch 入口；現行 App／agent service 不設每日五次限制、不讀寫歷史預算，歷史 `budget initialize` 不是目前通訊前置條件，也不應為此修改舊帳本。當次任務上限、模型授權、原生採集、桌面喚醒與長時運轉仍各按最新範圍驗收。
 
 最後核對：2026-10-23。先讀 [STATUS](../STATUS.md) 的實測界線；本頁是設定方法，不是新一輪模型／正式資料授權。
 
@@ -13,7 +13,7 @@
 | 用途 | 誰等待事件 | 何時使用模型 | 能力 |
 | --- | --- | --- | --- |
 | 聊天中手動使用 MCP | 使用者或正在工作的 agent | 聊天正在執行時 | 列表、查看、接收、ACK；註冊工具本身不喚醒閒置聊天 |
-| 有事件才啟動專用 agent | EventGuard 的 Python dispatcher | 有 pending、開關開啟、預算允許時 | 每個事件開一個短期 Codex CLI 任務；完成後回到 Python 等待 |
+| 有事件才啟動專用 agent | EventGuard 的 Python dispatcher | 有 pending、開關開啟、當次授權及派送閘道允許時 | 每個事件開一個短期 Codex CLI 任務；完成後回到 Python 等待 |
 
 人類 GUI／CLI 始終可獨立操作。agent ACK 只表示看過最小摘要，不表示事件已處理、主機安全或案件結束。專用 CLI 不續接任意既有桌面對話。
 
@@ -22,12 +22,12 @@
 1. 雙擊 `EventGuard.cmd`。預設未開自動模式時，按「開始」只有本機採集；若之前已保存自動選擇，開始也會恢復純程式待命。
 2. 「允許 agent 接收事件」只開放 live 工具讀取，不啟動模型。
 3. 要自動處理，先選擇已安裝的原生 `codex.exe`，再勾「自動交給專用 agent（會使用模型額度）」。這是另一個明確開關；原本接收勾選不會自動升格成模型授權。
-4. 自動模式要求接收開關、既有 MCP SDK、既有 Codex 登入及已初始化的每日預算。缺少任一條件時顯示原因，pending 保留。
+4. 自動模式要求接收開關、既有 MCP SDK、既有 Codex 登入及有效模型執行授權。現行模式不要求初始化每日預算；缺少必要條件時顯示原因，pending 保留。
 5. 「暫停」合作停止採集與 dispatcher；「暫停並結束」須核對本工具子程序退出。X 只縮小，程式仍等待。
 
 自動選擇與原生執行檔路徑保存於忽略的 `data/agent-automation.json`。單純開視窗或讀設定不啟動模型；之後明確按開始才沿用已保存選擇。不要將此檔或執行資料提交 Git。
 
-應用保持執行時，不因一小時或每日五件而退出。每日五次是模型任務上限，不是採集上限；用完由程式等到下一日，期間不叫模型。關機／登出會結束應用；登入自動啟動仍需另行批准排程，不能由本功能推論已完成重開機恢復。
+應用保持執行時不因每日件數退出；現行程式沒有每日五次 quota。dispatcher 的 `max_tasks` 是當次執行上限，達到後保留 pending，不承諾翌日自動恢復；桌面目前預設5個任務，詳見 [視窗操作](GUI.md)。模型帳戶額度與當次授權仍有效。關機／登出會結束應用；登入自動啟動仍需另行批准排程，不能由本功能推論已完成重開機恢復。
 
 ## 一次前置檢查
 
@@ -39,12 +39,11 @@ py -3.13 -B -c "import mcp; print('installed MCP SDK available')"
 $codexExe = (Get-Command codex.exe -CommandType Application -ErrorAction Stop).Source
 & $codexExe --version
 & $codexExe login status
-py -3.13 -B scripts/eventguard.py budget status
 ```
 
 若 PATH 指到 `.cmd`／`.bat`／`.ps1`，在同一既有安裝找原生 `codex.exe`，用其完整路徑；不要下載替代品。本機這次找到的版本路徑在 `AppData/Local/OpenAI/Codex/bin/<版本目錄>/codex.exe`，版本目錄會改，不能永久照抄。
 
-預算第一次建立須遵守 [AGENT_BUDGET](AGENT_BUDGET.md)：先核實今日已啟動數，再用 `budget initialize --known-used N`。不知道就用預設保守初始化，當日不新增任務。不得換 run/source/state 目錄或刪 DB 重置。既有登入成功不代表事件接收成功。
+[AGENT_BUDGET](AGENT_BUDGET.md) 是歷史預算相容說明，不是現行 GUI／agent service 前置步驟；不要為現在的通訊初始化或重置舊帳本。既有登入成功不代表事件接收成功。
 
 ## 不經 GUI 的持續 dispatcher
 
@@ -65,9 +64,10 @@ py -3.13 -B scripts/eventguard_agent.py stop --run-dir reports/agent-watch-NEW
 | --- | --- |
 | `waiting` | 沒有可交付事件，Python 等待，沒有新模型任務 |
 | `running` | 一個事件正在專用 CLI 處理 |
-| `waiting_budget` | 當日用量或首次歷史未知；保留 pending，程式繼續等待 |
+| `waiting_budget` | 舊派送保存狀態需重新核對；不能據此推定目前每日額度或翌日自動恢復 |
+| `waiting_task_limit` | 本次任務上限達成，pending 保留；不是每日 quota |
 | `waiting_disabled` | 接收開關關閉，沒有新任務 |
-| `waiting_attention` | 失敗、權限、預算證據等需人類檢查；同事件不自動重試模型 |
+| `waiting_attention` | 失敗、權限、收件證據等需人類檢查；同事件不自動重試模型 |
 | `pending_child_exit` | 尚不能證明子樹退出，不重啟；查原始退出回條 |
 | `stopped` | 合作停止；同時核對 `child_exited=true` |
 

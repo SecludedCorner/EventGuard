@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面無每日quota操作說明
+
+`reports/verify-desktop-guide-no-quota-20261029-01` UTC 2026-10-29 02:19:22：17/17、0skip、source_unchanged、Job自然退出0／remaining0。沿用現行無每日quota／automation測試；GUI及CONNECT_AGENT的舊每日預算、翌日恢復與初始化前置已改為當次任務上限與有效授權，沒有產品或帳戶設定變更／模型呼叫。來源依src/desktop.py與agent_dispatch.py，純文件另檢查本地連結／diff並沿用來源build。1940a3b80b0f785fa3858739895fc0b45fe3f00e已普通整合main並核對兩ref。
+
 ## 2026-10-29：真Tk保存／更新／重開調查
 
 `reports/verify-desktop-investigation-widgets-20261029-03` UTC 2026-10-29 02:16:00：49/49、0skip、source_unchanged、Job自然退出0／remaining0。真Tk按鈕與真DesktopController／Catalog／合成SQLite，固定過去as_of只控制快照時鐘，所有保存交易實際執行；更新保留前版、重開一致，容量失敗DB hash及pending2／receipt0保留，切換事件不串案，採集／子程序／模型／ACK哨兵未觸發。01因fixture超出既有刷新限制與清理問題有3error／3fail，02修正後2個標籤斷言失敗，03核對實際「成員與保存雜湊相符（非來源認證）」後通過。`reports/build-desktop-investigation-widgets-20261029-01`：273檔受測hash相符、251檔編譯成功；真人、Web與原生不升格。
