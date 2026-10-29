@@ -1,5 +1,10 @@
 # 證據與時間日誌
 
+## 2026-10-30 四工具真stdio及自然退出
+
+verify-investigation-stdio-20261030-02：16/16／0skip、328語法／來源編譯；實際安裝SDK、私有Job子程序跑四工具，保存後pending1／ACK後pending0、回條flush、stdin未關就自然exit0、remaining0／無強停。退出核對四工具須明確profile，舊三工具仍嚴格。這是synthetic client、模型0，非真agent調查；下一有限單事件驗收入口與精確批准包，不碰browser政策／系統。
+
+
 ## 2026-10-30 四步trace與保存內容交叉核對
 
 新增獨立四工具assessor，逐項對齊工具參數／回傳與durable report、hash／時間、單turn及獨一call；漏保存、改分析／hash、插shell、重複call、失敗退出或無ACK皆不通過。verify-investigation-evidence-20261030-02：9/9／0skip、327語法／編譯、Job自然0無殘留／強停；明示合成trace／模型0，不是獨立模型來源證明。下一實際stdio閉環與有限驗收入口，browser／真人關卡保留。

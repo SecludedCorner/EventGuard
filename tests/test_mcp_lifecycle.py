@@ -55,6 +55,14 @@ class McpLifecycleTests(unittest.TestCase):
         observe.assert_not_called()
         self.assertEqual(list(self.directory.iterdir()), [])
 
+    def test_four_tools_require_explicit_investigation_exit_profile(self):
+        self.fixture()
+        listed = read_json(self.directory / "mcp-tools-listed.json")
+        listed.update(tool_count=4, tool_names=["ack_event", "query_evidence", "receive_event", "save_investigation"])
+        self.save("mcp-tools-listed.json", listed)
+        self.assertFalse(lifecycle.assess_mcp_exit(self.directory, self.attempt)["passed"])
+        self.assertTrue(lifecycle.assess_mcp_exit(self.directory, self.attempt, investigation=True)["passed"])
+
     def test_bind_retains_only_live_matching_member_and_finish_closes_query_handle(self):
         observation = self.fixture()
         observation.close.assert_called_once_with()

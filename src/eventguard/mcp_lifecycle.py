@@ -149,7 +149,7 @@ def finish_mcp_observation(observation, binding, directory):
         _close(observation)
 
 
-def assess_mcp_exit(directory, attempt_id):
+def assess_mcp_exit(directory, attempt_id, *, investigation=False):
     """Pure read of raw capture/marker/HANDLE proof; missing legacy proof stays false."""
     errors = []
     result = {"passed": False, "mcp_natural_exit_verified": False, "evidence_errors": errors,
@@ -175,9 +175,12 @@ def assess_mcp_exit(directory, attempt_id):
                for marker in (listed, ended)):
             errors.append("mcp_phase_identity_mismatch")
         names = listed.get("tool_names")
-        if (type(names) is not list or len(names) != 3 or any(type(name) is not str for name in names)
-                or set(names) != {"receive_event", "query_evidence", "ack_event"}
-                or type(listed.get("tool_count")) is not int or listed["tool_count"] != 3
+        tools = {"receive_event", "query_evidence", "ack_event"}
+        if investigation is True:
+            tools.add("save_investigation")
+        if (type(investigation) is not bool or type(names) is not list or len(names) != len(tools)
+                or any(type(name) is not str for name in names) or set(names) != tools
+                or type(listed.get("tool_count")) is not int or listed["tool_count"] != len(tools)
                 or listed.get("response_prepared") is not True):
             errors.append("exact_inbox_tools_required")
         if (type(ended.get("return_code")) is not int or ended["return_code"] != 0
