@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 兩真程序的成功回條丟失／恢復閉環
+
+第一私有Job真Tk按鈕保存handled後故意丟成功回條，原ID留日誌，另一明示合成操作改read後自然退出；第二私有Job真Tk同scope先唯讀恢復原ID（初始DB hash不變、0自動save），明確按原handled只重播核對，consumer確認清要求，read／兩筆歷程／pending4／receipt0保留。舊ready／exit／原handle guardian bytes不變，新attempt無資料副本。`reports/verify-desktop-request-process-20261029-01`：2026-10-29 16:52（UTC+8）6/6、0skip、source_unchanged、外Job及兩程序自然0／remaining0／無強停，含新窗口與正常重開／scope拒絕回歸。各desktop-ux-request-*留request-probe／request-guardian，第二attempt的cross-process-proof.json索引兩root；均automated_fixture、participant_results=null。`reports/build-desktop-request-process-20261029-01`317hash／295編譯；6bdcab3兩ref一致。接續更新過時in-session操作文件、受影響整合與來源保存，不升格真人／原生驗收。
+
 ## 2026-10-29 Tk接入durable與consumer確認
 
 Worker的set_status走durable；匹配保存回條後另核對confirm_status_receipt，匹配完成才清ID。detail用嚴格recover合併已保存ID，不自送；壞日誌或識別衝突停用人工寫入，既有詳情仍可讀。合成SAFE同步加入兩方法。`reports/verify-desktop-request-tk-20261029-03`：2026-10-29 16:49（UTC+8）55/55、0skip、source_unchanged、Job自然0／remaining0／無強停；真Tk＋SQLite成功回條丟失後重建窗口讀原ID、未點前0save／0confirm且DB bytes不變，明確同ID核對不回退較新read、兩筆歷程／pending2／receipt0；壞schema按鈕及直接呼叫都禁寫，正常兩真Job重開回歸亦過。01的泛字串斷言過寬1fail，02修為事件標籤53pass，03補窗口重建／壞日誌為最終55。`reports/build-desktop-request-tk-20261029-01`315hash／293編譯。真正兩程序丟成功回條→重開故障路徑仍待下一單元，不以同程序窗口重建代替。

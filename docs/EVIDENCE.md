@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：兩真Job／Tk丟成功回條後恢復原ID
+
+`reports/verify-desktop-request-process-20261029-01` UTC08:52:27：6/6、0skip、source_unchanged、Job自然0／remaining0／無強停。desktop_request_process_probe第一程序實際Tk保存後丟成功回條、保留ID並於合成CLI較新read後自然退出，第二程序同scope先讀原ID／初始DB SHA相同、0自動重送，再實際按原handled；同ID只核對舊操作，最終read／兩筆歷程／pending4／receipt0不變、待確認1→0。兩個原handle managed／child_exited／exit0／remaining0／無強停，各request-guardian／request-probe及第二cross-process-proof.json留desktop-ux-request-*；原三收據bytes不變、無clone，採集／spawn／ACK哨兵未觸發，全部明示automated_fixture非真人。`reports/build-desktop-request-process-20261029-01`317hash／295編譯。不同case cohort不相加，不替代原生輸入／Web200%／長時實機。
+
 ## 2026-10-29：實際Tk原ID恢復與unknown禁寫
 
 `reports/verify-desktop-request-tk-20261029-03` UTC08:49:15：55/55、0skip、source_unchanged、Job自然0／remaining0／無強停。新窗口同SQLite恢復成功但丟回條的原ID，首次讀取0save／0confirm、DB bytes不變；之後明確按原狀態才原ID重播及consumer確認，保留後來read／兩筆歷程／pending2／receipt0。壞日誌schema仍可讀已處理詳情，但四按鈕及直接set_status禁寫，bytes不變。容量／活動故障現在允許新增待確認意圖，仍明確驗原人工read／原歷程不變且意圖保留，不能沿用整DB無變作新契約。01字串斷言誤把固定提示算成事件專屬標籤，02修正53pass，03新增兩項實際Tk為最終55；不同輪不相加。`reports/build-desktop-request-tk-20261029-01`315hash／293編譯，非原生輸入／真人；兩OS程序未確認重開待驗。

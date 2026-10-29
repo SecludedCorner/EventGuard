@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 兩真程序未確認恢復已驗／接整合保存
+
+6/6、0skip與295檔來源編譯；第一真Job／Tk成功後丟回條自然退出，第二同DB初始hash一致、讀回原ID不自送，明確核對只重播、不回退較新read，consumer確認後待確認1→0、pending4／receipt0及舊收據保留，見STATUS／EVIDENCE。下一修GUI文內「識別僅限本視窗」過時文字、跑受影響桌面／Catalog／history整合並保存可重現來源，不重跑無變動全庫。完整目標active，真人／Web200%／原生／恢復可信根與容量仍獨立待驗。
+
 ## 2026-10-29 Tk兩階段回條已接／兩真Job故障閉環下一項
 
 55/55、0skip及293檔來源編譯，worker durable→Tk匹配保存回條→confirm_status_receipt→匹配完成才pop；新窗口原ID恢復不自送、壞日誌禁寫且仍可讀，見STATUS。下一沿tests/desktop_fixture_process_probe新增明示automated的丟成功回條／重開核對phase：第一真Job在實際Tk按鈕成功後丟回條，自然退出仍有日誌；第二真Job同scope先讀原ID且不重送，再明確核對、不回退中間較新決定，consumer確認後原ID清除，兩程序原handle／pending／ACK／舊證據獨立守恆。不要用既有正常save/read的兩程序測試冒充故障已驗。
