@@ -142,6 +142,9 @@ def verify_stage(root, row):
         checked = assess(trace, evidence, row["event_id"], receipt.get("codex_exit_code"), acked)
         lifecycle = assess_mcp_exit(directory, row["attempt_id"], investigation=True)
         checked.update(passed=checked["passed"] and lifecycle["passed"], mcp_server_exit=lifecycle)
+        checked.setdefault("event_id", row["event_id"])
+        checked.setdefault("query_id", evidence.get("query_id") if evidence else None)
+        checked["outbox_acknowledged"] = acked
     else:
         checked = assess_delivery(trace, evidence, row["event_id"], receipt.get("codex_exit_code"),
                                   False if row["read_only"] else acked, require_ack=not row["read_only"])
@@ -708,6 +711,18 @@ def main(argv=None):
         print(json.dumps(proof))
         return 0 if proof["passed"] else 1
     except (OSError, ValueError, RuntimeError, KeyError, TypeError):
-        print(json.dumps({"state": "acceptance_blocked_or_failed", "pending_preserved": True,
-                          "note": "Inspect saved evidence; no automatic model retry."}))
+        outcome = {"state": "acceptance_blocked_or_failed", "pending_preserved": True,
+                   "note": "Inspect saved evidence; no automatic model retry."}
+        if args.case == "investigation":
+            # A failed exit proof can follow a durable ACK. Never claim pending
+            # was preserved merely because the overall acceptance failed.
+            outcome.update(pending_preserved=None, outbox_acknowledged=None)
+            try:
+                saved = read_json(args.root / "manifest.json")
+                identity = saved["events"][0]["event_id"]
+                audit = QueueInbox.open_readonly(args.root / "source", args.root / "inbox", identity, investigation=True)
+                outcome["outbox_acknowledged"] = audit.acknowledged(identity)
+            except (OSError, ValueError, RuntimeError, KeyError, TypeError):
+                pass
+        print(json.dumps(outcome))
         return 2

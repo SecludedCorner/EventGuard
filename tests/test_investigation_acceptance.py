@@ -1,5 +1,8 @@
 """Finite production acceptance with an explicitly FAKE CLI, real SDK and SQLite."""
 from datetime import datetime, timezone
+import contextlib
+import io
+import json
 from pathlib import Path
 import sys
 import tempfile
@@ -10,11 +13,34 @@ from budget_fixtures import isolated_launch
 from eventguard import delivery_validation as validation, investigation_scope as scope
 from eventguard.acceptance_control import read_json, write_json
 from eventguard.events.store import EventStore
+from eventguard.queue_inbox import QueueInbox
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class InvestigationAcceptanceTests(unittest.TestCase):
+    def test_failed_acceptance_after_ack_never_claims_source_still_pending(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)/'run'
+            manifest = validation.prepare(root, 'investigation')
+            validation.enqueue(root, manifest, manifest['events'])
+            identity = manifest['events'][0]['event_id']
+            inbox = QueueInbox(root/'source', root/'inbox', identity, investigation=True)
+            inbox.receive_event()
+            query = inbox.query_evidence(identity)
+            value = dict(summary='Synthetic metadata needs follow-up.', finding='metadata_requires_followup',
+                fact_keys=['coverage_status'], limitations=query['saved_evidence']['limitations'], next_step='request_authorized_evidence')
+            inbox.save_investigation(identity, query['query_id'], value)
+            inbox.ack_event(identity, query['query_id'], 'needs_more_evidence')
+            output = io.StringIO()
+            with patch.object(validation, 'execute', side_effect=ValueError('fixture_late_exit_failure')), contextlib.redirect_stdout(output):
+                code = validation.main(['investigation', '--root', str(root), '--execute'])
+            result = json.loads(output.getvalue())
+            self.assertEqual(code, 2)
+            self.assertIsNone(result['pending_preserved'])
+            self.assertIs(result['outbox_acknowledged'], True)
+            self.assertEqual(EventStore(root/'source').stats()['pending'], 0)
+
     def test_finite_fake_cli_real_stdio_report_ack_and_held_handle_natural_exit(self):
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)

@@ -1,5 +1,10 @@
 # EventGuard 現況
 
+## 2026-10-30 驗收失敗與ACK事實分開
+
+最終核對修正晚期exit proof失敗時仍聲稱pending_preserved=true；investigation改為pending未知、唯讀核實際ACK，verify-only失敗亦保留event/query與ACK事實。verify-investigation-late-failure-20261030-01：14/14／0skip、332語法／來源編譯，Job自然0無殘留／強停，模型0。前版f4bd4aa受影響14模組整合90/90／0skip有獨立證據verify-agent-investigation-integration-20261030-01，非全庫。現有CLI已更新0.165.0-alpha.1.2，--version／exec --help私有Job自然0、模型0，舊路徑已不存在；待批包使用新binary hash。
+
+
 ## 2026-10-30 有限調查驗收入口已可用
 
 validate_delivery.py新增investigation case：一合成high listener／一任務180秒；準備只產生未批准scope，execute先核當次批准再入列，四步trace／durable report／ACK及MCP持有HANDLE自然退出皆為必要。verify-investigation-acceptance-20261030-01：11/11／0skip、332語法／編譯；明示fake CLI透過真SDK stdio／SQLite、四步各1／pending0、MCP與CLI私有Job自然0無殘留／強停，重跑被拒。模型0，不冒充新真agent；下一最終受影響整合、CLI版本只讀預檢及實際待批包，真人最後一次參與。
