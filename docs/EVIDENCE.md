@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：六任務／獨立自報紀錄
+
+`reports/verify-desktop-ux-tasks-20261029-02` UTC07:11:49：9/9、0skip、source_unchanged、Job自然退出0／remaining0／無強停；真Tk精確任務分頁Text readonly及U1–U6、真CLI手動紀錄路由不spawn、空白計畫／缺值／非法／NaN拒絕、逐任務exclusive防覆寫；兩真Job合成Tk deadline／EOF自然退出再驗。01為8項，02補UI及CLI斷言為最終；`reports/build-desktop-ux-tasks-20261029-01`297檔hash／275檔編譯。測試輸入不作真人結果，session participant_results=null，紀錄human_participation_verified=false，無採集／模型／ACK。
+
 ## 2026-10-29：獨立Windows Job／合成Tk自然退出
 
 `reports/verify-desktop-fixture-launcher-20261029-01` UTC07:03:17：6/6、0skip、source_unchanged、guardian自然退出0／remaining0／無強停；真Windows Job含執行前assign、child adopt成員核對。兩個獨立合成Tk session的deadline與owner_eof均exit0／Job remaining0／forcibly_terminated=false，詳細原handle收據索引為同目錄launcher-scenarios.json；既有scope拒絕覆寫。`reports/build-desktop-fixture-launcher-20261029-01`295檔hash／273檔編譯。worker單元mock收據與這個真Job案例分開；無採集／模型／ACK、無真人參與，participant_results=null，六任務輸入功能仍待。

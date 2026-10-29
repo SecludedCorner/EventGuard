@@ -27,6 +27,8 @@ def launch(name, seconds=900, *, cancel_after=None):
     runtime.path('reports').mkdir(exist_ok=True)
     root = runtime.path(Path('reports')/name)
     root.mkdir(exist_ok=False)
+    from eventguard.desktop_ux_tasks import prepare_tasks
+    prepare_tasks(root)
     job_name = 'Local\\EventGuard-'+uuid.uuid4().hex
     child = spawn([sys.executable, '-B', str(Path(__file__).resolve()), '--worker', str(root),
                    '--job', job_name, '--seconds', str(seconds)], job_name=job_name, stdin=subprocess.PIPE)
@@ -59,6 +61,11 @@ def main(argv=None):
     parser.add_argument('--seconds', type=int, default=900, help='1–900秒，逾時合作關閉')
     parser.add_argument('--worker', type=Path, help=argparse.SUPPRESS)
     parser.add_argument('--job', help=argparse.SUPPRESS)
+    parser.add_argument('--record-task', choices=('U1', 'U2', 'U3', 'U4', 'U5', 'U6'))
+    parser.add_argument('--steps', type=int)
+    parser.add_argument('--elapsed-seconds', type=float)
+    parser.add_argument('--errors', type=int)
+    parser.add_argument('--outcome', choices=('completed', 'failed', 'unresolved'))
     args = parser.parse_args(argv)
     try:
         if args.worker is not None:
@@ -69,6 +76,14 @@ def main(argv=None):
             from eventguard.desktop_fixture_run import run_fixture
             result = run_fixture(root, args.seconds, args.job)
             return 0 if result['state'] == 'closed' and result['gui_worker_exited'] else 2
+        if args.record_task:
+            if not isinstance(args.name, str) or re.fullmatch(r'desktop-ux-[A-Za-z0-9_-]{1,64}', args.name) is None:
+                raise ValueError('desktop_fixture_name_invalid')
+            from eventguard.desktop_ux_tasks import record_task
+            result = record_task(Runtime(ROOT).path(Path('reports')/args.name), args.record_task,
+                                 args.steps, args.elapsed_seconds, args.errors, args.outcome)
+            print(json.dumps(result, ensure_ascii=True))
+            return 0
         result = launch(args.name, args.seconds)
         print(json.dumps(result, ensure_ascii=True))
         return 0 if result['status'] == 'synthetic_session_closed' else 2

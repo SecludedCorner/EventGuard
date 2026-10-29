@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 六任務及未認證自報入口已驗
+
+9/9、0skip及275檔來源編譯通過，真Tk任務Text與真CLI紀錄／exclusive防覆寫已驗，見STATUS；launcher啟動會生成tasks.json，GUI可看六項任務，手動--record-task保存獨立task-U*.json。沒有參與者結果，所有紀錄仍未認證自報，不能由模型代填。接續補既有GUI文件的完整操作／空白模板規則，再做受影響整合與來源保存；真實參與者、Web200%、原生與恢復可信根仍待。
+
 ## 2026-10-29 有界launcher真Job／Tk已驗
 
 6/6、0skip及273檔來源編譯通過；獨立真Tk child的deadline與owner_eof均原handle自然退出0／Job0／無強停，見STATUS及launcher-scenarios.json。run：py -3.13 -B scripts/desktop_ux_acceptance.py --name desktop-ux-新名稱 --seconds 900（限ASCII名稱，既有拒絕）。目前只合成安全session，participant_results=null，還沒有六任務紀錄入口；下一單元接固定六任務與明確操作者自報的有界紀錄，不自填步數／時間／錯誤，不把自報視為已認證真人。

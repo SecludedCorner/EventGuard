@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 六合成任務與明確自報紀錄
+
+launcher新scope先建立六任務空白計畫，產品Tk另有唯讀「六項合成任務」分頁；U1–U6涵蓋來源／事實未知／人工處置與pending／篩選返回／歷史查證／備份限制。--record-task只收明確步數、秒數、錯誤及completed／failed／unresolved，每任務獨立exclusive檔、不覆寫；非法／缺值／NaN／改壞計畫拒絕，所有自報仍human_participation_verified=false，不自填成績。`reports/verify-desktop-ux-tasks-20261029-02`：2026-10-29 15:11（UTC+8）9/9、0skip、source_unchanged、Job自然退出0／remaining0／無強停；真Tk目標Text六標題／readonly斷言、真CLI紀錄、不spawn、真Job期限／EOF再驗，01為8項、02補UI／CLI為最終。`reports/build-desktop-ux-tasks-20261029-01`297檔hash／275檔編譯。b8b3b24（+127/−0）已普通同步main／開發ref；這是人類驗收前置，仍無真實參與者結果，不與產品能力或EDR比較混為完成。
+
 ## 2026-10-29 獨立合成桌面launcher真Job驗收
 
 scripts/desktop_ux_acceptance.py明確新建reports/desktop-ux-*，先以processes.spawn把child放私有Job才執行；worker再驗Job成員，1–900秒／owner stdin合作關閉，父程序保留原handle核對退出與殘留。`reports/verify-desktop-fixture-launcher-20261029-01`：2026-10-29 15:03（UTC+8）6/6、0skip、source_unchanged、guardian自然退出0／remaining0／無強停；其中獨立真Tk child分別deadline及owner_eof，兩者自然exit0／Job0／無強停，收據索引在該目錄launcher-scenarios.json，重用目錄拒絕不覆寫。`reports/build-desktop-fixture-launcher-20261029-01`295檔hash／273檔編譯。2b31687（+119/−0）已普通同步main／開發ref；這是合成程序安全與生命週期，不是真人任務／原生來源驗收，participant_results仍null，六任務紀錄尚待。

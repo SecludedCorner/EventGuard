@@ -7,6 +7,8 @@ import unittest
 from unittest.mock import patch
 
 from eventguard.desktop_fixture_run import run_fixture
+from eventguard.gui import EventGuardWindow
+from eventguard.runtime import atomic_json
 
 
 class DesktopFixtureRunTests(unittest.TestCase):
@@ -27,7 +29,23 @@ class DesktopFixtureRunTests(unittest.TestCase):
         cancel = threading.Event()
         cancel.set()
         keeper = SimpleNamespace(receipt=lambda: {'kind': 'eventguard-private-job-keeper-v1'})
+        box = {}
+        def create(window, controller):
+            box['app'] = EventGuardWindow(window, controller)
+            return box['app']
+        def write(path, value):
+            if path.name == 'worker-ready.json':
+                notebook = box['app'].events.master.master
+                tab = next(t for t in notebook.tabs() if notebook.tab(t, 'text') == '六項合成任務')
+                frame = notebook.nametowidget(tab)
+                text = next(w for w in frame.winfo_children() if w.winfo_class() == 'Text')
+                self.assertEqual(text.cget('state'), 'disabled')
+                for key in ('U1', 'U2', 'U3', 'U4', 'U5', 'U6'):
+                    self.assertIn(key+'：', text.get('1.0', 'end'))
+            atomic_json(path, value)
         with patch('eventguard.desktop_fixture_run.adopt_current_job', return_value=keeper), patch(
+            'eventguard.desktop_fixture_run.EventGuardWindow', side_effect=create), patch(
+            'eventguard.desktop_fixture_run.atomic_json', side_effect=write), patch(
             'eventguard.processes.spawn', side_effect=AssertionError('no child/model')), patch(
             'eventguard.collectors.windows.WindowsCollectors.collect', side_effect=AssertionError('no inventory')):
             result = run_fixture(root, 1, 'mock-membership', cancel=cancel)

@@ -32,6 +32,20 @@ def run_fixture(root, seconds, job_name, *, cancel=None):
         import tkinter as tk
         window = tk.Tk()
         app = EventGuardWindow(window, controller)
+        from tkinter import ttk
+        from .desktop_ux_tasks import instructions
+        notebook = app.events.master.master
+        tasks = ttk.Frame(notebook, padding=8)
+        tasks.columnconfigure(0, weight=1)
+        tasks.rowconfigure(0, weight=1)
+        text = tk.Text(tasks, wrap='word')
+        text.insert('1.0', instructions())
+        text.configure(state='disabled')
+        text.grid(row=0, column=0, sticky='nsew')
+        scroll = ttk.Scrollbar(tasks, orient='vertical', command=text.yview)
+        scroll.grid(row=0, column=1, sticky='ns')
+        text.configure(yscrollcommand=scroll.set)
+        notebook.add(tasks, text='六項合成任務')
         deadline = time.monotonic()+seconds
         if cancel is None:
             cancel = threading.Event()
