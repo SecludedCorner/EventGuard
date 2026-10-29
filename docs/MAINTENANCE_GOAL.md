@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 目前可執行：VERIFY-PARENT-COUNTS
+
+盯哨政策／桌面新增能力已受影響整合370/370、0skip及312來源編譯。修本批red實際發現的驗證器通過數缺陷：subtest失敗數可超過testsRun，不能直接相減或僅截零；以隔離suite證明實際成功parent數、多subtest／skip與cleanup失敗不被算通過，保留所有失敗與skip明細。不改舊報告或放寬通過條件；此缺陷影響證據可信度，沒有新增實機／模型授權。整體原生／真人／Web／長跑／恢復可信根／防守驗收仍各自未完成。
+
 ## 2026-10-29 DESKTOP-AGENT-QUALIFICATION真Tk已驗／接整合
 
 預設條件快照已接桌面詳情並真Tk＋合成SQLite操作通過，36/36／0skip與312來源編譯；不符原因、條件符合但未證喚醒、錯案未知、人工handled與ACK獨立均已驗。接既有core／Catalog／UI／dispatch／queue／corpus及桌面回條保留整合；不改門檻／授權或把未觀測掃描當安全。驗收範圍保留原生／真人／Web／長跑／完整恢復來源可信根，各自仍未DONE。

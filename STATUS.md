@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 資安盯哨政策與桌面受影響整合370項通過
+
+產品f2bc30d兩ref一致；`reports/verify-sentry-policy-integration-20261029-01`（18:48 UTC+8）34模組370/370、0skip、source_unchanged、312語法、Job自然0／remaining0／無強停。含本批身分修正、診斷交易、實際Tk、預設政策、10案corpus、fake CLI／queue／ingress／保留與兩真Job回條恢復；不與先前數字相加。`reports/build-sentry-policy-integration-20261029-01`335hash／312編譯；`reports/release-prep-sentry-policy-20261029-01`415檔來源包可重現、SHA256 8a2777b47524a75fbb3f39e38f5a6f6d08edbdc569bd805ebf6433225d738b13，未建exe／tag／release。
+
+下一修本次red已觀測的VERIFY-PARENT-COUNTS：verify.py以subtest失敗數直接扣testsRun會負通過數；先隔離重現，修實際成功案例計數並保留所有失敗／skip，不改成單純截零。原生／真人／Web／長跑／歷程恢復可信根與真防守效果仍各自未完成，完整AI盯哨active。
+
 ## 2026-10-29 桌面預設agent政策條件呈現已實測
 
 詳情顯示預設政策符合／不符與固定原因；明示快照不是自訂dispatcher、due／lease、接收權限、啟動同意或真喚醒／防守證據。錯ID、缺欄位或未知保持unknown且不輸出任意原因文字。`reports/verify-desktop-agent-policy-widgets-20261029-01`（18:44 UTC+8）6模組36/36、0skip、source_unchanged、Job自然0／remaining0／無強停；真Tk＋SQLite驗warning、高severity及handled後原因更新，來源讀取不寫DB、pending3／receipt0、錯案／未知不顯符合。`reports/build-desktop-agent-policy-widgets-20261029-01`335hash／312來源編譯。操作已寫GUI.md；接受影響整合，不新增原生／模型，整體AI盯哨仍未驗收完成。

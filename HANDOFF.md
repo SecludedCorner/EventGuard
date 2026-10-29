@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 整合370項已驗／接測試證據計數缺陷
+
+f2bc30d受影響整合34模組370/370、0skip／312來源編譯，來源包與限制見STATUS，非完整實機／AI防守驗收。下一VERIFY-PARENT-COUNTS：本批red的5個parent／6失敗subchecks會報passed=-1，修verify.py實際成功parent計數，隔離注入suite驗多subtest失敗／skip及cleanup失敗，所有失敗明細保留；不重跑無變動全庫或啟動新模型。既有外部實機／人類關卡保留。
+
 ## 2026-10-29 Tk預設政策說明已驗／接整合
 
 36/36、0skip／312編譯，真Tk完成預設條件與原因、warning／high／人工handled更新、錯案未知及讀取不寫；GUI.md已補操作，見STATUS。下一針對Catalog／UI新增欄位、dispatch／queue／corpus與桌面回條／保留整合，保留原生／真人／Web／長跑及完整恢復可信根關卡。不能把預設條件符合叫agent已喚醒或防守成功。

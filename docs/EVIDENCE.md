@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：政策／偵測corpus受影響整合370項
+
+`reports/verify-sentry-policy-integration-20261029-01`UTC10:48:30，34模組370/370、0skip、source_unchanged、312語法、114.786s，guardian自然0／remaining0／無強停。build同名335hash／312來源編譯；受測f2bc30d來源包release-prep-sentry-policy-20261029-01可重現、415檔、SHA256 8a2777b47524a75fbb3f39e38f5a6f6d08edbdc569bd805ebf6433225d738b13。沒有新模型／原生或真防守驗收，不把預設資格、有限corpus或fake CLI當真喚醒。下一修red報告已證實的subtest通過數負值，不改寫歷史失敗證據。
+
 ## 2026-10-29：真Tk agent預設政策說明
 
 `reports/verify-desktop-agent-policy-widgets-20261029-01`UTC10:44:17：6模組36/36、0skip、312語法、source_unchanged、Job自然0／remaining0／無強停；build同名335hash／312編譯。真Tk新增3情境：warning與high分列、high人工handled後排除且pending3／receipt0、錯案／未知快照不顯符合。讀取與錯案測試DB位元組不變；fixture禁止child／scan／ACK，沒有真agent或正式防守結果。預設條件未涵蓋自訂dispatcher、due／lease或啟動權限；GUI文字明示範圍。
