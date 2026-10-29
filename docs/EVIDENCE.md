@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：鎖內重驗的controller重開
+
+`reports/verify-desktop-fixture-reopen-20261029-01` UTC07:37:08：12/12、0skip、source_unchanged、Job自然退出0／remaining0／無強停；同一scope先關controller再reopen，handled／保存case／DB bytes／marker一致，pending4／receipt0，_prepare哨兵證明未seed。active owner及缺scope拒絕，模擬鎖內重驗失敗後自身鎖釋放可再開。`reports/build-desktop-fixture-reopen-20261029-01`301檔hash及279檔編譯；不冒稱兩個GUI程序／真人／原生驗收，launcher接線仍待。
+
 ## 2026-10-29：既有scope只讀資料界線
 
 `reports/verify-desktop-fixture-read-20261029-02` UTC07:34:06：30/30、0skip、source_unchanged、Job自然退出0／remaining0／無強停。保存人工handled／調查後只讀重開檢查及list／stats，DB bytes不變；缺資料不建立、marker非synthetic／缺receipts schema不修補、hash有效的非synthetic事件拒絕且DB bytes保留。01為29項，02補缺DB／非合成後為最終。`reports/build-desktop-fixture-read-20261029-01`300檔hash／278檔編譯；尚未控制器重開或跨程序attempt，不以預檢當正式恢復或來源認證。

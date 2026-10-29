@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 控制器明確重開同一scope
+
+DesktopFixtureController(reopen=True)先唯讀預檢、取得原InstanceLock再於鎖內重驗；以SavedFixtureStore讀取，來源僅依保存prepare時間及固定情境重建，不重seed／改marker／開新DB，仍封鎖原生能力。`reports/verify-desktop-fixture-reopen-20261029-01`：2026-10-29 15:37（UTC+8）12/12、0skip、source_unchanged、Job自然退出0／remaining0／無強停；同scope handled與case、DB bytes及marker保留、pending4／receipt0，active owner／缺scope拒絕，鎖內資料變動失敗後釋放可再開。`reports/build-desktop-fixture-reopen-20261029-01`301檔hash／279檔編譯；6ca8c1c（+148/−0）已普通同步main。這是控制器閉環，launcher第二程序／新attempt尚待，不升格跨程序GUI已驗。
+
 ## 2026-10-29 既有合成scope唯讀預檢
 
 SavedFixtureStore以Catalog唯讀連線核對有界marker／帶時區prepare時間、現行events／receipts schema與完整policy、固定4個synthetic ID、pending／attempt0／receipt0，再核對各事件保存內容。拒絕缺失或舊不完整schema，不建立DB／遷移／清理；提供只讀list／stats供後續重開使用。`reports/verify-desktop-fixture-read-20261029-02`：2026-10-29 15:34（UTC+8）30/30、0skip、source_unchanged、Job自然退出0／remaining0／無強停，保存人工狀態／調查可讀回、缺DB不建立、marker錯／缺schema／hash有效但synthetic=false拒絕，成功與拒絕均DB bytes不變。`reports/build-desktop-fixture-read-20261029-01`300檔hash／278檔編譯；01為29項、02補非合成／缺資料為最終。6de331f（+62/−1）已普通同步main；控制器重開與新attempt仍待。

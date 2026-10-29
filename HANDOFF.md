@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 同scope控制器重開已驗
+
+12/12、0skip及279檔來源編譯通過，reopen先預檢、鎖內重驗／唯讀store、不seed，handled／case／DB bytes／marker及pending保留，見STATUS。下一步launcher每次仍新建attempt目錄、指定原始合成scope，worker輸出改存新attempt而資料留原scope；原生能力仍停用、不覆寫原收據。接真Job／GUI跨程序驗保存與並行拒絕，不能用controller測試代替。
+
 ## 2026-10-29 唯讀重開前置已驗
 
 SavedFixtureStore不初始化／遷移／清理，核對schema／policy／固定四synthetic與pending／receipt及保存內容，30/30、0skip及278檔來源編譯通過，DB bytes守恆，見STATUS。下一步controller reopen=True先預檢再取得既有InstanceLock，鎖內再驗並用只讀store接原GUI；重建來源只依保存prepare時間與固定合成情境，不重seed，不將marker當原生或還原授權。

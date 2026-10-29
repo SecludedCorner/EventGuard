@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import re
 
 from .desktop import DesktopController
+from .desktop_fixture_read import SavedFixtureStore
 from .diagnostics.review import review
 from .events.catalog import EventCatalog
 from .events.store import EventStore
@@ -18,27 +19,37 @@ BLOCKED = frozenset({'start', 'pause', 'set_agent_delivery', 'set_automatic_agen
 
 
 class DesktopFixtureController:
-    """Always create a new reports scope; never open installation live data.
+    """Create or explicitly reopen a validated reports scope, never installation data.
 
     Internal data/live is a disposable synthetic copy for the existing desktop
-    contract. Existing scopes are refused rather than guessed safe or reset.
+    contract. Reopening validates before and after the exclusive owner lock.
     """
     synthetic_fixture = True
 
-    def __init__(self, project_root, name, *, now=None):
+    def __init__(self, project_root, name, *, now=None, reopen=False):
         if not isinstance(name, str) or re.fullmatch(r'desktop-ux-[A-Za-z0-9_-]{1,64}', name) is None:
             raise ValueError('desktop_fixture_name_invalid')
+        if type(reopen) is not bool or reopen and now is not None:
+            raise ValueError('desktop_fixture_reopen_invalid')
         runtime = Runtime(project_root)
         reports = runtime.path('reports')
-        reports.mkdir(exist_ok=True)
         self.root = runtime.path(Path('reports')/name)
-        self.root.mkdir(exist_ok=False)
+        if reopen:
+            SavedFixtureStore(self.root)  # No lock metadata or initialization on invalid input.
+        else:
+            reports.mkdir(exist_ok=True)
+            self.root.mkdir(exist_ok=False)
         self.closed = False
         self._scope_lock = InstanceLock(Runtime(self.root))
         if not self._scope_lock.acquire():
             raise ValueError('desktop_fixture_already_owned')
         try:
-            self._prepare(now)
+            if reopen:
+                self.store = SavedFixtureStore(self.root)
+                self.catalog = self.store.catalog
+                self._attach(self.store.stamp)
+            else:
+                self._prepare(now)
         except BaseException:
             self._scope_lock.release()
             raise
@@ -60,6 +71,14 @@ class DesktopFixtureController:
             'truncated': True, 'observed_at': self.stamp, 'coverage': {}})
         diagnosis = dict(review(event, api, refresh=True, now=self.stamp), namespace='live')
         self.store.save_review(event['event_id'], diagnosis['payload_hash'], diagnosis)
+        atomic_json(self.root/'fixture.json', {'schema_version': '1.0', 'synthetic': True,
+            'prepared_at': self.stamp, 'event_count': 4, 'participant_results': None,
+            'machine_scan_executed': False, 'model_calls': 0, 'ack_performed': False})
+        self._attach(stamp)
+
+    def _attach(self, stamp):
+        self.stamp = stamp.isoformat(timespec='seconds')
+        stamp = datetime.fromisoformat(self.stamp)
         states = ('denied', 'partial', 'unknown', 'ok', 'error', 'stale', 'not_applicable')
         sources = ('defender', 'listeners', 'processes', 'startup', 'services', 'tasks', 'versions')
         self.sources = [{'source_id': source, 'status': state, 'row_count': 1 if state in ('partial', 'ok') else None,
@@ -67,9 +86,6 @@ class DesktopFixtureController:
             'last_success_at': (stamp-timedelta(minutes=5)).isoformat(), 'last_success_state': 'known',
             'reason': 'synthetic_fixture'} for source, state in zip(sources, states)]
         self._local = DesktopController(self.root)
-        atomic_json(self.root/'fixture.json', {'schema_version': '1.0', 'synthetic': True,
-            'prepared_at': self.stamp, 'event_count': 4, 'participant_results': None,
-            'machine_scan_executed': False, 'model_calls': 0, 'ack_performed': False})
 
     def _blocked(self, *args, **kwargs):
         return {'state': 'blocked', 'reason': 'synthetic_fixture_operation_disabled', 'synthetic_fixture': True,
