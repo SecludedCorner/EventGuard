@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 可執行缺陷：DESKTOP-REQUEST-RETENTION
+
+增量契約核對重現未確認人工要求的ACK事件會被TTL／容量輪替移除；red兩例皆fail，已新增event及receipt保護，滿額不放寬上限、壞日誌不當空，30項／0skip與296檔來源編譯通過（見STATUS），非增加展示或重跑既有成果。接續驗混合收據壓力與receiver-finalization／人工pin交集，各自確認只能釋放自己的保護；使用合成SQLite/local_mock ACK，不觸發真agent／原生。之後做受影響保留／桌面整合，逐單元普通同步main；真人／Web／原生及完整恢復來源信任根仍獨立未驗，整體active。
+
 ## 2026-10-29 當前驗收盤點：桌面閉環已驗，完整目標仍active
 
 DESKTOP-HANDLING、REQUEST-DURABILITY及CONFIRMATION-FAILURE已具真Tk／合成SQLite與兩真Job同資料重開證據：先意圖、原hash／namespace、consumer確認、不自送、不回退、unknown禁寫、確認清理前後故障及切換不串案。42模組235項整合後，最後訊息／故障增量56項定向通過，均0skip及295檔來源編譯；不同範圍不相加，不等於完整平台驗收。

@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：人工未確認要求的事件／收據保留修正
+
+`reports/verify-desktop-request-retention-red-20261029-01`：兩個合成回歸皆fail，TTL刪原ACK事件、件數壓力未拒絕新事件而移除anchor；不是模擬PASS。加入pending journal guard後`reports/verify-desktop-request-retention-20261029-02` UTC09:12:11：30/30、0skip、source_unchanged、Job自然0／remaining0／無強停，包含既有outbox/inbox/ledger保留與修訂測試。合成local_mock ACK後人工要求仍pending，TTL／count／byte輪替保留原event與receipt，確認gui操作回條後TTL恢復；壞日誌拋固定retention_unverified並rollback、DB bytes不變。收據TTL／limit／byte trim皆排除仍被人工要求引用的收據，未提高容量或刪歷程。`reports/build-desktop-request-retention-20261029-01`318hash／296編譯；不是實機、真receiver或24h證據，混合pin交集下一單元另驗。
+
 ## 2026-10-29：真Tk確認清理前後的回條故障
 
 `reports/verify-desktop-confirmation-failure-20261029-01` UTC09:01:56：56/56、0skip、source_unchanged、Job自然0／remaining0／無強停。真Tk分別注入confirm清理前OSError／清理成功後丟回條；message含保存回條已收到、原event及清理未知，不含未保存／最終核對成功；1save／1confirm無自動重送，待確認DB筆數分別1／0、記憶體原ID均保留；後來read後明確同ID核對只重播／不增歷程，pending2／receipt0。另一真Tk案例確認中切換到member，詳情仍member new，錯誤message指anchor且其handled保留，無串資料。容量／活動故障補原event hash及完整handling_history相等，與新增意圖分開驗。`reports/build-desktop-confirmation-failure-20261029-01`317hash／295編譯；235項為前一整合範圍，兩數不累加，不冒稱真人／原生輸入或完整平台已完成。

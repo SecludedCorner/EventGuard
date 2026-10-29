@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 新保留缺陷已修／接混合pin驗收
+
+恢復後查出ACK的event／receipt可被TTL／壓力清理，即使人工要求未確認；red兩例失敗，修正後30/30、0skip及296檔編譯通過，見STATUS。desktop_requests.retention_guard驗有界日誌後排除事件／收據引用，schema未知不清，原上限不變；滿額寧拒新事件，明確確認後恢復原TTL。下一個相關切片驗收據上限／byte trim中混合人工pin與一般收據、receiver-finalization pin與人工pin重疊／分別釋放，不把兩種確認混為ACK或互相釋放。只用合成SQLite/local_mock，保留原真人／Web／原生等待驗。
+
 ## 2026-10-29 桌面要求主閉環與確認故障已驗
 
 最後增量56/56、0skip及295檔來源編譯；真Tk清理前失敗／清理後丟回條均明示已收到保存但清理未知、原ID明確重試不回退，切換事件不串回條，容量／活動故障原event hash及完整歷程守恆，見STATUS。此前42模組235項整合／兩真Job成功回條丟失重開證據沿用，不相加。更新後的MAINTENANCE_GOAL列仍未達成的獨立關卡；沒有新缺陷時勿反覆重跑相同fixture或無限擴小功能。來源包與提交綁定留reports（不發布）；每次恢復先核對Git與實際工具／授權，完整目標active，不能宣稱真人／Web／原生／完整歷程恢復已驗。

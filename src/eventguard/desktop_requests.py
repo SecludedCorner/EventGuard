@@ -87,3 +87,19 @@ def complete(db, value):
     db.execute('DELETE FROM desktop_status_requests WHERE namespace=? AND event_id=? AND status=? AND operation_id=? AND payload_hash=?',
                tuple(value[key] for key in FIELDS))
     return {'resolved': True, 'caller_commit_required': True, 'ack_performed': False}
+
+
+def retention_guard(db, table):
+    """Keep both evidence and ACK receipts while human confirmation is pending.
+
+    The namespace is validated, not interpreted as authorization. Any malformed
+    journal blocks rotation rather than silently treating it as empty.
+    """
+    if table not in ('events', 'receipts'):
+        raise ValueError('desktop_request_retention_table_invalid')
+    exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='desktop_status_requests'").fetchone()
+    if not exists:
+        return ''
+    row = db.execute('SELECT namespace FROM desktop_status_requests LIMIT 1').fetchone()
+    pending(db, namespace=row[0] if row else 'live')
+    return ' AND NOT EXISTS (SELECT 1 FROM desktop_status_requests q WHERE q.event_id='+table+'.event_id)'

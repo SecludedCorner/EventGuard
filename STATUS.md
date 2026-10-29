@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 修正未確認人工要求被ACK清理移除
+
+重現TTL／件數壓力會清掉仍有人工未確認要求的ACK原事件，導致原ID無法核對；現將此事件及收據加入保留條件，TTL、件數／位元組輪替與收據上限皆沿用，不改上限、不把人工要求當ACK。日誌壞schema／欄位不明則整筆清理rollback，不reset成空。`reports/verify-desktop-request-retention-red-20261029-01`原2例皆fail證明缺陷；修正後`reports/verify-desktop-request-retention-20261029-02`：2026-10-29 17:12（UTC+8）30/30、0skip、source_unchanged、Job自然0／remaining0／無強停，TTL保留原event／receipt／ID、明確確認後原TTL可清理，滿額拒絕新事件bytes不變、byte回收不動pin、壞日誌不部分刪除。`reports/build-desktop-request-retention-20261029-01`318hash／296編譯。只在合成SQLite直接產生local_mock ACK，不是agent驗收或實機清理；35de80a兩ref已一致，下一驗receiver-finalization與人工pin交集及混合收據壓力。
+
 ## 2026-10-29 已收到保存／清理未知的真Tk故障驗收
 
 確認清理失敗訊息明示保存回條已收到、原事件ID與清理未知，不宣稱未保存或最終核對完成。`reports/verify-desktop-confirmation-failure-20261029-01`：2026-10-29 17:01（UTC+8）56/56、0skip、source_unchanged、Job自然0／remaining0／無強停；真Tk／SQLite分別在清理前失敗、清理成功後丟回條，均只1save／1confirm、原記憶體ID保留，明確同ID核對不回退後來read／不增歷程，pending2／receipt0；確認中切換事件不串資料、錯誤回條指明原事件。容量／活動失敗亦補原事件hash與完整歷程相等，待確認意圖另保留。`reports/build-desktop-confirmation-failure-20261029-01`317hash／295編譯；505742e兩ref已一致。

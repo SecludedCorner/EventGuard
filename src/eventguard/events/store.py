@@ -268,11 +268,19 @@ class EventStore:
         db.execute("INSERT OR REPLACE INTO meta(key,value) VALUES(?,?)", (key, str(count + amount)))
 
     @staticmethod
+    def _request_retention_guard(db, table):
+        from ..desktop_requests import retention_guard
+        try:
+            return retention_guard(db, table)
+        except ValueError:
+            raise StoreError("desktop_request_retention_unverified") from None
+
+    @staticmethod
     def _rotation_guard(db):
         # Keep anchors and latest cases reachable while saved revisions exist.
         has_revisions = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='investigation_revisions'").fetchone()
-        return (" AND NOT EXISTS (SELECT 1 FROM investigation_revisions r WHERE r.event_id=events.event_id)"
-                if has_revisions else "")
+        return ((" AND NOT EXISTS (SELECT 1 FROM investigation_revisions r WHERE r.event_id=events.event_id)"
+                 if has_revisions else "") + EventStore._request_retention_guard(db, "events"))
 
     def _prune(self, db, now, slots=1):
         self._expire(db, now)
@@ -298,11 +306,14 @@ class EventStore:
         rows = db.execute("SELECT event_id,delivery_status FROM events WHERE delivery_status='ack' AND updated_at<?"
                           + self._rotation_guard(db), (now-self.policy["acked_retention_seconds"],)).fetchall()
         self._delete_completed(db, rows)
-        removed = db.execute("DELETE FROM receipts WHERE pending_finalization=0 AND acked_at<?", (now-self.policy["receipt_retention_seconds"],)).rowcount
-        pinned = db.execute("SELECT COUNT(*) FROM receipts WHERE pending_finalization=1").fetchone()[0]
-        removed += db.execute("""DELETE FROM receipts WHERE event_id IN (
-            SELECT event_id FROM receipts WHERE pending_finalization=0
-            ORDER BY acked_at DESC,event_id DESC LIMIT -1 OFFSET ?)""", (max(0,self.policy["receipt_limit"]-pinned),)).rowcount
+        guard = self._request_retention_guard(db, "receipts")
+        removed = db.execute("DELETE FROM receipts WHERE pending_finalization=0 AND acked_at<?" + guard,
+                             (now-self.policy["receipt_retention_seconds"],)).rowcount
+        eligible = db.execute("SELECT COUNT(*) FROM receipts WHERE pending_finalization=0" + guard).fetchone()[0]
+        pinned = db.execute("SELECT COUNT(*) FROM receipts").fetchone()[0] - eligible
+        removed += db.execute("DELETE FROM receipts WHERE event_id IN (SELECT event_id FROM receipts WHERE pending_finalization=0"
+                              + guard + " ORDER BY acked_at DESC,event_id DESC LIMIT -1 OFFSET ?)",
+                              (max(0,self.policy["receipt_limit"]-pinned),)).rowcount
         if removed:
             self._increment(db, "expired_receipts", removed)
 
@@ -357,11 +368,12 @@ class EventStore:
         return len(rows)
 
     def _trim_receipts(self, db):
-        count = db.execute("SELECT COUNT(*) FROM receipts WHERE pending_finalization=0").fetchone()[0]
+        guard = self._request_retention_guard(db, "receipts")
+        count = db.execute("SELECT COUNT(*) FROM receipts WHERE pending_finalization=0" + guard).fetchone()[0]
         if count <= 1:
             return 0
-        removed = db.execute("""DELETE FROM receipts WHERE event_id IN (
-            SELECT event_id FROM receipts WHERE pending_finalization=0 ORDER BY acked_at,event_id LIMIT ?)""", (max(1,count//2),)).rowcount
+        removed = db.execute("DELETE FROM receipts WHERE event_id IN (SELECT event_id FROM receipts WHERE pending_finalization=0"
+                             + guard + " ORDER BY acked_at,event_id LIMIT ?)", (max(1,count//2),)).rowcount
         self._increment(db, "pressure_rotated_receipts", removed)
         return removed
 
