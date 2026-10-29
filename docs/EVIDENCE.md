@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：真Tk確認清理前後的回條故障
+
+`reports/verify-desktop-confirmation-failure-20261029-01` UTC09:01:56：56/56、0skip、source_unchanged、Job自然0／remaining0／無強停。真Tk分別注入confirm清理前OSError／清理成功後丟回條；message含保存回條已收到、原event及清理未知，不含未保存／最終核對成功；1save／1confirm無自動重送，待確認DB筆數分別1／0、記憶體原ID均保留；後來read後明確同ID核對只重播／不增歷程，pending2／receipt0。另一真Tk案例確認中切換到member，詳情仍member new，錯誤message指anchor且其handled保留，無串資料。容量／活動故障補原event hash及完整handling_history相等，與新增意圖分開驗。`reports/build-desktop-confirmation-failure-20261029-01`317hash／295編譯；235項為前一整合範圍，兩數不累加，不冒稱真人／原生輸入或完整平台已完成。
+
 ## 2026-10-29：要求持久化受影響整合235項
 
 `reports/verify-desktop-request-final-20261029-01` UTC08:56:58：42模組235/235、0skip、source_unchanged、295檔語法、Job自然0／remaining0／無強停。含namespace／不可變hash交易閘道、先意圖後操作、Tk已收到才確認、壞日誌禁寫且可讀、同窗口／新窗口／兩真Job原ID明確核對、不回退read、pending／receipt及舊證據守恆；合成／自動化分別標示，不代替原生或真人。`reports/build-desktop-request-final-20261029-01`317hash／295編譯，產品638b5e1兩遠端ref一致、兩工作樹／待整合差異0。

@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 已收到保存／清理未知的真Tk故障驗收
+
+確認清理失敗訊息明示保存回條已收到、原事件ID與清理未知，不宣稱未保存或最終核對完成。`reports/verify-desktop-confirmation-failure-20261029-01`：2026-10-29 17:01（UTC+8）56/56、0skip、source_unchanged、Job自然0／remaining0／無強停；真Tk／SQLite分別在清理前失敗、清理成功後丟回條，均只1save／1confirm、原記憶體ID保留，明確同ID核對不回退後來read／不增歷程，pending2／receipt0；確認中切換事件不串資料、錯誤回條指明原事件。容量／活動失敗亦補原事件hash與完整歷程相等，待確認意圖另保留。`reports/build-desktop-confirmation-failure-20261029-01`317hash／295編譯；505742e兩ref已一致。
+
+桌面人工處置、未確認意圖持久化與此確認故障分支已具實際Tk／合成SQLite證據；先前235項整合與本次56項範圍不同、不相加，後者為最後訊息／故障測試增量。原生輸入／真人／Web200%／原生覆蓋／24h／reboot、完整歷程恢復可信根及容量釋放仍各自未驗；完整目標active，不以本單元升格整體完成。
+
 ## 2026-10-29 未確認要求閉環整合235項通過
 
 產品638b5e1b3c431329bb23eee447ed05b343a081d9已逐單元普通push開發分支、ff-only整合／push main及直接核對兩ref，工作樹／待整合差異0；GUI文件已更新原ID落盤、consumer確認、重開不自送與unknown禁寫。`reports/verify-desktop-request-final-20261029-01`：2026-10-29 16:56（UTC+8）42模組235/235、0skip、source_unchanged、295檔語法通過、Job自然0／remaining0／無強停，涵蓋桌面、Catalog、歷程、durable控制層、真Tk與兩真Job成功回條丟失重開；非全庫或真人。`reports/build-desktop-request-final-20261029-01`317hash／295檔來源編譯；本純文件沿用該build並檢查操作／引用。

@@ -70,7 +70,8 @@ class DesktopHandlingWidgetTests(unittest.TestCase):
     def test_capacity_and_activity_failure_preserve_database_then_allow_read_recovery(self):
         self.select(self.anchor)
         self.decide('read')
-        before = self.store.path.read_bytes()
+        before = event_payload_hash(self.store.get_event(self.anchor))
+        history = self.catalog.detail(self.anchor)['handling_history']
         with patch('eventguard.events.disposition_history.MAX_HISTORY_PER_EVENT', 1):
             self.ui.handling_buttons['handled'].invoke()
             self.wait_for(lambda: '人工狀態未保存' in self.ui.message.get())
@@ -80,6 +81,8 @@ class DesktopHandlingWidgetTests(unittest.TestCase):
             self.wait_for(lambda: self.ui.handling_buttons['handled'].instate(['!disabled']))
         self.assertEqual(self.catalog.detail(self.anchor)['status'], 'read')
         self.assertTrue(self.catalog.detail(self.anchor)['pending_handling_requests']['requests'])
+        self.assertEqual(event_payload_hash(self.store.get_event(self.anchor)), before)
+        self.assertEqual(self.catalog.detail(self.anchor)['handling_history'], history)
         with patch('eventguard.activity.begin', side_effect=activity.ActivityError('activity_storage_unavailable')):
             self.ui.handling_buttons['handled'].invoke()
             self.wait_for(lambda: '人工狀態未保存' in self.ui.message.get())
@@ -88,6 +91,8 @@ class DesktopHandlingWidgetTests(unittest.TestCase):
             self.wait_for(lambda: self.ui._detail_document.get('state') == 'error')
         self.assertEqual(self.catalog.detail(self.anchor)['status'], 'read')
         self.assertTrue(self.catalog.detail(self.anchor)['pending_handling_requests']['requests'])
+        self.assertEqual(event_payload_hash(self.store.get_event(self.anchor)), before)
+        self.assertEqual(self.catalog.detail(self.anchor)['handling_history'], history)
         self.select(self.anchor)
         self.assertEqual(self.ui._detail_document['status'], 'read')
         self.assertEqual(len(self.catalog.detail(self.anchor)['handling_history']['entries']), 1)

@@ -1,5 +1,13 @@
 # EventGuard 目前目標
 
+## 2026-10-29 當前驗收盤點：桌面閉環已驗，完整目標仍active
+
+DESKTOP-HANDLING、REQUEST-DURABILITY及CONFIRMATION-FAILURE已具真Tk／合成SQLite與兩真Job同資料重開證據：先意圖、原hash／namespace、consumer確認、不自送、不回退、unknown禁寫、確認清理前後故障及切換不串案。42模組235項整合後，最後訊息／故障增量56項定向通過，均0skip及295檔來源編譯；不同範圍不相加，不等於完整平台驗收。
+
+剩餘必要關卡沿既有佇列：原生輸入需工具實際返回自有窗口（最近一次未返回，已自然退出、不重複輪詢）；UX-HUMAN需真正參與者六任務結果／可比資料，不能由模型代填；Web200%／版本焦點需實際瀏覽器；native覆蓋、24h／reboot各需具體有效授權及對應環境；HISTORY-RECOVERY仍缺可證來源可信根、正式恢復入口與無損容量契約，現有hash／唯讀備份／append-only原語不是認證或刪歷程批准，不自行建立憑證／清理資料。這些均未DONE，也沒有以合成替代。
+
+恢復時先查Git、最新證據與上述具體前置是否變化；有可復現產品缺陷便實作並定向驗證，有條件具備的關卡便執行既定程序。不以重複fixture、無限新增展示或反覆生成交接取代缺少的真人／真環境證據；不自動新增模型／採集或改系統設定來跨越授權邊界，整體目標維持active。
+
 ## 2026-10-29 最新可執行：DESKTOP-REQUEST-CONFIRMATION-FAILURE
 
 DESKTOP-REQUEST-DURABILITY主路徑已接Tk與原ID重開：先意圖commit、namespace／hash綁定實際交易、consumer已收到後才清理，兩真Job成功回條丟失→自然退出→同DB原ID核對已驗，42模組235項／0skip及295檔來源編譯；產品638b5e1逐單元普通同步main。下方「未接UI」為歷史，不再當現況。

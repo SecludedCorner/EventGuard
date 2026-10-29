@@ -1,5 +1,6 @@
 """Real Tk windows recover saved keys; reads and malformed journals never write."""
 import unittest
+import threading
 from unittest.mock import patch
 
 import test_desktop_investigation_widgets as fixture
@@ -12,6 +13,62 @@ class DesktopRequestWidgetTests(unittest.TestCase):
     close_ui = fixture.DesktopInvestigationWidgetTests.close_ui
     wait_for = fixture.DesktopInvestigationWidgetTests.wait_for
     select = fixture.DesktopInvestigationWidgetTests.select
+
+    def test_confirmation_failure_before_or_after_cleanup_keeps_key_without_replay(self):
+        for index, stage in enumerate(('before', 'after')):
+            with self.subTest(stage=stage):
+                self.select(self.anchor)
+                original, confirms = self.controller.confirm_status_receipt, []
+                def fail(*args):
+                    confirms.append(args)
+                    if stage == 'after':
+                        original(*args)
+                    raise OSError('synthetic confirmation reply failure')
+                with patch.object(self.controller, 'confirm_status_receipt', side_effect=fail), patch.object(
+                        self.controller, 'set_status_durable', wraps=self.controller.set_status_durable) as save:
+                    self.ui.handling_buttons['handled'].invoke()
+                    self.wait_for(lambda: '清理結果未確認' in self.ui.message.get() and not self.ui._busy)
+                    self.assertIn('保存回條已收到', self.ui.message.get())
+                    self.assertNotIn('未保存', self.ui.message.get())
+                    self.assertNotIn('人工狀態已核對', self.ui.message.get())
+                    op = self.ui._pending_status[(self.anchor, 'handled')]
+                    self.assertEqual((save.call_count, len(confirms)), (1, 1))
+                    self.assertEqual(len(self.catalog.detail(self.anchor)['pending_handling_requests']['requests']),
+                                     1 if stage == 'before' else 0)
+                self.catalog.set_status(self.anchor, 'read', source='cli', operation_id='later-confirm-'+stage)
+                self.ui._last_event = None
+                self.select(self.anchor)
+                with patch.object(self.controller, 'set_status_durable', wraps=self.controller.set_status_durable) as retry:
+                    self.ui.handling_buttons['handled'].invoke()
+                    self.wait_for(lambda: '人工狀態已核對' in self.ui.message.get())
+                    self.wait_for(lambda: not self.ui._busy and self.ui._detail_document.get('status') == 'read')
+                    self.assertEqual(retry.call_args.args[2], op)
+                self.assertEqual(len(self.catalog.detail(self.anchor)['handling_history']['entries']), 2*(index+1))
+                self.assertEqual(self.ui._pending_status, {})
+                self.assertEqual((self.store.stats()['pending'], self.store.stats()['receipt_count']), (2, 0))
+
+    def test_confirmation_failure_after_selection_change_stays_bound_to_original_event(self):
+        self.select(self.anchor)
+        entered, release = threading.Event(), threading.Event()
+        def fail(*args):
+            entered.set()
+            release.wait(timeout=2)
+            raise OSError('synthetic confirmation unavailable')
+        with patch.object(self.controller, 'confirm_status_receipt', side_effect=fail):
+            try:
+                self.ui.handling_buttons['handled'].invoke()
+                self.wait_for(entered.is_set)
+                self.ui.events.selection_set(self.member)
+                self.ui.select_event()
+                release.set()
+                self.wait_for(lambda: not self.ui.worker.pending and self.ui._detail_document.get('event', {}).get('event_id') == self.member)
+            finally:
+                release.set()
+        self.assertIn(self.anchor, self.ui.message.get())
+        self.assertEqual(self.ui._detail_document['status'], 'new')
+        self.assertNotIn('未確認要求：', self.ui.handling_status.get())
+        self.assertEqual(self.catalog.detail(self.anchor)['status'], 'handled')
+        self.assertEqual((self.store.stats()['pending'], self.store.stats()['receipt_count']), (2, 0))
 
     def test_new_tk_window_recovers_lost_success_key_without_automatic_replay(self):
         self.select(self.anchor)

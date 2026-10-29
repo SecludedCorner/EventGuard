@@ -776,7 +776,7 @@ class EventGuardWindow:
                     if confirmed:
                         self._pending_status.pop(key, None)
                     self.message.set("人工狀態已核對（事件：" + safe_text(event_id, 160) + "）；不是 ACK 或修復。" if confirmed else
-                                     "人工狀態回條核對結果未確認；原識別保留，不自動重送。")
+                                     "人工狀態保存回條已收到（事件：" + safe_text(event_id, 160) + "）；待確認要求清理結果未確認，原識別保留，不自動重送。")
                     self._refresh_selected_detail(event_id)
                 elif action == "set_status":
                     event_id, status = value.get("requested_event_id"), value.get("requested_status")
