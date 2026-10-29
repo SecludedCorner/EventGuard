@@ -1,5 +1,11 @@
 # EventGuard 接手
 
+## 2026-10-29 真人合成入口準備已保存／接續跨程序重開
+
+產品95f90b2bdc920a0e7067620d9f34a32aaccb6cc8已逐單元普通同步main／開發ref，185/185、0skip、275檔來源編譯與377檔可重現來源包，見STATUS／EVIDENCE。明確launcher、真Job deadline／EOF自然退出、六任務及未認證自報CLI均可用，操作見GUI文末；沒有真人結果，不能自行填成績或宣稱超越競品。
+
+下一個DESKTOP-FIXTURE-REOPEN：補同一合成scope跨程序安全重開，先沿現有Runtime／Job／生命週期找可重用的排他保護；不把既有目錄標記當任意live讀取授權。只允許本專案reports內既有已生成的合成scope，逐項驗schema／四synthetic及scope邊界；每次新attempt存新退出證據，不覆寫舊收據／任務紀錄，不重seed或reset既有資料。驗保存人工狀態／調查於第一個真Job自然退出後第二個真Job重開保留，並行開啟／非法scope拒絕，兩者退出／pending／ACK各自證明；若仍無法安全重開，保留缺口，不用複製新scope冒充同資料重啟。每單元build／測試後普通同步main，真人與原生獨立待驗不變。
+
 ## 2026-10-29 六任務及未認證自報入口已驗
 
 9/9、0skip及275檔來源編譯通過，真Tk任務Text與真CLI紀錄／exclusive防覆寫已驗，見STATUS；launcher啟動會生成tasks.json，GUI可看六項任務，手動--record-task保存獨立task-U*.json。沒有參與者結果，所有紀錄仍未認證自報，不能由模型代填。接續補既有GUI文件的完整操作／空白模板規則，再做受影響整合與來源保存；真實參與者、Web200%、原生與恢復可信根仍待。

@@ -61,3 +61,35 @@ py -3.13 -B scripts/eventguard_inbox_mcp.py --operator-root . --namespace live -
 現行桌面模式不設每日五次 quota，也不讀寫歷史預算帳本。桌面當次 dispatcher 目前預設最多5個任務，達到後顯示 `waiting_task_limit` 並保留 pending；這是單次執行界線，不會因跨日自動恢復。失敗事件不自動重試模型，需查證後在有效授權內明確重試或由人類接手。模型帳戶額度與具體執行授權仍各自適用；應用不因這個單次任務上限而關閉。
 
 登入後自動恢復是另外一次 [背景排程](BACKGROUND.md) 設定，目前未獲批准／建立。GUI 的開始／暫停可以直接使用；不把開啟視窗或有限測試當作實際重開機、長時 soak 或全天候成功。完整當前驗證見 [EVIDENCE](EVIDENCE.md)。
+
+## 桌面合成六任務（真人結果待驗）
+
+使用既有Python 3.13／Tk，在專案目錄明確啟動；每次選新ASCII名稱，既有目錄拒絕覆寫，不要刪舊證據來重用名稱：
+
+```powershell
+$desktopUxRun = 'desktop-ux-human-20261029-01'
+py -3.13 -B scripts/desktop_ux_acceptance.py --name $desktopUxRun --seconds 900
+```
+
+視窗明示「合成固定情境（非主機實測）」，資料固定於準備時間；採集、模型／agent設定及ACK停用。讀寫只在新reports scope，內層data/live僅為合成副本，不是安裝live。最長900秒後合作關閉，也可用「應用程式→暫停並結束」；X仍是最小化。啟動終端Ctrl+C會請求合作退出，父程序保存原Job handle的實際退出／殘留收據；未確認不報成功。
+
+在「六項合成任務」分頁依序操作：
+
+| 任務 | 要觀察／完成的事 |
+| --- | --- |
+| U1 | 七來源目前拒讀、部分、未知、過期與歷史成功的差異。 |
+| U2 | synthetic-ux-listener的事實／未知；能否據此宣稱主機安全。 |
+| U3 | 標已讀再已處理，核對人工歷程與接收狀態不同。 |
+| U4 | 人工／接收篩選、清除並找回原事件及保存狀態。 |
+| U5 | 歷史拒讀／截斷查證，能支持與不能支持的目前結論。 |
+| U6 | 備份、核對讀取時間／轉換／未知範圍，返回原事件。 |
+
+請由真實參與者另行記錄步數、秒數、錯誤及結果。程式不自動評分或填結果。結束後可逐任務輸入實測數值，例如U1；下列Read-Host沒有預填成績：
+
+```powershell
+py -3.13 -B scripts/desktop_ux_acceptance.py --name $desktopUxRun --record-task U1 --steps (Read-Host '實測步數') --elapsed-seconds (Read-Host '實測秒數') --errors (Read-Host '錯誤數') --outcome (Read-Host 'completed / failed / unresolved')
+```
+
+範圍為步數／錯誤0–1000、秒數0–900；缺值、非法值拒絕。tasks.json的六筆初始metrics皆null；每筆輸入獨立保存task-U1.json等，既有檔不覆寫／合併。自報永久明示operator_self_report_unverified及human_participation_verified=false，不能因輸入completed就宣稱真人驗收通過；session-result.json僅是程序收據，participant_results仍null。真人完成率／時間／錯誤仍需實際參與及獨立審閱，不與合法競品環境比較或原生覆蓋混同。
+
+所有runtime／SQLite／任務紀錄僅留reports，不提交或分享私人畫面。現階段重開同一scope的跨程序GUI入口未提供；舊資料保留，不能把同程序重建視窗測試當成跨程序重啟驗收。

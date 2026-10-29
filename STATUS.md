@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 真人桌面合成入口前置整合185項通過
+
+隔離控制器、固定合成標示／停用原生控制、有界真Job／Tk launcher、六任務與exclusive未認證自報入口已逐單元build／相關測試後指定檔案commit、普通push及ff-only整合／push main；產品兩ref直接核對95f90b2bdc920a0e7067620d9f34a32aaccb6cc8，兩工作樹及待整合差異0，每筆增刪少於200、未累積500行。提交訊息／行數見EVIDENCE最新段。`reports/verify-desktop-ux-fixture-final-20261029-01`：2026-10-29 15:16（UTC+8）26模組185/185、0skip、source_unchanged、275檔語法通過、Job自然退出0／remaining0／無強停；含獨立真Job合成Tk deadline／owner_eof原handle收據，索引同目錄launcher-scenarios.json。`reports/build-desktop-ux-fixture-final-20261029-01`297檔hash／275檔編譯；`reports/release-prep-desktop-ux-fixture-20261029-01`綁定上述產品SHA、377檔可重現，未tag／release，純文件沿用該來源build／整合並檢查引用。
+
+GUI文件提供真實參與者操作及明確Read-Host輸入，所有人類成績未提供／不自填，自報不升格認證真人。下一工程缺口為同一合成scope跨程序安全重開；目前只新scope及同程序重建視窗已驗。Web200%、真人／原生覆蓋／24h／reboot、恢復可信根／容量釋放仍未完成，目標active。
+
 ## 2026-10-29 六合成任務與明確自報紀錄
 
 launcher新scope先建立六任務空白計畫，產品Tk另有唯讀「六項合成任務」分頁；U1–U6涵蓋來源／事實未知／人工處置與pending／篩選返回／歷史查證／備份限制。--record-task只收明確步數、秒數、錯誤及completed／failed／unresolved，每任務獨立exclusive檔、不覆寫；非法／缺值／NaN／改壞計畫拒絕，所有自報仍human_participation_verified=false，不自填成績。`reports/verify-desktop-ux-tasks-20261029-02`：2026-10-29 15:11（UTC+8）9/9、0skip、source_unchanged、Job自然退出0／remaining0／無強停；真Tk目標Text六標題／readonly斷言、真CLI紀錄、不spawn、真Job期限／EOF再驗，01為8項、02補UI／CLI為最終。`reports/build-desktop-ux-tasks-20261029-01`297檔hash／275檔編譯。b8b3b24（+127/−0）已普通同步main／開發ref；這是人類驗收前置，仍無真實參與者結果，不與產品能力或EDR比較混為完成。

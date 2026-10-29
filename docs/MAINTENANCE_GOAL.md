@@ -1,5 +1,11 @@
 # EventGuard 目前目標
 
+## 2026-10-29 最新接續：DESKTOP-FIXTURE-REOPEN
+
+DESKTOP-UX-HUMAN-FIXTURE的新scope／控制能力封鎖／真Tk／有界真Job／六任務與未認證自報前置已驗，185項受影響整合、0skip及275檔來源編譯，逐單元普通同步main；真實參與者結果仍待，來源／成績不能由模型代填。下一具體缺口為同一保存合成scope跨程序重開，目前fresh-only拒絕所有既有scope，因此同程序重建視窗不能代替這一條驗收。
+
+驗收：只接受本專案reports內已生成且有界的合成scope，逐項核對schema／四synthetic／路徑，排他保護拒絕同時兩個owner；先沿用既有Runtime／Job契約，不信任任意標記為權限、不讀安裝live、不重seed／reset資料。每個新attempt寫新收據與任務紀錄，不覆寫舊證據；第一真Job保存人工狀態／調查後自然退出，第二真Job重開同一資料仍一致，pending／receipt守恆且退出／殘留各自可核對，非法／不完整scope拒絕。不以clone新scope冒充同資料重啟；控制層→launcher／真Tk切片，每單元立即普通同步main並守兩個500行上限。此為既有重開條件的工程前置，真人／Web200%、原生覆蓋／24h／reboot、恢復來源可信根／容量釋放仍各自未驗，平台目標active。
+
 ## 2026-10-29 最新接續：DESKTOP-UX-HUMAN-FIXTURE
 
 桌面時間／轉換衝突／返回上下文已實作，173項受影響整合與266檔來源編譯通過，逐單元普通同步main。下一最高價值可執行工作沿既有P2 UX-HUMAN：準備安全、可重現的桌面合成任務入口，讓真正參與者能評估未知與缺證據，而非無限增加小功能或用自動化冒充真人。

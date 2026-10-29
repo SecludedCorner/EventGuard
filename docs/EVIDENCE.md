@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-29：真人桌面合成入口前置最終整合
+
+`reports/verify-desktop-ux-fixture-final-20261029-01` UTC07:16:43：26個受影響模組185/185、0skip、source_unchanged、275檔語法通過，Job自然退出0／remaining0／無強停。獨立真Windows Job／合成Tk deadline及owner_eof均原handle自然exit0／Job0／無強停，索引同目錄launcher-scenarios.json；另有真Tk／SQLite控制與紀錄路由，未執行原生採集／模型／ACK。`reports/build-desktop-ux-fixture-final-20261029-01`297檔hash及275檔編譯；`reports/release-prep-desktop-ux-fixture-20261029-01`綁定95f90b2bdc920a0e7067620d9f34a32aaccb6cc8，377檔可重現，archive SHA256 43f5abad287b0183344fdf0c09981eb1834144287210f8426f2bf49d50f5c4ac，非tag／release／真人驗收。
+
+各單元先build／相關測試再指定檔案commit、普通push及ff-only整合／push main，兩ref直接核對95f90b2，兩工作樹及待整合差異0。相對父commit：d83f3c5 `feat(desktop): isolate synthetic acceptance data and capabilities` +188/−0；69233b0 `feat(desktop): keep synthetic acceptance clearly labelled in Tk` +112/−6；2b31687 `feat(desktop): bound synthetic Tk sessions by owner and duration` +119/−0；b8b3b24 `feat(desktop): launch finite synthetic acceptance in an owned Job` +127/−0；95f90b2 `feat(desktop): provide six synthetic tasks and explicit operator reports` +172/−0。所有人類成績仍未提供，測試輸入不當參與者證據；跨程序同scope重開入口未完成，下一切片補此缺口。
+
 ## 2026-10-29：六任務／獨立自報紀錄
 
 `reports/verify-desktop-ux-tasks-20261029-02` UTC07:11:49：9/9、0skip、source_unchanged、Job自然退出0／remaining0／無強停；真Tk精確任務分頁Text readonly及U1–U6、真CLI手動紀錄路由不spawn、空白計畫／缺值／非法／NaN拒絕、逐任務exclusive防覆寫；兩真Job合成Tk deadline／EOF自然退出再驗。01為8項，02補UI及CLI斷言為最終；`reports/build-desktop-ux-tasks-20261029-01`297檔hash／275檔編譯。測試輸入不作真人結果，session participant_results=null，紀錄human_participation_verified=false，無採集／模型／ACK。
