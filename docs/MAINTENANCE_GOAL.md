@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-30 CLASS-002完成／接CLASS-003
+
+傳輸與持久化83/83／0skip，317來源編譯，未新增採集或模型。下一CLASS-003讓operator來源摘要可讀完整固定分類、樣本64與未保留數；驗缺摘要／錯計數保持未知、舊樣本不當全量原因、分類已知不覆蓋來源partial／denied與安全未評估。既有資料與歷史原生缺口不回填，不重查主機；產品觸點沿既有source-status，不新增平行入口。
+
 ## 2026-10-30 可執行缺口已重現：COLLECTOR-ERROR-CLASS
 
 CLASS-001核心已修64筆後錯誤不影響推導、壞錯誤誤ok：70/70／0skip與316來源編譯。下一CLASS-002產品觸點為WindowsCollectors coverage/attempt與Runtime快照：驗完整分類守恆、只固定stage/status、舊資料無摘要不假完整、錯總數不採信、invalid row／timeout追加失敗仍一致。僅合成provider資料，不重新盤點主機；分類可用不等於來源完整或安全。沿既有pipeline分片，不新增平行管理文件。

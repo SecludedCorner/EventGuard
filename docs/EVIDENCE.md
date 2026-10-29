@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-30：分類摘要跨collector／診斷／Runtime保存投影
+
+verify-error-classification-propagation-core-20261030-03為83/83、0skip／317語法、source_unchanged、Job自然0／remaining0／無強停；build340hash／317編譯。合成80錯誤保留64明細，但全量固定分類穿過attempt／coverage／既有診斷operation與Runtime快照；invalid row核81總數，額外PRIVATE欄位不輸出。缺欄／bool總數／負值／重複／未知stage／總數矛盾／超60組／prefix下界矛盾各為null未知。legacy宣告80error卻ok空資料保持partial；未按樣本比例推估。red與誤用query_services的失敗另保留，修測試沿allowlisted operation，不改產品界線。非新實機或來源完整驗收。
+
 ## 2026-10-30：完整錯誤輸入的固定分類與狀態修正
 
 verify-error-classifications-red-20261030-01四項均未過（2fail/2error），含prefix後不同失敗及壞紀錄假ok；舊結果保留。修正後verify-error-classifications-core-20261030-03六模組70/70／0skip，339hash／316編譯、source_unchanged／Job自然0／remaining0／無強停。合成80筆核64明細仍有16 field/unknown計入、invalid分類無PRIVATE內容、空成功／explicit timeout不串意義；native deadline兩分支核總數守恆。分類只有有限stage/status/count，沒有新host資料或新查詢。WindowsCollectors上傳／持久化接續單元尚未DONE；原生partial不變安全。

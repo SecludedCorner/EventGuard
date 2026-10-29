@@ -92,6 +92,38 @@ def error_classifications(errors):
                        for (stage, status), count in sorted(groups.items())]}
 
 
+def verified_error_classifications(value, total, retained):
+    """Validate bounded counts against the declared total and retained evidence.
+
+    None means unavailable/inconsistent, never an extrapolated zero or success.
+    This checks a provider contract, not the authenticity of its observations.
+    """
+    if not isinstance(value, dict) or type(total) is not int or not 0 <= total <= 2**31-1:
+        return None
+    if type(value.get('total_count')) is not int or value['total_count'] != total:
+        return None
+    unknown, groups = value.get('unclassified_count'), value.get('groups')
+    if type(unknown) is not int or not 0 <= unknown <= total or not isinstance(groups, list) or len(groups) > 60:
+        return None
+    counts = {}
+    for group in groups:
+        if not isinstance(group, dict):
+            return None
+        stage, status, count = group.get('stage'), group.get('status'), group.get('count')
+        if (not isinstance(stage, str) or stage not in STAGES | {'unknown'}
+                or not isinstance(status, str) or status not in STATUSES - {'ok'}
+                or type(count) is not int or not 1 <= count <= total or (stage, status) in counts):
+            return None
+        counts[stage, status] = count
+    if sum(counts.values()) != total or unknown > sum(n for (s, t), n in counts.items() if s == 'unknown' or t == 'unknown'):
+        return None
+    prefix = error_classifications(retained)
+    if any(counts.get((g['stage'], g['status']), 0) < g['count'] for g in prefix['groups']):
+        return None
+    return {'total_count': total, 'unclassified_count': unknown,
+            'groups': [dict(stage=s, status=t, count=n) for (s, t), n in sorted(counts.items())]}
+
+
 def payload(rows=None, errors=None, *, truncated=False, status=None, checks=None):
     rows, raw_errors = list(rows or []), list(errors or [])
     classifications = error_classifications(raw_errors)

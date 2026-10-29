@@ -13,7 +13,7 @@ from .runner import Runner
 from .bounded_json import BoundedJSONError, loads
 from .progress import Progress, invoke_with_progress
 from .contract import (SECTION_IDS, STATUSES, FIELDS, LIMITS, MAX_ERRORS,
-                       clean_errors, evidence, error_from_exception)
+                       clean_errors, evidence, error_from_exception, verified_error_classifications)
 
 COMMON = r'''
 $ErrorActionPreference='Stop'
@@ -335,6 +335,7 @@ class WindowsCollectors:
                 invalid_rows = sum(not isinstance(row, dict) for row in data["rows"][:LIMITS[section_id]])
                 reported_errors = data.get("error_count", 0)
                 error_count = max(len(errors), reported_errors) if type(reported_errors) is int else len(errors)
+                classifications = verified_error_classifications(data.get('error_classifications'), error_count, errors)
                 errors_truncated = data.get("errors_truncated") is True
                 if invalid_rows:
                     row_error = evidence("object", "invalid_collector_row", exception_type="ContractError",
@@ -345,7 +346,14 @@ class WindowsCollectors:
                     errors_truncated = errors_truncated or len(errors) + invalid_rows > MAX_ERRORS
                     errors = ([row_error] + errors + [row_error] * (min(invalid_rows, MAX_ERRORS) - 1))[:MAX_ERRORS]
                     error_count += invalid_rows
+                    if classifications is not None:
+                        groups = {(g['stage'], g['status']): g['count'] for g in classifications['groups']}
+                        groups['object', 'error'] = groups.get(('object', 'error'), 0) + invalid_rows
+                        classifications = dict(classifications, total_count=error_count,
+                            groups=[dict(stage=s, status=t, count=n) for (s, t), n in sorted(groups.items())])
                 attempt = {"backend": name, "status": data["status"], "errors": errors,
+                           "error_count": error_count, "errors_truncated": errors_truncated,
+                           "error_classifications": classifications,
                            "elapsed_ms": int((time.monotonic() - before) * 1000),
                            "process": process_metadata(data.get("process"))}
                 if invalid_rows:
@@ -363,6 +371,7 @@ class WindowsCollectors:
             result["coverage"]["process"] = process_metadata(data.get("process"))
             result["coverage"]["errors"] = errors
             result["coverage"]["error_count"] = error_count
+            result["coverage"]["error_classifications"] = classifications
             result["coverage"]["errors_truncated"] = errors_truncated
             result["coverage"]["checks"] = clean_checks(data.get("checks"))
             rows = data["rows"]
@@ -406,7 +415,7 @@ class WindowsCollectors:
                 result["status"] = "partial" if usable else "error"
                 result["coverage"].update(invalid_row_count=invalid_rows, reason="invalid_collector_row")
                 attempt["status"] = result["status"]
-            if result["status"] == "ok" and (truncated or errors or any(r["status"] != "ok" and not optional_absence(section_id, r) for r in result["rows"])):
+            if result["status"] == "ok" and (truncated or error_count or errors or any(r["status"] != "ok" and not optional_absence(section_id, r) for r in result["rows"])):
                 result["status"] = "partial"
             result["coverage"]["truncated"] = truncated
             if section_id == "listeners":
@@ -438,6 +447,8 @@ class WindowsCollectors:
             for row in result["rows"])
         result["coverage"]["error_count"] = max(
             len(result["coverage"]["errors"]), result["coverage"].get("error_count", 0))
+        result['coverage']['error_classifications'] = verified_error_classifications(
+            result['coverage'].get('error_classifications'), result['coverage']['error_count'], result['coverage']['errors'])
         if result["coverage"]["errors"] and "reason" not in result["coverage"]:
             result["coverage"]["reason"] = result["coverage"]["errors"][0]["reason_code"]
         result["elapsed_ms"] = int((time.monotonic() - started) * 1000)
@@ -468,6 +479,8 @@ def coverage_metadata(section):
         if type(value) is int and 0 <= value <= 2**31-1:
             result[key] = value
     result["errors_truncated"] = source.get("errors_truncated") is True
+    result['error_classifications'] = verified_error_classifications(
+        source.get('error_classifications'), result.get('error_count'), result['errors'])
     if source.get("process_identity_status") in STATUSES:
         result["process_identity_status"] = source["process_identity_status"]
     if source.get("process_identity_reason") == "listener_process_identity_unavailable":
@@ -479,6 +492,8 @@ def coverage_metadata(section):
         result["reason"] = reason
     attempts = source.get("attempts", [])
     result["attempts"] = [{"backend": a["backend"], "status": a["status"], "errors": clean_errors(a.get("errors")),
+                           "error_classifications": verified_error_classifications(
+                               a.get('error_classifications'), a.get('error_count'), clean_errors(a.get('errors'))),
                            **({"process": process_metadata(a["process"])} if isinstance(a.get("process"), dict) else {}),
                            **({"source_status": a["source_status"]} if a.get("source_status") in STATUSES else {}),
                            **{key: a[key] for key in ("invalid_row_count", "error_count")

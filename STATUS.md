@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-30 COLLECTOR-ERROR-CLASS-002 傳輸與持久化已驗
+
+WindowsCollectors現驗摘要總數、最多60組固定stage/status、正整數／唯一組及保留prefix下界；錯型別／重複／矛盾／缺摘要為null未知，不按prefix外推。invalid row追加錯誤同步總數／分類，attempt、coverage_metadata、既有診斷API與Runtime保存／讀回均保留核對後的摘要；legacy只報error_count但ok／無明細也降為partial。verify-error-classification-propagation-core-20261030-03七模組83/83、0skip／source_unchanged／Job自然0／remaining0／無強停，build340hash／317來源編譯；前次API測試誤用不存在operation已改沿既有query_persistence_diff(kind=services)，未擴API。只有合成資料、無native/model。下一CLASS-003接operator來源摘要，分清完整分類與64筆樣本、缺／錯摘要保持unknown；不把error分類核對當資料認證、來源完整或安全。
+
 ## 2026-10-30 COLLECTOR-ERROR-CLASS-001 核心修正已驗
 
 red四案重現：64筆以後的錯誤狀態未參與推導，且單一壞紀錄[None]被當ok空集合。contract.payload現用完整錯誤輸入推導狀態、保留原64筆明細上限，額外只計固定stage/status（最多60組），未知分類計數不含任意reason/operation/名稱；clean_errors也拒絕非字串分類而不崩潰。native budget增加timeout時同步總數／分類，不丟prefix後錯誤。verify-error-classifications-core-20261030-03六模組70/70、0skip、source_unchanged／Job自然0／remaining0／無強停；build同範圍339hash／316來源編譯。無原生採集／模型；不能把分類完整稱來源完整或安全。下一CLASS-002驗WindowsCollectors傳輸、歷史快照與失敗回退，舊provider無摘要保持缺口，不外推原生179error的未知115筆。

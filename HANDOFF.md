@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-30 CLASS-002 pipeline已驗
+
+83/83／0skip及317來源編譯，完整固定分類經驗證後過attempt／collector／診斷API／Runtime保存讀回，無摘要或矛盾為null；詳STATUS。下一CLASS-003只接operator來源呈現：保留sample_occurrences與全量分組不同意義，不讓摘要蓋過partial或變安全，舊資料照常unknown。無native/model、每單元push/main與兩個500行基準。
+
 ## 2026-10-30 COLLECTOR-ERROR-CLASS-001 已實作
 
 payload完整錯誤狀態與固定分類計數已修，70/70／0skip與316來源編譯，見STATUS。下一CLASS-002將可驗證的有限分類帶過WindowsCollectors／attempt與保存／讀回；舊provider未提供或總數矛盾必須unknown、不按64prefix外推、不放寬來源partial。無新native/model，兩個500行基準／逐單元main整合續用。
