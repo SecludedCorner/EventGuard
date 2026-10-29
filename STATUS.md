@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面歷程備份控制層
+
+沿用Catalog單一唯讀交易及既有write_backup，DesktopController.backup_history只明確保存本機reports檔、fsync／讀回核對、不覆寫、不清理／還原／釋放容量；活動前置失敗不寫檔，缺live DB不初始化。`reports/verify-desktop-history-backup-20261029-02`：2026-10-29 13:42（UTC+8）65/65、0skip、source_unchanged、Job自然退出0／remaining0／無強停，真合成SQLite／檔案測DB bytes、pending1／receipt0及既有檔守恆；01為新增測試錯用活動回條欄位，修正對照operation_started後通過。`reports/build-desktop-history-backup-20261029-01`280檔hash／258檔編譯通過，Tk入口尚待接線。
+
+前一桌面／診斷整合`reports/verify-desktop-diagnosis-final-20261029-01`於13:41為175/175、0skip、Job自然退出無殘留，來源build279檔hash／257檔編譯通過；`reports/release-prep-desktop-diagnosis-20261029-01`綁定65d9d839c73679e10e1473ac68e06faf0c0d4790，359檔可重現。d28d817及65d9d83已普通同步main／開發ref；Web／真人／原生待驗不變。
+
 ## 2026-10-29 歷史查證真Tk／合成SQLite閉環
 
 新增摘要實際Tk→真Catalog驗partial／拒讀／保存列數／截斷／current_only，重開文字一致、切換無保存事件不沿用別件、保存hash衝突清掉舊摘要並停用人工處置、修復後只讀恢復。`reports/verify-desktop-diagnosis-widgets-20261029-01`：2026-10-29 13:38（UTC+8）81/81、0skip、source_unchanged、Job自然退出0／remaining0／無強停；DB bytes與pending2／receipt0守恆，DiagnosticAPI.query／ACK哨兵未觸發。`reports/build-desktop-diagnosis-widgets-20261029-01`：279檔hash及257檔編譯通過。d28d817（+120/−4）已普通同步main／開發ref；不將Tk／synthetic升格為真人／Web／原生驗收。

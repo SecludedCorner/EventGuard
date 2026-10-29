@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面歷程備份控制層與前版診斷整合
+
+`reports/verify-desktop-history-backup-20261029-02` UTC05:42:48：65/65、0skip、source_unchanged、Job自然退出0／remaining0／無強停；真合成SQLite／檔案驗備份hash／讀回、來源DB bytes、pending1／receipt0守恆、不覆寫與非法檔名／活動失敗／缺DB拒絕。01新增測試錯用state欄位，改驗既有operation_started=False契約；`reports/build-desktop-history-backup-20261029-01`280檔hash及258檔編譯通過。僅控制層，Tk按鈕未完成，無刪除／還原／容量釋放／原生／模型／ACK。
+
+前版`reports/verify-desktop-diagnosis-final-20261029-01` UTC05:41:27：175/175、0skip、source_unchanged、Job自然退出無殘留；`reports/build-desktop-diagnosis-final-20261029-01`279檔hash／257檔編譯。359檔可重現來源包`reports/release-prep-desktop-diagnosis-20261029-01`綁定65d9d839c73679e10e1473ac68e06faf0c0d4790，archive SHA256 ea12af4beeab4f30c54ef178239c36ec2eee1cffad884e6d2bb1c97c115237de，非release或真人驗收。
+
 ## 2026-10-29：歷史查證真Tk／SQLite閉環
 
 `reports/verify-desktop-diagnosis-widgets-20261029-01` UTC05:38:45：81/81、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真Tk新摘要＋真合成Catalog驗partial／拒讀／截斷／current_only、重開一致、切換不串查證；故意損壞保存hash後清舊摘要／禁用處置，fixture修復後只讀恢復。DB bytes及pending2／receipt0守恆、DiagnosticAPI.query／ACK哨兵未觸發。`reports/build-desktop-diagnosis-widgets-20261029-01`279檔hash及257檔編譯通過；不是Web／真人／原生證據。

@@ -350,6 +350,18 @@ class DesktopController:
             return {"state": "investigation_saved", "event_id": event_id, "investigation": saved,
                     "system_query_executed": False, "model_calls": 0, "ack_performed": False}
 
+    @recorded("gui_backup_history")
+    def backup_history(self, filename):
+        """Explicit bounded local backup, without overwriting or changing history."""
+        from .events.catalog import EventCatalog
+        from .events.disposition_history_backup_file import write_backup
+        with self._lock:
+            if self._closed:
+                return {"state": "error", "reason": "desktop_controller_closed"}
+            saved = write_backup(self.root, filename, EventCatalog(self.root, "live").handling_history_snapshot())
+            return dict(saved, state="history_backup_saved", system_query_executed=False,
+                        model_calls=0, ack_performed=False)
+
     @recorded("gui_set_status")
     def set_status(self, event_id, status, operation_id):
         """Save a human decision with an explicit idempotency key, never ACK."""

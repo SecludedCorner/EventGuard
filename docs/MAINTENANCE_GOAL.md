@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 DESKTOP-HISTORY-BACKUP 接續容量恢復前置
+
+歷史查證摘要真Tk／合成閉環與175項整合已驗，前述缺口已補。既有P2 HISTORY-RECOVERY仍缺完整恢復，先完成可獨立驗收的桌面明確備份入口：沿用CLI backup-history／Catalog唯讀快照及不覆寫write_backup，顯示本安裝live範圍、敏感識別僅留本機、未刪歷程／未釋放容量／目錄項耐久性未驗。控制層65/65及258檔來源編譯已驗；下一動作真Tk按鈕／回條及真合成SQLite閉環，不新增還原或清理。每單元立即普通同步main，完整恢復與Web／真人／原生仍各自待驗。
+
 ## 2026-10-29 DESKTOP-DIAG-SUMMARY 可執行接續
 
 桌面人工狀態／清單158/158整合已驗及逐單元普通同步main。下一個可執行缺口是已保存查證在Tk摘要只有時間，需展開raw JSON才可分辨partial／拒讀／截斷。驗收：沿用Catalog已驗證的診斷事件身分與hash，歷史觀察時間／結果／來源coverage／截斷分列，缺失或不符維持未知，不推導安全、修復或新增關聯；pure projection後以真Tk＋真合成SQLite驗讀取守恆，無新查詢／模型／ACK。依賴既有review schema及detail只讀路徑；下一動作核對契約並實作有界摘要，每單元立即普通同步main，Web／真人／原生待驗保留。
