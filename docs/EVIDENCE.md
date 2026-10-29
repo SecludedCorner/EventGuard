@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面最終整合與可重現來源
+
+`reports/verify-desktop-save-final-20261029-01` UTC 2026-10-29 02:33:00：10個受影響模組121/121、0skip、source_unchanged、251檔語法無誤，Job自然退出0／remaining0／無強停，fixture／合成Tk及標明的自有Windows Job API，未原生採集／模型／ACK。`reports/release-prep-desktop-investigation-20261029-01`：ce557888581a230b3ea8f12e39c60f058dec02aa，353檔可重現，archive SHA256 ea6f876554ceffcd395b17b2c060b573dfe22832aa2787d8d76efd18f75f942e。直接ls-remote兩ref一致，工作樹及對origin/main差異0；各單元增刪見STATUS，不把普通push或此包當release／CI／真人／Web／原生通過。
+
 ## 2026-10-29：桌面snapshot失敗與可恢復未知
 
 `reports/verify-desktop-snapshot-failure-20261029-03` UTC 2026-10-29 02:30:02：61/61、0skip、source_unchanged、Job自然退出0／remaining0，真Tk驗舊來源／事件清除、筆數及設定狀態未知、詳情保存禁用、重讀恢復且原fixture設定／pending不變；01原程式重現1失敗，02／03通過。`reports/build-desktop-snapshot-failure-20261029-02`：273檔受測hash相符、251檔編譯。原生輸入另有2次有界fixture，工具inventory未暴露目標，click／keyboard=0，未冒稱通過；reports/desktop-ui-acceptance-20261029-01與02的guardian-exit均自然0／remaining0／未強停。回條不含私人視窗清單／截圖，不影響既有真Tk元件證據或新增採集／模型／ACK。

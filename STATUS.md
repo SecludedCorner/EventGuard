@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面增量最終整合121項通過
+
+控制層acadbaa（+94/−2）、按鈕13d9d94（+101/−4）、真Tk閉環1940a3b（+143/−1）、操作文件caa19c5（+26/−10）、讀取失敗ce55788（+44/−0）均逐單元build／測試後commit／普通push開發ref，再普通ff-only整合main，未累積超過500行。直接遠端核對兩ref=ce557888581a230b3ea8f12e39c60f058dec02aa，原專案與整合工作樹乾淨／對origin/main差異0。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-save-final-20261029-01 --timeout-seconds 180`加該目錄summary所列10個`--module`，2026-10-29 10:33（UTC+8）121/121、0skip、source_unchanged、251檔語法通過，Job自然退出0／remaining0／無強停；不與前述重疊定向相加。`reports/release-prep-desktop-investigation-20261029-01`綁定ce55788完整SHA，353檔可重現，未建立tag／release。真人／Web／原生及原生輸入待驗保留；純文件本節沿用該版本來源build／相關測試並核對引用，不停止已授權桌面工作。
+
 ## 2026-10-29 桌面狀態讀取失敗明示未知
 
 修正snapshot例外只顯錯誤但保留舊資料：七來源／筆數／事件與詳情改為未知或清空，依賴舊詳情的保存禁用；接收及自動狀態明示未知，不宣稱已撤銷權限／停止，未變更保存設定。恢復讀取後可重新顯示原事件。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-snapshot-failure-20261029-03 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop_investigation_widgets --module test_desktop_source_consistency`：2026-10-29 10:30（UTC+8）61/61、0skip、source_unchanged、Job自然退出0／remaining0；01先重現1失敗，02／03通過，最終為03。`reports/build-desktop-snapshot-failure-20261029-02`：273檔hash相符、251檔編譯通過。caa19c5已同步main／開發ref。另原生點選有界2次，CUA未列專用fixture視窗，未送點選／鍵盤；01／02兩自有子程序皆合作自然exit0／remaining0／未強停，回條在reports/desktop-ui-acceptance-20261029-01及02。此局部待驗不阻止桌面開發，Web／真人／原生採集仍各自待驗。
