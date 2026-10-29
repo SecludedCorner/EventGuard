@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-30：原生新視窗與URL政策停止
+
+reports/web-ui-native-window-policy-20261030-01/browser-tool-result.json：原生建立一個專用New Tab窗口（（ID僅存本機reports）），初次立即清單尚未列出、後續核對確認存在，沒有重複Ctrl+N。CUA選取該自有窗口即回政策停止：無法可靠辨識目前browser URL。所有介面輸入即停止、沒有替代工具繞過；未導覽、啟動fixture／採集／模型／ACK或保存私人內容。空白視窗關閉未確認，清理待正常工具可用後fresh inventory核對，不猜handle。真200%未DONE，342來源hash仍匹配288項及319編譯的原版。
+
 ## 2026-10-30：本批最終288項與來源包
 
 verify-error-classification-final-20261030-01綁eb1433b，共26模組288/288／0skip，38.025秒／source_unchanged／319語法，Job自然0／remaining0／無強停；build342hash／319編譯。含實際Tk＋合成資料、真PowerShell interpreter的固定合成helpers、API與保存投影、既有Web讀取與明示fake CLI，未新啟真模型／原生採集，非完整庫或正式防守驗收。分段70／83／118／68與舊286均保留各自scope，不相加。

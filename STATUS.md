@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-30 真200%替代路徑被介面工具政策停止
+
+web-ui-native-window-policy-20261030-01未重試visibility API：受支援原生Ctrl+N建立唯一專用空白Chrome視窗，未讀既有頁面內容、未啟動fixture或導覽；CUA綁定時明示無法可靠辨識Windows目前browser URL以執行政策，停止本turn Computer Use。已停止所有app輸入，沒有用其他工具繞過，不稱使用者未授權。真200%仍未驗；新空白視窗（ID僅存本機reports）尚未確認關閉，沒有本次EventGuard worker／server殘留可收尾。
+
+純狀態紀錄核342來源hash與最終288/288／0skip及319來源編譯相同，未改產品或重跑同fixture。上一goal turn為四單元實作及實測進度；本次新證據界定工具停止條件，完整目標未完成，不能為求PASS放寬。下一僅在工具允許正常URL核對後，以fresh inventory核自有空白窗口並先合作關閉；不自動重試本turn被停止的介面操作。
+
 ## 2026-10-30 CLASS-FINAL 本批已完成整合，完整AI盯哨仍active
 
 產品eb1433b：reports/verify-error-classification-final-20261030-01共26模組288/288、0skip，38.025秒、source_unchanged、319語法、Job自然0／remaining0／無強停；build342hash／319來源編譯。包含全量錯誤分類、wire驗證、Runtime／診斷／operator保存讀回、實際Tk新欄、既有Web讀取契約與detector→明示fake CLI閉環，沒有新原生掃描／真agent／模型呼叫。各單元70、83、118、68為重疊定向，不與288相加。
