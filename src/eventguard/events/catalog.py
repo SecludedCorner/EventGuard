@@ -269,6 +269,8 @@ class EventCatalog:
                     "pending_handling_requests": self._pending_desktop_requests(db, event_id, row["payload_hash"], self.namespace),
                     "investigation_revisions": read_revisions(db, event, diagnosis=diagnosis),
                     "investigation": self._saved_investigation(db, event, row["catalog_source"])}
+            from ..agent_policy_view import snapshot as policy_snapshot
+            result["default_agent_policy"] = policy_snapshot(event, result["status"])
             if event["event_type"] == "advisory.changed":
                 from ..intelligence.views import public_advisories
                 result["advisory_context"] = public_advisories(self.runtime.root, self.namespace,

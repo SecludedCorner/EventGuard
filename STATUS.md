@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 預設agent政策唯讀契約落地（UI待接）
+
+Catalog詳情新增default_agent_policy，只核對預設severity／event type／人工狀態及pending／retry，符合與否不代表排程到期、接收授權、實際dispatcher自訂政策、已喚醒或防守成效。錯誤metadata／政策維持unknown；沒有新動作或門檻變更。`reports/verify-agent-policy-view-20261029-01`5模組61/61、0skip、source_unchanged、Job自然0／remaining0／無強停；真SQLite以high/new、warning/new、high/handled與select_pending逐案核對一致，詳情讀取DB位元組／pending／receipt不變。`reports/build-agent-policy-view-20261029-01`334hash／311來源編譯。此單元只有資料契約，尚不能稱桌面呈現已完成；接Tk文字與實際操作。
+
 ## 2026-10-29 P2-DETECT-001初版固定corpus落地
 
 新增scripts/validate_detection.py與10個固定合法合成案例，實際detector→預設configured rules→原子保存state/events→唯讀dispatch資格；不改門檻、不receive／ACK／啟動agent。`reports/verify-detection-corpus-20261029-02`5模組81/81、0skip／source_unchanged／Job自然0／remaining0／無強停；`reports/build-detection-corpus-20261029-02`332hash／309編譯。`reports/detection-corpus-20261029-03/detection-summary.json`逐案10/10，metadata規則預期7命中、FP0／FN0、良性無事件2、未觀測1另列不當TN；不是攻擊TP／偵測率。只有雙防護關閉與來源timeout兩案符合預設high／critical資格；warning的全介面監聽／新增持久化不會因此自動喚醒。inbound掃描無連線／封包遙測，明示未觀測。

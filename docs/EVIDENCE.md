@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：預設agent政策條件唯讀快照
+
+`reports/verify-agent-policy-view-20261029-01`UTC10:41:29，61/61、0skip（5模組），source_unchanged、311語法、Job自然0／remaining0／無強停；build同名334hash／311編譯。Catalog詳情同一事件的預設政策條件分列severity／type／人工狀態／delivery排除，與真SQLite選取在已到期無lease案例一致；讀取保留DB位元組、pending1／receipt0。ACK與未知metadata／政策不報條件符合。不包含due／lease／真正啟動授權或自訂dispatcher設定，尚未接UI。
+
 ## 2026-10-29：固定偵測corpus與dispatch資格
 
 `reports/verify-detection-corpus-20261029-02`UTC10:37:58：81/81、0skip、309語法、source_unchanged、Job自然0／remaining0／無強停；build同名332hash／309編譯。`reports/detection-corpus-20261029-03`10/10逐案、corpus SHA256 36bc976bb9be5d949722fdf4f4672b195c8efece1afa46d3d3a96e7ebe0de66f，metadata-rule TP7／FP0／FN0／TN2／unobserved1，不是攻擊偵測率。policy資格2、receipt全0，source在選取前後位元組相同，report含明確預設policy；同目錄guardian-exit自然0／remaining0／無強停。01包裝原因碼錯，缺退出證據；02包裝修後成功、03綁最終policy來源，未覆寫舊報告。無模型／主機採集／真喚醒，不把無遙測掃描當TN。

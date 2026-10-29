@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 預設政策資料已驗／接Tk呈現
+
+default_agent_policy唯讀契約61/61、0skip／311編譯，詳情不寫DB，見STATUS。下一Tk顯示明確「預設條件」，原因用固定詞彙且綁event ID；符合仍不代表due／lease／接收授權／真喚醒／防守成功，自訂dispatcher條件也不在此快照。未知／錯案回條呈現未知；實際Tk核對warning、高severity與人工handled變化，不啟動模型／ACK。
+
 ## 2026-10-29 固定corpus已驗／接事件agent門檻說明
 
 10案detector→保存→dispatch資格已跑，81/81／0skip與309來源編譯，命令與逐案證據見ENGINEERING_PLAN／STATUS。只有雙防護關閉／來源timeout符合預設high／critical，wildcard listener及新增持久化仍warning；沒有inbound掃描遙測，該案未觀測不當TN。下一桌面事件詳情唯讀呈現政策資格／未達門檻原因，與接收權限、真喚醒、ACK、防守效果分離；不為提高數字擅改嚴重度或授權。

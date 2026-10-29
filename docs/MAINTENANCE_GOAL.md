@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 DESKTOP-AGENT-QUALIFICATION資料契約已驗
+
+61/61／0skip、311來源編譯；Catalog已提供預設政策條件快照及固定排除原因，並與真SQLite選取比對，未改任何門檻／權限。下一接實際Tk呈現與合成操作：warning指出未選嚴重度，high符合仍聲明非授權或實際喚醒，人工handled另列排除、unknown／錯ID不確定化；自訂dispatcher、due／lease另待核對。UI未實作前不標此項DONE。
+
 ## 2026-10-29 目前可執行：DESKTOP-AGENT-QUALIFICATION
 
 P2-DETECT-001初版10案固定corpus已落地，81/81／0skip及309來源編譯（有限metadata規則，不是攻擊偵測率）；預設僅high／critical，warning線索不自動喚醒、未觀測掃描另列。下一於桌面事件詳情用既有事件與可核對政策呈現資格及不符原因；不調門檻、不改權限，不把policy符合稱agent已收件。先純契約／控制層，再實際Tk合成驗收；政策未知保持未知。各單元build／測試後普通同步main，整體AI盯哨active。
