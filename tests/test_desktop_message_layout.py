@@ -41,3 +41,18 @@ class DesktopMessageLayoutTests(unittest.TestCase):
                 self.assertTrue(button.winfo_ismapped())
                 self.assertLessEqual(button.winfo_rooty()+button.winfo_height(),
                                      self.window.winfo_rooty()+self.window.winfo_height())
+
+    def test_handling_scope_notice_wraps_at_minimum_client_size(self):
+        self.select(self.anchor)
+        self.ui.events.master.master.select(self.ui.events.master)
+        self.window.deiconify()
+        self.window.geometry('850x620')
+        self.window.update()
+        label = self.find_label(self.ui.handling_status)
+        self.assertIn('重開後先查保存歷程', self.ui.handling_status.get())
+        self.assertLessEqual(int(label.cget('wraplength')), label.winfo_width())
+        self.assertLessEqual(label.winfo_reqheight(), label.winfo_height())
+        for button in self.ui.handling_buttons.values():
+            self.assertTrue(button.winfo_ismapped())
+            self.assertLessEqual(button.winfo_rooty()+button.winfo_height(),
+                                 self.window.winfo_rooty()+self.window.winfo_height())

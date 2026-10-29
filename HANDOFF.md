@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 未確認可見性已驗／接續要求持久化
+
+13/13、0skip及283檔來源編譯；原事件未確認提示、切換不串顯、最小視窗換行與兩Job重開回歸已驗，見STATUS。目前只明示in-session限制，未持久化operation_id；下一DESKTOP-REQUEST-DURABILITY在既有runtime內做有界要求日誌，寫入意圖必須先於dispatch、無法保存則不變更狀態，身分綁定事件hash／namespace；重開僅恢復明確同ID核對選項，不自動重送，不把記錄當授權或ACK。先完成日誌原語的合成故障測試，再接worker／Tk及真Job跨程序未確認路徑，每單元立即普通同步main。
+
 ## 2026-10-29 失敗回饋及提交後未確認已驗
 
 DESKTOP-HANDLING-FAILURE通過67/67、0skip及283檔來源編譯，實際Tk分列容量／尚未建立操作紀錄；提交後activity.complete失敗保持未確認、同ID重試不覆蓋後來決定，pending／ACK守恆，見STATUS。下一驗收關注點是未確認要求跨GUI重開的可見性：目前operation_id只存在窗口記憶體，關窗後不得誤導使用者以為原要求可同ID重試；先核對退出／重開契約，再選不新增自動重送的最小改進。原生輸入局部待驗保留，不重複輪詢。

@@ -117,6 +117,29 @@ class DesktopHandlingWidgetTests(unittest.TestCase):
         self.assertEqual([row['status'] for row in self.catalog.detail(self.anchor)['handling_history']['entries']], ['handled', 'read'])
         self.assert_pending()
 
+    def test_uncertain_request_stays_visible_only_on_its_event_and_states_window_limit(self):
+        self.select(self.anchor)
+        original, calls = self.controller.set_status, []
+        def lose_reply(*args):
+            calls.append(args)
+            original(*args)
+            raise OSError('synthetic reply lost')
+        with patch.object(self.controller, 'set_status', side_effect=lose_reply):
+            self.ui.handling_buttons['handled'].invoke()
+            self.wait_for(lambda: '結果未確認' in self.ui.message.get())
+            self.wait_for(lambda: not self.ui._busy and self.ui._detail_document.get('status') == 'handled')
+            self.assertIn('未確認要求：已處理', self.ui.handling_status.get())
+            self.assertIn('同識別重試僅限本視窗；重開後先查保存歷程', self.ui.handling_status.get())
+            saved = self.store.path.read_bytes()
+            self.select(self.member)
+            self.assertNotIn('未確認要求', self.ui.handling_status.get())
+            self.select(self.anchor)
+            self.assertIn('未確認要求：已處理', self.ui.handling_status.get())
+            self.assertTrue(self.ui.handling_buttons['handled'].instate(['!disabled']))
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(self.store.path.read_bytes(), saved)
+        self.assert_pending()
+
     def test_switching_selection_during_save_keeps_decisions_bound_to_requested_event(self):
         self.select(self.anchor)
         original, entered, release = self.controller.set_status, threading.Event(), threading.Event()

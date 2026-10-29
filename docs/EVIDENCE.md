@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：未確認要求的事件及視窗範圍
+
+`reports/verify-desktop-uncertain-scope-20261029-01` UTC08:16:59：13/13、0skip、source_unchanged、Job自然0／remaining0／無強停。真Tk控件在提交後丟回條時顯示本事件「未確認要求：已處理」，切到另一事件不串顯、返回仍有提示及原按鈕可核對，set_status僅呼叫一次、DB bytes保留、pending2／receipt0。850×620實際Mapped Tk核對換行高度與四按鈕可見，跨程序真Tk保存讀回及返回焦點回歸通過；這不代表原生鍵盤／真人已驗。`reports/build-desktop-uncertain-scope-20261029-01`305檔hash／283檔來源編譯。畫面明示識別只保留本視窗，跨程序未確認要求持久化尚未實作。
+
 ## 2026-10-29：人工處置的確定失敗與提交後不確定
 
 `reports/verify-desktop-handling-failure-20261029-01` UTC08:13:28：67/67、0skip、source_unchanged、Job自然0／remaining0／無強停。真Tk／SQLite分別觸發歷程容量及activity.begin失敗，實際message顯示不同原因，DB bytes與pending保留；activity.complete在真正狀態提交後拋固定錯誤時，message只稱結果未確認、原operation_id保留且沒有自動重試。後續CLI改read，再按原handled要求用同ID重播，兩筆歷程handled→read不增不回退，pending2／receipt0，採集／spawn／ACK哨兵未觸發。`reports/build-desktop-handling-failure-20261029-01`305檔hash／283檔來源編譯，非真人或原生輸入驗收。

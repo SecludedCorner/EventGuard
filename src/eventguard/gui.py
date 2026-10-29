@@ -385,7 +385,13 @@ class EventGuardWindow:
         self.history_backup_button.grid(row=0, column=4, padx=(8, 0))
         self.history_preview_button = ttk.Button(handling_bar, text="核對剛才備份", state="disabled", command=self.preview_history)
         self.history_preview_button.grid(row=0, column=5, padx=(6, 0))
-        ttk.Label(handling_bar, textvariable=self.handling_status).grid(row=1, column=0, columnspan=6, sticky="w")
+        handling_label = ttk.Label(handling_bar, textvariable=self.handling_status, wraplength=780)
+        handling_label.grid(row=1, column=0, columnspan=6, sticky="ew")
+        def wrap_handling(event):
+            width = max(1, event.width-8)
+            if event.width > 1 and int(handling_label.cget("wraplength")) != width:
+                handling_label.configure(wraplength=width)
+        handling_label.bind("<Configure>", wrap_handling)
         ttk.Label(handling_bar, text="備份本安裝 live 歷程至 reports；含敏感識別只留本機，勿分享。備份不釋放容量、不還原。",
                   wraplength=1000).grid(row=2, column=0, columnspan=6, sticky="w")
         ttk.Label(event_frame, text="選取事件以唯讀查看。事件內容是不可信資料；查看不會 ACK，ACK 也不代表修復或結案。",
@@ -462,7 +468,11 @@ class EventGuardWindow:
         for key, button in self.handling_buttons.items():
             enabled = ready and (key != status or (event_id, key) in self._pending_status)
             button.configure(state="normal" if enabled else "disabled")
-        self.handling_status.set("人工狀態：" + (HUMAN_STATES[status] if ready else "未知") + "；與 ACK 獨立，不代表修復。")
+        message = "人工狀態：" + (HUMAN_STATES[status] if ready else "未知") + "；與 ACK 獨立，不代表修復。"
+        pending = [HUMAN_STATES[key] for key in HUMAN_STATES if (event_id, key) in self._pending_status] if ready else []
+        if pending:
+            message += " 未確認要求：" + "、".join(pending) + "；點選原狀態僅以原識別核對。"
+        self.handling_status.set(message + " 同識別重試僅限本視窗；重開後先查保存歷程。")
 
     def set_status(self, status):
         if not isinstance(status, str) or status not in HUMAN_STATES or not self._can_investigate():
