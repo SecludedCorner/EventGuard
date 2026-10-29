@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：產品Tk合成標示及操作閉環
+
+`reports/verify-desktop-fixture-widgets-20261029-02` UTC06:53:10：50/50、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真Tk＋新隔離Catalog／SQLite驗固定合成標示、非主機實測／prepare時間、原生／agent控制busy後仍停用、人工處置→備份→核對、pending4／receipt0、錯誤snapshot不去標示與同程序重建視窗已讀保留；native API／query／collect／spawn／ACK哨兵未觸發。01亦50項、02補初始說明為最終；`reports/build-desktop-fixture-widgets-20261029-01`291檔hash及269檔編譯。尚無真人、跨程序重啟或有界獨立入口證據，不冒稱相關完成。
+
 ## 2026-10-29：安全桌面合成scope
 
 `reports/verify-desktop-fixture-20261029-04` UTC06:47:39：29/29、0skip、source_unchanged、Job自然退出0／remaining0／無強停，真合成SQLite驗新scope／既有拒絕、安裝sentinel未觸及、7來源／4synthetic、真人工狀態／另存拒讀查證、pending4／receipt0、混入多件及相同總數非合成皆拒絕；OperatorAPI／native query／collect／spawn／ACK哨兵未觸發。01為28項初版、02加入執行時檢查29項，03補強插錯測試位置失敗，04移正為最終；不相加。`reports/build-desktop-fixture-20261029-01`290檔hash及268檔編譯。真人入口／任務紀錄與Tk合成標示未完成，沒有真人參與結果。

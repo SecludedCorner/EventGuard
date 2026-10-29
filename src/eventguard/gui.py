@@ -198,6 +198,7 @@ class EventGuardWindow:
         if type(refresh_ms) is not int or not 250 <= refresh_ms <= 60000:
             raise ValueError("invalid_desktop_refresh_interval")
         self.window, self.tk, self.ttk = window, tk, ttk
+        self.synthetic_fixture = getattr(controller, "synthetic_fixture", False) is True
         self.worker = ControllerWorker(controller)
         self.refresh_ms = refresh_ms
         self._closed = False
@@ -214,7 +215,7 @@ class EventGuardWindow:
         self._pending_status = {}  # Bounded, in-session keys for explicit uncertain retries.
         self._last_event = None
         self._timers = set()
-        self.window.title("EventGuard — 本機唯讀監看")
+        self.window.title("EventGuard — 合成固定情境（非主機實測）" if self.synthetic_fixture else "EventGuard — 本機唯讀監看")
         self.window.geometry("1080x760")
         self.window.minsize(850, 620)
         self.window.protocol("WM_DELETE_WINDOW", self.minimize)
@@ -222,7 +223,8 @@ class EventGuardWindow:
         self.counts = tk.StringVar(value="待接手 未知　已接收 未知　投遞失敗 未知")
         self.updated = tk.StringVar(value="尚無更新")
         self.source_gaps = tk.StringVar(value="正在讀取保存的來源觀察…")
-        self.message = tk.StringVar(value="按「開始」持續監看；按「暫停」停止採集，事件仍會保留。")
+        self.message = tk.StringVar(value="合成固定情境：採集、模型、設定與 ACK 已停用；只操作隔離的保存資料。" if self.synthetic_fixture else
+                                   "按「開始」持續監看；按「暫停」停止採集，事件仍會保留。")
         self.agent_enabled = tk.BooleanVar(value=False)
         self.agent_status = tk.StringVar(value="正在讀取接收設定…")
         self.automatic_enabled = tk.BooleanVar(value=False)
@@ -235,6 +237,7 @@ class EventGuardWindow:
         self.events_note = tk.StringVar(value="尚未載入事件；不能以此判定主機安全。")
         self.show_raw = tk.BooleanVar(value=False)
         self._build()
+        self._set_busy(False)
         self._request("snapshot")
         self._after(75, self._drain)
         self._after(self.refresh_ms, self._refresh)
@@ -435,9 +438,10 @@ class EventGuardWindow:
 
     def _set_busy(self, busy):
         self._busy = busy
-        for widget in (self.start_button, self.pause_button, self.refresh_button, self.agent_check,
+        for widget in (self.start_button, self.pause_button, self.agent_check,
                        self.automatic_check, self.automatic_browse, self.automatic_path):
-            widget.configure(state="disabled" if busy else "normal")
+            widget.configure(state="disabled" if busy or self.synthetic_fixture else "normal")
+        self.refresh_button.configure(state="disabled" if busy else "normal")
         self._update_investigate_button()
 
     def _can_investigate(self):
@@ -632,9 +636,9 @@ class EventGuardWindow:
             delivery=DELIVERY_FILTERS.get(self.delivery_filter.get(), "all"),
             handling=HANDLING_FILTERS.get(self.handling_filter.get(), "all"))
         self._snapshot = view
-        self.headline.set(view["headline"])
+        self.headline.set(("合成驗收｜" if self.synthetic_fixture else "") + view["headline"])
         self.counts.set(view["counts"])
-        self.updated.set("最後更新：" + view["updated_at"])
+        self.updated.set("情境準備時間：" + view["updated_at"] + "（非主機實測）" if self.synthetic_fixture else "最後更新：" + view["updated_at"])
         self.source_gaps.set(view["source_gaps"])
         self.agent_enabled.set(view["agent_enabled"])
         self.agent_status.set(view["agent_status"])

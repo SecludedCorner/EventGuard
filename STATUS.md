@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 產品Tk的合成標示與能力界線
+
+EventGuardWindow由控制器固定旗標辨認合成模式，視窗標題／頁首／準備時間及初始說明明示非主機實測；開始／暫停、接收／自動agent及選CLI控制持續停用，刷新與保存資料功能保留，busy結束不重新啟用。`reports/verify-desktop-fixture-widgets-20261029-02`：2026-10-29 14:53（UTC+8）50/50、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真Tk＋隔離真Catalog／SQLite驗處置→備份→核對、pending4／receipt0、錯誤資料不去標示與同程序重建視窗保留已讀；native API／query／collect／spawn／ACK哨兵未觸發。`reports/build-desktop-fixture-widgets-20261029-01`291檔hash／269檔編譯通過，01亦50項、02加初始說明斷言為最終。d83f3c5（+188/−0）已普通同步main／開發ref；有界Job入口與人類紀錄尚待，非跨程序重啟或真人驗收。
+
 ## 2026-10-29 隔離桌面合成控制器
 
 DesktopFixtureController只新建reports/desktop-ux-* scope，既有scope拒絕，不讀安裝live；內部data/live沿用桌面Catalog契約但僅含4件合成事件。七來源固定prepare時點、拒讀／部分／未知／過期分列，另存合成拒讀／截斷查證；採集、模型／agent設定、ACK與未知API均不代理，允許人工狀態／保存調查／本地備份核對。每次讀寫前有界檢查事件數及synthetic，混入非合成或多件即拒絕。`reports/verify-desktop-fixture-20261029-04`：2026-10-29 14:47（UTC+8）29/29、0skip、source_unchanged、Job自然退出0／remaining0／無強停，API／spawn／collector／ACK哨兵未觸發，安裝sentinel及pending4／receipt0保留；03為補強測試插錯位置，已移正，未提交失敗狀態。`reports/build-desktop-fixture-20261029-01`290檔hash／268檔編譯通過；尚未接合成banner、真人入口／任務紀錄，不宣稱真人已驗。
