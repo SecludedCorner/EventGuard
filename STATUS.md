@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 核對讀取時間與快照限制
+
+桌面備份核對回傳第一次讀檔前／第二次驗檔後的UTC時間，畫面正規化UTC並明示計數是區間內資料庫快照、不能證明之後狀態。缺失、非法、無時區、逆序或未來時間顯未知，不補現在時間。`reports/verify-desktop-preview-time-20261029-02`：2026-10-29 14:19（UTC+8）39/39、0skip、source_unchanged、Job自然退出0／remaining0／無強停；受控時鐘驗clock→file→DB→file→clock，真Tk直接驗區間及缺時間清舊顯未知，DB bytes及pending／receipt守恆。01的38/38為補Tk前，02為最終；`reports/build-desktop-preview-time-20261029-01`286檔hash／264檔編譯通過。未新增讀檔、掃描／模型／ACK，非真人／Web驗收。
+
 ## 2026-10-29 備份核對整合229項通過
 
 600ea414461263d560ebec40cf5857b47907af5d `feat(desktop): verify only the last locally created history backup`（+130/−4）及bff9d16f44a15487ca18c5d57b26cb50e242cefc `feat(desktop): expose explicit backup identity checks in Tk`（+151/−7）均各自來源build／相關測試後普通push並ff-only整合main，直接兩遠端ref核對bff9d16，兩工作樹及origin/main...HEAD差異0，未累積500行。`reports/verify-desktop-history-preview-final-20261029-01`：2026-10-29 14:13（UTC+8）27模組229/229、0skip、source_unchanged、263檔語法通過，Job自然退出0／remaining0／無強停；來源build285檔hash及263檔編譯通過。`reports/release-prep-desktop-history-preview-20261029-01`綁定bff9d16完整SHA，365檔可重現，未tag／release；純文件沿用來源build／相關整合並核對引用。

@@ -289,6 +289,22 @@ def handling_summary(value):
     return lines
 
 
+def history_preview_window(value):
+    """Describe a read interval; never manufacture a missing observation time."""
+    unknown = "核對讀取區間：未知；無法確認讀取時間。"
+    try:
+        raw = [value.get(key) for key in ("read_started_at", "read_finished_at")]
+        if any(not isinstance(item, str) or not 1 <= len(item) <= 80
+               or any(unicodedata.category(c) in {"Cc", "Cf", "Cs"} for c in item) for item in raw):
+            return unknown
+        start, end = (datetime.fromisoformat(item.replace("Z", "+00:00")) for item in raw)
+        if start.utcoffset() is None or end.utcoffset() is None or not start <= end <= datetime.now(timezone.utc):
+            return unknown
+        return "核對讀取區間：" + start.astimezone(timezone.utc).isoformat() + " → " + end.astimezone(timezone.utc).isoformat()
+    except (ValueError, TypeError, OverflowError):
+        return unknown
+
+
 def history_preview_text(value):
     """Counts only; no identifiers, provenance or restore inferred from a match."""
     counts = value.get("counts")
@@ -306,6 +322,7 @@ def history_preview_text(value):
     order = "目前歷程是備份前綴（非完整性證明）" if value["history_order"] == "exact_prefix" else "順序已分歧，不推論可還原"
     labels = ("缺少綁定", "事件缺失", "事件變動", "操作衝突", "已存在操作", "缺失操作")
     return ("本次備份身分核對（唯讀快照）\n"
+            + history_preview_window(value) + "\n計數是區間內的資料庫快照，不能證明之後狀態；時間未知時不推定目前有效。\n"
             + f"備份 {data['backup_records']} 筆；目前 {data['target_records']} 筆；身分衝突 {data['identity_conflicts']} 筆。\n"
             + "；".join(f"{label} {counts[key]}" for key, label in zip(keys, labels)) + "。\n"
             + order + "。\n來源、歷程完整性、容量及可恢復性均未知；零衝突不等於可信、完整或可還原。\n"

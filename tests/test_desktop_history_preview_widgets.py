@@ -1,5 +1,6 @@
 """Actual own Tk controls and real synthetic backup identity comparison."""
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 from eventguard.gui_presenter import history_preview_text
@@ -68,3 +69,21 @@ class DesktopHistoryPreviewWidgetTests(unittest.TestCase):
             self.wait_for(lambda: '歷程備份結果未確認' in self.ui.message.get())
         self.assertTrue(self.ui.history_preview_button.instate(['disabled']))
         self.assertIn('先前核對不能代表本次', self.ui.history_preview.get('1.0', 'end'))
+
+    def test_real_widget_discloses_controlled_interval_and_missing_time_is_not_filled(self):
+        name = self.backup()
+        original = self.controller.preview_history_backup
+        start, end = (datetime(2026, 10, 26, 0, 0, s, tzinfo=timezone.utc) for s in (0, 1))
+        def timed(filename):
+            with patch('eventguard.desktop.datetime') as clock:
+                clock.now.side_effect = (start, end)
+                return original(filename)
+        before = self.store.path.read_bytes()
+        with patch.object(self.controller, 'preview_history_backup', side_effect=timed):
+            self.preview('2026-10-26T00:00:00+00:00 → 2026-10-26T00:00:01+00:00')
+        self.assertIn('不能證明之後狀態', self.ui.history_preview.get('1.0', 'end'))
+        value = dict(original(name), read_started_at=None, read_finished_at=None)
+        with patch.object(self.controller, 'preview_history_backup', return_value=value):
+            self.preview('核對讀取區間：未知')
+        self.assertNotIn('2026-10-26', self.ui.history_preview.get('1.0', 'end'))
+        self.assertEqual(self.store.path.read_bytes(), before)

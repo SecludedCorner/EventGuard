@@ -373,10 +373,12 @@ class DesktopController:
             if self._closed or self._history_backup is None or filename != self._history_backup[0]:
                 raise ValueError("history_backup_not_known")
             identity = self._history_backup[1]
+            started_at = datetime.now(timezone.utc).isoformat(timespec="microseconds")
             value = read_known_backup(self.root, filename, identity)
             result = EventCatalog(self.root, "live").preview_handling_history(value)
             read_known_backup(self.root, filename, identity)  # Reject a change during the DB read.
             return dict(result, state="history_backup_previewed", path="reports/"+filename,
+                        read_started_at=started_at, read_finished_at=datetime.now(timezone.utc).isoformat(timespec="microseconds"),
                         system_query_executed=False, model_calls=0, ack_performed=False)
 
     @recorded("gui_set_status")

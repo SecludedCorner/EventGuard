@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：核對時間區間與實際Tk
+
+`reports/verify-desktop-preview-time-20261029-02` UTC06:19:43：39/39、0skip、source_unchanged、Job自然退出0／remaining0／無強停。受控時鐘證明區間包住兩次檔案驗證與DB快照；真Tk顯正確UTC、缺失時間清舊且不補造，純呈現驗無時區／非法／逆序／未來未知，DB bytes及pending／receipt守恆。01為38/38，02加新元件斷言為最終，非相加；`reports/build-desktop-preview-time-20261029-01`286檔hash／264檔編譯。沒有額外自動讀檔、原生採集／模型／ACK，非Web或真人驗收。
+
 ## 2026-10-29：桌面備份核對最終整合及遠端
 
 `reports/verify-desktop-history-preview-final-20261029-01` UTC06:13:02：27模組229/229、0skip、source_unchanged、263檔語法通過，Job自然退出0／remaining0／無強停；含真Tk／合成SQLite／本機暫存檔及自有Job API，不與前面重疊定向相加。`reports/build-desktop-history-preview-final-20261029-01`285檔hash及263檔編譯。`reports/release-prep-desktop-history-preview-20261029-01`綁定bff9d16f44a15487ca18c5d57b26cb50e242cefc，365檔可重現，archive SHA256 5d4b13b740163247f009b144cc5416cb854dc0c23eb3db1669548de47571ea39；無tag／release。沒有新增採集、模型或ACK，非真人／Web／原生驗收。
