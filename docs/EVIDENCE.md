@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：既有scope只讀資料界線
+
+`reports/verify-desktop-fixture-read-20261029-02` UTC07:34:06：30/30、0skip、source_unchanged、Job自然退出0／remaining0／無強停。保存人工handled／調查後只讀重開檢查及list／stats，DB bytes不變；缺資料不建立、marker非synthetic／缺receipts schema不修補、hash有效的非synthetic事件拒絕且DB bytes保留。01為29項，02補缺DB／非合成後為最終。`reports/build-desktop-fixture-read-20261029-01`300檔hash／278檔編譯；尚未控制器重開或跨程序attempt，不以預檢當正式恢復或來源認證。
+
 ## 2026-10-29：合成scope排他鎖
 
 `reports/verify-desktop-fixture-lock-20261029-01` UTC07:27:47：9/9、0skip、source_unchanged、Job自然退出0／remaining0／無強停；真OS-backed InstanceLock驗持有時第二取得拒絕、close及prepare失敗釋放、DB bytes守恆；真Tk／真Job launcher回歸。`reports/build-desktop-fixture-lock-20261029-01`298檔hash／276檔編譯。鎖metadata非驗收收據，不停止其他程序，既有scope唯讀預檢與跨程序重開尚待，未原生採集／模型／ACK。

@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 既有合成scope唯讀預檢
+
+SavedFixtureStore以Catalog唯讀連線核對有界marker／帶時區prepare時間、現行events／receipts schema與完整policy、固定4個synthetic ID、pending／attempt0／receipt0，再核對各事件保存內容。拒絕缺失或舊不完整schema，不建立DB／遷移／清理；提供只讀list／stats供後續重開使用。`reports/verify-desktop-fixture-read-20261029-02`：2026-10-29 15:34（UTC+8）30/30、0skip、source_unchanged、Job自然退出0／remaining0／無強停，保存人工狀態／調查可讀回、缺DB不建立、marker錯／缺schema／hash有效但synthetic=false拒絕，成功與拒絕均DB bytes不變。`reports/build-desktop-fixture-read-20261029-01`300檔hash／278檔編譯；01為29項、02補非合成／缺資料為最終。6de331f（+62/−1）已普通同步main；控制器重開與新attempt仍待。
+
 ## 2026-10-29 合成scope排他生命週期
 
 沿用Runtime.InstanceLock，合成控制器準備前取得scope鎖、正常close及準備失敗均釋放；不用PID強停或新機制，暫時monitor-owner只作既有鎖metadata，不作不可變驗收收據。`reports/verify-desktop-fixture-lock-20261029-01`：2026-10-29 15:27（UTC+8）9/9、0skip、source_unchanged、Job自然退出0／remaining0／無強停；第二owner在持有期間拒絕、close後可取得、失敗清自身鎖、DB bytes守恆，真Tk／真Job launcher回歸通過。`reports/build-desktop-fixture-lock-20261029-01`298檔hash／276檔編譯；重開讀取及新attempt仍待，不把此步當跨程序保留已驗。

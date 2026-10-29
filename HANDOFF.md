@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 唯讀重開前置已驗
+
+SavedFixtureStore不初始化／遷移／清理，核對schema／policy／固定四synthetic與pending／receipt及保存內容，30/30、0skip及278檔來源編譯通過，DB bytes守恆，見STATUS。下一步controller reopen=True先預檢再取得既有InstanceLock，鎖內再驗並用只讀store接原GUI；重建來源只依保存prepare時間與固定合成情境，不重seed，不將marker當原生或還原授權。
+
 ## 2026-10-29 既有排他鎖已接scope
 
 InstanceLock持有／close／準備失敗釋放及第二owner拒絕，9/9、0skip及276檔來源編譯通過，見STATUS；既有GUI與真Job launcher回歸亦通過。下一步在鎖內做既有scope唯讀schema／四synthetic預檢，再接reopen，不建立／修補缺失DB、不重seed，不讀安裝live或覆寫舊收據。
