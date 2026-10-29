@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 換行修正完成／namespace最終來源驗證
+
+第二檔test_desktop_request_store恢復原LF；`reports/verify-desktop-request-lf-final-20261029-01`：2026-10-29 16:32（UTC+8）31/31、0skip、source_unchanged、Job自然0／remaining0／無強停，`reports/build-desktop-request-lf-final-20261029-01`309hash／287編譯，git diff --check通過。產品namespace／Catalog功能不變，整檔換行修正採兩個新commit保留既有歷史，後續以此來源整合main，不掩飾344行保存失誤；controller／Tk仍待接線。
+
 ## 2026-10-29 換行修正紀錄（一）
 
 4ea33f9的namespace產品／測試通過，但寫檔把兩個測試檔轉CRLF，且命令未在diff --check失敗後停止，錯誤造成+212/−132（344行、未超500）整檔差異；已推開發ref，尚未main，保留歷史不amend。先單獨將test_desktop_requests恢復原LF，原語3/3、0skip、Job自然0／remaining0／無強停（reports/verify-desktop-request-lf-core-20261029-01），build同名309hash／287編譯通過。後續native命令加明確exit檢查；另一測試檔下一筆修正後才整合main。

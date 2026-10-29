@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 namespace切片換行修正已驗
+
+兩測試檔已用分別的新commit恢復原LF，不amend／重寫歷史；最終31/31、0skip、309hash／287編譯與diff --check通過，見STATUS。整合最終SHA到main後接前節controller工作；命令已改為native失敗明確exit，避免檢查失敗仍提交。原生／真人等獨立待驗不變。
+
 ## 2026-10-29 namespace與Catalog視圖已驗／接controller
 
 31/31、0skip與287檔來源編譯，日誌顯式namespace、Store入口比對、Catalog.detail同交易hash綁定視圖及unknown守恆已驗，見STATUS。下一controller切片：先根據已保存事件hash構成五欄意圖、prepare交易完成後才呼叫Catalog.set_status；外層活動完成失敗時必須保留意圖，不能在被recorded包住的方法內過早complete。只有最外層確認成功才以匹配gui操作證據清除；任何清除失敗保持結果未確認。先控制層與故障測試，再接Tk恢復ID／壞日誌禁寫及兩真Job，無自動重送。
