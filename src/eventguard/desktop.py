@@ -392,6 +392,18 @@ class DesktopController:
             result = EventCatalog(self.root, "live").set_status(event_id, status, source="gui", operation_id=operation_id)
             return dict(result, state="event_status_updated", system_query_executed=False)
 
+    def set_status_durable(self, event_id, status, operation_id):
+        """Explicit human request with a durable intent; never replay on read."""
+        from .desktop_request_control import save
+        return save(self, event_id, status, operation_id)
+
+    @recorded("gui_set_status")
+    def _set_status_bound(self, event_id, status, operation_id, payload_hash):
+        from .events.catalog import EventCatalog
+        result = EventCatalog(self.root, "live").set_status(event_id, status, source="gui", operation_id=operation_id,
+                                                          expected_payload_hash=payload_hash)
+        return dict(result, state="event_status_updated", system_query_executed=False)
+
     def snapshot(self):
         """Read one saved overview; no collector, model or scheduling operation."""
         with self._lock:

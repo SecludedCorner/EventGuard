@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 durable控制層已接先意圖後活動完成
+
+新增set_status_durable及內部hash綁定的recorded方法：先提交意圖，再執行含activity.begin／complete的狀態動作，最外層確認成功才刪除匹配要求；活動完成或要求清除失敗保持未確認／原ID。`reports/verify-desktop-request-control-20261029-01`：2026-10-29 16:37（UTC+8）18/18、0skip、source_unchanged、Job自然0／remaining0／無強停，真合成SQLite驗實際操作前已可讀意圖、提交後活動失敗跨controller重建原ID明確重試不回退較新read、prepare失敗不dispatch、清除失敗保留、pending1／receipt0。`reports/build-desktop-request-control-20261029-01`312hash／290編譯；b713f2e兩ref已一致。GUI仍走既有set_status，下一切片接durable路徑及原ID恢復，不把控制層當Tk已驗。
+
 ## 2026-10-29 人工狀態寫入交易的原hash閘道
 
 Catalog.set_status／Store.set_disposition接受可選expected_payload_hash，實際BEGIN IMMEDIATE內驗原payload後比對；不符在建立處置／歷程前拒絕，預備日誌與實際寫入可綁同事件證據。未傳參數的既有CLI／Web語意不變。`reports/verify-desktop-request-identity-20261029-02`：2026-10-29 16:35（UTC+8）32/32、0skip、source_unchanged、Job自然0／remaining0／無強停；真合成SQLite在Catalog讀後置換合法payload／hash，狀態仍new、無處置歷程、pending1／receipt0；合法hash重播不回退較新決定。01測試誤用不支援的low severity，改合法info後02通過。`reports/build-desktop-request-identity-20261029-01`310hash／288編譯；4fc7b70兩ref一致。controller／Tk持久化接線仍待。

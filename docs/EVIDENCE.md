@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：durable控制層與外層活動回條
+
+`reports/verify-desktop-request-control-20261029-01` UTC08:37:41：18/18、0skip、source_unchanged、Job自然0／remaining0／無強停。真controller／SQLite在_set_status_bound開始前已讀到原意圖；activity.complete在狀態commit後失敗不清意圖，新controller只於明確set_status_durable同ID重試才核對，讀回後來read／兩筆歷程、pending1／receipt0。prepare容量失敗哨兵證明未dispatch；complete持久化失敗固定completion_unconfirmed並保留ID，下一次明確重試才清除。`reports/build-desktop-request-control-20261029-01`312hash／290編譯。GUI尚未改呼叫，不冒稱真Tk或兩程序故障已驗。
+
 ## 2026-10-29：要求意圖到狀態寫入的身分競態
 
 `reports/verify-desktop-request-identity-20261029-02` UTC08:35:38：32/32、0skip、source_unchanged、Job自然0／remaining0／無強停。新expected_payload_hash可選參數由Catalog傳入Store，BEGIN IMMEDIATE內在任何處置／歷程寫入前比對；fixture在前讀後寫間換成另一合法事件payload及相應hash，固定event_status_identity_changed拒絕，人工狀態new／無歷程／pending1／receipt0。合法hash與原ID仍保持不回退後來決定；非法hash不寫DB。01fixture severity=low不合法有1error，02改info通過，無放寬schema。`reports/build-desktop-request-identity-20261029-01`310hash／288編譯。

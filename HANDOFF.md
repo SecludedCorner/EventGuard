@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 durable控制層通過／接Tk
+
+18/18、0skip與290檔來源編譯，set_status_durable先意圖commit→hash綁定recorded操作→外層確認才complete，提交後活動／清除失敗留ID，見STATUS。下一Tk切片需走durable控制層；detail pending_handling_requests須核對事件／namespace／hash／最多128與每欄，available才恢復原ID，unknown禁新人工寫入但保留唯讀；收到request_pending=true不得清記憶體ID，返回／重開不自送。現有合成controller whitelist也需接新方法，容量失敗現在會合理新增意圖，測試改驗原事件／歷程／pending守恆並證明意圖保留，不能再把DB bytes無變當完整契約。最後補兩真Job未確認重開，不停在控制層。
+
 ## 2026-10-29 綁定寫入hash已驗／接controller外層完成
 
 32/32、0skip與288檔來源編譯通過，Catalog→Store expected_payload_hash在真正狀態交易內核對，合法payload被置換也不能寫到新證據，見STATUS。接controller時將意圖原hash傳入此參數；外層activity完成回條未確認必須留下日誌，只有全部成功才complete，不提前清除。再接Tk原ID恢復／unknown禁寫及真Job兩程序故障驗收；整體active。
