@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-30 桌面原生輸入與人工處置／ACK獨立已驗
+
+reports/desktop-ux-native-host-20261029-02由非提升host啟動，使用受支援CUA選取唯一自有合成Tk，真滑鼠點事件頁→listener→已讀→已處理→清除→已處理篩選（2列），畫面全程顯待接手／ACK獨立；不是Tk.invoke或callback。合作點應用程式→暫停並結束後，SQLite唯讀核對listener handled／2操作、四件全pending／receipt0；10項收尾與守恆檢查全過，Job自然0／remaining0／無強停、GUI worker已退出、scan/model0。七來源合成狀態亦實際可見，真人metrics仍null，無真防守結論。
+
+前次01找到窗口但capture approval timeout／文字模式失敗，240秒deadline自然退出，稍後CUA才綁定故窗口已消失；證據原樣保留，不稱使用者拒絕。切換及時的受支援CUA新attempt後成功，無設定改動或猜窗口ID。兩張合成截圖只留本機reports、不提交Git。來源碼未變，純證據沿用338hash／315來源編譯及56/56、0skip；下一核對真Web200%所需可見專用窗口，沿可用CUA不重問；真人、24h/reboot、可信恢復與真agent防守結果各自未驗。
+
 ## 2026-10-29 非提升宿主比較消除兩項來源阻擋
 
 依既有開發授權比較不同工具執行環境，worker先以TOKEN_QUERY確認TokenElevation=0，未提權／UAC／改設定。task-com-root-host-20261029-02的同一Connect/GetFolder成功；原受限環境0x80070003保留。source-coverage-host-20261029-01再單查先前不完整四來源：Defender ok7列／error0、tasks ok220／error0；processes partial585／179error（僅64保留、115未知），listeners partial251／23 ListenerOpenProcess access_denied。總2.721679秒、每query≤5秒／總預算35秒，4內Job與外Job自然0／remaining0／無強停。只保存分類計數及自有Job、無rawfacts／模型／系統變更，不是完整來源或安全PASS，也不據token metadata推論特定拒讀根因。

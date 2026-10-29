@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-30 Tk原生操作關卡已補
+
+native-host-02用CUA實際點已讀→已處理及handled篩選，SQLite核pending4／receipt0／listener handled2操作，合作選單退出、Job自然0／無殘留，見STATUS及desktop-ux-native-host-20261029-02。01舊timeout保存；新路徑已可用，不再報全域原生窗口阻擋或重問同許可。沒有真人metrics／新模型／掃描。下一有界核真Web200%可見專用窗口；完整目標其餘真人／長跑／可信恢復／真防守獨立保留。
+
 ## 2026-10-29 非提升宿主路徑可讀Defender／tasks
 
 先讀STATUS最新：default與host worker皆核非提升，host root COM成功、既有4來源比較Defender ok7／tasks ok220；processes/listeners仍partial。每個Job自然0／remaining0／無強停，rawfacts/model/system changes0，證據source-coverage-host-20261029-01。不要再稱tasks／Defender全域不可用或重問同範圍；舊受限結果保留、根因未確定。下一沿同非提升宿主路徑做有限期合成Tk原生輸入驗收；其他200%／真人／長跑／可信恢復／真防守關卡獨立未完成。

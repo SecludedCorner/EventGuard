@@ -1,5 +1,9 @@
 # EventGuard 工作提醒
 
+## 2026-10-30 原生桌面工具已實際可用
+
+desktop-ux-native-host-20261029-02已用受支援CUA、唯一自有合成Tk做真滑鼠read→handled／篩選／合作退出，pending4／ACK0與SQLite一致。不要沿用舊窗口未列出／capture timeout宣稱目前全不可用，也不重問相同桌面驗收許可；先核當前窗口與本次證據。真人metrics仍未取得，截圖只留本機reports。
+
 ## 2026-10-29 工具執行邊界不等於OS提升
 
 同一Task root查詢在default工具環境unknown，在host工具環境ok；兩邊worker自查皆TokenElevation=0，未觸發UAC或改token／系統設定。host另驗Defender／tasks可讀，processes／listeners仍partial，見STATUS。後續必要診斷依已授權範圍使用可用路徑、在worker先核非提升，保存scope/hash/time與最小資料，不重問相同許可、不把受限路徑失敗視為全主機不可用，也不推論需管理員或安全。

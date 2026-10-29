@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-30：原生CUA實際操作Tk及落盤核對
+
+reports/desktop-ux-native-host-20261029-02/acceptance-summary.json記錄9個真滑鼠動作，未用invoke／fixture自動動作：事件選取、read→handled、篩選顯2件handled但仍pending、合作選單退出。SQLite mode=ro核listener handled、兩項操作、pending4／receipts0；10檢查全過，Job自然0／remaining0／forcibly_terminated=false、GUI worker exited、model/scan0、participant null。handled-proof.jpg與handled-filter-proof.jpg僅本機合成截圖，hash在summary，未進Git。這只驗工程操作與合成資料，非人類可用性／真防守。
+
+01保留capture timeout／foreground無process id／deadline後找不到窗口的原始失敗分類，自然退出而非強停；02採受支援CUA及時綁定後成功，不再沿用「原生工具無本版窗口」為現行阻擋。launch helper第一次import shadow失敗在啟動前，修正後另root留記錄，未改產品。純文件沿用338hash／315編譯與56項既有定向來源。
+
 ## 2026-10-29：不同非提升執行環境的真來源結果
 
 reports/task-com-root-host-20261029-02：worker先核TokenElevation=0，同root COM查詢ok／.0134秒／自然0／remaining0／無強停；原default unknown未洗掉。reports/source-coverage-host-20261029-01：Defender ok7、tasks ok220均error0；processes partial585／179error、保留64／未保留115；listeners partial251／23error全ListenerOpenProcess access_denied。總2.721679秒、4query與外Job均自然0／無殘留，不保存其他程序身份、名稱、路徑、地址／port或rawfacts；model0／系統變更0。兩路徑self-token結果均非提升／medium／restricted，不能單憑差異推論根因。這是真唯讀覆蓋增量，不代表安全或防守。

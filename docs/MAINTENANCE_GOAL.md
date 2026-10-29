@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-30 DESKTOP-NATIVE-HOST 已達本單元驗收
+
+實際CUA滑鼠操作read／handled／篩選及合作退出，SQLite核4pending／ACK0、2人工操作，10收尾檢查全過，原生輸入工程關卡已完成；不是人類六任務或主機防守驗收。來源碼未變／既有編譯與56項沿用，見STATUS。下一GUI-UX-200檢查可見專用browser窗口能否由已可用CUA驗真比例，不再沿舊window／browser失敗作全域阻擋；不能改系統／帳戶或用viewport假裝zoom。
+
 ## 2026-10-29 執行環境比較已解兩個來源阻擋
 
 HOST-CONTEXT-COVERAGE已驗：非提升host root COM成功，Defender ok7／tasks ok220；原default結果仍保留，processes/listeners仍partial，見STATUS／source-coverage-host-20261029-01。沒有新模型、系統設定或OS提權。下一最高可執行為DESKTOP-NATIVE-HOST：同非提升環境啟動有限期自有合成Tk，只有工具返回匹配窗口才做原生輸入並驗人工狀態與ACK獨立；無窗口則保留缺口、不猜ID或重複輪詢。其他獨立真環境關卡不因本次ok改DONE。
