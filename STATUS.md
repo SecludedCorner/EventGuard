@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 清單人工狀態的唯讀身分投影
+
+Desktop snapshot以最多100件已載入事件核對Catalog保存payload hash及delivery，獨立提供handling_status；缺失、重複、損壞、身分或delivery變動皆unknown，不沿用另一事件的決定，不建立缺失DB或寫入／ACK。`reports/verify-handling-projection-20261029-02`：2026-10-29 13:22（UTC+8）60/60、0skip、source_unchanged、Job自然退出0／remaining0／無強停；`reports/build-handling-projection-20261029-01`受測來源hash及254檔編譯通過。01的58/59為測試連線未關閉，已修正並加非法身分測試，非通過證據。下一單元接實際Tk清單分列與合成閉環；本單元尚非清單UI完成。
+
 ## 2026-10-29 桌面人工狀態最終整合145項通過
 
 cc21787（+103/−2）、7b102d5（+126/−7）、1ee626d（+128/−0）已各自build／相關測試後指定檔案commit、普通push開發分支及ff-only整合／push main，直接核對兩ref=1ee626d6dd11e0f7883de5e953eb10ecafee9564，兩工作樹與對origin/main差異0。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-handling-final-20261029-01 --timeout-seconds 180`加該目錄summary所列11個`--module`，2026-10-29 13:13（UTC+8）145/145、0skip、source_unchanged、253檔語法通過、Job自然退出0／remaining0／無強停。包含真Tk＋真合成Catalog及既有ACK分離fixture，人工狀態路徑不ACK；未執行原生採集或模型，不與前述重疊測試相加。`reports/release-prep-desktop-handling-20261029-01`綁定該SHA、355檔可重現。平台目標再回讀active／桌面人工狀態優先／保留Web及main授權皆相符；整體目標未完成，下一個桌面增量清單人工狀態可見性已排入既有文件。純文件沿用來源build／相關測試並核對引用。

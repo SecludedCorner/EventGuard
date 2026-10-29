@@ -170,7 +170,7 @@ class DesktopTests(unittest.TestCase):
         with patch('eventguard.source_status.source_status', return_value=saved):
             value = self.controller.snapshot()
         self.assertEqual(value["counts"], {"pending": 5, "acked": 4, "failed": 1})
-        self.assertEqual(value["events"], [event])
+        self.assertEqual(value["events"], [dict(event, handling_status="unknown")])
         self.assertTrue(value["monitoring"])
         source = next(item for item in value["sources"] if item["source_id"] == "listeners")
         self.assertEqual(source["status"], "partial")

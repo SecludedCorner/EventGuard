@@ -410,11 +410,17 @@ class DesktopController:
                           "acked": counts.get("ack", 0) if known else None,
                           "failed": counts.get("failed", 0) if known else None}
             listing = document.get("event_list") or {}
+            events = listing.get("events") if isinstance(listing.get("events"), list) else []
+            from .events.catalog import EventCatalog
+            handling = EventCatalog(self.root, "live").handling_states(events[:100])
+            projected = [dict(e, handling_status=handling.get(e.get("event_id"), "unknown"))
+                         if isinstance(e, dict) and isinstance(e.get("event_id"), str)
+                         else dict(e, handling_status="unknown") if isinstance(e, dict) else e for e in events[:100]]
             state = bg.get("state") or document.get("status") or "unknown"
             return {"state": state, "desired_enabled": bg.get("desired_enabled"),
                 "monitoring": monitoring, "updated_at": datetime.now(timezone.utc).isoformat(),
                 "namespace": "live", "sources": sources, "counts": count_view,
-                "events": listing.get("events", []), "events_truncated": listing.get("truncated"),
+                "events": projected, "events_truncated": listing.get("truncated") is True or len(events) > 100,
                 "events_total": listing.get("total") if type(listing.get("total")) is int and listing["total"] >= 0 else None,
                 "events_limit": 100,
                 "agent_delivery": agent, "last_action": self._last_action,

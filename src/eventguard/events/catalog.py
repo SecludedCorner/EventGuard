@@ -157,6 +157,45 @@ class EventCatalog:
             raise ValueError("saved_review_invalid")
         return validate_saved_review(value, event)
 
+    def handling_states(self, events):
+        """Bind at most 100 loaded payloads to human states in one RO snapshot.
+
+        Missing, duplicated, changed or unreadable identities stay unknown.
+        A changed delivery state also needs a new list read, not a mixed row.
+        """
+        if not isinstance(events, list) or len(events) > 100:
+            raise ValueError("handling_projection_limit")
+        ids = [e.get("event_id") for e in events if isinstance(e, dict)
+               and isinstance(e.get("event_id"), str) and IDENTIFIER.fullmatch(e["event_id"])]
+        unknown = {event_id: "unknown" for event_id in ids}
+        if not ids:
+            return unknown
+        try:
+            with self._read() as db:
+                if db is None:
+                    return unknown
+                selection, table = self._selection(db)
+                result = dict(unknown)
+                for event in events:
+                    if not isinstance(event, dict) or not isinstance(event.get("event_id"), str) or event["event_id"] not in unknown:
+                        continue
+                    event_id = event["event_id"]
+                    if ids.count(event_id) != 1:
+                        continue
+                    try:
+                        clean = validate_event(event)
+                        row = db.execute("SELECT " + selection + " FROM " + table + " WHERE e.event_id=?", (event_id,)).fetchone()
+                        if row is None:
+                            continue
+                        summary = self._summary(row)
+                        if row["payload_hash"] == event_payload_hash(clean) and event.get("delivery_status") == summary["delivery_status"]:
+                            result[event_id] = summary["status"]
+                    except (ValueError, TypeError, KeyError, StoreError):
+                        continue
+                return result
+        except (OSError, ValueError, StoreError):
+            return unknown
+
     def detail(self, event_id):
         _identifier(event_id)
         with self._read() as db:

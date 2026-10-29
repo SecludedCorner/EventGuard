@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：清單人工狀態唯讀投影
+
+`reports/verify-handling-projection-20261029-02` UTC05:22:53：60/60、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真合成SQLite驗implicit new、保存決定、缺DB不建立、payload／delivery變動、重複與非法身分皆未知，讀取DB bytes守恆；既有真Tk人工處置回歸通過。`reports/build-handling-projection-20261029-01`來源hash及254檔編譯通過。01測試漏關SQLite連線造成cleanup錯誤，已修正；未執行原生採集／模型，尚未完成清單UI顯示。
+
 ## 2026-10-29：人工狀態最終桌面整合與目標active
 
 `reports/verify-desktop-handling-final-20261029-01` UTC 2026-10-29 05:13:55：11個受影響模組145/145、0skip、source_unchanged、253檔語法無誤，Job自然退出0／remaining0／無強停，實際Tk元件＋合成metadata／SQLite及自有Windows Job API；人工狀態路徑不ACK，既有ACK資料另有fixture覆蓋，未原生採集／模型。`reports/release-prep-desktop-handling-20261029-01`：1ee626d6dd11e0f7883de5e953eb10ecafee9564，355檔可重現，archive SHA256 5ea9f73bc8081e695f3d354b6c21225de282f27a131f3c324247949df31ec0ea。兩ref已普通同步且工作樹／待整合差異0；get_goal回讀active、桌面優先／保留Web／普通main授權相符，未把目標編輯或push當整體產品完成／CI或真人驗收。
