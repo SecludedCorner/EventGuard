@@ -1,5 +1,10 @@
 # EventGuard 現況
 
+## 2026-10-30 單事件真模型範圍閘道
+
+新增準備／核對helper，綁合成事件、CLI binary、source、launch、四工具、單任務180秒與不重試；human-approval預設false，實際批准原文／UTC／hash一致且24小時內才可使用一次，來源改動即失效。verify-investigation-scope-20261030-01：5/5／0skip、330語法／編譯，Job自然0無殘留／強停，純fixture批准、模型0。下一接有限validate_delivery入口與端到端合成驗收，再準備實際待批目錄；CLI預設模型內部請求／token／費用沒有硬上限保證。
+
+
 ## 2026-10-30 四工具真stdio及自然退出
 
 verify-investigation-stdio-20261030-02：16/16／0skip、328語法／來源編譯；實際安裝SDK、私有Job子程序跑四工具，保存後pending1／ACK後pending0、回條flush、stdin未關就自然exit0、remaining0／無強停。退出核對四工具須明確profile，舊三工具仍嚴格。這是synthetic client、模型0，非真agent調查；下一有限單事件驗收入口與精確批准包，不碰browser政策／系統。
