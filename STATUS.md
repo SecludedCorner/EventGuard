@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 人工狀態真Tk／SQLite閉環
+
+真Tk四狀態保存／重開與gui歷程已驗，event payload hash及pending2／receipt0保留；提交後模擬回條遺失，UI明確沿用同ID重試，另一較新CLI決定不被回退，僅2筆歷程。實際每事件歷程滿載拒絕交易且DB hash不變；活動故障後讀回復原，忙碌重點只寫1筆，切換事件不串案。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-handling-widgets-20261029-02 --timeout-seconds 180 --module test_desktop_handling_widgets --module test_gui --module test_desktop_handling --module test_disposition_history_integration`：2026-10-29 13:10（UTC+8）57/57、0skip、source_unchanged、Job自然退出0／remaining0；01亦57/57，02收緊為真容量滿載與重點守恆，為最終。`reports/build-desktop-handling-widgets-20261029-01`：275檔hash相符、253檔編譯。7b102d5已逐單元普通同步main／開發ref；平台目標active。Web、真人／原生輸入與採集待驗不變。
+
 ## 2026-10-29 桌面人工狀態按鈕與同ID重試
 
 真Tk新增new／read／handled／ignored入口及人工狀態標示；未選取、詳情未知或忙碌時禁用，結果綁定事件／operation_id，保存後只讀重載。未確認要求保留同ID，明確再點原狀態才重送，不自動重試；最多128個未確認key，滿載拒絕新要求而不丟冪等識別。容量／活動前置失敗不宣稱成功。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-handling-buttons-20261029-01 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop_handling --module test_desktop_investigation_widgets`：2026-10-29 13:05（UTC+8）61/61、0skip、source_unchanged、Job自然退出0／remaining0，真Tk＋fixture及控制層SQLite。`reports/build-desktop-handling-buttons-20261029-01`：274檔hash相符、252檔編譯。cc21787已同步main；平台目標已用支援編輯介面保存桌面優先內容，get_goal回讀active，保留原Web及獨立驗收，不再是舊blocked卡。下一步真Tk→真Catalog人工狀態整合，尚未宣稱該閉環完成。
