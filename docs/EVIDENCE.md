@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：返回事件上下文與Tk焦點
+
+`reports/verify-desktop-preview-navigation-20261029-02` UTC06:28:15：48/48、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真映射Tk＋合成SQLite驗明確進入核對焦點目標、捲軸可見、返回保留事件及篩選／詳情、不增加核對讀取、DB bytes守恆；核對pending時先返回、晚到結果不搶頁。01的47/48找到映射前焦點仍在舊Text，已先完成idle幾何再focus_set，未放寬斷言。`reports/build-desktop-preview-navigation-20261029-01`288檔hash／266檔編譯；focus-lastfor不證明OS鍵盤／真人操作，沒有採集／模型／ACK。
+
 ## 2026-10-29：桌面呈現已知轉換衝突
 
 `reports/verify-desktop-history-transition-20261029-01` UTC06:22:42：32/32、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真Tk＋合成SQLite兩筆歷程故意有不連續previous_status，備份與DB hash／前綴一致、identity_conflicts0仍正確顯已知轉換衝突1；單筆顯未觀察，多筆一致顯非完整性證明，非法計數／未知格式保留未知。DB bytes、pending2／receipt0守恆；`reports/build-desktop-history-transition-20261029-01`287檔hash及265檔編譯。無還原／清理／模型／原生採集／ACK，非真人或Web驗收。

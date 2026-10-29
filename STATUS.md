@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 核對分頁返回／焦點與捲動
+
+獨立核對結果加捲軸及返回事件入口；明確核對後Tk焦點指向唯讀結果，返回保留事件／篩選並回到核對按鈕，忙碌時返回事件清單。01的47/48揭露分頁映射前focus_set無效，補齊idle幾何後移焦；`reports/verify-desktop-preview-navigation-20261029-02`：2026-10-29 14:28（UTC+8）48/48、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真Tk＋真合成SQLite驗返回不重讀、DB bytes守恆、核對未完成先返回後晚到結果不切頁，及既有最小視窗／長回條回歸。`reports/build-desktop-preview-navigation-20261029-01`288檔hash／266檔編譯通過。c586bd7（+79/−0）已普通同步main／開發ref；Tk focus-lastfor是應用焦點目標，不冒稱原生鍵盤／真人驗收。
+
 ## 2026-10-29 桌面備份內部轉換衝突明示
 
 沿用Catalog已回傳transition_order，桌面分開顯示相鄰轉換檢查對數／衝突數與not_observed／consistent／conflict；一致不當完整，缺失／非法或不可能計數未知，不公開個別事件。`reports/verify-desktop-history-transition-20261029-01`：2026-10-29 14:22（UTC+8）32/32、0skip、source_unchanged、Job自然退出0／remaining0／無強停，真Tk＋合成SQLite重現身分衝突0及前綴相符卻有內部衝突，與單筆無相鄰／多筆一致分開，DB bytes及pending2／receipt0守恆。`reports/build-desktop-history-transition-20261029-01`287檔hash／265檔編譯通過。9e92d4a（+108/−0）已普通同步main／開發ref；未新增還原、清理、模型／採集／ACK。

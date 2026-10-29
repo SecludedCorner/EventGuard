@@ -412,6 +412,11 @@ class EventGuardWindow:
         self.history_preview_frame.rowconfigure(0, weight=1)
         self.history_preview = tk.Text(self.history_preview_frame, wrap="word", height=8, state="disabled")
         self.history_preview.grid(sticky="nsew")
+        self.history_preview_scroll = ttk.Scrollbar(self.history_preview_frame, orient="vertical", command=self.history_preview.yview)
+        self.history_preview_scroll.grid(row=0, column=1, sticky="ns")
+        self.history_preview.configure(yscrollcommand=self.history_preview_scroll.set)
+        self.history_return_button = ttk.Button(self.history_preview_frame, text="返回事件與內容", command=self.return_from_history_preview)
+        self.history_return_button.grid(row=1, column=0, columnspan=2, sticky="w", pady=(8, 0))
         notebook.add(self.history_preview_frame, text="備份核對")
         self._show_history_preview("尚無核對結果；先明確備份，再按「核對剛才備份」。重開應用不保留本次檔案識別。")
         ttk.Label(outer, text="關閉視窗只會最小化，監看會繼續。要完全離開，請選「應用程式 → 暫停並結束」。",
@@ -487,6 +492,15 @@ class EventGuardWindow:
             self._preview_requested_name = self._confirmed_backup_name
             self._show_history_preview("正在唯讀核對，結果尚未確認；未執行還原或清理。")
             self.history_preview_frame.master.select(self.history_preview_frame)
+            self.history_preview_frame.master.update_idletasks()
+            self.history_preview.focus_set()
+
+    def return_from_history_preview(self):
+        self.events.master.master.select(self.events.master)
+        self.events.master.master.update_idletasks()
+        target = self.history_preview_button if self.history_preview_button.instate(['!disabled']) else self.events
+        target.focus_set()
+        self.reveal_selected_event()
 
     def backup_history(self):
         if self._busy or self._closed:
