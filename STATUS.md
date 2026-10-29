@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面人工狀態最終整合145項通過
+
+cc21787（+103/−2）、7b102d5（+126/−7）、1ee626d（+128/−0）已各自build／相關測試後指定檔案commit、普通push開發分支及ff-only整合／push main，直接核對兩ref=1ee626d6dd11e0f7883de5e953eb10ecafee9564，兩工作樹與對origin/main差異0。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-handling-final-20261029-01 --timeout-seconds 180`加該目錄summary所列11個`--module`，2026-10-29 13:13（UTC+8）145/145、0skip、source_unchanged、253檔語法通過、Job自然退出0／remaining0／無強停。包含真Tk＋真合成Catalog及既有ACK分離fixture，人工狀態路徑不ACK；未執行原生採集或模型，不與前述重疊測試相加。`reports/release-prep-desktop-handling-20261029-01`綁定該SHA、355檔可重現。平台目標再回讀active／桌面人工狀態優先／保留Web及main授權皆相符；整體目標未完成，下一個桌面增量清單人工狀態可見性已排入既有文件。純文件沿用來源build／相關測試並核對引用。
+
 ## 2026-10-29 人工狀態真Tk／SQLite閉環
 
 真Tk四狀態保存／重開與gui歷程已驗，event payload hash及pending2／receipt0保留；提交後模擬回條遺失，UI明確沿用同ID重試，另一較新CLI決定不被回退，僅2筆歷程。實際每事件歷程滿載拒絕交易且DB hash不變；活動故障後讀回復原，忙碌重點只寫1筆，切換事件不串案。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-handling-widgets-20261029-02 --timeout-seconds 180 --module test_desktop_handling_widgets --module test_gui --module test_desktop_handling --module test_disposition_history_integration`：2026-10-29 13:10（UTC+8）57/57、0skip、source_unchanged、Job自然退出0／remaining0；01亦57/57，02收緊為真容量滿載與重點守恆，為最終。`reports/build-desktop-handling-widgets-20261029-01`：275檔hash相符、253檔編譯。7b102d5已逐單元普通同步main／開發ref；平台目標active。Web、真人／原生輸入與採集待驗不變。

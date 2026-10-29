@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：人工狀態最終桌面整合與目標active
+
+`reports/verify-desktop-handling-final-20261029-01` UTC 2026-10-29 05:13:55：11個受影響模組145/145、0skip、source_unchanged、253檔語法無誤，Job自然退出0／remaining0／無強停，實際Tk元件＋合成metadata／SQLite及自有Windows Job API；人工狀態路徑不ACK，既有ACK資料另有fixture覆蓋，未原生採集／模型。`reports/release-prep-desktop-handling-20261029-01`：1ee626d6dd11e0f7883de5e953eb10ecafee9564，355檔可重現，archive SHA256 5ea9f73bc8081e695f3d354b6c21225de282f27a131f3c324247949df31ec0ea。兩ref已普通同步且工作樹／待整合差異0；get_goal回讀active、桌面優先／保留Web／普通main授權相符，未把目標編輯或push當整體產品完成／CI或真人驗收。
+
 ## 2026-10-29：真Tk人工決定與delivery守恆
 
 `reports/verify-desktop-handling-widgets-20261029-02` UTC 2026-10-29 05:10:46：57/57、0skip、source_unchanged、Job自然退出0／remaining0。真Tk按鈕＋真Catalog／合成SQLite驗四狀態gui歷程與重開、payload hash及pending2／receipt0不變；實際提交後回條遺失，UI同ID重播不回退另一CLI決定且歷程僅2筆；實際每事件容量滿載交易回滾DB hash相同、活動故障只讀復原、忙碌重點1筆、切換不串案。01亦通過，02加強容量／重點後為最終。`reports/build-desktop-handling-widgets-20261029-01`：275檔受測hash相符、253檔編譯；未原生採集／模型／ACK，非真人或Web驗收。
