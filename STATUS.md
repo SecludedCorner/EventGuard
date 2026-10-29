@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面歷史查證摘要
+
+event_summary已接有界另存查證摘要：歷史結果／時間、來源狀態／保存列數、截斷、current_only及缺口分列；Catalog先驗payload hash，呈現再核對事件ID及保存投影標記，缺失／不符未知，不推導目前安全或恢復。`reports/verify-desktop-diagnosis-summary-20261029-01`：2026-10-29 13:35（UTC+8）97/97、0skip、source_unchanged、Job自然退出0／remaining0／無強停，含純呈現、既有實際Tk回歸及Catalog診斷身分契約；新增摘要真Tk＋真合成SQLite閉環尚待下一單元。`reports/build-desktop-diagnosis-summary-20261029-01`：278檔hash及256檔編譯通過。ee8c256（+16/−0）已普通同步main／開發ref；沒有新增查詢／模型／ACK。
+
 ## 2026-10-29 桌面人工狀態／清單整合158項通過
 
 54f3f2a（+142/−2）、023644a（+89/−9）、d8e6e21（+97/−10）已各自build／相關測試後commit、普通push並ff-only整合main，兩遠端直接核對d8e6e214285e3b9bf1643e25e6ecbc700e3cddfa，工作樹與對origin/main差異0。`reports/verify-desktop-handling-visible-final-20261029-01`於2026-10-29 13:32（UTC+8）158/158、0skip、source_unchanged、255檔語法通過，Job自然退出0／remaining0／無強停；包含13個受影響模組及真Tk／合成SQLite，非真人／Web／原生驗收。來源build277檔hash相符；`reports/release-prep-desktop-handling-visible-20261029-01`綁定上述SHA，357檔可重現，未發布。get_goal回讀active，桌面優先與完整待驗保留。下一個桌面缺口：目前另存查證只顯時間，需唯讀摘要分開歷史結果／可見性／截斷及未知，先核對保存契約，不新增查詢或ACK。

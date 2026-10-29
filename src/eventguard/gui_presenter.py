@@ -289,6 +289,59 @@ def handling_summary(value):
     return lines
 
 
+def diagnosis_summary(value, event_id):
+    """Bounded saved Catalog projection; never issue or infer a new query."""
+    heading = "另存的查證結果（歷史觀察）"
+    diagnosis = value.get("latest_diagnosis")
+    if diagnosis is None and value.get("latest_diagnosis_is_saved") is True:
+        return [heading, "尚無已保存查證；目前狀態未知。"]
+    unknown = [heading, "保存查證身分或格式無法核對，保持未知。"]
+    if not isinstance(diagnosis, dict) or value.get("latest_diagnosis_is_saved") is not True:
+        return unknown
+    saved_event = diagnosis.get("event")
+    rows = diagnosis.get("observations")
+    if (not isinstance(event_id, str) or not event_id or not isinstance(saved_event, dict)
+            or saved_event.get("event_id") != event_id or diagnosis.get("mode") != "current_read_only"
+            or diagnosis.get("incident_conclusion") != "not_assessed" or diagnosis.get("ack_performed") is not False
+            or not isinstance(rows, list) or len(rows) > 2 or any(not isinstance(row, dict) for row in rows)):
+        return unknown
+    status = {"partial": "部分觀察，仍有缺口", "observed": "已記錄觀察，非安全判定"}
+    states = {"ok": "可讀，非安全判定", "partial": "部分可讀", "denied": "拒讀", "error": "讀取失敗",
+              "timeout": "逾時", "cancelled": "已取消", "not_applicable": "不適用", "unknown": "未知"}
+    sources = {"listeners": "監聽端點", "processes": "程序", "defender": "Defender",
+               "startup": "啟動項", "services": "服務", "tasks": "排程工作"}
+    lines = [heading, "查證時間：" + safe_text(diagnosis.get("observed_at"), 80),
+             "歷史結果：" + status.get(safe_text(diagnosis.get("status")), "未知"),
+             "保存事件雜湊由 Catalog 核對，非來源認證；歷史查證不能證明目前狀態，查無資料不等於恢復。"]
+    if not rows:
+        lines.append("尚無可列出的查證觀察；保持未知。")
+    for row in rows:
+        coverage = row.get("coverage") if isinstance(row.get("coverage"), dict) else {}
+        records = row.get("rows")
+        count = str(len(records)) if isinstance(records, list) and len(records) <= 20 else "未知"
+        truncated = "已截斷" if row.get("truncated") is True or coverage.get("truncated") is True else (
+            "未標記截斷（非完整性證明）" if row.get("truncated") is False else "截斷未知")
+        lines.append("• " + sources.get(safe_text(row.get("source")), "未知來源") + "："
+                     + states.get(safe_text(row.get("status")), "未知") + "；保存列數 " + count + "；" + truncated)
+        lines.append("  來源觀察時間：" + safe_text(row.get("observed_at"), 80))
+        if coverage.get("mode") == "current_only":
+            lines.append("  僅查證當時狀態，不能重建事件發生時的歷史。")
+        for key in ("error_code",):
+            if row.get(key) is not None:
+                lines.append("  原因碼（不可信資料）：" + safe_text(row[key], 96))
+        if coverage.get("errors_truncated") is True:
+            lines.append("  錯誤紀錄已截斷，缺口仍未知。")
+    gaps = diagnosis.get("uncertainties")
+    if isinstance(gaps, list):
+        for code in gaps[:16]:
+            lines.append("• " + UNCERTAINTIES.get(safe_text(code), "查證缺口：" + safe_text(code, 120)))
+        if len(gaps) > 16:
+            lines.append("更多查證缺口請展開結構化資料。")
+    else:
+        lines.append("查證缺口未知。")
+    return lines
+
+
 def event_summary(value):
     """Human headings over the existing saved guidance, never a new diagnosis."""
     value = value if isinstance(value, dict) else {}
@@ -330,9 +383,7 @@ def event_summary(value):
     limits = guidance.get("limitations")
     if isinstance(limits, list):
         lines.extend("• " + safe_text(item, 600) for item in limits[:4] if isinstance(item, str))
-    diagnosis = value.get("latest_diagnosis")
-    if isinstance(diagnosis, dict):
-        lines.append("有另存的查證結果（歷史觀察）時間：" + safe_text(diagnosis.get("observed_at"), 80))
+    lines.extend(["", *diagnosis_summary(value, event.get("event_id"))])
     lines.extend(["", "保存調查（只讀，不建立或更新）",
                   *investigation_summary(value.get("investigation"), event.get("event_id"))])
     lines.extend(["", "保存前版調查（只讀）",

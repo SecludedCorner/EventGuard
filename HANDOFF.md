@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 歷史查證摘要已接線
+
+DESKTOP-DIAG-SUMMARY呈現單元97/97、0skip及256檔來源編譯通過，見STATUS；另存查證不再只有時間。下一步新增摘要的真Tk→真合成Catalog閉環：拒讀／部分／截斷、無保存及hash衝突讀取失敗時不留舊結果，DB bytes、pending／receipt守恆且無隱式查詢／ACK；不以既有Tk回歸當新元件驗收。
+
 ## 2026-10-29 桌面人工處置與清單整合已保存
 
 最新產品d8e6e214285e3b9bf1643e25e6ecbc700e3cddfa已逐單元普通同步main／開發ref；158/158、0skip、255檔來源編譯及357檔可重現來源包通過，工作樹／待整合差異0，見STATUS。get_goal為active，未完成Web／真人／原生等獨立關卡。立即接續桌面已保存查證的可讀摘要：現行event_summary只列observed_at；先核對診斷event/hash契約，再呈現歷史狀態、來源可見性、截斷／未知，不執行查詢／ACK。

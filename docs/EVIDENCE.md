@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：歷史查證摘要呈現單元
+
+`reports/verify-desktop-diagnosis-summary-20261029-01` UTC05:35:55：97/97、0skip、source_unchanged、Job自然退出0／remaining0／無強停。驗有界來源／狀態／列數／截斷／current_only、無保存／不符ID／超限未知、惡意字串惰性轉義，及既有Tk／Catalog／診斷契約回歸。`reports/build-desktop-diagnosis-summary-20261029-01`278檔hash及256檔編譯通過；新摘要的真Tk＋真合成SQLite閉環另列下一單元，無原生查詢／模型／ACK。
+
 ## 2026-10-29：桌面人工處置可見性最終整合
 
 `reports/verify-desktop-handling-visible-final-20261029-01` UTC05:32:26：13模組158/158、0skip、source_unchanged、255檔語法無誤，Job自然退出0／remaining0／無強停；真Tk＋合成SQLite及自有Job API，不與前述重疊定向相加。`reports/build-desktop-handling-visible-final-20261029-01`277檔hash相符；`reports/release-prep-desktop-handling-visible-20261029-01`綁定d8e6e214285e3b9bf1643e25e6ecbc700e3cddfa，357檔可重現，archive SHA256 9f6d6994488acc4a9fd2203f3aa36a296f2f6526aeb8e0ad311b96d17e0c08e4。普通推送後兩ref一致，兩工作樹及對origin/main差異0；get_goal實際回讀active。未建立release或升格為真人／Web／原生驗收。
