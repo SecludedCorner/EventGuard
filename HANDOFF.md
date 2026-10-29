@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 日誌原語已驗／接續交易包裝
+
+16/16、0skip與285檔來源編譯通過，desktop_requests.pending／begin有界、hash綁定、原ID重播及衝突／schema拒絕已驗，見STATUS／EVIDENCE。仍未接產品；下一步沿EventStore既有BEGIN IMMEDIATE／_used_bytes／_ack_reserve把begin包成先持久化意圖的交易，新增僅匹配原四欄且已有確定結果才移除的完成操作；容量或完成持久化失敗保留要求、不宣稱確定未開始。之後接controller／Tk及兩真Job未確認重開，每切片build／測試後立即普通同步main，無自動重送、ACK或日誌授權。
+
 ## 2026-10-29 未確認可見性已驗／接續要求持久化
 
 13/13、0skip及283檔來源編譯；原事件未確認提示、切換不串顯、最小視窗換行與兩Job重開回歸已驗，見STATUS。目前只明示in-session限制，未持久化operation_id；下一DESKTOP-REQUEST-DURABILITY在既有runtime內做有界要求日誌，寫入意圖必須先於dispatch、無法保存則不變更狀態，身分綁定事件hash／namespace；重開僅恢復明確同ID核對選項，不自動重送，不把記錄當授權或ACK。先完成日誌原語的合成故障測試，再接worker／Tk及真Job跨程序未確認路徑，每單元立即普通同步main。

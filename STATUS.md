@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 未確認要求日誌原語，尚未接UI
+
+desktop_requests提供caller交易內的有界pending讀取／begin，不dispatch、不commit、不ACK；最多128筆，綁已保存事件hash／狀態／operation_id，原ID重播即使容量滿仍可核對，不同ID占用同要求拒絕；缺表唯讀不初始化、schema錯／容量不足不重建。`reports/verify-desktop-request-core-20261029-02`：2026-10-29 16:21（UTC+8）16/16、0skip、source_unchanged、Job自然0／remaining0／無強停；合成SQLite驗commit後重開保留ID、錯hash／容量拒絕後DB bytes不變、衝突不覆寫、pending1／receipt0。01因測試拿enqueue前而非落盤後hash有2error，已修正fixture，未提交失敗狀態。`reports/build-desktop-request-core-20261029-01`307檔hash／285檔編譯；fff3dd7（+70/−2）已同步兩ref。此原語尚未接EventStore容量收尾、controller／Tk或完成清除，不能宣稱跨程序未確認恢復已可用。
+
 ## 2026-10-29 未確認要求隨事件顯示，重開限制明示
 
 人工狀態列持續顯示本事件未確認的要求與原識別核對語意，切去其他事件不串顯、返回仍保留；固定明示同ID只限本視窗、重開先查歷程，不假稱識別已持久化。狀態列依實際寬度換行。`reports/verify-desktop-uncertain-scope-20261029-01`：2026-10-29 16:16（UTC+8）13/13、0skip、source_unchanged、Job自然0／remaining0／無強停；真Tk＋SQLite驗丟回條後選取往返不重送、DB bytes不變及pending2／receipt0，850×620提示與按鈕可見，兩個真Job／Tk同scope保存讀回回歸通過。`reports/build-desktop-uncertain-scope-20261029-01`305檔hash／283檔編譯；78db1f1（+50/−4）已同步兩ref。跨程序保留未確認operation_id仍缺，列下一工程，不用本提示升格已完成。

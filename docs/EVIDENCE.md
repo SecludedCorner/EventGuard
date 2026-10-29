@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：未確認要求日誌第一切片
+
+`reports/verify-desktop-request-core-20261029-02` UTC08:21:11：16/16、0skip、source_unchanged、Job自然0／remaining0／無強停。新desktop_requests原語需caller的write transaction／ACK預留與最終容量驗證；begin只插入有界要求，pending只讀，不觸發任何原要求。合成SQLite驗缺表讀取不改DB、保存commit後重開同ID、同ID在滿額仍冪等、錯事件hash／無空間拒絕及rollback bytes守恆、換ID與schema多欄拒絕不重置，pending1／receipt0。01兩error源於fixture使用enqueue前hash，02改用落盤事件hash通過；未降低身分標準。`reports/build-desktop-request-core-20261029-01`307檔hash／285檔來源編譯。未接產品呼叫路徑，worker／Tk與跨程序未確認恢復仍待。
+
 ## 2026-10-29：未確認要求的事件及視窗範圍
 
 `reports/verify-desktop-uncertain-scope-20261029-01` UTC08:16:59：13/13、0skip、source_unchanged、Job自然0／remaining0／無強停。真Tk控件在提交後丟回條時顯示本事件「未確認要求：已處理」，切到另一事件不串顯、返回仍有提示及原按鈕可核對，set_status僅呼叫一次、DB bytes保留、pending2／receipt0。850×620實際Mapped Tk核對換行高度與四按鈕可見，跨程序真Tk保存讀回及返回焦點回歸通過；這不代表原生鍵盤／真人已驗。`reports/build-desktop-uncertain-scope-20261029-01`305檔hash／283檔來源編譯。畫面明示識別只保留本視窗，跨程序未確認要求持久化尚未實作。
