@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 待確認清單Catalog切片已驗
+
+101件合成資料明確把anchor的created_at設舊，最近100件不含它；新增Catalog.pending_requests在單一RO交易驗全部要求／原event身分，按事件ID穩定分頁≤100、最多128事件，同事件多要求合併。下一頁的錯hash、hash有效但payload ID不符、缺DB／非法頁碼均unknown／拒絕，不略過成安全空集合。`reports/verify-desktop-pending-catalog-20261029-03`：2026-10-29 17:29（UTC+8）33/33、0skip、source_unchanged、Job自然0／remaining0／無強停，100＋1無重複、讀前後DB bytes不變／pending101／receipt0。01原fixture同批時間相同導致anchor仍在最近清單1fail，02明確舊時間32pass，03補row／payload ID錯綁為最終33。`reports/build-desktop-pending-catalog-20261029-02`320hash／298編譯；9fc27c2兩ref一致。尚未controller／Tk入口，不把Catalog結果當元件驗收。
+
 ## 2026-10-29 保留修正受影響整合155項通過
 
 產品1f987f794434297b2778becbac3ef28680c83403兩遠端ref一致、兩工作樹／對origin/main待整合差異0；e3f6824修正+123/−10、1f987f7交集證據+90/−0，皆逐單元build／測試後普通同步main。`reports/verify-desktop-retention-integration-20261029-01`：2026-10-29 17:20（UTC+8）24模組155/155、0skip、source_unchanged、297檔語法通過、Job自然0／remaining0／無強停，涵蓋outbox/inbox／MCP／日誌／Tk／兩程序恢復、處置歷程及調查修訂；不是全庫或真人。`reports/build-desktop-retention-integration-20261029-01`319hash／297檔編譯；STORAGE_RETENTION已補人工pin、與receiver保護分離及未知清理rollback，本純文件沿用該build。

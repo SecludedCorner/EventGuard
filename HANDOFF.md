@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 pending Catalog已驗／接有界controller與Tk
+
+33/33、0skip及298檔來源編譯，Catalog.pending_requests(limit≤100,offset≤128)提供最多128個不同事件、request_total與has_more；同事件要求合併、全體namespace／hash／row ID驗證、壞資料不部分略過，101件recent100缺口已重現並由後端找到，見STATUS。下一controller唯讀包裝／worker action與實際Tk入口，保持最近100模式及待確認分頁各自範圍；查看待確認時來源snapshot刷新不能覆蓋該頁，完成要求後明確刷新，返回最近清單要恢復原篩選／選取契約，不串回條。先控制層切片，再元件＋101件合成SQLite，不以本API代替Tk驗收，每單元立即普通同步main。
+
 ## 2026-10-29 保留缺陷已整合／接待確認入口
 
 產品1f987f7兩ref一致，24模組155/155、0skip、297檔來源編譯與Job自然0／無殘留，見STATUS／EVIDENCE；STORAGE_RETENTION已補人工event／receipt pin與receiver保護界線。下一DESKTOP-PENDING-ENTRY：先以101件以上合成事件確認最近100件會隱藏更早的未確認anchor；提供Catalog有界唯讀待確認事件清單（同事件多要求合併、最多128件、每頁≤100，namespace／hash／缺失／壞日誌unknown不略過），再接controller／實際Tk可找到並以原ID明確核對、切回最近清單與刷新不串資料。不得擴大原100件上限、讀頁不採集／模型／ACK；先後端切片再UI，每單元普通同步main。真人／Web／原生與恢復可信根仍獨立待驗，整體active。

@@ -139,6 +139,46 @@ class EventCatalog:
             result.update(events=[self._summary(row) for row in rows], total=total, has_more=offset + limit < total)
             return result
 
+    def pending_requests(self, *, limit=100, offset=0):
+        """RO journal discovery, stable event-ID pages; never dispatch or ACK.
+
+        Validate every referenced event in one snapshot, including later pages.
+        An invalid/off-page anchor makes the view unknown, never a partial zero.
+        """
+        from ..desktop_requests import pending, MAX_PENDING
+        if type(limit) is not int or not 1 <= limit <= 100 or type(offset) is not int or not 0 <= offset <= MAX_PENDING:
+            raise ValueError("desktop_request_page_invalid")
+        result = {"state": "unknown", "namespace": self.namespace, "events": [], "total": None,
+                  "request_total": None, "limit": limit, "offset": offset, "has_more": None,
+                  "model_calls": 0, "ack_performed": False, "data_trust": "untrusted_data"}
+        try:
+            with self._read() as db:
+                if db is None:
+                    return result
+                columns = EventStore._schema_columns(db)
+                if columns is None or "payload_hash" not in columns["events"]:
+                    return result
+                requests = pending(db, namespace=self.namespace)
+                groups = {}
+                for item in requests:
+                    groups.setdefault(item["event_id"], []).append(item)
+                selection, table = self._selection(db)
+                events = []
+                for event_id in sorted(groups):
+                    row = db.execute("SELECT " + selection + " FROM " + table + " WHERE e.event_id=?", (event_id,)).fetchone()
+                    if row is None or any(item["payload_hash"] != row["payload_hash"] for item in groups[event_id]):
+                        return result
+                    summary = self._summary(row)
+                    if summary["event_id"] != event_id:
+                        return result
+                    events.append(dict(summary, handling_status=summary["status"], payload_hash=row["payload_hash"],
+                                       pending_request_count=len(groups[event_id])))
+                page = events[offset:offset+limit]
+                return dict(result, state="available", events=page, total=len(events), request_total=len(requests),
+                            has_more=offset+len(page) < len(events))
+        except (OSError, sqlite3.Error, StoreError, ValueError, TypeError, KeyError):
+            return result
+
     @staticmethod
     def _saved_diagnosis(db, event):
         if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_reviews'").fetchone():

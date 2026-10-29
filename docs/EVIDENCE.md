@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：跨最近100件的待確認發現API
+
+`reports/verify-desktop-pending-catalog-20261029-03` UTC09:29:13：33/33、0skip、source_unchanged、Job自然0／remaining0／無強停。101件真合成SQLite中明確較舊anchor不在recent100，但Catalog.pending_requests找回並將兩要求合併1事件；101個不同anchor可分100＋1，事件ID排序穩定無重複。全體身分在同一RO交易驗證，第二頁錯hash仍使第一頁unknown，payload／journal hash有效但row ID與payload ID不同亦unknown，讀前後DB bytes守恆、pending101／receipt0，無dispatch／ACK。01 fixture同時間被舊排序涵蓋1fail，02改明確created_at32pass，03身分補強為33；build-desktop-pending-catalog-20261029-02為320hash／298編譯。尚無controller／Tk入口，不升格產品UI已完成。
+
 ## 2026-10-29：保留／inbox／桌面整合155項
 
 `reports/verify-desktop-retention-integration-20261029-01` UTC09:20:40：24模組155/155、0skip、source_unchanged、297檔語法、Job自然0／remaining0／無強停。outbox/inbox／MCP／日誌保留、原ID控制層與真Tk／兩程序、人工歷程及調查修訂受影響範圍均過；不同範圍不與既有235或56相加。`reports/build-desktop-retention-integration-20261029-01`319hash／297編譯；產品1f987f7兩ref直接一致、工作樹／待整合差異0。source35de80a→e3f6824保留修正+123/−10、1f987f7交集測試+90/−0，未累積500、未改上限／系統／帳戶／模型。STORAGE_RETENTION修正政策說明，仍不宣稱真人／實機或完整歷程恢復。
