@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-30 阻塞保存點／不要繼續無效循環
+
+已連續三次核實同一外部驗收前置無變化，無新產品工作或活體等待，依goal規則標blocked、不是完成；審核見reports/continuation-impasse-audit-20261030-03.json。來源與兩遠端7ce9d61一致／乾淨，真人六項仍0metrics，問題已問一次不重問。完整缺口與解除條件見STATUS最新；有新前置或新可重現缺陷再恢復，先核Git，不重跑同fixture／browser政策錯誤或新增交接取代工程。一般開發授權保留，沒有排程或會話外執行承諾。
+
 ## 2026-10-30 最新成功證據整合與通知範圍
 
 4dc1f76產品24模組344項為343pass／1skip（notification_icon_unavailable），source_unchanged／321編譯、Job自然0無殘留；固定通知案例另在非提升host私有Job 1/1、OS接受且自有icon/window關閉，原skip不改寫。非真人看見／桌面喚醒／agent喚醒，詳STATUS。424檔來源包可重現，無release。兩個產品單元已同步origin/main，下一從既有真200%、真人、原生身分／長跑、可信恢復及真防守等具體前置變化接續，不重跑相同fixture或重問相同開發授權，目標仍active。

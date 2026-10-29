@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-30 連續三次外部驗收前置未變／保存阻塞點
+
+continuation-impasse-audit-20261030-01～03連續三個goal turns均無產品進度，未假稱verified wait：沒有本輪已啟動的活體程序可等候。HEAD與兩遠端核對皆7ce9d61、工作區乾淨，344個受測來源hash未變；真人六任務仍0筆metrics，參與時間僅問一次尚未回覆。沒有重跑測試／原生query／瀏覽器或新模型，也未以文件保存冒充工程進度。
+
+已知剩餘必要關卡需外部前置：真200%的正常受支援URL政策路徑、實際人類結果／合法可比資料、具體24h/reboot範圍與環境、可信恢復來源根與無損容量契約、原生身分partial的有效證據，以及入站偵查／真agent防守成效驗收。不得以新憑證／提權／系統設定／模型或刪歷程跨越；一般唯讀開發許可仍有效、不重問。已知可執行修正及前置已保存，沒有新可重現缺陷或可用下一單元；本次依三次阻塞審核將平台目標標blocked而非complete，保留完整目標。條件改變後先核Git與相應證據，真人可參與時直接沿既有有限期合成桌面程序驗六任務，不建立排程或承諾會話外執行。
+
 ## 2026-10-30 成功證據跨入口整合已驗／通知skip另實測
 
 產品4dc1f76：verify-success-evidence-integration-20261030-01共24模組344項、343通過／1skip（notification_icon_unavailable）、無fail/error，102.795秒、source_unchanged／321語法、Job自然0／remaining0／無強停；build344hash／321來源編譯。覆蓋source_status／Operator／CLI／Web讀取契約／實際Tk／監看及既有分類pipeline，不是全庫回歸。兩個缺陷單元67與86為重疊定向，不相加。release-prep-success-evidence-20261030-01為4dc1f76的424檔可重現來源包，SHA256 bf93af1374168d8bfe73c83fc22624e19fde71b141d58c081ccd098041de0f95，未tag／release／部署。
