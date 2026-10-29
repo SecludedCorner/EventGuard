@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：Tk待確認模式與返回初驗
+
+`reports/verify-gui-pending-controls-20261029-02` UTC09:47:51：49/49、0skip、source_unchanged、Job自然0／remaining0／無強停。實際pending按鈕＋真SQLite只顯示anchor，普通snapshot不覆蓋頁，返回恢復原member與詳情，DB bytes不變／pending2／receipt0；新增四控制與既有操作在1080×760／850×620均可見。01在最小尺寸兩項首列bbox超界，修為依Treeview標題font metrics及rowheight保留最小區域，02通過，未削弱幾何斷言。`reports/build-gui-pending-controls-20261029-01`325hash／303編譯。101件／100＋1及壞頁／晚到回條另待，不冒稱完整元件／原生／真人完成。
+
 ## 2026-10-29：待確認頁consumer契約
 
 `reports/verify-gui-pending-page-20261029-01` UTC09:41:23：8/8、0skip、source_unchanged、Job自然0／remaining0／無強停。gui_pending.page以實際worker回條核對scope、頁碼回條、100／128界線與完整列數／has_more、ID／hash／狀態／要求數及重複，真SQLite讀取不變；錯頁／scope／計數／ID／hash／重複等保持None未知，不能當空清單。`reports/build-gui-pending-page-20261029-01`323hash／301編譯；尚非Tk操作或真人／原生輸入驗收，接線下一單元。

@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 Tk pending首切片已驗／接101件與故障
+
+49/49、0skip及303檔來源編譯，PendingView四控制／reply模式／snapshot隔離／返回原選取及最小尺寸已驗，見STATUS。下一用test_desktop_pending_control的101件live fixture建立真Tk（原fixture只2件）：找不在recent100的anchor，讀不自送、明確原ID核對、不回退較新決定；另造101個pending事件驗100＋1前後頁、最後空頁／unknown／錯offset，pending普通刷新不可蓋頁、返回恢復非預設篩選／選取，讀頁中返回後晚到回條不可套用。保留故障前後DB／payload／pending／ACK與worker退出證據；不重跑無變動全庫，每單元立即普通同步main。
+
 ## 2026-10-29 pending頁consumer驗證已驗／立即接Tk模式
 
 8/8、0skip及301檔來源編譯，gui_pending.page返回合法有界頁或None未知，真worker／SQLite及壞回條已驗，見STATUS。接Tk時使用明確pending／recent模式，四按鈕另列避免原篩選列擠壓；pending普通snapshot只更新來源／計數，不覆蓋快照頁。保存回條後原頁保留快照標示，明確刷新再移除已確認列；返回最近模式恢復原篩選／選取／焦點，晚到pending回條不得覆蓋，busy期間禁止新頁但允許返回。先最小實際Tk切片，再101事件／100＋1及故障驗收；每單元普通同步main。

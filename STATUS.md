@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 實際Tk待確認模式首切片
+
+新增查看待確認／上一頁／下一頁／返回最近控制，採已驗回條契約；pending模式保留有界頁快照，一般snapshot只更新來源／計數，明確刷新才換頁；返回恢復原篩選／可見選取／焦點，離開後晚到頁不套用。`reports/verify-gui-pending-controls-20261029-02`：2026-10-29 17:47（UTC+8）49/49、0skip、source_unchanged、Job自然0／remaining0／無強停，真Tk＋SQLite驗按鈕讀取、來源刷新不覆蓋頁、返回原事件、DB bytes／pending2／receipt0守恆及四新控制在850×620可見。01最小視窗2fail為事件首列被截，依標題字型metrics＋rowheight保留最小空間後02通過，沒有提高最小視窗或放寬測試。`reports/build-gui-pending-controls-20261029-01`325hash／303編譯；015b7f2兩ref一致。≥101件／兩頁／舊ID明確核對及故障仍待下一單元，不能用此首切片升格全UI驗收。
+
 ## 2026-10-29 待確認頁回條驗證前置
 
 gui_pending.page核對namespace／requested_offset／offset、每頁100、事件總數及要求總數≤128、has_more與列數一致，逐列ID／hash／人工及接收狀態／要求數與排序去重；unknown回None，合法空頁另辨。`reports/verify-gui-pending-page-20261029-01`：2026-10-29 17:41（UTC+8）8/8、0skip、source_unchanged、Job自然0／remaining0／無強停，真controller／worker＋101件SQLite回條能找原anchor，錯頁／錯scope／重複／壞列拒絕，DB bytes不變。`reports/build-gui-pending-page-20261029-01`323hash／301編譯。此為實際Tk接線前置，尚無查看／分頁按鈕，不升格UI已驗。

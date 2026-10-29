@@ -9,6 +9,7 @@ from pathlib import Path
 import queue
 import threading
 import uuid
+from .gui_pending_view import PendingView
 
 from .gui_presenter import (DELIVERY_FILTERS, SEVERITY_FILTERS, HANDLING_FILTERS, detail_text,
                             event_list_view, event_summary, history_preview_text, safe_text, source_success_text, source_gap_text)
@@ -191,7 +192,7 @@ class ControllerWorker:
             self.thread.join(timeout=2)
 
 
-class EventGuardWindow:
+class EventGuardWindow(PendingView):
     """A single normal-user application window; X minimizes, Pause is durable."""
 
     def __init__(self, window, controller, *, refresh_ms=5000):
@@ -217,6 +218,7 @@ class EventGuardWindow:
         self._pending_status = {}  # Bounded, in-session keys for explicit uncertain retries.
         self._request_journal_known = False
         self._last_event = None
+        self._init_pending()
         self._timers = set()
         self.window.title("EventGuard — 合成固定情境（非主機實測）" if self.synthetic_fixture else "EventGuard — 本機唯讀監看")
         self.window.geometry("1080x760")
@@ -342,11 +344,16 @@ class EventGuardWindow:
         self.severity_choice.bind("<<ComboboxSelected>>", self.filter_events)
         self.delivery_choice.bind("<<ComboboxSelected>>", self.filter_events)
         self.handling_choice.bind("<<ComboboxSelected>>", self.filter_events)
-        ttk.Label(filters, textvariable=self.events_note, wraplength=1000).grid(
-            row=1, column=0, columnspan=7, sticky="ew", pady=(5, 0))
+        self._build_pending_controls(filters)
+        ttk.Label(filters, textvariable=self.events_note, wraplength=760).grid(
+            row=2, column=0, columnspan=7, sticky="ew", pady=(5, 0))
         self.events = ttk.Treeview(event_frame, show="headings", height=7,
                                   columns=("time", "type", "severity", "delivery", "id", "handling"),
                                   displaycolumns=("time", "type", "severity", "handling", "delivery", "id"))
+        from tkinter import font as tkfont
+        style = ttk.Style(self.window)
+        heading = tkfont.Font(root=self.window, font=style.lookup("Treeview.Heading", "font") or "TkHeadingFont")
+        event_frame.rowconfigure(1, minsize=int(style.lookup("Treeview", "rowheight") or 20)+heading.metrics("linespace")+12)
         for key, label, width in (("time", "事件時間", 200), ("type", "類型", 230),
                                   ("severity", "嚴重度", 80), ("delivery", "接收狀態", 100),
                                   ("id", "事件 ID", 200), ("handling", "人工處置", 80)):
@@ -451,6 +458,7 @@ class EventGuardWindow:
                        self.automatic_check, self.automatic_browse, self.automatic_path):
             widget.configure(state="disabled" if busy or self.synthetic_fixture else "normal")
         self.refresh_button.configure(state="disabled" if busy else "normal")
+        self._update_pending_controls()
         self._update_investigate_button()
 
     def _can_investigate(self):
@@ -580,11 +588,11 @@ class EventGuardWindow:
                              else "正在停止自動處理；事件仍保留。")
 
     def refresh(self):
-        self._request("snapshot")
+        self.show_pending(self._pending_offset) if self._pending_mode else self._request("snapshot")
 
     def _refresh(self):
         if not self._busy:
-            self.refresh()
+            self._request("snapshot")
         self._after(self.refresh_ms, self._refresh)
 
     def select_event(self, _event=None):
@@ -655,7 +663,8 @@ class EventGuardWindow:
         self._update_investigate_button()
 
     def _apply_snapshot(self, value):
-        self._event_document = value if isinstance(value, dict) else {}
+        self._recent_document = value if isinstance(value, dict) else {}
+        self._event_document = self._pending_document() if self._pending_mode else self._recent_document
         view = view_snapshot(value,
             severity=SEVERITY_FILTERS.get(self.severity_filter.get(), "all"),
             delivery=DELIVERY_FILTERS.get(self.delivery_filter.get(), "all"),
@@ -682,12 +691,12 @@ class EventGuardWindow:
                 self.sources.item(source, values=row)
             else:
                 self.sources.insert("", "end", iid=source, values=row)
-        self._render_events(view)
+        self.filter_events() if self._pending_mode else self._render_events(view)
         if view["error"]:
             self.message.set("尚未完成：" + view["error"])
 
     def _render_events(self, view):
-        self.events_note.set(view["events_note"])
+        self.events_note.set(self._pending_note(view))
         present = {event_id for event_id, _ in view["events"]}
         for item in self.events.get_children():
             if item not in present:
@@ -719,6 +728,10 @@ class EventGuardWindow:
                     self.message.set("狀態讀取失敗：" + safe_text(value.get("reason"), 160))
                 else:
                     self._apply_snapshot(value)
+            elif action == "pending_requests":
+                self._set_busy(False)
+                self._receive_pending(value)
+                self._snapshot_due = True
             elif action == "inspect":
                 inspected = value.get("event") if isinstance(value.get("event"), dict) else value
                 event_id = inspected.get("event_id")
@@ -822,6 +835,7 @@ class EventGuardWindow:
             if (self.events.exists(event_id) and self.events.selection() == (event_id,)
                     and self._request("inspect", event_id)):
                 self._last_event = event_id
+        self._update_pending_controls()
         self._after(75, self._drain)
 
     def dispose(self):
