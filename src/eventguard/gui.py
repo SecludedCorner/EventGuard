@@ -586,7 +586,7 @@ class EventGuardWindow:
                 elif action == "investigate":
                     event_id = value.get("requested_event_id")
                     confirmed = value.get("state") == "investigation_saved" and value.get("event_id") == event_id
-                    self.message.set("已保存調查；不代表已 ACK、修復或主機安全。" if confirmed else
+                    self.message.set("已保存調查（事件：" + safe_text(event_id, 160) + "）；不代表已 ACK、修復或主機安全。" if confirmed else
                         "調查保存空間或版本容量不足，原調查與事件保留。" if value.get("reason") == "investigation_capacity" else
                         "保存結果未確認；請查看保存資料，不自動重試。")
                     if self.events.selection() == (event_id,) and self.events.exists(event_id):

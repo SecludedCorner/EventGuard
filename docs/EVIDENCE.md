@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：真Tk保存／更新／重開調查
+
+`reports/verify-desktop-investigation-widgets-20261029-03` UTC 2026-10-29 02:16:00：49/49、0skip、source_unchanged、Job自然退出0／remaining0。真Tk按鈕與真DesktopController／Catalog／合成SQLite，固定過去as_of只控制快照時鐘，所有保存交易實際執行；更新保留前版、重開一致，容量失敗DB hash及pending2／receipt0保留，切換事件不串案，採集／子程序／模型／ACK哨兵未觸發。01因fixture超出既有刷新限制與清理問題有3error／3fail，02修正後2個標籤斷言失敗，03核對實際「成員與保存雜湊相符（非來源認證）」後通過。`reports/build-desktop-investigation-widgets-20261029-01`：273檔受測hash相符、251檔編譯成功；真人、Web與原生不升格。
+
 ## 2026-10-29：桌面保存按鈕與worker
 
 `reports/verify-desktop-investigation-button-20261029-01` UTC 2026-10-29 02:09:40：82/82、0skip、source_unchanged、Job自然退出0／remaining0。真Tk按鈕＋fixture驗未選取／讀取中／忙碌禁用、雙點只保存一次並只讀重載、容量失敗訊息不洩例外且可再操作，pending不變；控制層真合成SQLite測試沿用同批。`reports/build-desktop-investigation-button-20261029-01`：272檔受測hash相符、250檔編譯通過。acadbaa3b6dae805ac733c22e9886c6fbe9353fe已普通merge／push並核對main／開發ref一致。按鈕尚未與真Catalog合併驗證；Web／真人／原生待驗保留。

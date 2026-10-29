@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面保存調查閉環實測
+
+真Tk按鈕→DesktopController→真合成Catalog／SQLite已驗保存、更新保留1前版、重開讀回；容量失敗原DB hash不變，pending2／receipt0，保存中切換事件不顯錯案。完成訊息標明原請求事件ID，避免新選取被誤認為已保存。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-investigation-widgets-20261029-03 --timeout-seconds 180 --module test_desktop_investigation_widgets --module test_gui --module test_desktop_investigation --module test_investigation_revision_integration`：2026-10-29 10:16（UTC+8）49/49、0skip、source_unchanged、Job自然退出0／remaining0。01為fixture刷新間隔超上限及未清視窗造成3error／3fail；02修正間隔／清理後47/49，2項斷言誤用前版標籤，03改核對實際成員雜湊語意後通過。`reports/build-desktop-investigation-widgets-20261029-01`：273檔hash相符、251檔編譯成功。13d9d94已普通同步main／開發ref；Web、真人版面／鍵盤、原生驗收仍保留待驗。
+
 ## 2026-10-29 桌面保存調查按鈕與失敗呈現
 
 實際Tk新增「建立／更新保存調查」，只在所選事件詳情已核對且非忙碌時啟用；序列worker執行，忙碌時重點不重複保存。結果綁定請求事件，保存後只讀重載；容量不足明示舊案保留，其他未確認結果不宣稱成功／不自動重送。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-investigation-button-20261029-01 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop_investigation --module test_desktop`：2026-10-29 10:09（UTC+8）82/82、0skip、source_unchanged、Job自然退出0／remaining0；真Tk按鈕＋fixture controller驗無選取禁用、明確單次保存／讀回、容量失敗與pending保留，不是完整真Catalog按鈕驗收。`reports/build-desktop-investigation-button-20261029-01`：272檔hash相符、250檔編譯通過。前單元acadbaa已普通同步main／開發ref。下一單元補真Tk→真合成Catalog保存／更新／重開整合；Web／真人／原生待驗不變。
