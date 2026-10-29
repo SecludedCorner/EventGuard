@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面備份身分核對控制層
+
+僅記住本程序最後成功備份一份檔名／寫入handle身分／完整檔案hash；檔案開啟後先fstat核對再讀有界內容，前後路徑／metadata及hash相符才沿用Catalog單一唯讀交易預檢，再拒絕交易期間檔案變動。不公開內部檔案身分、不讀任意路徑，重開controller須重新明確備份。`reports/verify-desktop-history-preview-20261029-02`：2026-10-29 14:04（UTC+8）35/35、0skip、source_unchanged、Job自然退出0／remaining0／無強停；真合成SQLite驗比對／DB bytes守恆、未知／重開拒絕、缺檔／變動／同metadata異hash拒絕、身分不符時read哨兵未觸發。01的37含3項重複繼承，02移除後加強前置讀取守門，為最終。`reports/build-desktop-history-preview-20261029-01`284檔hash／262檔編譯通過。Tk入口尚待接線，不稱已還原或容量恢復。
+
 ## 2026-10-29 桌面人工處置及接續增量整合223項通過
 
 人工處置與ACK獨立的四狀態入口、清單身分投影／分列／篩選、保存後刷新、歷史查證摘要及明確歷程備份均有真Tk＋真合成SQLite閉環；修復最小視窗無可見事件列及長回條裁切。各單元已逐筆普通同步main／開發ref，直接遠端核對產品92cc0807052f8cd35d177cdc22fa4c1ff40137c2；兩工作樹及對origin/main差異0，每commit增刪合計皆少於200，無累積500行。完整提交訊息／行數見EVIDENCE最新表。

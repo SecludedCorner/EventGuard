@@ -60,6 +60,7 @@ class DesktopController:
         self._last_action = None
         self._last_error = None
         self._closed = False
+        self._history_backup = None  # Only this process's last confirmed file.
         # Separate from the receive permission: only an explicit automatic
         # processing action may start this process-local dispatcher owner.
         self._agent_thread = None
@@ -358,9 +359,25 @@ class DesktopController:
         with self._lock:
             if self._closed:
                 return {"state": "error", "reason": "desktop_controller_closed"}
-            saved = write_backup(self.root, filename, EventCatalog(self.root, "live").handling_history_snapshot())
+            saved = write_backup(self.root, filename, EventCatalog(self.root, "live").handling_history_snapshot(), with_identity=True)
+            self._history_backup = (filename, saved.pop("file_identity"))
             return dict(saved, state="history_backup_saved", system_query_executed=False,
                         model_calls=0, ack_performed=False)
+
+    @recorded("gui_preview_history")
+    def preview_history_backup(self, filename):
+        """Explicit identity comparison, never restore, clear history or ACK."""
+        from .events.catalog import EventCatalog
+        from .events.disposition_history_backup_file import read_known_backup
+        with self._lock:
+            if self._closed or self._history_backup is None or filename != self._history_backup[0]:
+                raise ValueError("history_backup_not_known")
+            identity = self._history_backup[1]
+            value = read_known_backup(self.root, filename, identity)
+            result = EventCatalog(self.root, "live").preview_handling_history(value)
+            read_known_backup(self.root, filename, identity)  # Reject a change during the DB read.
+            return dict(result, state="history_backup_previewed", path="reports/"+filename,
+                        system_query_executed=False, model_calls=0, ack_performed=False)
 
     @recorded("gui_set_status")
     def set_status(self, event_id, status, operation_id):

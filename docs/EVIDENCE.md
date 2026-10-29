@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面備份核對控制層
+
+`reports/verify-desktop-history-preview-20261029-02` UTC06:04:46：35/35、0skip、source_unchanged、Job自然退出0／remaining0／無強停；真合成SQLite／本工具暫存檔驗已存在計數、零衝突仍recoverability未知、DB bytes守恆、未知／重開controller拒絕、缺失／交易期間變動及同metadata異hash拒絕。對不符檔案身分，read哨兵證明未讀內容；CLI原receipt不新增內部file_identity欄位。01含重複繼承測試，02去重補強為最終。`reports/build-desktop-history-preview-20261029-01`284檔hash及262檔編譯；Tk按鈕仍待驗，無還原／清理／模型／採集／ACK。
+
 ## 2026-10-29：桌面處置／查證／備份最終受影響整合
 
 `reports/verify-desktop-handling-complete-20261029-01` UTC05:58:22：25模組223/223、0skip、source_unchanged、261檔語法無誤，Job自然退出0／remaining0／無強停。真Tk＋真合成SQLite／本機暫存檔及自有Job API，不與前述重疊定向相加；無採集／新模型／ACK，非真人／Web／原生輸入。`reports/build-desktop-handling-complete-20261029-01`283檔hash及261檔編譯通過。`reports/release-prep-desktop-handling-complete-20261029-01`綁定92cc0807052f8cd35d177cdc22fa4c1ff40137c2，363檔可重現，archive SHA256 190aaf99684183b6a496b9e50bc4671614785c330dda23c6977d373b91953a82；非tag／release，目錄項耐久性及完整還原未驗。

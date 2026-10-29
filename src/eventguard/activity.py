@@ -23,7 +23,7 @@ MAX_BYTES = 2 * 1024 * 1024
 OPERATIONS = frozenset({"capabilities", "status", "overview", "observation", "stop", "monitor",
     "events", "inspect_event", "diagnose_event", "receive_event", "ack_event", "retry_event",
     "report", "background_start", "background_status", "background_stop", "gui_start", "gui_pause",
-    "gui_inspect", "gui_investigate", "gui_set_status", "gui_backup_history", "gui_receive_permission", "gui_automatic_agent"})
+    "gui_inspect", "gui_investigate", "gui_set_status", "gui_backup_history", "gui_preview_history", "gui_receive_permission", "gui_automatic_agent"})
 ACTORS = frozenset({"agent_mcp", "human_gui"})
 CODE = re.compile(r"[a-z][a-z0-9_]{0,95}\Z")
 
