@@ -28,7 +28,7 @@ def recorded(operation):
             from .activity import call
             enabled = args[0] if args else kwargs.get("enabled")
             result = call(self.root, "human_gui", operation, "live",
-                          lambda: method(self, *args, **kwargs), args[0] if operation == "gui_inspect" and args else None,
+                          lambda: method(self, *args, **kwargs), args[0] if operation in {"gui_inspect", "gui_investigate"} and args else None,
                           allow_unrecorded_stop=operation in {"gui_receive_permission", "gui_automatic_agent"}
                           and enabled is False)
             if isinstance(result, dict) and result.get("activity_warning"):
@@ -340,6 +340,15 @@ class DesktopController:
         with self._lock:
             from .events.catalog import EventCatalog
             return dict(EventCatalog(self.root, "live").detail(event_id), system_query_executed=False)
+
+    @recorded("gui_investigate")
+    def investigate(self, event_id):
+        """Explicit metadata snapshot; never collect, call a model, or ACK."""
+        with self._lock:
+            from .events.catalog import EventCatalog
+            saved = EventCatalog(self.root, "live").investigate(event_id)
+            return {"state": "investigation_saved", "event_id": event_id, "investigation": saved,
+                    "system_query_executed": False, "model_calls": 0, "ack_performed": False}
 
     def snapshot(self):
         """Read one saved overview; no collector, model or scheduling operation."""

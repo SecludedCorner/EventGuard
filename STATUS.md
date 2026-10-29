@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面明確保存調查：控制層
+
+依使用者最新指示續做桌面，瀏覽器待驗保留。原專案乾淨但落後15個已整合commit，已ff-only同步至20f8895；+1246/−28是舊checkout對已推送基準的同步，非新backlog，當時對origin/main差異0。新增DesktopController.investigate沿用EventCatalog已保存metadata調查；活動先落意圖、記錄目標hash，無採集／模型／ACK。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-investigation-controller-20261029-01 --timeout-seconds 180 --module test_desktop_investigation --module test_desktop --module test_activity --module test_event_investigation`：2026-10-29 10:05（UTC+8）64/64、0skip、source_unchanged、Job自然退出0／remaining0；合成資料驗保存／重開、容量失敗舊案不變、活動失敗不保存、缺事件不建立、pending2／receipt0不變。`reports/build-desktop-investigation-controller-20261029-01`：272檔hash相符、250檔編譯通過。只完成控制層，桌面按鈕接線與Tk驗收下一單元；Web／真人／原生關卡仍待驗。
+
 ## 2026-10-29 清單修正整合與驗收阻擋盤點
 
 df55da8bb06bca06853b3b0fb9354e4a340717c4（fix(web): make failed event list refreshes explicitly unknown，+110/−2）已普通push開發ref、ff-only merge／普通push main並直接核對兩ref一致，工作樹／對main差異0。42/42與249檔編譯見下節；`reports/release-prep-web-list-read-state-20261029-01`綁定此SHA，351檔來源包可重現；`reports/build-web-list-javascript-20261029-01`完整served JS語法通過、私有Job自然退出0／remaining0。單次瀏覽器inventory仍空且回傳Work settings disabled，回條已保存；未把授權問題歸給使用者。最終目標逐項盤點見MAINTENANCE_GOAL頂部：核心功能有離線證據，本版真瀏覽器／200%／焦點、人類可比量測、原生各自仍缺外部條件，目標未完成。純文件沿用本版來源build／相關測試，檢查diff及引用路徑；不反覆輪詢或添加無關功能代替驗收。

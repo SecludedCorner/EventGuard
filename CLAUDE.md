@@ -1,5 +1,7 @@
 # EventGuard 工作提醒
 
+使用者2026-10-29再次指定：優先推進桌面版開發與實際Tk＋合成資料測試，瀏覽器保留待驗，不以瀏覽器阻擋停止可執行桌面工作。每單元commit、push並普通整合main，兩個500行基準仍適用；當前原專案工作樹已普通快轉同步已推送成果，後續在原專案增量開發，不覆寫其他checkout。
+
 先讀 [AGENTS.md](AGENTS.md)，遵守專案界線、Continuous Execution Policy 及「Git checkpoint 與遠端保存」。
 
 ## 既有授權與不重複詢問（2026-10-29）

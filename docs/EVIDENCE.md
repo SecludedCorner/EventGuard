@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面保存調查控制層
+
+`reports/verify-desktop-investigation-controller-20261029-01` UTC 2026-10-29 02:05:42：64/64、0skip、source_unchanged、Job自然退出0／remaining0。全新臨時root的合成事件，真DesktopController／EventCatalog／SQLite驗明確保存與重開、活動目標僅hash、容量失敗舊DB hash保留、活動失敗不啟動保存、缺事件不補造，pending2／receipt0；採集、子程序／模型與ACK哨兵未觸發。`reports/build-desktop-investigation-controller-20261029-01`：272檔受測hash相符、250檔編譯通過。尚未接桌面按鈕，不當UI驗收；Web／真人／原生仍各自待驗。
+
 ## 2026-10-29：清單main整合與單次瀏覽器核對
 
 df55da8bb06bca06853b3b0fb9354e4a340717c4已普通ff-only merge／push main，直接ls-remote核對main及開發ref一致，未提交及對main差異0。`reports/release-prep-web-list-read-state-20261029-01`：351檔可重現，archive SHA256 1036c260d8422bc0470f078e2a706464576f110bc353365d8e3f76459a0ec739；`reports/build-web-list-javascript-20261029-01`完整served JS語法通過、Job自然退出0／remaining0／無強停。同目錄browser-state.json只保存單次cua.getState的去識別錯誤：browsers=[]、Work settings disabled；不保存私人視窗清單／截圖。42項離線通過不能證明真瀏覽器／200%／真人／原生。目標盤點明列未達成及外部解除條件，未冒稱完成。

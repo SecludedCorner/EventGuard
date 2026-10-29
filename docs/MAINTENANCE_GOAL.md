@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 桌面工作恢復：明確保存調查
+
+最新使用者指示以桌面開發／測試續進，保留瀏覽器待驗；先前「目前無可執行Web切片」不限制桌面工作。DESKTOP-INVEST-SAVE-A：控制層已實作，64/64合成定向、來源編譯通過；B：接實際Tk按鈕、worker與容量／錯誤語意；C：真Tk＋真合成Catalog保存／更新／重開與pending守恆整合。每切片獨立驗證、commit／push／普通整合main，不以控制層或Tk結果取代Web、真人、原生關卡。
+
 ## 2026-10-29 最終驗收盤點：目標尚未完成
 
 目前Web核心改善已有程式與離線證據，以下缺口不能由新增功能、Node／Tk或語法檢查補足。最近三個續航階段均保留同一瀏覽器驗收阻擋；本次一次`cua.getState()`仍回傳browsers=[]及`Local browser use is disabled in Work settings`，具體回條在`reports/build-web-list-javascript-20261029-01/browser-state.json`。既有使用者授權持續有效，原因是工具狀態，沒有重新要求權限或改設定。
