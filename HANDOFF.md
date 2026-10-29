@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 Task COM root契約未重現bug／接替代provider
+
+56/56／0skip、315編譯與真root-only HRESULT 0x80070003已保存，參數／旗標／所有權合成核對無缺陷，不改production或猜根因；詳STATUS。下一用既有PowerShell tasks metadata一次、有界且不存私密facts的替代provider核對；同屬已授權唯讀開發，不重問，保留COM unknown與來源差異，不提權／改設定。
+
 ## 2026-10-29 已授權唯讀原生開發／來源實測partial
 
 同範圍開發診斷不再問，見AGENTS／CLAUDE最新節；仍不提權／模型／系統變更。listeners新包已執行：250列、缺身分122、23 OpenProcess access_denied、baseline仍不過，兩層自然退出；13/13只驗回條。其餘六來源單次實查：defender denied、processes partial（306error僅64prefix）、startup/services/versions ok、tasks unknown／TaskGetFolder object_unavailable；不重查listeners，見STATUS與本機reports。下一先核TaskGetFolder COM呼叫契約並合成重現；不先宣稱bug／權限根因，不盲目重跑或繞限制。其他真人／Web／長跑／恢復與真防守關卡保留。

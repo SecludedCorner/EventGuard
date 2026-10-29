@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 Task COM契約已驗／原生root仍unknown
+
+`reports/verify-task-com-root-contract-20261029-01`4模組56/56、0skip、source_unchanged、Job自然0／remaining0／無強停；build同名338hash／315來源編譯。新增3項直接跑Dispatch marshalling，核單一BSTR root、DISPATCH_METHOD、VARIANT清理、回傳參考移交及非法路徑不Invoke，未改產品。`reports/task-com-root-contract-20261029-01`另一次root-only真查核 .010494秒，GetFolder回HRESULT -2147024893（0x80070003），仍unknown、不是0個task；未枚舉／讀XML／Actions，Job自然0／無殘留。root文字與Invoke對照Microsoft文件，尚未重現程式缺陷。下一以既有PowerShell tasks唯讀metadata做一次有界替代路徑核對，不改設定／提權、不洗綠COM失敗。
+
 ## 2026-10-29 開發授權已記錄／實際原生診斷完成且保留缺口
 
 使用者已直接授權本專案必要一般權限唯讀原生診斷與自有介面驗收，不再逐次詢問；AGENTS／CLAUDE最新節已落地。系統／帳戶／安全設定、提權、新模型、敏感處置、重開機與未指定長時運行不因此新增授權。授權原文與每次scope/hash/time只存忽略的reports，不提交回條。

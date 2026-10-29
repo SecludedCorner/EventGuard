@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-29 目前可執行：TASK-PROVIDER-ALTERNATIVE
+
+Task COM root marshalling56/56／0skip及315編譯，真root仍0x80070003／unknown，無已重現程式缺陷；不重複同COM查詢。下一最低成本替代是既有PowerShell tasks只讀metadata一次（一般權限、≤5秒query、有私有Job、只存固定碼／計數），先核既有查詢不讀Definition／XML／Actions。若有效才設計保留primary失敗證據的最小fallback切片；若亦不可用則保存結果、保留任務來源未驗，不繞環境限制。其他關卡獨立保留。
+
 ## 2026-10-29 目前可執行：TASK-COM-ROOT-CONTRACT
 
 本專案一般權限唯讀開發診斷已直接授權，詳AGENTS／CLAUDE最新節，相同範圍不再重問。新的真來源證據：listeners partial（必要身分缺122，23 typed OpenProcess access_denied）；另外六來源單查後tasks root GetFolder object_unavailable、defender denied、processes partial，startup/services/本Python版本metadata可讀，完整來源仍未驗收。各query／Job已自然退出，無模型／系統改動，詳STATUS。

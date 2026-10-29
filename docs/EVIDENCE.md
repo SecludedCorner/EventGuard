@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：Task root合成marshalling＋真HRESULT
+
+verify-task-com-root-contract-20261029-01為56/56、0skip／315語法、source_unchanged、Job自然0／無殘留；build338hash／315編譯。task-com-root-contract-20261029-01只Connect/GetFolder，不枚舉／XML／Actions，真回0x80070003／unknown，.010494秒／Job自然0／無強停，無模型。root字串依[Microsoft GetFolder](https://learn.microsoft.com/en-us/windows/desktop/api/taskschd/nf-taskschd-itaskservice-getfolder)，呼叫依[IDispatch Invoke](https://learn.microsoft.com/windows/win32/api/oaidl/nf-oaidl-idispatch-invoke)；[Win32 error 3](https://learn.microsoft.com/openspecs/windows_protocols/ms-erref/18d8fbe8-a967-4f1c-ae50-99ca8e491d2d)為PATH_NOT_FOUND，不能推論無task／需管理員或自行修系統。只保存固定碼，沒有解碼provider錯誤描述。
+
 ## 2026-10-29：實際唯讀來源診斷，非合成
 
 使用者最新直接授權已記AGENTS／CLAUDE一般開發規則，具體原文回條不提交。windows-listener-diagnostics-20261029-01原12hash重核後執行1次：250列／身分缺122／partial，error23全部typed ListenerOpenProcess access_denied，分組完整不代表baseline完整；query .378848秒、內自然0／外自然2、remaining0／無強停，13/13交叉核對只驗回條一致。查源已用QUERY_LIMITED_INFORMATION，不推定管理員／owner／sandbox。
