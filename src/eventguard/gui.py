@@ -8,6 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 import queue
 import threading
+import uuid
 
 from .gui_presenter import (DELIVERY_FILTERS, SEVERITY_FILTERS, detail_text,
                             event_list_view, event_summary, safe_text, source_success_text, source_gap_text)
@@ -15,13 +16,14 @@ from .gui_presenter import (DELIVERY_FILTERS, SEVERITY_FILTERS, detail_text,
 
 SOURCE_NAMES = {"defender": "Defender 防護", "listeners": "監聽端點", "processes": "程序",
                 "startup": "啟動項", "services": "服務", "tasks": "排程工作", "versions": "版本"}
+HUMAN_STATES = {"new": "新增", "read": "已讀", "handled": "已處理", "ignored": "忽略"}
 OPERATION_NAMES = {"capabilities": "查看能力", "status": "查看狀態", "overview": "查看總覽",
     "observation": "查看來源觀察", "stop": "暫停監看", "monitor": "單輪採集", "events": "列出事件",
     "inspect_event": "查看事件", "diagnose_event": "唯讀查證", "receive_event": "接收事件",
     "ack_event": "確認收到", "retry_event": "重試投遞", "report": "匯出報告",
     "background_start": "開始持續監看", "background_status": "查看背景狀態", "background_stop": "暫停監看",
     "gui_start": "開始監看", "gui_pause": "暫停監看", "gui_inspect": "查看事件", "gui_investigate": "保存調查",
-    "gui_receive_permission": "設定接收開關", "gui_automatic_agent": "設定自動處理"}
+    "gui_set_status": "保存人工狀態", "gui_receive_permission": "設定接收開關", "gui_automatic_agent": "設定自動處理"}
 ACTIVITY_STATES = {"running": "執行中／待結果", "completed": "已完成", "blocked": "受阻",
                    "failed": "失敗", "interrupted": "中斷，結果未確認"}
 STATE_NAMES = {"running": "監看中", "running_verified": "監看中", "started": "啟動中",
@@ -115,7 +117,7 @@ def view_snapshot(document, *, severity="all", delivery="all"):
 
 class ControllerWorker:
     """Serialize local operations without invoking Tk on a worker thread."""
-    ACTIONS = frozenset({"snapshot", "start", "pause", "set_agent_delivery", "set_automatic_agent", "inspect", "investigate", "close"})
+    ACTIONS = frozenset({"snapshot", "start", "pause", "set_agent_delivery", "set_automatic_agent", "inspect", "investigate", "set_status", "close"})
 
     def __init__(self, controller):
         self.controller = controller
@@ -159,8 +161,12 @@ class ControllerWorker:
                           "error_type": safe_text(type(error).__name__, 80)}
                 if action == "investigate" and isinstance(error, CapacityError):
                     result["reason"] = "investigation_capacity"
-            if action in {"inspect", "investigate"}:
+                if action == "set_status" and isinstance(error, CapacityError):
+                    result["reason"] = "event_status_capacity"
+            if action in {"inspect", "investigate", "set_status"}:
                 result = dict(result, requested_event_id=arguments[0])
+            if action == "set_status":
+                result.update(requested_status=arguments[1], requested_operation_id=arguments[2])
             self.results.put((action, result))
             with self._lock:
                 self._pending = False
@@ -199,6 +205,7 @@ class EventGuardWindow:
         self._snapshot = {}
         self._event_document = {}
         self._detail_document = None
+        self._pending_status = {}  # Bounded, in-session keys for explicit uncertain retries.
         self._last_event = None
         self._timers = set()
         self.window.title("EventGuard — 本機唯讀監看")
@@ -340,6 +347,15 @@ class EventGuardWindow:
         detail_scroll = ttk.Scrollbar(detail_frame, orient="vertical", command=self.detail.yview)
         detail_scroll.grid(row=1, column=1, sticky="ns")
         self.detail.configure(yscrollcommand=detail_scroll.set)
+        handling_bar = ttk.Frame(detail_frame)
+        handling_bar.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(4, 0))
+        self.handling_buttons = {}
+        for column, (status, label) in enumerate(HUMAN_STATES.items()):
+            button = ttk.Button(handling_bar, text=label, state="disabled", command=lambda s=status: self.set_status(s))
+            button.grid(row=0, column=column, padx=(0, 6))
+            self.handling_buttons[status] = button
+        self.handling_status = tk.StringVar(value="人工狀態未知；與 ACK 獨立。")
+        ttk.Label(handling_bar, textvariable=self.handling_status).grid(row=1, column=0, columnspan=4, sticky="w")
         ttk.Label(event_frame, text="選取事件以唯讀查看。事件內容是不可信資料；查看不會 ACK，ACK 也不代表修復或結案。",
                   wraplength=1000).grid(row=3, column=0, sticky="w", pady=(8, 0))
         notebook.add(event_frame, text="事件與內容")
@@ -391,6 +407,35 @@ class EventGuardWindow:
 
     def _update_investigate_button(self):
         self.investigate_button.configure(state="normal" if self._can_investigate() else "disabled")
+        value = self._detail_document or {}
+        status = value.get("status")
+        ready = self._can_investigate() and isinstance(status, str) and status in HUMAN_STATES
+        event_id = self._last_event
+        for key, button in self.handling_buttons.items():
+            enabled = ready and (key != status or (event_id, key) in self._pending_status)
+            button.configure(state="normal" if enabled else "disabled")
+        self.handling_status.set("人工狀態：" + (HUMAN_STATES[status] if ready else "未知") + "；與 ACK 獨立，不代表修復。")
+
+    def set_status(self, status):
+        if not isinstance(status, str) or status not in HUMAN_STATES or not self._can_investigate():
+            return
+        current = (self._detail_document or {}).get("status")
+        if not isinstance(current, str) or current not in HUMAN_STATES:
+            return
+        key = (self.events.selection()[0], status)
+        if (self._detail_document or {}).get("status") == status and key not in self._pending_status:
+            return
+        if key not in self._pending_status and len(self._pending_status) >= 128:
+            self.message.set("未確認要求已達上限，請先核對或重試原要求；不丟棄冪等識別。")
+            return
+        operation_id = self._pending_status.setdefault(key, uuid.uuid4().hex)
+        if self._request("set_status", key[0], status, operation_id):
+            self.message.set("正在保存人工狀態；不 ACK、不採集、不呼叫模型。")
+
+    def _refresh_selected_detail(self, event_id):
+        if self.events.selection() == (event_id,) and self.events.exists(event_id):
+            self._last_event = None
+            self.select_event()
 
     def investigate(self):
         if self._can_investigate() and self._request("investigate", self.events.selection()[0]):
@@ -592,9 +637,23 @@ class EventGuardWindow:
                     self.message.set("已保存調查（事件：" + safe_text(event_id, 160) + "）；不代表已 ACK、修復或主機安全。" if confirmed else
                         "調查保存空間或版本容量不足，原調查與事件保留。" if value.get("reason") == "investigation_capacity" else
                         "保存結果未確認；請查看保存資料，不自動重試。")
-                    if self.events.selection() == (event_id,) and self.events.exists(event_id):
-                        self._last_event = None
-                        self.select_event()
+                    self._refresh_selected_detail(event_id)
+                elif action == "set_status":
+                    event_id, status = value.get("requested_event_id"), value.get("requested_status")
+                    key = (event_id, status)
+                    correlated = self._pending_status.get(key) == value.get("requested_operation_id")
+                    confirmed = (correlated and value.get("state") == "event_status_updated" and value.get("event_id") == event_id
+                                 and isinstance(value.get("status"), str) and value["status"] in HUMAN_STATES and value.get("ack_performed") is False)
+                    if confirmed:
+                        self._pending_status.pop(key, None)
+                        self.message.set("人工狀態已核對（事件：" + safe_text(event_id, 160) + "）：" + HUMAN_STATES[value["status"]] + "；不是 ACK 或修復。")
+                    elif value.get("reason") == "event_status_capacity" or value.get("operation_started") is False:
+                        if correlated:
+                            self._pending_status.pop(key, None)
+                        self.message.set("人工狀態未保存，容量或活動紀錄受阻；原資料與 pending 保留。")
+                    else:
+                        self.message.set("人工狀態結果未確認；重新點選原狀態會沿用同一識別，不自動重送。")
+                    self._refresh_selected_detail(event_id)
                 elif value.get("state") in {"blocked", "error", "startup_failed", "shutdown_unconfirmed", "stop_not_persisted"}:
                     self.message.set("操作尚未完成：" + safe_text(value.get("reason", value.get("state")), 220))
                 elif action == "start":

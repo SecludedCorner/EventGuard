@@ -21,6 +21,7 @@ class FixtureController:
         self.release = threading.Event()
         self.release.set()
         self.close_allowed = True
+        self.human_status = {}
         self.value = {"state": "disabled", "desired_enabled": False, "monitoring": False,
                       "updated_at": "2026-10-23T04:00:00+00:00", "namespace": "test",
                       "sources": [{"source_id": "defender", "status": "partial", "row_count": 2,
@@ -64,7 +65,7 @@ class FixtureController:
     def inspect(self, event_id):
         self._called("inspect")
         event = next(item for item in self.value["events"] if item["event_id"] == event_id)
-        return {"event": copy.deepcopy(event), "scope": "synthetic", "incident_conclusion": "not_assessed",
+        return {"event": copy.deepcopy(event), "status": self.human_status.get(event_id, "new"), "scope": "synthetic", "incident_conclusion": "not_assessed",
                 "guidance": {"observation": "保存的合成監聽觀察，不代表外部可達或惡意。",
                              "binding_facts": {"protocol": "TCP", "port": 43210},
                              "next_steps": ["核對保存的 port 與綁定範圍。"],
@@ -80,6 +81,11 @@ class FixtureController:
     def investigate(self, event_id):
         self._called("investigate")
         return {"state": "investigation_saved", "event_id": event_id, "ack_performed": False, "model_calls": 0}
+
+    def set_status(self, event_id, status, operation_id):
+        self._called('set_status')
+        self.human_status[event_id] = status
+        return {'state': 'event_status_updated', 'event_id': event_id, 'status': status, 'ack_performed': False}
 
 
 class GuiPresentationTests(unittest.TestCase):
@@ -678,6 +684,42 @@ class GuiOwnTkWidgetTests(unittest.TestCase):
         self.assertNotIn('private fixture', self.ui.message.get())
         self.assertEqual(self.controller.value['events'][0]['delivery_status'], 'pending')
         self.assertFalse(any(action in {'ack', 'diagnose', 'start'} for action, _ in self.controller.calls))
+
+    def test_handling_buttons_save_four_states_without_ack(self):
+        self.assertTrue(all(b.instate(['disabled']) for b in self.ui.handling_buttons.values()))
+        self.ui.events.selection_set('synthetic-example-1')
+        self.ui.select_event()
+        self.wait_for(lambda: self.ui.handling_buttons['read'].instate(['!disabled']))
+        for status in ('read', 'handled', 'ignored', 'new'):
+            self.ui.handling_buttons[status].invoke()
+            self.wait_for(lambda: '人工狀態已核對' in self.ui.message.get())
+            self.wait_for(lambda: not self.ui._busy and self.ui._detail_document.get('status') == status)
+            self.assertTrue(self.ui.handling_buttons[status].instate(['disabled']))
+        self.assertEqual(self.controller.value['events'][0]['delivery_status'], 'pending')
+        self.assertFalse(any(action in {'ack', 'diagnose', 'start'} for action, _ in self.controller.calls))
+
+    def test_uncertain_handling_retry_reuses_key_without_automatic_resend(self):
+        self.ui.events.selection_set('synthetic-example-1')
+        self.ui.select_event()
+        self.wait_for(lambda: self.ui.handling_buttons['handled'].instate(['!disabled']))
+        original, keys = self.controller.set_status, []
+        def save(event_id, status, operation_id):
+            keys.append(operation_id)
+            result = original(event_id, status, operation_id)
+            if len(keys) == 1:
+                raise OSError('private fixture')
+            return result
+        with patch.object(self.controller, 'set_status', side_effect=save):
+            self.ui.handling_buttons['handled'].invoke()
+            self.wait_for(lambda: '結果未確認' in self.ui.message.get())
+            self.wait_for(lambda: self.ui.handling_buttons['handled'].instate(['!disabled']))
+            self.assertEqual(len(keys), 1)
+            self.ui.handling_buttons['handled'].invoke()
+            self.wait_for(lambda: '人工狀態已核對' in self.ui.message.get())
+        self.assertEqual(len(keys), 2)
+        self.assertEqual(keys[0], keys[1])
+        self.assertEqual(self.ui._pending_status, {})
+        self.assertEqual(self.controller.value['events'][0]['delivery_status'], 'pending')
 
     def test_window_close_minimizes_and_unconfirmed_exit_keeps_window(self):
         with patch.object(self.window, "iconify") as minimize:

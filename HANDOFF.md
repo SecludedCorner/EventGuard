@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 人工狀態Tk入口已接線／目標active
+
+平台目標內容已實際修訂並get_goal回讀active，桌面人工狀態優先、原Web等驗收保留，取代前述舊blocked卡狀態。控制層cc21787已同步main。Tk四按鈕、忙碌／未知閘道、明確回條與有界同ID未確認重試通過61/61、0skip及來源編譯，詳見STATUS。下一步真Tk→真合成SQLite驗四狀態／歷程／重開、提交後回條遺失的冪等、容量／活動故障與切換不串案；每單元立即普通整合main，不碰瀏覽器或新增採集／模型／ACK。
+
 ## 2026-10-29 人工狀態控制層與桌面目標
 
 最新任務目標及完成條件已寫MAINTENANCE_GOAL頂部，保留舊Web待驗。人工set_status控制層固定gui來源及明確operation_id，54/54、0skip、來源編譯252檔通過，pending／receipt守恆，詳見STATUS。下一步接真Tk四狀態按鈕、同ID未確認重試與回條；不可把handled當ACK或將保存state當修復。平台目標卡仍舊Web blocked，工具沒有edit/resume方法；後續有界用支援UI核對，不因此停工程。

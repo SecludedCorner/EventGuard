@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：人工狀態Tk按鈕與目標恢復
+
+`reports/verify-desktop-handling-buttons-20261029-01` UTC 2026-10-29 05:05:09：61/61、0skip、source_unchanged、Job自然退出0／remaining0；真Tk＋fixture驗四狀態點選／讀回、同ID未確認重試且無自動重送、pending保留。`reports/build-desktop-handling-buttons-20261029-01`：274檔hash相符、252檔編譯通過。目標卡透過目前聊天的支援編輯器修改／保存後，get_goal回讀status=active且內容為桌面優先；原Web目標／待驗未消失。操作依[官方進度列說明](https://learn.chatgpt.com/docs/long-running-work)，未用內部DB或browser改設定；不提交目標UI截圖。真Catalog人工狀態Tk閉環仍為下一單元。
+
 ## 2026-10-29：桌面人工狀態控制層
 
 `reports/verify-desktop-handling-controller-20261029-01` UTC 2026-10-29 04:58:37：54/54、0skip、source_unchanged、Job自然退出0／remaining0。真臨時SQLite驗new／read／handled／ignored、gui歷程、同operation_id重播不回退較新決定、容量與活動失敗不改DB、非法狀態／key拒絕，pending1／receipt0；採集／spawn模型／ACK哨兵未觸發。`reports/build-desktop-handling-controller-20261029-01`：274檔受測hash相符、252檔編譯。只完成控制層，不當Tk按鈕／Web／真人／原生驗收；桌面目標檔更新與平台卡實際狀態分別記錄。

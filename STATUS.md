@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面人工狀態按鈕與同ID重試
+
+真Tk新增new／read／handled／ignored入口及人工狀態標示；未選取、詳情未知或忙碌時禁用，結果綁定事件／operation_id，保存後只讀重載。未確認要求保留同ID，明確再點原狀態才重送，不自動重試；最多128個未確認key，滿載拒絕新要求而不丟冪等識別。容量／活動前置失敗不宣稱成功。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-handling-buttons-20261029-01 --timeout-seconds 180 --module test_gui --module test_gui_presenter --module test_desktop_handling --module test_desktop_investigation_widgets`：2026-10-29 13:05（UTC+8）61/61、0skip、source_unchanged、Job自然退出0／remaining0，真Tk＋fixture及控制層SQLite。`reports/build-desktop-handling-buttons-20261029-01`：274檔hash相符、252檔編譯。cc21787已同步main；平台目標已用支援編輯介面保存桌面優先內容，get_goal回讀active，保留原Web及獨立驗收，不再是舊blocked卡。下一步真Tk→真Catalog人工狀態整合，尚未宣稱該閉環完成。
+
 ## 2026-10-29 桌面人工狀態控制層
 
 DesktopController.set_status固定source=gui並要求明確operation_id，沿用Catalog交易與有界操作歷程；活動先保存意圖且目標只hash，不採集／模型／ACK。`py -3.13 -B scripts/verify.py --run-dir reports/verify-desktop-handling-controller-20261029-01 --timeout-seconds 180 --module test_desktop_handling --module test_desktop --module test_disposition_history_integration --module test_activity`：2026-10-29 12:58（UTC+8）54/54、0skip、source_unchanged、Job自然退出0／remaining0。真合成SQLite驗四狀態／gui歷程、同ID重播不覆蓋後來決定、容量／活動失敗保留舊DB、非法狀態／缺key拒絕，pending1／receipt0不變。`reports/build-desktop-handling-controller-20261029-01`：274檔hash相符、252檔編譯。目標檔已更新桌面A–C閉環，平台卡仍舊Web blocked，不冒稱已恢復；Tk按鈕為下一單元，既有Web／真人／原生待驗保留。
