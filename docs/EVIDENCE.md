@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：桌面呈現已知轉換衝突
+
+`reports/verify-desktop-history-transition-20261029-01` UTC06:22:42：32/32、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真Tk＋合成SQLite兩筆歷程故意有不連續previous_status，備份與DB hash／前綴一致、identity_conflicts0仍正確顯已知轉換衝突1；單筆顯未觀察，多筆一致顯非完整性證明，非法計數／未知格式保留未知。DB bytes、pending2／receipt0守恆；`reports/build-desktop-history-transition-20261029-01`287檔hash及265檔編譯。無還原／清理／模型／原生採集／ACK，非真人或Web驗收。
+
 ## 2026-10-29：核對時間區間與實際Tk
 
 `reports/verify-desktop-preview-time-20261029-02` UTC06:19:43：39/39、0skip、source_unchanged、Job自然退出0／remaining0／無強停。受控時鐘證明區間包住兩次檔案驗證與DB快照；真Tk顯正確UTC、缺失時間清舊且不補造，純呈現驗無時區／非法／逆序／未來未知，DB bytes及pending／receipt守恆。01為38/38，02加新元件斷言為最終，非相加；`reports/build-desktop-preview-time-20261029-01`286檔hash／264檔編譯。沒有額外自動讀檔、原生採集／模型／ACK，非Web或真人驗收。

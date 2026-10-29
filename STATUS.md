@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 桌面備份內部轉換衝突明示
+
+沿用Catalog已回傳transition_order，桌面分開顯示相鄰轉換檢查對數／衝突數與not_observed／consistent／conflict；一致不當完整，缺失／非法或不可能計數未知，不公開個別事件。`reports/verify-desktop-history-transition-20261029-01`：2026-10-29 14:22（UTC+8）32/32、0skip、source_unchanged、Job自然退出0／remaining0／無強停，真Tk＋合成SQLite重現身分衝突0及前綴相符卻有內部衝突，與單筆無相鄰／多筆一致分開，DB bytes及pending2／receipt0守恆。`reports/build-desktop-history-transition-20261029-01`287檔hash／265檔編譯通過。9e92d4a（+108/−0）已普通同步main／開發ref；未新增還原、清理、模型／採集／ACK。
+
 ## 2026-10-29 核對讀取時間與快照限制
 
 桌面備份核對回傳第一次讀檔前／第二次驗檔後的UTC時間，畫面正規化UTC並明示計數是區間內資料庫快照、不能證明之後狀態。缺失、非法、無時區、逆序或未來時間顯未知，不補現在時間。`reports/verify-desktop-preview-time-20261029-02`：2026-10-29 14:19（UTC+8）39/39、0skip、source_unchanged、Job自然退出0／remaining0／無強停；受控時鐘驗clock→file→DB→file→clock，真Tk直接驗區間及缺時間清舊顯未知，DB bytes及pending／receipt守恆。01的38/38為補Tk前，02為最終；`reports/build-desktop-preview-time-20261029-01`286檔hash／264檔編譯通過。未新增讀檔、掃描／模型／ACK，非真人／Web驗收。

@@ -305,6 +305,21 @@ def history_preview_window(value):
         return unknown
 
 
+def history_transition_text(value):
+    """Surface known internal conflicts without proving the first state/history."""
+    unknown = "備份內部轉換：未知，格式或計數無法核對。"
+    if not isinstance(value, dict):
+        return unknown
+    state, pairs, conflicts = (value.get(key) for key in ("state", "checked_pairs", "conflicts"))
+    if (type(pairs) is not int or type(conflicts) is not int or not 0 <= conflicts <= pairs <= 4095
+            or (state, bool(pairs), bool(conflicts)) not in (
+                ("not_observed", False, False), ("consistent", True, False), ("conflict", True, True))):
+        return unknown
+    label = {"not_observed": "尚無可比較相鄰轉換", "consistent": "已檢查相鄰轉換一致（非完整性證明）",
+             "conflict": "已知衝突，不能視為可還原"}[state]
+    return f"備份內部轉換：{label}；檢查 {pairs} 對／衝突 {conflicts} 對。首筆前狀態與缺失歷程仍未知。"
+
+
 def history_preview_text(value):
     """Counts only; no identifiers, provenance or restore inferred from a match."""
     counts = value.get("counts")
@@ -325,6 +340,7 @@ def history_preview_text(value):
             + history_preview_window(value) + "\n計數是區間內的資料庫快照，不能證明之後狀態；時間未知時不推定目前有效。\n"
             + f"備份 {data['backup_records']} 筆；目前 {data['target_records']} 筆；身分衝突 {data['identity_conflicts']} 筆。\n"
             + "；".join(f"{label} {counts[key]}" for key, label in zip(keys, labels)) + "。\n"
+            + history_transition_text(value.get("transition_order")) + "\n"
             + order + "。\n來源、歷程完整性、容量及可恢復性均未知；零衝突不等於可信、完整或可還原。\n"
             + "未執行還原、清理、容量釋放或 ACK；開啟分頁不會自動讀檔。")
 
