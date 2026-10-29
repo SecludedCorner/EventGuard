@@ -672,7 +672,8 @@ class EventGuardWindow(PendingView):
         self._snapshot = view
         self.headline.set(("合成驗收｜" if self.synthetic_fixture else "") + view["headline"])
         self.counts.set(view["counts"])
-        self.updated.set("情境準備時間：" + view["updated_at"] + "（非主機實測）" if self.synthetic_fixture else "最後更新：" + view["updated_at"])
+        self._recent_caption = "情境準備時間：" + view["updated_at"] + "（非主機實測）" if self.synthetic_fixture else "最後更新：" + view["updated_at"]
+        self._update_pending_caption()
         self.source_gaps.set(view["source_gaps"])
         self.agent_enabled.set(view["agent_enabled"])
         self.agent_status.set(view["agent_status"])

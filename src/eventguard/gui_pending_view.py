@@ -35,6 +35,10 @@ class PendingView:
         value = self._pending_page or {}
         return {'events': value.get('events', []), 'events_total': value.get('total'), 'events_limit': 100}
 
+    def _update_pending_caption(self):
+        caption = getattr(self, '_recent_caption', '來源／計數時間未知')
+        self.updated.set('來源／計數：'+caption+'；待確認頁為獨立快照' if self._pending_mode else caption)
+
     def show_pending(self, offset=0):
         if self._busy or self.worker.pending or type(offset) is not int or offset not in (0, 100):
             return
@@ -46,6 +50,7 @@ class PendingView:
         if first:
             self._recent_context = context
         self._pending_mode, self._pending_offset, self._pending_expected = True, offset, offset
+        self._update_pending_caption()
         self._pending_page = None
         self._last_event = None
         self.events.selection_remove(self.events.selection())
@@ -85,6 +90,7 @@ class PendingView:
             return
         context = self._recent_context
         self._pending_mode = False
+        self._update_pending_caption()
         self._pending_page = self._pending_expected = None
         self._last_event = None
         self.events.selection_remove(self.events.selection())

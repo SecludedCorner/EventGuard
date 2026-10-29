@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 更新時間與pending快照範圍分列
+
+pending模式header標明更新屬來源／計數，待確認頁為獨立讀取快照；切入即標、普通snapshot更新不冒充頁刷新，返回恢復原正常標示，不補造頁面讀取時間。`reports/verify-desktop-pending-caption-20261029-01`：2026-10-29 18:04（UTC+8）11/11、0skip、source_unchanged、Job自然0／remaining0／無強停；實際Tk驗snapshot後仍原pending頁且caption分列、返回標示及原item焦點／非預設篩選／選取恢復，850×620與長回條幾何回歸通過。`reports/build-desktop-pending-caption-20261029-01`326hash／304編譯；890487a兩ref一致。接受影響整合與GUI操作文件，保留原生／真人及Web獨立待驗。
+
 ## 2026-10-29 pending最後空頁與錯offset真Tk補驗
 
 `reports/verify-desktop-pending-boundaries-20261029-02`：2026-10-29 17:59（UTC+8）9/9、0skip、source_unchanged、Job自然0／remaining0／無強停。實際Tk在第2頁明確核對最後1件後刷新得空頁、總數100，仍可回前頁100件且無已確認事件；原ID／pending101／receipt0保持。錯namespace及錯offset都unknown並禁寫，明確重試回復，未默默套舊頁。01測試新方法誤插try/finally中導致載入SyntaxError／worker-summary缺失，未提交失敗來源；02修正位置及共用資料準備helper後通過。`reports/build-desktop-pending-boundaries-20261029-01`326hash／304編譯；c0f513c兩ref一致。接續來源／計數更新與待確認快照的標示核對、受影響整合及操作文件，仍不冒稱原生／真人完成。

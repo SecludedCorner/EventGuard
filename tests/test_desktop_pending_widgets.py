@@ -63,6 +63,7 @@ class DesktopPendingWidgetTests(unittest.TestCase):
         self.wait_for(lambda: not self.ui.worker.pending and self.ui._detail_document.get('event', {}).get('event_id') == recent['event_id'])
         self.assertEqual(tuple(v.get() for v in (self.ui.severity_filter, self.ui.delivery_filter, self.ui.handling_filter)), filters)
         self.assertEqual(self.ui.events.selection(), (recent['event_id'],))
+        self.assertEqual(self.ui.events.focus(), recent['event_id'])
         self.assertEqual((self.store.stats()['pending'], self.store.stats()['receipt_count']), (101, 0))
 
     def prepare_all_pending(self):

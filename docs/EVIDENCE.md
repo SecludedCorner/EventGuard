@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：來源更新不等於pending頁刷新
+
+`reports/verify-desktop-pending-caption-20261029-01` UTC10:04:05：11/11、0skip、source_unchanged、Job自然0／remaining0／無強停。真Tk pending頁普通snapshot後仍原anchor，updated標籤明示來源／計數與獨立快照；返回正常標示與原事件item焦點、非預設篩選／選取恢復，沒有新造snapshot時間。最小尺寸及長訊息回歸通過，read/write／pending／receipt守恆沿新入口各案例核對。`reports/build-desktop-pending-caption-20261029-01`326hash／304編譯；Tk item焦點不冒充原生鍵盤／真人操作。
+
 ## 2026-10-29：真Tk最後空頁與錯頁回條
 
 `reports/verify-desktop-pending-boundaries-20261029-02` UTC09:59:50：9/9、0skip、source_unchanged、Job自然0／remaining0／無強停。第2頁單件使用原ID明確核對後刷新，該頁空／total100，再按上一頁回100件且不含已核對ID；pending101／receipt0不變，沒有自動處置。錯namespace／offset均未知、空tree且寫入停用，不假報零要求，明確重試可讀原anchor。01新測試插錯try/finally位置造成SyntaxError，guardian仍自然exit1／無殘留，02修正後通過；build-desktop-pending-boundaries-20261029-01為326hash／304編譯。不同測試範圍不與前10項相加。
