@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 開啟中真Tk拒絕另一程序重開
+
+第一GUI在私有Job中保持開啟，第二Job以同scope重開得到already_owned／exit2，無ready視窗回條；拒絕發生時第一程序仍存活，原ready與DB bytes不變。第一自然退出後第三Job可成功重開，舊三收據及pending4／receipt0保留；三Job均remaining0／無強停。`reports/verify-desktop-concurrent-gui-20261029-01`：2026-10-29 15:55（UTC+8）6/6、0skip、source_unchanged，包含兩程序保存讀回、launcher非法scope及鎖失敗回歸；guardian自然退出0。`reports/build-desktop-concurrent-gui-20261029-01`305檔hash／283檔編譯。7fe016f（+141/−1）已普通同步main／開發ref；接續更新重開操作、受影響整合與目標缺口，不宣稱真人／原生輸入已驗。
+
 ## 2026-10-29 第一真Tk保存、第二真Tk同資料讀回
 
 測試專用on_ready回呼由獨立owned probe操作實際Tk按鈕；第一程序標handled並保存調查，合作退出後第二程序讀原scope，實際Text／Treeview核對已處理與同case，DB hash及舊三收據不變，沒有複製新DB；pending4／receipt0，採集／spawn／ACK哨兵未觸發。ready／exit明示automated_fixture_actions，非真人操作，正式CLI不提供自動改資料旗標。`reports/verify-desktop-process-reopen-20261029-01`：2026-10-29 15:50（UTC+8）8/8、0skip、source_unchanged、Job自然退出0／remaining0／無強停，含兩個真Job／Tk及非法scope／active owner回歸。`reports/build-desktop-process-reopen-20261029-01`304檔hash／282檔編譯。5a3f393（+88/−11）已普通同步main／開發ref；完整GUI並行owner拒絕及操作文件仍接續。

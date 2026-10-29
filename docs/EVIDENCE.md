@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：兩個並行GUI啟動的排他證據
+
+`reports/verify-desktop-concurrent-gui-20261029-01` UTC07:55:59：6/6、0skip、source_unchanged、外Job自然0／remaining0／無強停。test_desktop_fixture_concurrent_gui第一真Tk保持開啟8秒，另一真Job重開同scope被already_owned拒絕／自然exit2、無worker-ready，拒絕前後第一future均未完成且ready／DB bytes不變；第一自然0後第三真Tk重開成功／自然0。三原handle收據各留desktop-ux-concurrent-*／contender-*／after-owner-*，均managed／child_exited／remaining0／無強停，舊三收據不覆寫、pending4／receipt0不變。`reports/build-desktop-concurrent-gui-20261029-01`305檔hash／283檔來源編譯；這是自動化並行owner驗收，非真人成績。
+
 ## 2026-10-29：兩個真GUI程序保存／讀回閉環
 
 `reports/verify-desktop-process-reopen-20261029-01` UTC07:50:43：8/8、0skip、source_unchanged，Job自然退出0／remaining0／無強停。test_desktop_fixture_process_reopen啟動兩個私有Job的真Tk程序：第一個invoke已處理與保存調查，第二個重開同scope並核對實際Text／Treeview、同case_id／DB hash，舊worker-ready／worker-exit／probe-guardian bytes不變、新attempt無DB副本。每個probe-result及原handle guardian回條留各desktop-ux-probe-*，pending4／receipt0，禁止採集／模型子程序／ACK的哨兵未觸發。明示自動化fixture及participant_results=null，不是原生輸入或真人測試。`reports/build-desktop-process-reopen-20261029-01`304檔hash／282檔來源編譯；正式CLI未加自動保存旗標。
