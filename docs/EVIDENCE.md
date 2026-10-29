@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：備份核對真Tk閉環
+
+`reports/verify-desktop-history-preview-widgets-20261029-03` UTC06:10:19：31/31、0skip、source_unchanged、Job自然退出0／remaining0／無強停。實際Tk→真合成Catalog／備份檔，明確點選才讀、分頁開啟不讀、不披露ID、後來操作顯順序分歧、DB bytes及pending2／receipt0守恆、變檔／錯誤回條清舊成功、新備份未確認禁用。01的52/52含GUI回歸，02的15/15加入新按鈕850×620邊界，03加未確認新備份；重疊不相加。`reports/build-desktop-history-preview-widgets-20261029-01`285檔hash／263檔編譯。完整性／來源／容量／可恢復性均未知，無還原／清理／模型／採集／ACK，非真人或Web驗收。
+
 ## 2026-10-29：桌面備份核對控制層
 
 `reports/verify-desktop-history-preview-20261029-02` UTC06:04:46：35/35、0skip、source_unchanged、Job自然退出0／remaining0／無強停；真合成SQLite／本工具暫存檔驗已存在計數、零衝突仍recoverability未知、DB bytes守恆、未知／重開controller拒絕、缺失／交易期間變動及同metadata異hash拒絕。對不符檔案身分，read哨兵證明未讀內容；CLI原receipt不新增內部file_identity欄位。01含重複繼承測試，02去重補強為最終。`reports/build-desktop-history-preview-20261029-01`284檔hash及262檔編譯；Tk按鈕仍待驗，無還原／清理／模型／採集／ACK。

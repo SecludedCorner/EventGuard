@@ -289,6 +289,29 @@ def handling_summary(value):
     return lines
 
 
+def history_preview_text(value):
+    """Counts only; no identifiers, provenance or restore inferred from a match."""
+    counts = value.get("counts")
+    keys = ("unbound", "event_missing", "event_mismatch", "operation_conflict", "already_present", "absent_operation")
+    numbers = (*keys, "target_records", "backup_records", "identity_conflicts")
+    data = {**value, **counts} if isinstance(counts, dict) else {}
+    if (value.get("state") != "history_backup_previewed" or not isinstance(counts, dict) or set(counts) != set(keys)
+            or any(type(data.get(k)) is not int or not 0 <= data[k] <= 4096 for k in numbers)
+            or sum(counts.values()) != data["backup_records"] or sum(counts[k] for k in keys[:4]) != data["identity_conflicts"]
+            or value.get("history_order") not in ("exact_prefix", "diverged")
+            or value.get("restore_performed") is not False or value.get("restore_authorized") is not False
+            or value.get("ack_performed") is not False
+            or any(value.get(k) != "unknown" for k in ("provenance_status", "history_completeness", "capacity_status", "recoverability_status"))):
+        return None
+    order = "目前歷程是備份前綴（非完整性證明）" if value["history_order"] == "exact_prefix" else "順序已分歧，不推論可還原"
+    labels = ("缺少綁定", "事件缺失", "事件變動", "操作衝突", "已存在操作", "缺失操作")
+    return ("本次備份身分核對（唯讀快照）\n"
+            + f"備份 {data['backup_records']} 筆；目前 {data['target_records']} 筆；身分衝突 {data['identity_conflicts']} 筆。\n"
+            + "；".join(f"{label} {counts[key]}" for key, label in zip(keys, labels)) + "。\n"
+            + order + "。\n來源、歷程完整性、容量及可恢復性均未知；零衝突不等於可信、完整或可還原。\n"
+            + "未執行還原、清理、容量釋放或 ACK；開啟分頁不會自動讀檔。")
+
+
 def diagnosis_summary(value, event_id):
     """Bounded saved Catalog projection; never issue or infer a new query."""
     heading = "另存的查證結果（歷史觀察）"

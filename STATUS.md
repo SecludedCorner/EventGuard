@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 真Tk備份核對入口
+
+新增「核對剛才備份」按鈕與獨立唯讀結果分頁；明確點選才讀檔，開分頁不讀；只在本視窗取得成功備份回條後啟用。結果核對檔名、固定計數／守恆及未知契約，不披露個別ID；檔案變動／錯誤回條清舊成功、新備份未確認禁用核對，不混入事件詳情。`reports/verify-desktop-history-preview-widgets-20261029-03`：2026-10-29 14:10（UTC+8）31/31、0skip、source_unchanged、Job自然退出0／remaining0／無強停；01為52/52，02補後來歷程與最小按鈕邊界15/15，03再驗新備份未確認，非相加。真Tk＋真合成SQLite驗計數／順序分歧／DB bytes及pending2／receipt0守恆，850×620新按鈕未超界。`reports/build-desktop-history-preview-widgets-20261029-01`285檔hash／263檔編譯；600ea41（+130/−4）已普通同步main／開發ref。未還原／清理／釋放容量、未原生查詢／模型／ACK。
+
 ## 2026-10-29 桌面備份身分核對控制層
 
 僅記住本程序最後成功備份一份檔名／寫入handle身分／完整檔案hash；檔案開啟後先fstat核對再讀有界內容，前後路徑／metadata及hash相符才沿用Catalog單一唯讀交易預檢，再拒絕交易期間檔案變動。不公開內部檔案身分、不讀任意路徑，重開controller須重新明確備份。`reports/verify-desktop-history-preview-20261029-02`：2026-10-29 14:04（UTC+8）35/35、0skip、source_unchanged、Job自然退出0／remaining0／無強停；真合成SQLite驗比對／DB bytes守恆、未知／重開拒絕、缺檔／變動／同metadata異hash拒絕、身分不符時read哨兵未觸發。01的37含3項重複繼承，02移除後加強前置讀取守門，為最終。`reports/build-desktop-history-preview-20261029-01`284檔hash／262檔編譯通過。Tk入口尚待接線，不稱已還原或容量恢復。

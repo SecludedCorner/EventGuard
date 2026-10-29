@@ -26,7 +26,7 @@ class DesktopHandlingLayoutTests(unittest.TestCase):
                 self.assertIsNotNone(self.ui.detail.dlineinfo('1.0'), 'detail needs a visible text line')
                 for widget in (self.ui.events, self.ui.detail, self.ui.severity_choice,
                                self.ui.delivery_choice, self.ui.handling_choice, self.ui.clear_filters_button,
-                               self.ui.investigate_button, self.ui.history_backup_button,
+                               self.ui.investigate_button, self.ui.history_backup_button, self.ui.history_preview_button,
                                *self.ui.handling_buttons.values()):
                     self.assertTrue(widget.winfo_ismapped(), str(widget))
                     self.assertGreater(widget.winfo_height(), 1, str(widget))

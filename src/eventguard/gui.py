@@ -11,7 +11,7 @@ import threading
 import uuid
 
 from .gui_presenter import (DELIVERY_FILTERS, SEVERITY_FILTERS, HANDLING_FILTERS, detail_text,
-                            event_list_view, event_summary, safe_text, source_success_text, source_gap_text)
+                            event_list_view, event_summary, history_preview_text, safe_text, source_success_text, source_gap_text)
 
 
 SOURCE_NAMES = {"defender": "Defender 防護", "listeners": "監聽端點", "processes": "程序",
@@ -23,7 +23,7 @@ OPERATION_NAMES = {"capabilities": "查看能力", "status": "查看狀態", "ov
     "ack_event": "確認收到", "retry_event": "重試投遞", "report": "匯出報告",
     "background_start": "開始持續監看", "background_status": "查看背景狀態", "background_stop": "暫停監看",
     "gui_start": "開始監看", "gui_pause": "暫停監看", "gui_inspect": "查看事件", "gui_investigate": "保存調查",
-    "gui_set_status": "保存人工狀態", "gui_backup_history": "備份處置歷程",
+    "gui_set_status": "保存人工狀態", "gui_backup_history": "備份處置歷程", "gui_preview_history": "核對備份身分",
     "gui_receive_permission": "設定接收開關", "gui_automatic_agent": "設定自動處理"}
 ACTIVITY_STATES = {"running": "執行中／待結果", "completed": "已完成", "blocked": "受阻",
                    "failed": "失敗", "interrupted": "中斷，結果未確認"}
@@ -118,7 +118,7 @@ def view_snapshot(document, *, severity="all", delivery="all", handling="all"):
 
 class ControllerWorker:
     """Serialize local operations without invoking Tk on a worker thread."""
-    ACTIONS = frozenset({"snapshot", "start", "pause", "set_agent_delivery", "set_automatic_agent", "inspect", "investigate", "set_status", "backup_history", "close"})
+    ACTIONS = frozenset({"snapshot", "start", "pause", "set_agent_delivery", "set_automatic_agent", "inspect", "investigate", "set_status", "backup_history", "preview_history_backup", "close"})
 
     def __init__(self, controller):
         self.controller = controller
@@ -168,7 +168,7 @@ class ControllerWorker:
                 result = dict(result, requested_event_id=arguments[0])
             if action == "set_status":
                 result.update(requested_status=arguments[1], requested_operation_id=arguments[2])
-            if action == "backup_history":
+            if action in {"backup_history", "preview_history_backup"}:
                 result.update(requested_filename=arguments[0])
             self.results.put((action, result))
             with self._lock:
@@ -206,6 +206,7 @@ class EventGuardWindow:
         self._inspect_after_refresh = None
         self._snapshot_due = False
         self._backup_filename = None
+        self._confirmed_backup_name = self._preview_requested_name = None
         self._deferred_request = None
         self._snapshot = {}
         self._event_document = {}
@@ -379,9 +380,11 @@ class EventGuardWindow:
         self.handling_status = tk.StringVar(value="人工狀態未知；與 ACK 獨立。")
         self.history_backup_button = ttk.Button(handling_bar, text="備份已保存處置歷程", command=self.backup_history)
         self.history_backup_button.grid(row=0, column=4, padx=(8, 0))
-        ttk.Label(handling_bar, textvariable=self.handling_status).grid(row=1, column=0, columnspan=5, sticky="w")
+        self.history_preview_button = ttk.Button(handling_bar, text="核對剛才備份", state="disabled", command=self.preview_history)
+        self.history_preview_button.grid(row=0, column=5, padx=(6, 0))
+        ttk.Label(handling_bar, textvariable=self.handling_status).grid(row=1, column=0, columnspan=6, sticky="w")
         ttk.Label(handling_bar, text="備份本安裝 live 歷程至 reports；含敏感識別只留本機，勿分享。備份不釋放容量、不還原。",
-                  wraplength=1000).grid(row=2, column=0, columnspan=5, sticky="w")
+                  wraplength=1000).grid(row=2, column=0, columnspan=6, sticky="w")
         ttk.Label(event_frame, text="選取事件以唯讀查看。事件內容是不可信資料；查看不會 ACK，ACK 也不代表修復或結案。",
                   wraplength=1000).grid(row=3, column=0, sticky="w", pady=(8, 0))
         notebook.add(event_frame, text="事件與內容")
@@ -404,6 +407,13 @@ class EventGuardWindow:
                   wraplength=1000).grid(row=2, column=0, sticky="w", pady=(8, 0))
         notebook.add(activity_frame, text="操作紀錄")
         notebook.add(automatic_frame, text="自動 agent 設定")
+        self.history_preview_frame = ttk.Frame(notebook, padding=8)
+        self.history_preview_frame.columnconfigure(0, weight=1)
+        self.history_preview_frame.rowconfigure(0, weight=1)
+        self.history_preview = tk.Text(self.history_preview_frame, wrap="word", height=8, state="disabled")
+        self.history_preview.grid(sticky="nsew")
+        notebook.add(self.history_preview_frame, text="備份核對")
+        self._show_history_preview("尚無核對結果；先明確備份，再按「核對剛才備份」。重開應用不保留本次檔案識別。")
         ttk.Label(outer, text="關閉視窗只會最小化，監看會繼續。要完全離開，請選「應用程式 → 暫停並結束」。",
                   foreground="#53606d", wraplength=1000).grid(row=6, column=0, sticky="ew", pady=(10, 0))
 
@@ -435,6 +445,7 @@ class EventGuardWindow:
     def _update_investigate_button(self):
         self.investigate_button.configure(state="normal" if self._can_investigate() else "disabled")
         self.history_backup_button.configure(state="disabled" if self._busy or self._closed else "normal")
+        self.history_preview_button.configure(state="normal" if not self._busy and not self._closed and self._confirmed_backup_name else "disabled")
         value = self._detail_document or {}
         status = value.get("status")
         ready = self._can_investigate() and isinstance(status, str) and status in HUMAN_STATES
@@ -465,12 +476,26 @@ class EventGuardWindow:
             self._last_event = None
             self.select_event()
 
+    def _show_history_preview(self, text):
+        self.history_preview.configure(state="normal")
+        self.history_preview.delete("1.0", "end")
+        self.history_preview.insert("1.0", text)
+        self.history_preview.configure(state="disabled")
+
+    def preview_history(self):
+        if not self._busy and self._confirmed_backup_name and self._request("preview_history_backup", self._confirmed_backup_name):
+            self._preview_requested_name = self._confirmed_backup_name
+            self._show_history_preview("正在唯讀核對，結果尚未確認；未執行還原或清理。")
+            self.history_preview_frame.master.select(self.history_preview_frame)
+
     def backup_history(self):
         if self._busy or self._closed:
             return
         filename = "history-backup-" + uuid.uuid4().hex + ".json"
         if self._request("backup_history", filename):
             self._backup_filename = filename
+            self._confirmed_backup_name = None
+            self._show_history_preview("新備份結果尚未確認；先前核對不能代表本次檔案，尚不能核對本次備份。")
             self.message.set("正在備份本安裝 live 處置歷程；不清理、不還原、不 ACK。")
 
     def investigate(self):
@@ -674,6 +699,13 @@ class EventGuardWindow:
                 if action == "close":
                     self.window.deiconify()
                     self.message.set("尚未確認暫停，視窗會保留。原因：" + safe_text(value.get("reason", value.get("state")), 220))
+                elif action == "preview_history_backup":
+                    text = history_preview_text(value)
+                    correlated = (self._preview_requested_name is not None and value.get("requested_filename") == self._preview_requested_name
+                                  and value.get("path") == "reports/"+self._preview_requested_name)
+                    self._show_history_preview(text if correlated and text is not None else
+                        "備份核對結果未確認；檔案可能缺失／變動或回條不符。來源資料保留，不自動重試；未還原／清理。")
+                    self._preview_requested_name = None
                 elif action == "backup_history":
                     expected = "reports/" + self._backup_filename if self._backup_filename else None
                     confirmed = (expected is not None and value.get("requested_filename") == self._backup_filename
@@ -683,6 +715,10 @@ class EventGuardWindow:
                     self.message.set("歷程備份已核對：" + expected + "；未刪歷程／未釋放容量。目錄項耐久性未驗；雜湊非來源認證。" if confirmed else
                         "歷程備份結果未確認；請核對 reports。未執行還原或清理，不自動重試或覆寫。")
                     self._backup_filename = None
+                    if confirmed:
+                        self._confirmed_backup_name = value["requested_filename"]
+                        self._show_history_preview("新備份尚未做身分核對；按「核對剛才備份」才讀檔。")
+                    self._update_investigate_button()
                 elif action == "investigate":
                     event_id = value.get("requested_event_id")
                     confirmed = value.get("state") == "investigation_saved" and value.get("event_id") == event_id
