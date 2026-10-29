@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：成功回條仍可能在Tk消費前遺失
+
+`reports/verify-desktop-request-consumer-20261029-01` UTC08:43:37：15/15、0skip、source_unchanged、Job自然0／remaining0／無強停。durable成功也留日誌，consumer再明確confirm_status_receipt；新controller.inspect在禁止dispatch哨兵下仍讀到原ID，錯status確認拒絕且DB bytes不變，後來CLI改read後原ID明確重試不回退、再確認才清除，pending1／receipt0。活動完成失敗、prepare失敗、確認清除持久化失敗亦守恆。`reports/build-desktop-request-consumer-20261029-01`314hash／292編譯；GUI尚未接線，不升格兩程序Tk故障已驗。
+
 ## 2026-10-29：Tk原ID恢復前的嚴格視圖驗證
 
 `reports/verify-desktop-request-view-20261029-01` UTC08:40:39：30/30、0skip、source_unchanged、Job自然0／remaining0／無強停。gui_requests.recover只投影經同事件／namespace／原hash核對且無重複的有界要求；缺值／錯誤與available空分開。真Catalog、真durable controller提交後活動失敗的原ID可投影，DB bytes不變、pending1／receipt0；非原事件、namespace、hash、unknown、錯list／重複ID及空值拒絕。`reports/build-desktop-request-view-20261029-01`314hash／292編譯；無dispatch／模型／採集／ACK，Tk接線待下一單元。

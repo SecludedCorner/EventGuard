@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 consumer確認協定已驗／接Tk兩階段
+
+15/15、0skip與292檔來源編譯，成功controller返回仍保留意圖，confirm_status_receipt只驗／清除原要求不改狀態／ACK，見STATUS。Tk需在已匹配set_status回條後另送confirm_status_receipt，收到desktop_request_confirmed且同key／ID才pop並顯示最終核對；確認失敗仍保留，不自動重送狀態。讀detail恢復keys及unknown禁寫沿gui_requests.recover，合成SAFE增加兩方法。先最小Tk接線／實際元件與SQLite，再兩真Job丟成功回條→自然退出→重開核對，不能以控制器重建代替。
+
 ## 2026-10-29 視圖驗證器已驗／立即接Tk恢復
 
 30/30、0skip與292檔來源編譯，gui_requests.recover(real Catalog detail)可得原map，錯形／scope／hash回None，available空回{}，見STATUS。下一Tk在_show_detail驗證並恢復所選事件keys；讀取不能清掉仍有丟回條的本視窗keys（後端可能已成功清日誌），要合併且衝突禁寫，不自送。ControllerWorker的set_status改用存在的set_status_durable（legacy fixture明確補對應介面），durable回條request_pending=true或未知時保留ID；壞日誌禁人工寫入仍可閱讀。新增真Tk／SQLite重建窗口及容量故障契約，再補兩真Job故障路徑。

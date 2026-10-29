@@ -397,6 +397,11 @@ class DesktopController:
         from .desktop_request_control import save
         return save(self, event_id, status, operation_id)
 
+    def confirm_status_receipt(self, event_id, status, operation_id):
+        """Resolve a GUI-consumed reply; this never changes status or ACKs."""
+        from .desktop_request_control import confirm
+        return confirm(self, event_id, status, operation_id)
+
     @recorded("gui_set_status")
     def _set_status_bound(self, event_id, status, operation_id, payload_hash):
         from .events.catalog import EventCatalog

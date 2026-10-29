@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 成功回條到達consumer前仍保留意圖
+
+補上controller成功返回後、Tk收到前仍可能丟回條的缺口：set_status_durable即使成功也保留要求，新增confirm_status_receipt只在consumer確認收到後，依原gui操作證據清除，不改狀態／ACK。取代前節僅等外層活動回條就清除的中間實作。`reports/verify-desktop-request-consumer-20261029-01`：2026-10-29 16:43（UTC+8）15/15、0skip、source_unchanged、Job自然0／remaining0／無強停；新controller唯讀可找回成功但未確認的原ID、錯要求不能清除、較新read不回退、pending1／receipt0。`reports/build-desktop-request-consumer-20261029-01`314hash／292編譯；576ea28兩ref已一致。Tk下一切片必須接消費回條確認，而非直接pop記憶體識別。
+
 ## 2026-10-29 Tk待確認視圖驗證前置
 
 Catalog.detail加原payload_hash；gui_requests.recover核對同事件／namespace／hash、固定五欄、最多128及重複ID，available空回空map、unknown或錯形回None，不混成安全空集合。`reports/verify-desktop-request-view-20261029-01`：2026-10-29 16:40（UTC+8）30/30、0skip、source_unchanged、Job自然0／remaining0／無強停；真Catalog的提交後未確認視圖可讀原ID、讀前後DB bytes／pending1／receipt0守恆，錯身分／namespace／hash／重複要求均unknown。`reports/build-desktop-request-view-20261029-01`314hash／292編譯；cb66959已同步兩ref。Tk尚未呼叫此驗證器，下一單元接線，非已完成GUI恢復。

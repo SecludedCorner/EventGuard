@@ -31,10 +31,23 @@ def save(controller, event_id, status, operation_id):
         if not confirmed:
             value = value if isinstance(value, dict) else {'state': 'error', 'reason': 'desktop_result_invalid'}
             return dict(value, request_pending=True, request_operation_id=operation_id)
+        # A returned controller result can still be lost before Tk receives it.
+        # Keep the intent until the consumer explicitly confirms that receipt.
+        return dict(value, request_pending=True, request_operation_id=operation_id)
+
+
+def confirm(controller, event_id, status, operation_id):
+    with controller._lock:
+        catalog = EventCatalog(controller.root, 'live')
+        view = catalog.detail(event_id)['pending_handling_requests']
+        selected = [item for item in view['requests'] if item['status'] == status and item['operation_id'] == operation_id]
+        if view['state'] != 'available' or len(selected) != 1:
+            return {'state': 'error', 'reason': 'desktop_request_confirmation_unverified', 'request_pending': True}
         try:
-            store._complete_desktop_request(intent, namespace='live')
+            EventStore(catalog.directory)._complete_desktop_request(selected[0], namespace='live')
         except (OSError, ValueError, StoreError):
             return {'state': 'error', 'reason': 'desktop_request_completion_unconfirmed',
                     'operation_may_have_completed': True, 'automatic_retry_allowed': False,
                     'request_pending': True, 'request_operation_id': operation_id, 'model_calls': 0}
-        return dict(value, request_pending=False, request_operation_id=operation_id)
+        return {'state': 'desktop_request_confirmed', 'event_id': event_id, 'request_pending': False,
+                'request_operation_id': operation_id, 'ack_performed': False, 'model_calls': 0}
