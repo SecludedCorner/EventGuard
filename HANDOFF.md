@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 有界launcher真Job／Tk已驗
+
+6/6、0skip及273檔來源編譯通過；獨立真Tk child的deadline與owner_eof均原handle自然退出0／Job0／無強停，見STATUS及launcher-scenarios.json。run：py -3.13 -B scripts/desktop_ux_acceptance.py --name desktop-ux-新名稱 --seconds 900（限ASCII名稱，既有拒絕）。目前只合成安全session，participant_results=null，還沒有六任務紀錄入口；下一單元接固定六任務與明確操作者自報的有界紀錄，不自填步數／時間／錯誤，不把自報視為已認證真人。
+
 ## 2026-10-29 有界合成worker已實作
 
 47/47、0skip及271檔來源編譯通過，先Job成員驗證後建資料／Tk、stdin取消／deadline安全關閉，見STATUS。此worker單元adopt收據為mock，獨立launcher真Job／自然退出尚待；接續父程序明確啟動及保留原handle退出／殘留收據，未證明退出不能報成功，不停其他程序。六任務與participant輸入仍待，不自填真人結果。

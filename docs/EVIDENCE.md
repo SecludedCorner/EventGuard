@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：獨立Windows Job／合成Tk自然退出
+
+`reports/verify-desktop-fixture-launcher-20261029-01` UTC07:03:17：6/6、0skip、source_unchanged、guardian自然退出0／remaining0／無強停；真Windows Job含執行前assign、child adopt成員核對。兩個獨立合成Tk session的deadline與owner_eof均exit0／Job remaining0／forcibly_terminated=false，詳細原handle收據索引為同目錄launcher-scenarios.json；既有scope拒絕覆寫。`reports/build-desktop-fixture-launcher-20261029-01`295檔hash／273檔編譯。worker單元mock收據與這個真Job案例分開；無採集／模型／ACK、無真人參與，participant_results=null，六任務輸入功能仍待。
+
 ## 2026-10-29：有界合成Tk worker單元
 
 `reports/verify-desktop-fixture-run-20261029-01` UTC06:59:00：47/47、0skip、source_unchanged、guardian Job自然退出0／remaining0／無強停。run_fixture單元mock adopt收據、真Tk驗owner取消合作關閉及GUI worker退出；時限非法／adopt失敗前不建資料或Tk，participant_results保持null。`reports/build-desktop-fixture-run-20261029-01`293檔hash及271檔編譯；不升格為獨立GUI程序真Job驗收，launcher／真人六任務仍待，無採集／模型／ACK。

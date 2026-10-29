@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 獨立合成桌面launcher真Job驗收
+
+scripts/desktop_ux_acceptance.py明確新建reports/desktop-ux-*，先以processes.spawn把child放私有Job才執行；worker再驗Job成員，1–900秒／owner stdin合作關閉，父程序保留原handle核對退出與殘留。`reports/verify-desktop-fixture-launcher-20261029-01`：2026-10-29 15:03（UTC+8）6/6、0skip、source_unchanged、guardian自然退出0／remaining0／無強停；其中獨立真Tk child分別deadline及owner_eof，兩者自然exit0／Job0／無強停，收據索引在該目錄launcher-scenarios.json，重用目錄拒絕不覆寫。`reports/build-desktop-fixture-launcher-20261029-01`295檔hash／273檔編譯。2b31687（+119/−0）已普通同步main／開發ref；這是合成程序安全與生命週期，不是真人任務／原生來源驗收，participant_results仍null，六任務紀錄尚待。
+
 ## 2026-10-29 有限時間合成Tk worker
 
 run_fixture先adopt既有私有Job並驗成員才建立隔離scope／Tk，1–900秒，owner stdin合作取消或deadline請求GUI安全關閉；worker-ready／exit只存固定收據與participant_results=null，不自稱程序已退出。`reports/verify-desktop-fixture-run-20261029-01`：2026-10-29 14:59（UTC+8）47/47、0skip、source_unchanged、guardian Job自然退出0／remaining0／無強停；worker單元明確模擬adopt收據，驗時限／成員前置拒絕及真Tk合作關閉，不能冒稱獨立worker實際Job驗收。`reports/build-desktop-fixture-run-20261029-01`293檔hash／271檔編譯通過。69233b0（+112/−6）已普通同步main／開發ref；下一父程序launcher再驗真Job／自然退出，六任務與人類紀錄未完成。
