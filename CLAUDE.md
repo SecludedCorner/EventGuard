@@ -1,5 +1,9 @@
 # EventGuard 工作提醒
 
+## 2026-10-30 通知測試的執行環境與證據範圍
+
+受限環境整合344項含notification_icon_unavailable的1skip；同一固定合成通知案例在已核非提升host的私有Job單獨1/1通過，OS接受且自有icon/window關閉，見notification-host-contract-20261030-01。原skip保留，不反覆重跑整套洗成0skip，也不把OS接受等同真人看見、桌面喚醒或agent喚醒。相同自有GUI開發許可不再問，不改設定／提權。
+
 ## 2026-10-30 原生桌面工具已實際可用
 
 desktop-ux-native-host-20261029-02已用受支援CUA、唯一自有合成Tk做真滑鼠read→handled／篩選／合作退出，pending4／ACK0與SQLite一致。不要沿用舊窗口未列出／capture timeout宣稱目前全不可用，也不重問相同桌面驗收許可；先核當前窗口與本次證據。真人metrics仍未取得，截圖只留本機reports。

@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-30 最新成功證據整合與通知範圍
+
+4dc1f76產品24模組344項為343pass／1skip（notification_icon_unavailable），source_unchanged／321編譯、Job自然0無殘留；固定通知案例另在非提升host私有Job 1/1、OS接受且自有icon/window關閉，原skip不改寫。非真人看見／桌面喚醒／agent喚醒，詳STATUS。424檔來源包可重現，無release。兩個產品單元已同步origin/main，下一從既有真200%、真人、原生身分／長跑、可信恢復及真防守等具體前置變化接續，不重跑相同fixture或重問相同開發授權，目標仍active。
+
 ## 2026-10-30 Operator與來源頁已一致
 
 86/86／0skip及321來源編譯；Operator status/observation/cross-namespace overview與CLI沿同成功證據核對，raw saved_status保留，partial/unknown不提升，stale目前覆蓋unknown；非字串status不使七來源中斷。下一做受影響分類pipeline、Operator、來源頁、Web讀取與真Tk整合，無新native/model，詳STATUS。窗口只確認目前不列出，不重試browser政策路線；其餘獨立關卡保留。

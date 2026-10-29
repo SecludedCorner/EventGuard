@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-30 成功證據跨入口整合已驗／通知skip另實測
+
+產品4dc1f76：verify-success-evidence-integration-20261030-01共24模組344項、343通過／1skip（notification_icon_unavailable）、無fail/error，102.795秒、source_unchanged／321語法、Job自然0／remaining0／無強停；build344hash／321來源編譯。覆蓋source_status／Operator／CLI／Web讀取契約／實際Tk／監看及既有分類pipeline，不是全庫回歸。兩個缺陷單元67與86為重疊定向，不相加。release-prep-success-evidence-20261030-01為4dc1f76的424檔可重現來源包，SHA256 bf93af1374168d8bfe73c83fc22624e19fde71b141d58c081ccd098041de0f95，未tag／release／部署。
+
+依既有自有合成GUI授權，該通知案例另於非提升host context一次執行：notification-host-contract-20261030-01為1/1／0skip，Shell_NotifyIconW接受固定合成要求、自有窗口及圖示close=true；私有Job自然0／remaining0／無強停、provider_queries/model0。原344報告不覆寫或加總成0skip；此證據不驗人類可見、桌面喚醒或真agent收件。先前空白窗口只由唯讀清單證明已不列出，沒有宣稱由agent關閉。原生身分partial、真200%／真人、24h/reboot、可信恢復與真防守仍分開未達成，整體active；沒有新原生inventory或模型。
+
 ## 2026-10-30 OPERATOR-SUCCESS-CONTRADICTIONS 跨入口已修
 
 Operator health status、observation與跨namespace overview沿用effective_collection_status；原始狀態另存saved_status，有錯誤partial、壞coverage unknown，current_coverage另受freshness限制。修非字串宣告status可使七來源整批TypeError的邊界，保留其他來源與原檔。verify-operator-success-contradictions-core-20261030-02八模組86/86／0skip、source_unchanged／Job自然0／remaining0／無強停，build344hash／321來源編譯；含真CLI render、fresh/stale、live/test隔離及讀前後hash。前次85/86為新測試未固定source_status時鐘，已與operator合成時鐘對齊，未放寬產品判定。無採集／模型／ACK。下一受影響Operator／Web讀取／桌面及分類資料pipeline整合，不重跑全部未受影響庫。

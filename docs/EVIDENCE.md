@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-30：跨入口成功證據整合與獨立通知要求
+
+verify-success-evidence-integration-20261030-01綁4dc1f76，24模組344項＝343通過／1skip／0fail/0error，102.795秒、source_unchanged／321語法、Job自然0／remaining0／無強停；build344hash／321編譯。skip為現行受限環境notification_icon_unavailable，原結果保留。notification-host-contract-20261030-01先核TokenElevation=0，再在私有Job單跑既有固定合成通知案例，1/1／0skip、OS accepted=true／own icon/window closed=true、Job自然0／remaining0／無強停，無provider query／模型；human_visibility=false、非桌面喚醒／真agent證據，不把兩scope合併成344項零skip。
+
+release-prep-success-evidence-20261030-01：4dc1f76／424檔／reproducible，archive SHA256 bf93af1374168d8bfe73c83fc22624e19fde71b141d58c081ccd098041de0f95。來源候選包排除runtime／授權／私人截圖，未建立exe／tag／release。SOURCE-SUCCESS兩單元的原始legacy狀態及檔案均未改寫，partial／unknown／stale不變安全；完整AI盯哨未完成。
+
 ## 2026-10-30：Operator來源成功矛盾跨入口
 
 red四項未過（1fail／3error），core-20261030-02八模組86/86、0skip／321語法，source_unchanged／Job自然0／remaining0／無強停；build344hash／321編譯。health ok＋80錯誤在CLI／status呈partial，stale current_coverage unknown；invalid bool count為unknown，live保存資料不被test health的ok蓋過，原始saved_status保留、檔案hash不變；list型status不再中斷七來源。前次測試fake clock差異保存於core-01，對齊時鐘後通過，不改freshness或成功標準。純合成無原生採集／模型／ACK，不能稱主機安全或整體完成。

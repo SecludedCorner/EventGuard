@@ -1,5 +1,11 @@
 # EventGuard 目前目標
 
+## 2026-10-30 成功證據兩單元完成／剩餘關卡不縮小
+
+SOURCE／OPERATOR-SUCCESS-CONTRADICTIONS已修並同步main；24模組344項343pass／1skip、321來源編譯，424檔來源包可重現。通知skip案例已在另一非提升host scope一次1/1、OS接受／自有icon關閉，不改原skip，也不等同人類可見或agent喚醒。原始結果與已保存歷史保留，跨入口不再把非零錯誤或壞metadata當成功。
+
+下一沿具體前置變化驗既有真200%、真人六任務、原生身分覆蓋／24h/reboot、可信無損恢復、入站偵查與真agent防守成效；新可重現產品缺陷則直接修復／驗證／分片推送。一般開發已授權不重問，不藉重複同fixture或文件替代缺少的真環境證據；不新增模型／系統設定／敏感處置或排程，完整核心目標仍active。
+
 ## 2026-10-30 OPERATOR-SUCCESS-CONTRADICTIONS通過／接整合
 
 八模組86/86／0skip、321來源編譯，跨入口成功與錯誤矛盾已修，原始結果／時間／檔案保留，freshness仍獨立。下一CONTRADICTION-INTEGRATION驗source_status、Operator read paths／CLI、Web契約、桌面、分類pipeline與既有成功歷史；必要失敗才修，不重跑未變動全庫，通過逐單元同步main並保存證據。真200%／真人／長跑／可信恢復／真防守各自未DONE，不用局部完成縮小核心目標。
