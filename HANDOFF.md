@@ -1,5 +1,10 @@
 # EventGuard 接手
 
+## 2026-10-30 四步trace與保存內容交叉核對
+
+新增獨立四工具assessor，逐項對齊工具參數／回傳與durable report、hash／時間、單turn及獨一call；漏保存、改分析／hash、插shell、重複call、失敗退出或無ACK皆不通過。verify-investigation-evidence-20261030-02：9/9／0skip、327語法／編譯、Job自然0無殘留／強停；明示合成trace／模型0，不是獨立模型來源證明。下一實際stdio閉環與有限驗收入口，browser／真人關卡保留。
+
+
 ## 2026-10-30 四工具SDK接線完成／新調查目標
 
 P1-AGENT-INVESTIGATION：完成一自有事件receive→讀保存證據→獨立保存分析→ACK及自然退出；目前SDK／CLI command已明確選用四工具、synthetic-only，不改既有三工具。verify-investigation-mcp-20261030-01：33/33／0skip、325語法／來源編譯，Job自然0無殘留／強停，模型0。下一完成四步trace核對與真stdio自然退出，再準備版本／單事件／180秒範圍及產物的真模型批准包；不沿用已消耗舊批准。真人六項最後一次參與，browser政策未驗保留、不換工具繞過；整體AI盯哨未完成。
