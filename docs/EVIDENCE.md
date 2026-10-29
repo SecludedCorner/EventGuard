@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-30：PowerShell契約與獨立新版原生分類
+
+verify-powershell-error-counts-core-20261030-01為68/68／0skip／319語法、source_unchanged、Job自然0／remaining0／無強停，build342hash／319編譯。既有interpreter實跑固定合成80錯誤、兩壞分類、成功空集合，只有COMMON helpers不呼叫主機查詢；inner Job自然0／無殘留由測試逐筆核對。未把interpreter成功當Defender或實機來源成功。
+
+1b53a44來源獨立受影響整合286/286／0skip，sources341hash／318編譯。error-classifications-native-20261030-01真查processes/listeners各一次，非提升／總.709922秒；processes565列、175錯誤＝object/denied174＋object/unknown1，64明細／111未保留；listeners257列、23object/denied。全量分類不是全量reason／operation或唯一物件數，兩來源仍partial；10項crosscheck只核分類守恆與三Job自然0／remaining0／無強停，不是覆蓋PASS／安全。原summary頂層為最後來源重複，acceptance-crosscheck有errata，以sources各列為準。原報告保留、無rawfacts／新模型／設定變更；本PS新切片尚待最終整合，不回填歷史原生未知。
+
 ## 2026-10-30：桌面七來源錯誤計數元件
 
 verify-desktop-error-counts-core-20261030-02為118/118、0skip／318語法，source_unchanged／Job自然0／remaining0／無強停，build341hash／318編譯。實際Tk processes列核部分可讀、錯誤80、保留明細64、field/unknown16與object/denied64；Runtime保存資料讀前後hash相同，legacy無摘要顯未知、不補造成80拒讀。額外bool／負值／樣本數大於總數／任意文字不顯核對成功或PRIVATE。新欄是合成元件驗證，不冒充本版原生滑鼠或真人量測；舊原生179error未保留115筆的原因仍未知。

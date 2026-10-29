@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-30 CLASS-004已驗／接本批最終整合
+
+PS COMMON固定分類已接，實際interpreter合成測68/68／0skip、319來源編譯，無主機查詢／新模型。1b53a44產品已286項整合及一次非提升processes/listeners分類查核：175error全量174denied＋1unknown（僅64明細），23listener denied，兩來源仍partial；詳STATUS及native acceptance-crosscheck的頂層重複errata。下一26模組受影響整合含PS新測試，通過後保存本批證據／來源包並保持兩ref一致，不能把合成、分類完整或包裝成正式交付／真防守。
+
 ## 2026-10-30 CLASS-003 桌面入口已驗
 
 118/118／0skip與318來源編譯，七來源追加保存錯誤計數欄、保留原status／freshness／reason，水平捲軸可讀。合成80總數、64明細、16未知分開，legacy／矛盾摘要保持未知，真Tk與檔案不變有證據。下一受影響整合collector／診斷／Runtime／source_status／桌面，不新增native/model，不回填歷史原生未知分類；詳STATUS。

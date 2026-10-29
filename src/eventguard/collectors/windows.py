@@ -21,8 +21,21 @@ $ProgressPreference='SilentlyContinue'
 [Console]::OutputEncoding=New-Object System.Text.UTF8Encoding($false)
 $script:Errors=New-Object System.Collections.Generic.List[object]
 $script:ErrorCount=0
+$script:ErrorClasses=@{}
+$script:UnclassifiedErrors=0
 function Add-Evidence($stage,$reason,$type,$hr,$native,$operation,$status,$providerCode=$null,$category=$null) {
  $script:ErrorCount++
+ $validStage=($stage -is [string]) -and (@('launch','provider','object','field','policy') -ccontains $stage)
+ $validStatus=($status -is [string]) -and (@('partial','denied','unknown','not_applicable','error','timeout','cancelled','busy','not_requested') -ccontains $status)
+ $safeStage='unknown';$safeStatus='unknown'
+ if($validStage){$safeStage=$stage}
+ if($validStatus){$safeStatus=$status}
+ if(-not ($validStage -and $validStatus)){$script:UnclassifiedErrors++}
+ $key=$safeStage+'|'+$safeStatus
+ if(-not $script:ErrorClasses.ContainsKey($key)) {
+  $script:ErrorClasses[$key]=[ordered]@{stage=$safeStage;status=$safeStatus;count=0}
+ }
+ $script:ErrorClasses[$key].count++
  if($script:Errors.Count -lt 64){$script:Errors.Add([ordered]@{stage=$stage;reason_code=$reason;exception_type=$type;hresult=$hr;win32_error=$native;operation=$operation;status=$status;provider_code=$providerCode;category=$category})}
 }
 function Missing-Field($operation) {
@@ -55,6 +68,7 @@ function Read-Status($record,$stage=$script:ReadStage,$operation=$script:ReadOpe
 function Write-Result($rows,[bool]$truncated=$false) {
  $all=@($rows.ToArray())
  $failed=@($all | Where-Object { $_.status -ne 'ok' -and -not ($_.kind -eq 'registry_missing' -and $_.status -eq 'not_applicable') })
+ $failed+=@($script:ErrorClasses.Values | ForEach-Object {@{status=$_.status}})
  $good=@($all | Where-Object { $_.status -eq 'ok' })
  $status='ok'
  if($failed.Count -gt 0) {
@@ -62,7 +76,9 @@ function Write-Result($rows,[bool]$truncated=$false) {
   if($good.Count -eq 0 -and $unique.Count -eq 1) { $status=[string]$unique[0] }
  }
  if($truncated -and $status -eq 'ok') {$status='partial'}
-  [ordered]@{status=$status;rows=$all;truncated=$truncated;errors=@($script:Errors.ToArray());error_count=$script:ErrorCount;errors_truncated=($script:ErrorCount -gt 64)} | ConvertTo-Json -Depth 5 -Compress
+ $groups=@($script:ErrorClasses.Keys | Sort-Object -CaseSensitive | ForEach-Object {$script:ErrorClasses[$_]})
+ $classes=[ordered]@{total_count=$script:ErrorCount;unclassified_count=$script:UnclassifiedErrors;groups=$groups}
+ [ordered]@{status=$status;rows=$all;truncated=$truncated;errors=@($script:Errors.ToArray());error_count=$script:ErrorCount;errors_truncated=($script:ErrorCount -gt 64);error_classifications=$classes} | ConvertTo-Json -Depth 5 -Compress
 }
 function Test-LocalFixedPath([string]$path) {
  if([string]::IsNullOrWhiteSpace($path) -or $path -notmatch '^[A-Za-z]:\\' -or $path.StartsWith('\\')) {return $false}

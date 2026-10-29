@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-30 CLASS-004 PowerShell provider固定分類已驗
+
+既有PowerShell Add-Evidence同步有限stage/status計數，Write-Result以完整分類參與狀態，仍只保留64筆明細；不增加任何query或系統設定。實際既有PowerShell只執行合成Add-Evidence／Write-Result，red兩項fail，green verify-powershell-error-counts-core-20261030-01七模組68/68、0skip／source_unchanged／Job自然0／remaining0／無強停，build342hash／319來源編譯；80錯誤64明細、未知分類及空成功守恆，各inner Job退出由測試核對。這是實際interpreter的合成契約，非主機provider採集或完整覆蓋。下一跑包含本切片的最終受影響整合，保留先前1b53a44兩來源原生證據獨立範圍。
+
+此前1b53a44產品25模組286/286／0skip整合及421檔可重現來源包已完成（archive SHA2554884d3577e08cde5d25e13d34e2373e0007f29397cac49ff766191e1e3f84，非release）；reports/error-classifications-native-20261030-01按既有授權一次非提升兩來源查核總.709922秒：processes partial565列／175error，64明細＋111未保留，全量object/denied174、object/unknown1；listeners partial257列／23error全object/denied。10項crosscheck通過只驗分類／退出守恆，三Job自然0／remaining0／無強停、無rawfacts／模型；不能將175個error等同唯一程序數或全量reason／operation，未保留111筆的細原因仍未保存。原始summary頂層分類重複最後來源、非跨來源總數，crosscheck明記以sources各列為準，未覆寫或重查。
+
 ## 2026-10-30 CLASS-003 桌面保存錯誤計數已實作
 
 七來源新增「保存錯誤計數（非安全判定）」欄，沿既有水平捲軸查看；來源status／歷史成功／新鮮度不被分類摘要蓋掉。顯錯誤總數、保留明細及最多3組固定stage/status，更多組明列數量；缺摘要／計數矛盾為全量分類未知，不將64樣本當80個同原因。source_status→DesktopController→真Tk元件同一份保存資料，view也核對retained≤min(64,total)。verify-desktop-error-counts-core-20261030-02九模組118/118／0skip、source_unchanged／Job自然0／remaining0／無強停；build341hash／318來源編譯。合成80總數／64明細／16 field未知有元件與讀前後檔案hash不變證據；無原生採集／模型／ACK、新欄尚非真人或原生輸入驗收。下一完成受影響collector／Runtime／來源UI／診斷整合，舊原生報告不回填分類。

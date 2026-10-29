@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-30 CLASS-004通過／最後受影響整合
+
+既有PS provider有限分類與全量狀態推導已補，實際interpreter合成68/68／0skip、319來源編譯，沒有新增原生query。1b53a44的286整合與兩來源真分類查核另存獨立scope，來源仍partial，細reason不外推。下一CLASS-FINAL以26模組驗完整本批collector／監看／診斷／來源呈現契約，重建對應來源包、逐單元同步main；真200%／真人／native身分缺口／24h/reboot／可信無損恢復／真防守保持獨立未達成。
+
 ## 2026-10-30 CLASS-003已驗／接整合
 
 桌面七來源保存錯誤計數欄已落地，118/118／0skip、318來源編譯。只核對保存分類，不是完整覆蓋／安全或原生輸入驗收；舊資料缺摘要保持未知。下一CLASS-INTEGRATION完成受影響collector、診斷、Runtime、operator來源、七來源實際Tk與Web讀取契約合成整合並核對原生／模型／ACK不被讀取啟動，完成後逐單元main同步。真人／200%／native partial／長跑／可信恢復／真防守關卡獨立保留。
