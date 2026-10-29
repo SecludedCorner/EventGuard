@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-30 OPERATOR-SUCCESS-CONTRADICTIONS 跨入口已修
+
+Operator health status、observation與跨namespace overview沿用effective_collection_status；原始狀態另存saved_status，有錯誤partial、壞coverage unknown，current_coverage另受freshness限制。修非字串宣告status可使七來源整批TypeError的邊界，保留其他來源與原檔。verify-operator-success-contradictions-core-20261030-02八模組86/86／0skip、source_unchanged／Job自然0／remaining0／無強停，build344hash／321來源編譯；含真CLI render、fresh/stale、live/test隔離及讀前後hash。前次85/86為新測試未固定source_status時鐘，已與operator合成時鐘對齊，未放寬產品判定。無採集／模型／ACK。下一受影響Operator／Web讀取／桌面及分類資料pipeline整合，不重跑全部未受影響庫。
+
 ## 2026-10-30 SOURCE-SUCCESS-CONTRADICTIONS 核心與真Tk已修
 
 red三項／七個失敗檢查重現legacy保存ok卻error_count80或格式矛盾仍顯成功，過期桌面也沿原ok顯可讀。source_status現保留saved_status與歷史成功，新增evidence_status：明確錯誤／截斷為partial、壞型別或衝突coverage為unknown；fresh success不再成立，桌面過期列亦用核對後結果。缺選用舊欄仍相容，不寫回舊資料。verify-source-success-contradictions-core-20261030-01七模組67/67／0skip、source_unchanged／Job自然0／remaining0／無強停，build343hash／320來源編譯；含七來源／舊成功保留、壞coverage讀前後hash不變、真Tk過期partial。無native/model／ACK。下一把同契約接Operator coverage/current_coverage，避免另一入口沿舊ok；沿合成測試不重試瀏覽器政策停止。

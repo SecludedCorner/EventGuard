@@ -147,7 +147,8 @@ def source_status(root, namespace="live"):
             row_count = health_item.get("row_count")
         coverage = section.get("coverage", {})
         coverage = coverage if isinstance(coverage, dict) else {}
-        saved_status = section.get("status") if section.get("status") in STATUSES else "unknown"
+        saved_status = section.get('status')
+        saved_status = saved_status if isinstance(saved_status, str) and saved_status in STATUSES else 'unknown'
         evidence_status = effective_collection_status(saved_status, section.get('coverage', {}))
         reasons = _reasons(coverage, evidence_status) if section else []
         if saved_status == 'ok' and evidence_status != 'ok':

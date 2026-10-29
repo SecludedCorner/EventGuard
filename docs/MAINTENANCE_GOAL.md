@@ -1,5 +1,9 @@
 # EventGuard 目前目標
 
+## 2026-10-30 OPERATOR-SUCCESS-CONTRADICTIONS通過／接整合
+
+八模組86/86／0skip、321來源編譯，跨入口成功與錯誤矛盾已修，原始結果／時間／檔案保留，freshness仍獨立。下一CONTRADICTION-INTEGRATION驗source_status、Operator read paths／CLI、Web契約、桌面、分類pipeline與既有成功歷史；必要失敗才修，不重跑未變動全庫，通過逐單元同步main並保存證據。真200%／真人／長跑／可信恢復／真防守各自未DONE，不用局部完成縮小核心目標。
+
 ## 2026-10-30 SOURCE-SUCCESS-CONTRADICTIONS已修／接Operator
 
 發現既有legacy ok＋錯誤非零仍顯成功，已以67/67／0skip與320來源編譯修source_status／桌面stale呈現；原始狀態、歷史成功與檔案不改。下一同一缺陷跨入口檢查Operator overview/status：有錯誤不能current_coverage=ok，malformed為unknown，原始結果另存且freshness不混淆；沿七來源合成資料與定向build，逐單元普通推兩ref。真200%工具policy路線不重試；其餘獨立環境缺口保留。

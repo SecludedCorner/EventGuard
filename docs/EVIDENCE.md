@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-30：Operator來源成功矛盾跨入口
+
+red四項未過（1fail／3error），core-20261030-02八模組86/86、0skip／321語法，source_unchanged／Job自然0／remaining0／無強停；build344hash／321編譯。health ok＋80錯誤在CLI／status呈partial，stale current_coverage unknown；invalid bool count為unknown，live保存資料不被test health的ok蓋過，原始saved_status保留、檔案hash不變；list型status不再中斷七來源。前次測試fake clock差異保存於core-01，對齊時鐘後通過，不改freshness或成功標準。純合成無原生採集／模型／ACK，不能稱主機安全或整體完成。
+
 ## 2026-10-30：legacy成功與錯誤矛盾的呈現修正
 
 verify-source-success-contradictions-red-20261030-01三項皆fail（含5個malformed subtest），修後core-20261030-01七模組67/67／0skip、320語法、source_unchanged／Job自然0／remaining0／無強停；build343hash／320編譯。七來源原始saved_status=ok不改寫，但80錯誤顯partial／success=null，最後真成功仍為先前時間；invalid count／errors／flags或coverage status衝突為unknown，讀取hash不變。真Tk stale列顯部分可讀／過期，不再可讀。沒有模型／採集／ACK；Operator另一入口接續，非全庫／實機安全完成。

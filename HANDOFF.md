@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-30 Operator與來源頁已一致
+
+86/86／0skip及321來源編譯；Operator status/observation/cross-namespace overview與CLI沿同成功證據核對，raw saved_status保留，partial/unknown不提升，stale目前覆蓋unknown；非字串status不使七來源中斷。下一做受影響分類pipeline、Operator、來源頁、Web讀取與真Tk整合，無新native/model，詳STATUS。窗口只確認目前不列出，不重試browser政策路線；其餘獨立關卡保留。
+
 ## 2026-10-30 legacy來源成功矛盾已修／接Operator
 
 67/67／0skip、320來源編譯；source_status保留原始ok，另以evidence_status呈現錯誤partial／壞資料unknown，桌面stale亦用核對後狀態，真Tk有證據。下一Operator coverage與current_coverage沿同契約，保持namespace／stale／保存原狀，不新掃描／模型。自有空白窗口唯讀查已不在清單，沒有輸入或聲稱由agent關閉，仍不重試已停的browser route。詳STATUS，兩個500行基準續用。

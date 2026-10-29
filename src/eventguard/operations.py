@@ -20,6 +20,8 @@ from .events.store import EventStore, StoreError, event_payload_hash
 from .events.schema import validate_event
 from .diagnostics.review import event_view, review, validate_saved_review, row_view, event_guidance
 from .collectors.windows import coverage_metadata
+from .collectors.contract import STATUSES
+from .source_status import effective_collection_status
 
 IDENTIFIER = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
 SOURCES = ("defender", "listeners", "processes", "startup", "services", "tasks", "versions")
@@ -153,11 +155,14 @@ def _coverage_status(runtime, health, now):
         interval = intervals.get(source)
         threshold = interval + query_timeout if type(interval) in (int, float) and interval > 0 else None
         freshness = _freshness(item.get("observed_at"), now, threshold)
+        saved_status = item.get('status')
+        saved_status = saved_status if isinstance(saved_status, str) and saved_status in STATUSES else 'unknown'
+        effective_status = effective_collection_status(saved_status, item)
         result[source] = {**coverage_metadata({"coverage": item}),
-                          "status": item.get("status", "unknown"), "observed_at": item.get("observed_at"),
+                          "status": effective_status, "saved_status": saved_status, "observed_at": item.get("observed_at"),
                           "last_success": item.get("last_success"), "freshness": freshness,
                           "freshness_basis": "configured_interval_plus_query_timeout",
-                          "current_coverage": item.get("status", "unknown") if freshness["state"] == "fresh" else "unknown"}
+                          "current_coverage": effective_status if freshness["state"] == "fresh" else "unknown"}
         for key in ("row_count", "usable_row_count", "elapsed_ms"):
             value = item.get(key)
             result[source][key] = value if type(value) is int and 0 <= value <= 2**53 - 1 else None
@@ -453,6 +458,7 @@ class OperatorAPI:
                     observed = item["status"] != "not_observed"
                     coverage[source] = {**item.get("coverage", {}),
                         "status": item["status"] if observed else "not_requested",
+                        "saved_status": item.get('saved_status', 'unknown'),
                         "observed_at": item.get("observed_at"), "last_success": None,
                         "freshness": item["freshness"], "freshness_basis": "configured_interval_plus_query_timeout",
                         "current_coverage": item.get("current_coverage", "unknown"),
@@ -503,9 +509,9 @@ class OperatorAPI:
                     "explanation": "此來源尚無保存觀察，不能解讀為成功讀取零筆或沒有風險。",
                     "system_query_executed": False, "model_calls": 0}
         section = value["section"]
-        status_value = section.get("status")
-        if status_value not in {"ok", "partial", "denied", "unknown", "not_applicable", "error", "timeout", "cancelled", "busy", "not_requested"}:
-            status_value = "unknown"
+        saved_status = section.get('status')
+        saved_status = saved_status if isinstance(saved_status, str) and saved_status in STATUSES else 'unknown'
+        status_value = effective_collection_status(saved_status, section.get('coverage', {}))
         try:
             config = self.runtime.config()
             max_age = config["interval_seconds"][source_id] + config["query_timeout_seconds"]
@@ -515,7 +521,7 @@ class OperatorAPI:
         rows = [row_view(row) for row in section.get("rows", [])[:limit] if isinstance(row, dict)]
         total = value.get("total")
         total = total if type(total) is int and total >= len(rows) else None
-        return {"namespace": namespace, "source_id": source_id, "status": status_value,
+        return {"namespace": namespace, "source_id": source_id, "status": status_value, "saved_status": saved_status,
                 "current_coverage": status_value if fresh["state"] == "fresh" else "unknown",
                 "row_count": total, "exported": len(rows),
                 "truncated": value.get("truncated") is True or total is not None and total > len(rows),
