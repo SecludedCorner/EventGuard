@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：歷史查證真Tk／SQLite閉環
+
+`reports/verify-desktop-diagnosis-widgets-20261029-01` UTC05:38:45：81/81、0skip、source_unchanged、Job自然退出0／remaining0／無強停。真Tk新摘要＋真合成Catalog驗partial／拒讀／截斷／current_only、重開一致、切換不串查證；故意損壞保存hash後清舊摘要／禁用處置，fixture修復後只讀恢復。DB bytes及pending2／receipt0守恆、DiagnosticAPI.query／ACK哨兵未觸發。`reports/build-desktop-diagnosis-widgets-20261029-01`279檔hash及257檔編譯通過；不是Web／真人／原生證據。
+
 ## 2026-10-29：歷史查證摘要呈現單元
 
 `reports/verify-desktop-diagnosis-summary-20261029-01` UTC05:35:55：97/97、0skip、source_unchanged、Job自然退出0／remaining0／無強停。驗有界來源／狀態／列數／截斷／current_only、無保存／不符ID／超限未知、惡意字串惰性轉義，及既有Tk／Catalog／診斷契約回歸。`reports/build-desktop-diagnosis-summary-20261029-01`278檔hash及256檔編譯通過；新摘要的真Tk＋真合成SQLite閉環另列下一單元，無原生查詢／模型／ACK。

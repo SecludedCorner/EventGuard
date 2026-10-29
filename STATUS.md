@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 歷史查證真Tk／合成SQLite閉環
+
+新增摘要實際Tk→真Catalog驗partial／拒讀／保存列數／截斷／current_only，重開文字一致、切換無保存事件不沿用別件、保存hash衝突清掉舊摘要並停用人工處置、修復後只讀恢復。`reports/verify-desktop-diagnosis-widgets-20261029-01`：2026-10-29 13:38（UTC+8）81/81、0skip、source_unchanged、Job自然退出0／remaining0／無強停；DB bytes與pending2／receipt0守恆，DiagnosticAPI.query／ACK哨兵未觸發。`reports/build-desktop-diagnosis-widgets-20261029-01`：279檔hash及257檔編譯通過。d28d817（+120/−4）已普通同步main／開發ref；不將Tk／synthetic升格為真人／Web／原生驗收。
+
 ## 2026-10-29 桌面歷史查證摘要
 
 event_summary已接有界另存查證摘要：歷史結果／時間、來源狀態／保存列數、截斷、current_only及缺口分列；Catalog先驗payload hash，呈現再核對事件ID及保存投影標記，缺失／不符未知，不推導目前安全或恢復。`reports/verify-desktop-diagnosis-summary-20261029-01`：2026-10-29 13:35（UTC+8）97/97、0skip、source_unchanged、Job自然退出0／remaining0／無強停，含純呈現、既有實際Tk回歸及Catalog診斷身分契約；新增摘要真Tk＋真合成SQLite閉環尚待下一單元。`reports/build-desktop-diagnosis-summary-20261029-01`：278檔hash及256檔編譯通過。ee8c256（+16/−0）已普通同步main／開發ref；沒有新增查詢／模型／ACK。

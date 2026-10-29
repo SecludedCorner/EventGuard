@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 已保存查證桌面閉環完成
+
+新摘要已在實際Tk＋真合成SQLite驗81/81、0skip及257檔來源編譯；hash衝突清掉舊摘要／禁用處置，修復後只讀恢復，pending／receipt守恆，見STATUS。d28d817已普通同步main。下一步只做本次受影響整合及來源保存，再接既有容量恢復佇列中可獨立安全實作的桌面備份入口；既有CLI已有backup-history／preview-history，不重做原語或自動清理歷程。Web／真人／原生待驗保留。
+
 ## 2026-10-29 歷史查證摘要已接線
 
 DESKTOP-DIAG-SUMMARY呈現單元97/97、0skip及256檔來源編譯通過，見STATUS；另存查證不再只有時間。下一步新增摘要的真Tk→真合成Catalog閉環：拒讀／部分／截斷、無保存及hash衝突讀取失敗時不留舊結果，DB bytes、pending／receipt守恆且無隱式查詢／ACK；不以既有Tk回歸當新元件驗收。
