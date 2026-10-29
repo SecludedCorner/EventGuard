@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 同scope重開已整合／接續原生桌面輸入
+
+產品9a441b9兩遠端ref一致，197/197、0skip、283檔來源編譯及385檔可重現來源包，見STATUS／EVIDENCE；GUI已提供--reopen-from原始scope與每次新--name，新attempt只存新收據，不覆寫舊資料或成績。下一具體動作讀目前computer-use技能並列工具可見窗口，只操作本工具有界Job合成視窗；若可選取則驗原生點選／鍵盤保存與退出，否則記錄當次實際工具狀態，不繞過限制、不把Tk.invoke升格原生／真人。目標active及完整待驗清單保留，每單元立即普通同步main、兩個500行基準不變。
+
 ## 2026-10-29 並行GUI owner拒絕已驗
 
 6/6、0skip與283檔來源編譯通過；第一真GUI開啟中第二真Job重開被拒絕／自然exit2，第一自然退出後第三GUI可讀原資料，三Job均無殘留／強停，DB／舊證據／pending守恆，見STATUS／EVIDENCE。DESKTOP-FIXTURE-REOPEN工程閉環已具證據；接續修正GUI文末過時限制、整合相關桌面模組與可重現來源保存，維持真人／Web／原生等獨立未驗及active目標。

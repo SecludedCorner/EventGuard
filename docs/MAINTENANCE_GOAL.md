@@ -1,5 +1,11 @@
 # EventGuard 目前目標
 
+## 2026-10-29 最新接續：DESKTOP-NATIVE-INPUT
+
+DESKTOP-FIXTURE-REOPEN已具第一真Tk按鈕保存／自然退出／第二真Tk同DB讀回與並行owner拒絕、舊證據／pending／ACK守恆；197項受影響整合、0skip及283檔來源編譯通過，產品9a441b9已普通同步main。下方fresh-only或跨程序未提供為歷史，現行明確操作見GUI文末。
+
+接續既有桌面實際輸入待驗：工具能列出且選取本工具自有合成窗口才操作，不改系統／帳戶／瀏覽器設定；在有界私有Job內以原生點選／鍵盤驗人工狀態及調查讀回、pending與ACK獨立、合作退出及原handle殘留。Tk.invoke仍只屬自動化元件證據，真人六任務另需真正參與者，不自填成績；工具不可用保留待驗，不反覆輪詢。Web200%、真人、原生覆蓋／24h／reboot與恢復來源可信根／容量釋放仍獨立未完成，平台目標active，不縮小或假報整體DONE。
+
 ## 2026-10-29 最新接續：DESKTOP-FIXTURE-REOPEN
 
 DESKTOP-UX-HUMAN-FIXTURE的新scope／控制能力封鎖／真Tk／有界真Job／六任務與未認證自報前置已驗，185項受影響整合、0skip及275檔來源編譯，逐單元普通同步main；真實參與者結果仍待，來源／成績不能由模型代填。下一具體缺口為同一保存合成scope跨程序重開，目前fresh-only拒絕所有既有scope，因此同程序重建視窗不能代替這一條驗收。

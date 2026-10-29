@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-10-29 跨程序重開整合197項通過
+
+DESKTOP-FIXTURE-REOPEN工程驗收已完成：同原scope真Tk保存／退出／第二真Tk讀回、開啟中另一Job拒絕及退出後可重開、非法scope不修補，舊證據及pending／ACK保留。產品9a441b91f336182daccf794452226b4aa9d50663已普通同步main／開發ref，兩工作樹及對origin/main差異0。`reports/verify-desktop-reopen-final-20261029-01`：2026-10-29 15:59（UTC+8）32模組197/197、0skip、source_unchanged、283檔語法通過、Job自然0／remaining0／無強停；範圍為桌面、Catalog、fixture與相關備份預檢，非全庫／真人。`reports/build-desktop-reopen-final-20261029-01`305檔hash／283檔編譯；`reports/release-prep-desktop-reopen-20261029-01`綁上述產品SHA，385檔可重現來源包，未tag／release。GUI文末已提供原scope與新attempt操作；純文件沿用本次來源build並檢查引用。
+
+目標仍active；下一既有驗收缺口為合成視窗原生桌面輸入，僅在工具能選取自有窗口時執行，不改設定或重試瀏覽器。真人六任務／Web200%／原生覆蓋／24h／reboot、恢復可信根及容量釋放各自未驗，不以197項自動化升格。
+
 ## 2026-10-29 開啟中真Tk拒絕另一程序重開
 
 第一GUI在私有Job中保持開啟，第二Job以同scope重開得到already_owned／exit2，無ready視窗回條；拒絕發生時第一程序仍存活，原ready與DB bytes不變。第一自然退出後第三Job可成功重開，舊三收據及pending4／receipt0保留；三Job均remaining0／無強停。`reports/verify-desktop-concurrent-gui-20261029-01`：2026-10-29 15:55（UTC+8）6/6、0skip、source_unchanged，包含兩程序保存讀回、launcher非法scope及鎖失敗回歸；guardian自然退出0。`reports/build-desktop-concurrent-gui-20261029-01`305檔hash／283檔編譯。7fe016f（+141/−1）已普通同步main／開發ref；接續更新重開操作、受影響整合與目標缺口，不宣稱真人／原生輸入已驗。

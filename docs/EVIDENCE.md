@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-10-29：同scope重開整合與來源保存
+
+產品9a441b91f336182daccf794452226b4aa9d50663兩遠端ref直接一致，工作樹及待整合差異0；本批7fe016f `test(desktop): prove saved handling survives two real Tk processes` +141/−1、9a441b9 `test(desktop): reject a second process while a Tk scope is open` +70/−0，均逐單元build／測試後指定檔案stage、普通push及ff-only整合／push main，未累積500行。
+
+`reports/verify-desktop-reopen-final-20261029-01` UTC07:59:01：32模組197/197、0skip、source_unchanged、283檔語法通過、Job自然0／remaining0／無強停。包含fixture唯讀預檢、排他、controller／launcher重開、兩程序真Tk保存讀回及真GUI並行owner拒絕，沒有模型／採集／ACK或真人結果。`reports/build-desktop-reopen-final-20261029-01`305檔hash／283檔編譯；`reports/release-prep-desktop-reopen-20261029-01`為上述產品commit的385檔可重現來源ZIP，SHA256 fa86d833ac3a3d3364989097c0f1134c4863c11ae0419094cb59a629fda9d133；沒有exe建置／發布。GUI新增重開步驟核對實際argparse、scope路由及既有定向證據，真人／原生輸入等獨立待驗。
+
 ## 2026-10-29：兩個並行GUI啟動的排他證據
 
 `reports/verify-desktop-concurrent-gui-20261029-01` UTC07:55:59：6/6、0skip、source_unchanged、外Job自然0／remaining0／無強停。test_desktop_fixture_concurrent_gui第一真Tk保持開啟8秒，另一真Job重開同scope被already_owned拒絕／自然exit2、無worker-ready，拒絕前後第一future均未完成且ready／DB bytes不變；第一自然0後第三真Tk重開成功／自然0。三原handle收據各留desktop-ux-concurrent-*／contender-*／after-owner-*，均managed／child_exited／remaining0／無強停，舊三收據不覆寫、pending4／receipt0不變。`reports/build-desktop-concurrent-gui-20261029-01`305檔hash／283檔來源編譯；這是自動化並行owner驗收，非真人成績。

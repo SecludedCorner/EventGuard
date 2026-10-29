@@ -92,4 +92,19 @@ py -3.13 -B scripts/desktop_ux_acceptance.py --name $desktopUxRun --record-task 
 
 範圍為步數／錯誤0–1000、秒數0–900；缺值、非法值拒絕。tasks.json的六筆初始metrics皆null；每筆輸入獨立保存task-U1.json等，既有檔不覆寫／合併。自報永久明示operator_self_report_unverified及human_participation_verified=false，不能因輸入completed就宣稱真人驗收通過；session-result.json僅是程序收據，participant_results仍null。真人完成率／時間／錯誤仍需實際參與及獨立審閱，不與合法競品環境比較或原生覆蓋混同。
 
-所有runtime／SQLite／任務紀錄僅留reports，不提交或分享私人畫面。現階段重開同一scope的跨程序GUI入口未提供；舊資料保留，不能把同程序重建視窗測試當成跨程序重啟驗收。
+所有runtime／SQLite／任務紀錄僅留reports，不提交或分享私人畫面。
+
+### 重開原合成資料，另存本次收據
+
+先結束原視窗並確認session-result.json的synthetic_session_closed及guardian剩餘程序0，再選新的attempt名稱。`--reopen-from`永遠指向最初建立資料的名稱（上例的$desktopUxRun），不能改指向只有新收據的重開attempt：
+
+```powershell
+$desktopUxReopen = 'desktop-ux-human-20261029-02'
+py -3.13 -B scripts/desktop_ux_acceptance.py --name $desktopUxReopen --reopen-from $desktopUxRun --seconds 900
+```
+
+人工狀態、歷程及保存調查仍讀寫原scope，不複製、重seed或清空DB。這次的ready／exit／guardian、tasks.json與之後明確輸入的task-U*.json留新attempt；記錄重開後任務時，`--name`使用$desktopUxReopen。每個attempt的空白任務計畫不代表舊任務成績遺失，也不會自動繼承或填入真人結果。
+
+同一原scope已被GUI持有時，新程序拒絕並保存blocked／already_owned及實際exit2收據；父程序回unconfirmed，不能當成功。關閉原owner後以另一新attempt再開，不刪舊目錄或重用名稱。缺失、非合成、schema不符或有ACK的scope也拒絕，不建立替代DB，不讀安裝live或修復舊資料。
+
+兩個真Job／Tk的按鈕保存→同DB讀回與開啟中排他拒絕已有自動化證據（見EVIDENCE）；automated_fixture_actions明示測試回呼，participant_results仍null。這不取代真人任務、原生滑鼠／鍵盤、Web200%、原生覆蓋或重開機驗收。
