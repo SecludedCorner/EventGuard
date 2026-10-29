@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 待確認清單controller／worker前置已驗
+
+新增具固定activity碼的DesktopController.pending_requests，只查本scope live Catalog／每頁100；worker action回requested_offset，合成SAFE加入唯讀入口，未新增原生／模型／ACK。`reports/verify-desktop-pending-control-20261029-02`：2026-10-29 17:33（UTC+8）61/61、0skip、source_unchanged、Job自然0／remaining0／無強停；真controller＋合成101件SQLite證明snapshot仍只100且無anchor，pending_requests能讀回anchor，原DB bytes／pending101／receipt0保留；worker有效／非法offset各新建執行緒驗回條與結束，避免result.put先於pending旗標清除的測試時序競爭。`reports/build-desktop-pending-control-20261029-01`321hash／299編譯；fbe2592兩ref一致。GUI尚無按鈕／分頁／模式處理，下一接實際Tk，不把此worker證據當UI完成。
+
 ## 2026-10-29 待確認清單Catalog切片已驗
 
 101件合成資料明確把anchor的created_at設舊，最近100件不含它；新增Catalog.pending_requests在單一RO交易驗全部要求／原event身分，按事件ID穩定分頁≤100、最多128事件，同事件多要求合併。下一頁的錯hash、hash有效但payload ID不符、缺DB／非法頁碼均unknown／拒絕，不略過成安全空集合。`reports/verify-desktop-pending-catalog-20261029-03`：2026-10-29 17:29（UTC+8）33/33、0skip、source_unchanged、Job自然0／remaining0／無強停，100＋1無重複、讀前後DB bytes不變／pending101／receipt0。01原fixture同批時間相同導致anchor仍在最近清單1fail，02明確舊時間32pass，03補row／payload ID錯綁為最終33。`reports/build-desktop-pending-catalog-20261029-02`320hash／298編譯；9fc27c2兩ref一致。尚未controller／Tk入口，不把Catalog結果當元件驗收。

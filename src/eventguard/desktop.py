@@ -409,6 +409,13 @@ class DesktopController:
                                                           expected_payload_hash=payload_hash)
         return dict(result, state="event_status_updated", system_query_executed=False)
 
+    @recorded("gui_pending_requests")
+    def pending_requests(self, offset=0):
+        """Read a journal page independently of the recent-event snapshot."""
+        from .events.catalog import EventCatalog
+        with self._lock:
+            return EventCatalog(self.root, "live").pending_requests(limit=100, offset=offset)
+
     def snapshot(self):
         """Read one saved overview; no collector, model or scheduling operation."""
         with self._lock:

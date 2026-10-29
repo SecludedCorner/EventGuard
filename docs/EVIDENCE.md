@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：待確認頁唯讀控制層與worker
+
+`reports/verify-desktop-pending-control-20261029-02` UTC09:33:38：61/61、0skip、source_unchanged、Job自然0／remaining0／無強停。合成101事件的真DesktopController.snapshot維持100件且不含舊anchor，pending_requests回live／total1及該anchor，前後DB bytes／pending101／receipt0不變，採集／spawn／ACK哨兵未觸發；固定gui_pending_requests僅記操作metadata。worker回requested_offset，非法129保持error不回原例外文字，thread shutdown已確認。01同61通過，02改每個offset使用獨立worker避免測試提交與pending旗標的短暫競爭，非重跑產品洗數；build-desktop-pending-control-20261029-01為321hash／299編譯。沒有Tk入口或操作驗收，仍待下一切片。
+
 ## 2026-10-29：跨最近100件的待確認發現API
 
 `reports/verify-desktop-pending-catalog-20261029-03` UTC09:29:13：33/33、0skip、source_unchanged、Job自然0／remaining0／無強停。101件真合成SQLite中明確較舊anchor不在recent100，但Catalog.pending_requests找回並將兩要求合併1事件；101個不同anchor可分100＋1，事件ID排序穩定無重複。全體身分在同一RO交易驗證，第二頁錯hash仍使第一頁unknown，payload／journal hash有效但row ID與payload ID不同亦unknown，讀前後DB bytes守恆、pending101／receipt0，無dispatch／ACK。01 fixture同時間被舊排序涵蓋1fail，02改明確created_at32pass，03身分補強為33；build-desktop-pending-catalog-20261029-02為320hash／298編譯。尚無controller／Tk入口，不升格產品UI已完成。

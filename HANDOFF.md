@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 pending控制層已驗／下一實際Tk入口
+
+61/61、0skip及299檔來源編譯，DesktopController.pending_requests(offset=0)固定live／100件、worker action與requested_offset／活動metadata及合成SAFE已接，snapshot原100限制不變，見STATUS。下一真正Tk入口尚未寫：新增查看待確認／分頁／返回最近模式，處理pending_requests回條必須先於generic操作分支；嚴格驗namespace、offset、total≤128、request_total≤128、events≤100及每列ID／hash／狀態，不把unknown當空。pending模式中普通snapshot仍刷新來源／計數，但不能覆蓋當頁事件；返回／晚到頁／保存完成刷新不串資料，保留正常清單篩選／選取契約。用≥101件真合成SQLite＋實際Tk驗找到舊anchor、明確同ID核對、不自送／不ACK與兩頁，不用靜態字串取代。每單元立即普通同步main。
+
 ## 2026-10-29 pending Catalog已驗／接有界controller與Tk
 
 33/33、0skip及298檔來源編譯，Catalog.pending_requests(limit≤100,offset≤128)提供最多128個不同事件、request_total與has_more；同事件要求合併、全體namespace／hash／row ID驗證、壞資料不部分略過，101件recent100缺口已重現並由後端找到，見STATUS。下一controller唯讀包裝／worker action與實際Tk入口，保持最近100模式及待確認分頁各自範圍；查看待確認時來源snapshot刷新不能覆蓋該頁，完成要求後明確刷新，返回最近清單要恢復原篩選／選取契約，不串回條。先控制層切片，再元件＋101件合成SQLite，不以本API代替Tk驗收，每單元立即普通同步main。

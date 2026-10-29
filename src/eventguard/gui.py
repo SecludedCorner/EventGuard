@@ -23,7 +23,7 @@ OPERATION_NAMES = {"capabilities": "查看能力", "status": "查看狀態", "ov
     "ack_event": "確認收到", "retry_event": "重試投遞", "report": "匯出報告",
     "background_start": "開始持續監看", "background_status": "查看背景狀態", "background_stop": "暫停監看",
     "gui_start": "開始監看", "gui_pause": "暫停監看", "gui_inspect": "查看事件", "gui_investigate": "保存調查",
-    "gui_set_status": "保存人工狀態", "gui_backup_history": "備份處置歷程", "gui_preview_history": "核對備份身分",
+    "gui_set_status": "保存人工狀態", "gui_pending_requests": "查看待確認要求", "gui_backup_history": "備份處置歷程", "gui_preview_history": "核對備份身分",
     "gui_receive_permission": "設定接收開關", "gui_automatic_agent": "設定自動處理"}
 ACTIVITY_STATES = {"running": "執行中／待結果", "completed": "已完成", "blocked": "受阻",
                    "failed": "失敗", "interrupted": "中斷，結果未確認"}
@@ -118,7 +118,7 @@ def view_snapshot(document, *, severity="all", delivery="all", handling="all"):
 
 class ControllerWorker:
     """Serialize local operations without invoking Tk on a worker thread."""
-    ACTIONS = frozenset({"snapshot", "start", "pause", "set_agent_delivery", "set_automatic_agent", "inspect", "investigate", "set_status", "confirm_status_receipt", "backup_history", "preview_history_backup", "close"})
+    ACTIONS = frozenset({"snapshot", "start", "pause", "set_agent_delivery", "set_automatic_agent", "inspect", "investigate", "set_status", "confirm_status_receipt", "pending_requests", "backup_history", "preview_history_backup", "close"})
 
     def __init__(self, controller):
         self.controller = controller
@@ -170,6 +170,8 @@ class ControllerWorker:
                 result.update(requested_status=arguments[1], requested_operation_id=arguments[2])
             if action in {"backup_history", "preview_history_backup"}:
                 result.update(requested_filename=arguments[0])
+            if action == "pending_requests":
+                result["requested_offset"] = arguments[0] if arguments else 0
             self.results.put((action, result))
             with self._lock:
                 self._pending = False
