@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-10-29 人工處置失敗原因分列
+
+真Tk回饋將容量不足與操作紀錄尚未建立分列；只有對應本次pending operation_id的確定失敗才清除該要求，容量訊息明示備份不釋放空間、不自動重試／刪歷程。活動完成紀錄在狀態已提交後失敗仍是結果未確認；真Tk同ID重試讀回後來的read而不回退成handled／重複歷程。`reports/verify-desktop-handling-failure-20261029-01`：2026-10-29 16:13（UTC+8）67/67、0skip、source_unchanged、Job自然0／remaining0／無強停；真合成SQLite驗兩種確定失敗DB bytes不變、提交後歷程handled→read及pending2／receipt0守恆。`reports/build-desktop-handling-failure-20261029-01`305檔hash／283檔編譯。f6a0a3a（+16/−0）已同步兩ref；整體真人／Web／原生／完整恢復仍待驗，目標active。
+
 ## 2026-10-29 原生輸入局部待驗，合成窗口已自然退出
 
 `reports/desktop-ux-native-input-20261029-01`由launcher在私有Job啟動180秒合成Tk，ready確認membership且automated_fixture_actions=false；目前computer-use/26.1023.51421初始化成功，但list_apps／list_windows皆未列EventGuard，後者回6窗口而目標0，不猜ID或跨程序注入。到期worker closed／deadline、原handle exit0／remaining0／無強停，模型／掃描／ACK均false；native-input-observation.json保存當次限制，沒有真人成績。原生輸入是局部待驗，不等同Tk元件未實作或整體blocked。4a70b85（+38/−1）已同步兩ref。接續人工狀態失敗回饋：現行容量與未開始活動錯誤共用一句，需分列並保留提交後未確認語意；沿用197項整合／283檔build作本純文件來源證據。

@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-10-29：人工處置的確定失敗與提交後不確定
+
+`reports/verify-desktop-handling-failure-20261029-01` UTC08:13:28：67/67、0skip、source_unchanged、Job自然0／remaining0／無強停。真Tk／SQLite分別觸發歷程容量及activity.begin失敗，實際message顯示不同原因，DB bytes與pending保留；activity.complete在真正狀態提交後拋固定錯誤時，message只稱結果未確認、原operation_id保留且沒有自動重試。後續CLI改read，再按原handled要求用同ID重播，兩筆歷程handled→read不增不回退，pending2／receipt0，採集／spawn／ACK哨兵未觸發。`reports/build-desktop-handling-failure-20261029-01`305檔hash／283檔來源編譯，非真人或原生輸入驗收。
+
 ## 2026-10-29：原生桌面輸入當次工具狀態
 
 `reports/desktop-ux-native-input-20261029-01` UTC08:06啟動180秒，worker-ready的私有Job membership=true／automated_fixture_actions=false；computer-use當版list_apps目標0、list_windows共6／目標0，未選取任何窗口或輸入，不保存他人標題／畫面。native-input-observation.json與guardian-start／exit、worker-ready／exit、session-result留原目錄；deadline合作退出後父程序原handle核對natural_exit／exit0／remaining0／無強停，worker thread已退出，模型0／採集false／ACKfalse／participant_results=null。原生輸入未驗，不拿此次期限退出冒充成功；不重試瀏覽器或更改設定。

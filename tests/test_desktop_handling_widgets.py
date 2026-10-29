@@ -74,16 +74,47 @@ class DesktopHandlingWidgetTests(unittest.TestCase):
         with patch('eventguard.events.disposition_history.MAX_HISTORY_PER_EVENT', 1):
             self.ui.handling_buttons['handled'].invoke()
             self.wait_for(lambda: '人工狀態未保存' in self.ui.message.get())
+            self.assertIn('容量不足', self.ui.message.get())
+            self.assertIn('備份不釋放容量', self.ui.message.get())
+            self.assertNotIn('操作紀錄無法建立', self.ui.message.get())
             self.wait_for(lambda: self.ui.handling_buttons['handled'].instate(['!disabled']))
         self.assertEqual(self.store.path.read_bytes(), before)
         with patch('eventguard.activity.begin', side_effect=activity.ActivityError('activity_storage_unavailable')):
             self.ui.handling_buttons['handled'].invoke()
             self.wait_for(lambda: '人工狀態未保存' in self.ui.message.get())
+            self.assertIn('操作紀錄無法建立，尚未執行狀態變更', self.ui.message.get())
+            self.assertNotIn('容量不足', self.ui.message.get())
             self.wait_for(lambda: self.ui._detail_document.get('state') == 'error')
         self.assertEqual(self.store.path.read_bytes(), before)
         self.select(self.anchor)
         self.assertEqual(self.ui._detail_document['status'], 'read')
         self.assertEqual(len(self.catalog.detail(self.anchor)['handling_history']['entries']), 1)
+        self.assert_pending()
+
+    def test_activity_completion_failure_after_commit_is_uncertain_and_retry_does_not_revert(self):
+        self.select(self.anchor)
+        original, keys = self.controller.set_status, []
+        def save(event_id, status, operation_id):
+            keys.append(operation_id)
+            return original(event_id, status, operation_id)
+        with patch.object(self.controller, 'set_status', side_effect=save), patch(
+                'eventguard.activity.complete', side_effect=activity.ActivityError('activity_storage_unavailable')):
+            self.ui.handling_buttons['handled'].invoke()
+            self.wait_for(lambda: '結果未確認' in self.ui.message.get())
+            self.wait_for(lambda: not self.ui._busy)
+            self.assertNotIn('未保存', self.ui.message.get())
+            self.assertEqual(len(keys), 1)
+            self.assertEqual(self.catalog.detail(self.anchor)['status'], 'handled')
+            self.assertEqual(self.ui._pending_status[(self.anchor, 'handled')], keys[0])
+        self.catalog.set_status(self.anchor, 'read', source='cli', operation_id='op-after-activity-failure')
+        self.ui._last_event = None
+        self.select(self.anchor)
+        with patch.object(self.controller, 'set_status', side_effect=save):
+            self.ui.handling_buttons['handled'].invoke()
+            self.wait_for(lambda: '人工狀態已核對' in self.ui.message.get())
+            self.wait_for(lambda: not self.ui._busy and self.ui._detail_document.get('status') == 'read')
+        self.assertEqual(keys, [keys[0], keys[0]])
+        self.assertEqual([row['status'] for row in self.catalog.detail(self.anchor)['handling_history']['entries']], ['handled', 'read'])
         self.assert_pending()
 
     def test_switching_selection_during_save_keeps_decisions_bound_to_requested_event(self):

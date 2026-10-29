@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-10-29 失敗回饋及提交後未確認已驗
+
+DESKTOP-HANDLING-FAILURE通過67/67、0skip及283檔來源編譯，實際Tk分列容量／尚未建立操作紀錄；提交後activity.complete失敗保持未確認、同ID重試不覆蓋後來決定，pending／ACK守恆，見STATUS。下一驗收關注點是未確認要求跨GUI重開的可見性：目前operation_id只存在窗口記憶體，關窗後不得誤導使用者以為原要求可同ID重試；先核對退出／重開契約，再選不新增自動重送的最小改進。原生輸入局部待驗保留，不重複輪詢。
+
 ## 2026-10-29 原生輸入局部待驗／接續失敗原因回饋
 
 當版computer-use未返回已ready的自有合成窗口；180秒私有Job已自然0／remaining0／無強停，證據見STATUS，不留背景程序、不繞過或重複輪詢。下一可執行DESKTOP-HANDLING-FAILURE：容量不足與活動意圖紀錄失敗目前畫面共用泛稱，分列實際原因及未開始／提交後未確認；真Tk＋合成SQLite驗DB／pending守恆，提交後活動完成紀錄失敗保留同operation_id，不自動重送。仍守每單元build／測試後普通同步main及兩個500行基準。

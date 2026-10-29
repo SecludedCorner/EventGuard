@@ -753,10 +753,11 @@ class EventGuardWindow:
                     if confirmed:
                         self._pending_status.pop(key, None)
                         self.message.set("人工狀態已核對（事件：" + safe_text(event_id, 160) + "）：" + HUMAN_STATES[value["status"]] + "；不是 ACK 或修復。")
-                    elif value.get("reason") == "event_status_capacity" or value.get("operation_started") is False:
-                        if correlated:
-                            self._pending_status.pop(key, None)
-                        self.message.set("人工狀態未保存，容量或活動紀錄受阻；原資料與 pending 保留。")
+                    elif correlated and (value.get("reason") == "event_status_capacity" or value.get("operation_started") is False):
+                        self._pending_status.pop(key, None)
+                        self.message.set("人工狀態未保存：處置歷程或資料庫容量不足；原資料與 pending 保留。備份不釋放容量，不自動重試或刪除歷程。"
+                            if value.get("reason") == "event_status_capacity" else
+                            "人工狀態未保存：操作紀錄無法建立，尚未執行狀態變更；原資料與 pending 保留。不自動重試。")
                     else:
                         self.message.set("人工狀態結果未確認；重新點選原狀態會沿用同一識別，不自動重送。")
                     self._refresh_selected_detail(event_id)
