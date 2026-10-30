@@ -1,5 +1,10 @@
 # EventGuard 目前目標
 
+## 2026-10-30 NAS-002僅離線／來源樣本仍未知
+
+使用者直接授權與NAS任務合作確認來源／樣本／隱私並完成可離線parser／測試，明示不連設備、不啟模型。候選CSV與批次核對17/17、347編譯通過，詳STATUS及NAS_EVENT_CONTRACT.md；沒有真CSV／syslog模板，不能標DSM-compatible。下一實際格式需去識別樣本、語系／時間／record ID定義，先維持不取新log／不連NAS。03 source失效且未消耗，不直接執行或自動重試。
+
+
 ## 2026-10-30 NAS-001最小離線契約完成
 
 事件／source／coverage純函式與8/8合成測試、343編譯完成，詳NAS_EVENT_CONTRACT.md與STATUS；未接收件／原始log／持久化adapter／設備或模型。下一NAS-002是先定唯讀來源／樣本與隱私範圍，再作格式adapter及實際收件驗證；沒有相應設備／資料批准時不連線。原資安AI盯哨與真模型調查目標保留；03因新增src失效且未消耗，未來另準備scope，不能直接執行舊03。

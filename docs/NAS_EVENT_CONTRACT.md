@@ -39,3 +39,13 @@
 輸入上限64KiB／256列／單列1024字元；支援CSV引號，未知標頭／非法編碼／形狀／語法錯誤使用固定碼。有效列仍保留，語法截斷後不猜測剩餘列；input_complete僅代表CSV已讀完，不代表無errors、來源完整或健康。證據hash綁UTC正規化後的最小化欄位投影，不是原始log bytes。下游需另核去重／衝突與coverage。
 
 隱私範圍：目前只用全合成fixture，無真樣本批准／收集。真實樣本若日後另行批准，帳戶／來源IP等須在受控邊界先去識別，EventGuard只接opaque參照、不接HMAC secret。原文、cookie/token/session、hostname、query/body/path與無關私人內容不落盤／回傳／上模型；來源／時間窗／目的地／保留期限與刪除方式須另定，不默認30天。解析器不保證Python記憶體安全抹除，不提供真資料入口或檔案讀寫。
+
+## NAS-002批次核對與coverage接線
+
+`nas_csv_import.inspect_fixture_csv(raw, context, profile=..., now=..., max_age_seconds=..., coverage=None)`在記憶體中呼叫候選解析器後，按已驗dedup_key分組。相同內容選擇確定性代表並計duplicate_rows；同key不同content_hash整群排除、計identity_conflict_rows，其他有效紀錄保留，不first-wins。錯誤計數是解析器固定分類，不冒充上游遺失數。
+
+parser_status、transport_coverage及總status分開：CSV讀完仍可有errors／partial事件；缺transport coverage時heartbeat／last_success／parse_errors／dropped全部未知，不由匯入時間或列數補0。提供的coverage須與device/source/epoch/service/trust完全相同，窗口須涵蓋本次received_at；不符來源拒絕，不涵蓋窗口／時間矛盾／截斷為unknown。任一明確部分失敗至少partial，unknown優先；原transport計數不被本批parser錯誤覆寫，兩者分別保留。
+
+驗證：`py -3.13 -B scripts/verify.py --run-dir reports/verify-nas-import-NEW --timeout-seconds 90 --module test_nas_csv_import --module test_nas_csv --module test_nas_contract --module test_nas_coverage`。目前verify-nas-csv-import-20261030-01為17/17／0skip、347語法／來源編譯，含CSV→正規化→衝突核對→coverage離線整合。
+
+NAS-002已完成來源／隱私協作確認與可離線的候選CSV解析／批次測試；實際DSM export及SSH/WebStation/EBG15的adapter／相容性仍待去識別樣本、語系、時間與record identity定義。不是已完成真樣本取證或設備接線；未建立receiver、原文保存、HMAC秘密或模型路徑。

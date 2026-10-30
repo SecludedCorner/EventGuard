@@ -1,5 +1,10 @@
 # EventGuard 工作提醒
 
+## 2026-10-30 NAS-002僅離線／來源樣本仍未知
+
+使用者直接授權與NAS任務合作確認來源／樣本／隱私並完成可離線parser／測試，明示不連設備、不啟模型。候選CSV與批次核對17/17、347編譯通過，詳STATUS及NAS_EVENT_CONTRACT.md；沒有真CSV／syslog模板，不能標DSM-compatible。下一實際格式需去識別樣本、語系／時間／record ID定義，先維持不取新log／不連NAS。03 source失效且未消耗，不直接執行或自動重試。
+
+
 ## 2026-10-30 NAS-001離線單元／03綁定已失效
 
 NAS合作沿本專案既有開發權限，僅合成契約與測試，尚未接收件／真資料／模型／設備。第一事件契約單元4/4與341編譯通過，下一來源coverage；詳STATUS。新src使03 source hash不同，已保存source-binding-invalidated.json；未批准／入列／啟模型，舊scope保留不可執行。後續模型須另備新範圍，不沿用03；本次不下載／部署／變更設備或帳戶，不把NAS合成契約當現場防護。
