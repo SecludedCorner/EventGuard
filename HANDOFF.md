@@ -1,5 +1,10 @@
 # EventGuard 接手
 
+## 2026-10-30 原生桌面缺少的操作證據已補
+
+新native-history-20261030-01驗備份→核對→返回原listener，以及歷史拒讀／截斷／未知；native-status-20261030-01重開同scope真點忽略→新增，兩個gui operation_id、原defender及備份保留、pending4／receipt0／未確認要求0。兩acceptance-summary passed，兩私有Job合作自然0無殘留／強停，5張合成JPEG只留reports。355來源hash未變／332編譯沿用，無新單元重跑／模型／掃描／browser／真人metrics。下一仍是既有02模型待批與最後一次真人參與；browser政策、24h/reboot、可信恢復及真防守各自保留，詳STATUS，不以此次原生操作替代。
+
+
 ## 2026-10-30 待批包02取代已失效01
 
 CLI app更新移除原0.165執行檔，01加superseded.json而保留原證據。現行0.166.0-alpha.5.1已固定副本於reports/agent-investigation-runtime-20261030-01，與安裝檔hash相同，--version／exec --help皆私有Job自然0無殘留／強停、模型0。新待批包reports/investigation-acceptance-eventguard-single-20261030-02，事件evt-a39ef0f7b9924655b6806691d48ee22a，scope f5d676f807601738cc953ccdc3d93544cd9d1bc636987e241a2fce8f433e2b17；human-approval=false、未入列／未執行。先取得對02當次模型範圍批准再記原文UTC/hash，不能用舊01或goal恢復取代批准。355來源未變，沿用既有14/14／332編譯；本次不重跑同測試、真人／browser等關卡保留，詳STATUS。

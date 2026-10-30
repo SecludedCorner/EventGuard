@@ -1,5 +1,10 @@
 # EventGuard 工作提醒
 
+## 2026-10-30 原生Tk工具當前可用／尚缺操作已驗
+
+目前computer-use技能的node_repl＋@oai/sky可實際操控唯一自有合成Tk。native-history-20261030-01補備份核對／返回與拒讀截斷呈現，native-status-20261030-01補重開後忽略→新增；兩個有限Job自然0無殘留／強停、pending4／receipt0。不要重做同一驗收或把它當真人／Web；browser URL政策未驗仍保留，不以native工具操作browser繞過。五張合成JPEG僅本機reports，真人metrics未代填，02模型批准問題仍待答，不重問相同範圍。
+
+
 ## 2026-10-30 CLI更新與待批版本固定
 
 原01包綁定CLI因app更新被移除，已保留原證據並標superseded，不能執行或轉用舊批准。改用本專案忽略reports中的0.166.0-alpha.5.1固定副本；hash相同、版本／help私有Job無模型預檢通過，不改安裝檔／帳戶。當前待批包為investigation-acceptance-eventguard-single-20261030-02，範圍與hash見STATUS。goal active不是新模型授權；固定副本不能靜默替換，真正執行仍需當次有效批准。真人六項依使用者最後一次集中參與；browser政策未驗繼續保留、不繞過。

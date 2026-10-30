@@ -1,5 +1,15 @@
 # EventGuard 現況
 
+## 2026-10-30 補齊桌面原生備份核對／歷史限制與忽略→新增
+
+先核現有native-host-20261029-02僅有read／handled及篩選原生證據，本次補尚未原生操控驗證的路徑；沿既有合成GUI授權，使用computer-use技能目前受支援的node_repl＋@oai/sky，只選唯一自有Tk，沒有browser呼叫或繞過URL政策。非widget.invoke／fixture callback、非真人參與。
+
+- reports/desktop-ux-native-history-20261030-01：真滑鼠開事件／選listener／備份既有處置歷程／明確核對剛才備份／返回原選取，再切事件及捲動查看歷史拒讀／截斷。畫面明示時間快照、來源認證／完整性／容量未知、未還原／未清理／未ACK；返回listener選取及既有捲動內容保留。只讀SQLite與production snapshot/preview交叉核備份2筆＝目前2筆、0身分衝突、事件4pending／receipt0；交叉讀取前後DB bytes不變（不宣稱整個GUI過程DB bytes不變）。
+- reports/desktop-ux-native-status-20261030-01：明確reopen上述scope，真點忽略→新增；每次等待保存／詳情回條，畫面與SQLite一致。新增2筆不同gui operation_id，只作用於listener；原defender read→handled兩筆及已保存備份未改，其他事件不串案。pending4／receipt0／未確認要求0，累計歷程4筆。兩個acceptance-summary.json皆passed，source-binding綁355來源hash未變／332既有來源編譯；沒有重跑未變動單元測試。
+
+兩次worker均先加入私有Job，合作選單退出，guardian自然exit0／remaining0／無強停／GUI worker已退出，fresh原生清單確認自有窗口均消失；模型／原生掃描／browser0。五張自有合成截圖只留忽略reports的JPEG及hash，不提交Git；沒有生成task-U*真人metrics。這補足原生輸入驗收，仍不能替代真人六項、真200%／焦點、原生覆蓋／24h／reboot／真agent防守。02真模型待批包不變，未批准／未入列；不再重問既有開發或同一模型待批問題。
+
+
 ## 2026-10-30 恢復後核到CLI已更新／待批包改用固定副本
 
 恢復目標不構成模型授權。db9ee8e後產品／測試355來源hash均未變，沿用9b288b5的14/14／0skip與332編譯；沒有重跑相同測試。重新核scope發現原0ab0e7a8f3779036/codex.exe已被應用更新移除，01包不再有效，不能沿用上一節scope_matches=true。
