@@ -79,3 +79,7 @@
 `nas_sample_probe.inspect_structure` 已提供有界、無值的 CSV 結構摘要純函式；無檔案／網路 I/O，輸入批准由呼叫端負責，本次僅以合成值測試。結構可讀不等於 schema 已知或 DSM 相容；來源固定未驗、語意 not_assessed，錯誤不回原文。22/22／0skip、349編譯通過，詳最新 EVIDENCE；完整去識別、本機選檔、來源批准／保留與真匯出前邊界仍未就緒。
 
 本包去識別核心 `nas_sample_minimize.minimize_fixture_row` 已用固定 `nas-login-local-fixture-v1` 合成 schema 驗證；key 必須由呼叫者提供，HMAC 綁 package/source/field，時間是保留 offset 的 canonical shifted 值，不宣稱原格式 bytes 不變。私有輸出不對 agent 公開；26/26、351編譯。真 DSM schema、選檔／保存及取樣批准仍未就緒。
+
+整批合成入口已完成：`nas_sample_prepare.prepare_fixture_csv` 回傳 `PreparedFixture`；只能輸出 `.summary`，禁止對整個物件使用 `asdict`／`vars`／其他序列化，`repr=False` 並非存取保護。單筆失敗不交出半批 private_rows；缺成敗種類或身分／時間證據為 partial，來源仍未驗。
+
+在專案根目錄執行 `py -3.13 -B scripts/preview_nas_sample.py --synthetic` 可檢查固定合成示範，無檔案輸入／網路／落盤，終端僅無值摘要；不是給使用者選取真檔的工具。30/30、354編譯與真Python CLI自然退出已驗。實際DSM schema／匯出前有界證據與真資料批准仍缺；未接真檔選擇、保存／清理及取樣入口。

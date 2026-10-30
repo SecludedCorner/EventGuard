@@ -1,5 +1,10 @@
 # EventGuard 工作提醒
 
+## 2026-10-31 NAS 離線工具已可示範，真資料入口仍待條件
+
+結構檢查、本包去識別、整批summary分離與preview_nas_sample.py --synthetic已完成；30/30、354編譯、真Python合成CLI自然退出通過，詳STATUS。目前無真DSM schema／匯出前限制證據，無真檔選擇或保存入口，不自動連線／讀log／啟模型。下一受控真檔工具需可核對schema／來源範圍，取樣前一次列清具體批准；不重跑相同fixture取代實機。使用者要求不使用CI，本機驗證後照常commit／push／整合main，每單元500行內。
+
+
 ## 2026-10-31 不使用 GitHub CI 額度
 
 使用者明示不使用 CI、直接 push。既有 workflow 改為僅 workflow_dispatch，不手動觸發；每個 commit 保留 [skip ci] 作過渡保障。本機 build／相關測試仍需通過，指定檔案提交後普通 push 開發分支並整合 main，不將無 CI 當成免測試。工作樹與待整合變更各不超過 500 行；此指示不新增 NAS 取樣或模型批准。

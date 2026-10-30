@@ -1,5 +1,12 @@
 # EventGuard 現況
 
+## 2026-10-31 NAS 離線整批準備與合成 CLI 預覽完成
+
+新增 nas_sample_prepare：CSV結構→固定fixture schema→整批去識別→private_rows／summary分離；錯列整批拒絕、不輸出半批，缺成敗類別或欄位為partial，摘要無header／值／HMAC／原例外。preview_nas_sample.py只接受--synthetic，內建合成資料，不接受路徑／設備／真log。verify-nas-sample-prepare-20261031-01：30/30、0skip、354語法／編譯、377來源hash一致；Job自然0／remaining0／無強停。build見reports/build-nas-sample-prepare-20261031-01。
+
+實際Python CLI合成預覽 reports/nas-sample-preview-20261031-02：2列、成敗各1、只輸出無值摘要，私有Job自然退出0、無殘留／強停。01驗收helper誤用Job收尾reason而缺退出回條，保留failure.json、不列通過；修正helper後02通過，未改放寬產品規則。此為本機fixture準備工具，非DSM相容性／真取樣／模型驗收。下一需真schema與匯出前有界證據，才能完成受控真檔入口與綁定取樣範圍；不自動收資料，不使用CI。
+
+
 ## 2026-10-31 NAS 本包去識別與時間平移核心完成
 
 新增 nas_sample_minimize.minimize_fixture_row：顯式固定合成 schema、呼叫者提供32-byte key，HMAC綁包／來源／欄位；缺身分／offset留unknown，不造跨匯出去重，日期平移明示artificial。未知欄位／結果、非法日期與小數秒offset固定拒絕，錯誤鏈不外洩原值；輸出為私有衍生fixture，不能貼模型或當真事件。verify-nas-sample-minimize-20261031-02：26/26、0skip、351語法／編譯、374來源hash一致；Job自然0、無殘留／強停。六模組合成驗證，不是DSM實機；build見reports/build-nas-sample-minimize-20261031-02。下一接整批轉換與僅無值摘要的合成示範入口；不連設備／啟模型／GitHub CI。
