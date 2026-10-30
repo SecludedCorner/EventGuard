@@ -49,3 +49,5 @@ parser_status、transport_coverage及總status分開：CSV讀完仍可有errors�
 驗證：`py -3.13 -B scripts/verify.py --run-dir reports/verify-nas-import-NEW --timeout-seconds 90 --module test_nas_csv_import --module test_nas_csv --module test_nas_contract --module test_nas_coverage`。目前verify-nas-csv-import-20261030-01為17/17／0skip、347語法／來源編譯，含CSV→正規化→衝突核對→coverage離線整合。
 
 NAS-002已完成來源／隱私協作確認與可離線的候選CSV解析／批次測試；實際DSM export及SSH/WebStation/EBG15的adapter／相容性仍待去識別樣本、語系、時間與record identity定義。不是已完成真樣本取證或設備接線；未建立receiver、原文保存、HMAC秘密或模型路徑。
+
+DSM 最小真取樣的候選範圍、隱私、期限及未就緒關卡見 [NAS_DSM_SAMPLING_PLAN.md](NAS_DSM_SAMPLING_PLAN.md)；該方案不是連線／取樣批准。
