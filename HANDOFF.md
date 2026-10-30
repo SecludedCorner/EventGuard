@@ -1,5 +1,12 @@
 # EventGuard 接手
 
+## 2026-10-30 02真模型已失敗／完整CLI套件修復第一單元
+
+02包當次批准已消耗；communication-result.json記四工具各0、pending1／receipt0、CLI自然0／MCP自然1、Job remaining0／無強停。原因是舊固定副本只複製codex.exe，缺同版codex-code-mode-host.exe；版本／help成功不足以證明host可用。保留失敗包，不重試、不關閉code mode或改安全設定。
+
+新增codex_runtime完整四檔快照與SHA256核對；缺host、空檔、非PE前綴、未知安裝布局及覆寫皆拒絕。verify-codex-runtime-20261030-01：4/4、0skip、334語法／編譯、357來源hash一致，Job自然0／remaining0／無強停；假PE fixture、模型0，MZ不是簽章驗證。下一將bundle與無模型host啟動證據接入入列前閘道，通過後另備新待批範圍。原02真收件失敗不因本測試通過而改寫。
+
+
 ## 2026-10-30 已確認goal blocked／保留完整範圍
 
 ece330a原生增量後三個連續goal turns仍是同一外部前置未變，03/goal-status.json保存本turn update_goal回blocked。無新產品／測試進度，355來源未變／原build332及原生兩case沿用；沒有活體程序可等或已知可執行未修單元。02模型包未批准／未入列／未執行，真人六項、browser政策、原生身分／長跑／reboot、可信恢復與真防守各關卡保留。下一只沿具體有效答覆或環境變化增量恢復，不重問、不重跑相同fixture、不把blocked當complete，不承諾會話外運行。詳STATUS與reports/continuation-resumed-impasse-20261030-03。

@@ -1,5 +1,12 @@
 # 證據與時間日誌
 
+## 2026-10-30 02真模型已失敗／完整CLI套件修復第一單元
+
+02包當次批准已消耗；communication-result.json記四工具各0、pending1／receipt0、CLI自然0／MCP自然1、Job remaining0／無強停。原因是舊固定副本只複製codex.exe，缺同版codex-code-mode-host.exe；版本／help成功不足以證明host可用。保留失敗包，不重試、不關閉code mode或改安全設定。
+
+新增codex_runtime完整四檔快照與SHA256核對；缺host、空檔、非PE前綴、未知安裝布局及覆寫皆拒絕。verify-codex-runtime-20261030-01：4/4、0skip、334語法／編譯、357來源hash一致，Job自然0／remaining0／無強停；假PE fixture、模型0，MZ不是簽章驗證。下一將bundle與無模型host啟動證據接入入列前閘道，通過後另備新待批範圍。原02真收件失敗不因本測試通過而改寫。
+
+
 ## 2026-10-30 原生增量後的三次阻塞審核
 
 reports/continuation-resumed-impasse-20261030-01／02／03：相同模型批准false、無真人metrics與其餘獨立外部條件，沒有新工程／測試、活體wait或新提問；兩自有GUI程序均已terminal exit0／remaining0。03/goal-status.json記本turn update_goal實際回blocked，完整目標保留。355來源hash仍匹配既有build332，本次純狀態文件不升格新產品驗收；native兩case與14/14各維持原scope，未新跑模型／掃描／browser。

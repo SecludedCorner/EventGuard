@@ -1,5 +1,12 @@
 # EventGuard 現況
 
+## 2026-10-30 02真模型已失敗／完整CLI套件修復第一單元
+
+02包當次批准已消耗；communication-result.json記四工具各0、pending1／receipt0、CLI自然0／MCP自然1、Job remaining0／無強停。原因是舊固定副本只複製codex.exe，缺同版codex-code-mode-host.exe；版本／help成功不足以證明host可用。保留失敗包，不重試、不關閉code mode或改安全設定。
+
+新增codex_runtime完整四檔快照與SHA256核對；缺host、空檔、非PE前綴、未知安裝布局及覆寫皆拒絕。verify-codex-runtime-20261030-01：4/4、0skip、334語法／編譯、357來源hash一致，Job自然0／remaining0／無強停；假PE fixture、模型0，MZ不是簽章驗證。下一將bundle與無模型host啟動證據接入入列前閘道，通過後另備新待批範圍。原02真收件失敗不因本測試通過而改寫。
+
+
 ## 2026-10-30 三次相同外部前置未解除／goal已blocked
 
 在原生桌面增量ece330a完成後，continuation-resumed-impasse-20261030-01／02／03連續三輪核對相同外部條件未變，無新可重現未修缺陷、已授權可執行單元或活體工作可等；不假稱verified wait。02模型批准仍false、enqueued0／stages0，真人結果仍未取得；browser政策路徑、24h/reboot、原生身分partial、可信無損恢復及真防守／競品可比資料各缺口保留。

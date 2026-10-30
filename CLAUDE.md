@@ -1,5 +1,10 @@
 # EventGuard 工作提醒
 
+## 2026-10-30 02批准已消耗／禁止重試
+
+02真模型因固定副本缺code-mode host失敗，四工具0／pending1；舊「待批／未執行」段落已過時。使用者只授權完整套件與無模型預檢修復、測試後commit／push／整合main及準備下次範圍；本次不得重試模型。不改code mode／帳戶／系統設定；完整runtime只留忽略reports。
+
+
 ## 2026-10-30 原生Tk工具當前可用／尚缺操作已驗
 
 目前computer-use技能的node_repl＋@oai/sky可實際操控唯一自有合成Tk。native-history-20261030-01補備份核對／返回與拒讀截斷呈現，native-status-20261030-01補重開後忽略→新增；兩個有限Job自然0無殘留／強停、pending4／receipt0。不要重做同一驗收或把它當真人／Web；browser URL政策未驗仍保留，不以native工具操作browser繞過。五張合成JPEG僅本機reports，真人metrics未代填，02模型批准問題仍待答，不重問相同範圍。
