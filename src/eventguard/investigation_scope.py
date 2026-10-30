@@ -8,6 +8,7 @@ from .acceptance_control import read_json, write_json
 from .acceptance_process import launch_hash
 from .agent_dispatch import command, ROOT
 from .agent_investigation import PROFILE, PROMPT, TOOLS, digest
+from .codex_runtime import inventory
 from .events.store import event_payload_hash
 from .local_paths import _guard
 
@@ -19,6 +20,7 @@ def file_hash(path):
 
 def scope(root, manifest, codex):
     root, codex = _guard(root), _guard(codex)
+    runtime = inventory(codex)
     events = manifest['events']
     if manifest['case'] != 'investigation' or len(events) != 1 or events[0]['synthetic'] is not True:
         raise ValueError('single_synthetic_investigation_required')
@@ -28,7 +30,7 @@ def scope(root, manifest, codex):
     args = command(codex, sys.executable, root/'source', root/'inbox', identity,
                    root/'stage-1', investigation=True)
     body = dict(kind=PROFILE, root=str(root), event_id=identity, event_hash=event_payload_hash(events[0]),
-        codex_executable=str(codex), codex_sha256=file_hash(codex), python=sys.version.split()[0],
+        codex_executable=str(codex), codex_sha256=file_hash(codex), runtime_bundle=runtime, python=sys.version.split()[0],
         source_hash=digest(sources), launch_hash=launch_hash(args, PROMPT), tasks=1, events=1,
         timeout_seconds=180, expected_tools=list(TOOLS), native_queries=0, remediation=False,
         model='existing CLI default; one ephemeral task, no guaranteed token/cost cap', retries=0)

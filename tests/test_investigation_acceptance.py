@@ -41,7 +41,8 @@ class InvestigationAcceptanceTests(unittest.TestCase):
             self.assertIs(result['outbox_acknowledged'], True)
             self.assertEqual(EventStore(root/'source').stats()['pending'], 0)
 
-    def test_finite_fake_cli_real_stdio_report_ack_and_held_handle_natural_exit(self):
+    @patch.object(scope, 'inventory', return_value={'fixture_only': 'FAKE CLI, no executable bundle'})
+    def test_finite_fake_cli_real_stdio_report_ack_and_held_handle_natural_exit(self, _inventory):
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
             root = base/'reports/run'

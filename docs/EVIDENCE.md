@@ -1,5 +1,10 @@
 # 證據與時間日誌
 
+## 2026-10-30 入列前核完整runtime
+
+調查scope現綁四檔bytes／SHA256；缺任何companion或批准後改動皆在enqueue／stage前拒絕，pending保持0。verify-investigation-runtime-20261030-01：8/8、0skip、335語法／編譯、358來源hash一致；包含明示fake CLI＋真SDK回歸，模型0、Job自然0無殘留／強停。實際完整副本四次無模型探測皆自然0（cli-bundle-probes-20261030-01）；下一把其固定探測與退出證據自動核對接進scope，尚不可宣稱真模型閉環成功。
+
+
 ## 2026-10-30 02真模型已失敗／完整CLI套件修復第一單元
 
 02包當次批准已消耗；communication-result.json記四工具各0、pending1／receipt0、CLI自然0／MCP自然1、Job remaining0／無強停。原因是舊固定副本只複製codex.exe，缺同版codex-code-mode-host.exe；版本／help成功不足以證明host可用。保留失敗包，不重試、不關閉code mode或改安全設定。

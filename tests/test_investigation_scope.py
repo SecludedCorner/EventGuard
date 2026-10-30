@@ -12,7 +12,8 @@ from eventguard.synthetic import make_synthetic
 
 
 class InvestigationScopeTests(unittest.TestCase):
-    def test_scope_requires_current_explicit_single_use_approval_and_matching_source(self):
+    @patch.object(scope, 'inventory', return_value={'fixture_only': 'no executable bundle'})
+    def test_scope_requires_current_explicit_single_use_approval_and_matching_source(self, _inventory):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             manifest = dict(case='investigation', events=[make_synthetic('listener')], stages=[], enqueued=[])
