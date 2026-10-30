@@ -1,5 +1,10 @@
 # 證據與時間日誌
 
+## 2026-10-31 NAS 最小 CSV 結構檢查已可離線使用
+
+新增 nas_sample_probe.inspect_structure 純函式：64KiB／10邏輯列／32欄、顯式分隔符、UTF-8/BOM、多行、固定錯誤碼；只回枚舉／計數／bool，不回 header、值、hash 或例外。schema／來源真實性保持未驗，未接真資料或產品佇列。verify-nas-sample-probe-20261031-01：22/22、0skip、349語法／編譯、372來源hash一致；Job自然0、無殘留／強停，五模組合成測試，非DSM相容性驗收。build見reports/build-nas-sample-probe-20261031-01。下一接本包去識別與本機無值預覽；取樣界線／期限仍待確認，不連NAS、不啟模型，不使用GitHub CI。
+
+
 ## 2026-10-31 改為本機驗證，普通推送不自動用 CI
 
 依使用者額度指示，唯一 tests.yml workflow 改僅 workflow_dispatch，不手動執行；提交保留 [skip ci]，本機驗證要求不變。verify-local-only-policy-20261031-01：11/11、0skip、347 語法／編譯、370 來源 hash 一致；自有 Job 自然退出0、無殘留或強停。範圍為兩個 verify 模組及 workflow 內容審查，不是全庫或 GitHub CI 實跑；證據 reports/build-local-only-policy-20261031-01。下一繼續 NAS 離線最小資料工具，不連設備或啟模型。
