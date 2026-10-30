@@ -1,5 +1,12 @@
 # 證據與時間日誌
 
+## 2026-10-30 NAS-001來源coverage及離線驗收完成
+
+新增nas_coverage純函式：同source／epoch的區間計數、heartbeat／last_success、錯誤／漏件／截斷／中斷／儲存失敗分離。新鮮heartbeat不隱藏partial；未知／過期／未來時間／窗口錯序皆unknown，歷史成功保留，無安全結論／處置。事件另補超前時鐘gap。verify-nas-coverage-20261030-02：8/8、0skip、343語法／編譯、366來源hash一致，Job自然0／remaining0／無強停；是兩模組合成契約驗收，不是全庫／實機／真模型。完整欄位與限制見docs/NAS_EVENT_CONTRACT.md。
+
+NAS-001本次最小事件／來源／coverage契約已可用；未實作原始log解析、網路收件、持久化adapter或NAS告警／處置。沒有NAS／EBG15連線、真log、下載、部署、設定變更或模型呼叫；磁碟滿為fixture。03仍未批准／未執行且source綁定失效，下一NAS來源樣本／接線需另定範圍，不沿用03或宣稱NAS已受保護。
+
+
 ## 2026-10-30 NAS-001 合成事件契約第一單元
 
 新增獨立nas-security-fixture-v1純函式：DSM登入成敗、opaque設備／來源／epoch／record參照、UTC與原offset／clock uncertainty、證據hash與有界去重；同秒不同record不誤合併，同record不同內容拒絕，亂序與重送結果一致。只接受synthetic、trust=unverified；拒絕原始log／秘密欄位，不接現有2.0事件白名單、runtime、收件器、模型或處置。verify-nas-contract-20261030-02：4/4、0skip、341語法／編譯、364來源hash一致，guardian自然0／remaining0／無強停；模型／NAS連線0。下一實作來源coverage純契約。

@@ -63,6 +63,8 @@ def normalize(value):
     gaps = [key for key, missing in (('event_time_unknown', event_time is None),
         ('subject_unknown', subject is None), ('clock_uncertainty_unknown', uncertainty is None),
         ('record_truncated', value['truncated'])) if missing]
+    if event_time and uncertainty is not None and (datetime.fromisoformat(event_time)-datetime.fromisoformat(received)).total_seconds() > uncertainty:
+        gaps.append('event_clock_ahead')
     body = dict(schema_version=VERSION, synthetic=True, source=origin, **refs, subject_ref=subject,
         event_type='dsm_login', outcome=value['outcome'], event_time=event_time,
         clock_uncertainty_seconds=uncertainty, truncated=value['truncated'])

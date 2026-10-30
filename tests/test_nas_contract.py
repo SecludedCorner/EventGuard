@@ -45,6 +45,9 @@ class NasContractTests(unittest.TestCase):
         event = normalize(fixture(event_time=None, subject_ref=None, clock_uncertainty_seconds=None, truncated=True))
         self.assertEqual(event['data_status'], 'partial')
         self.assertEqual(len(event['gaps']), 4)
+        ahead = normalize(fixture(event_time='2026-10-30T00:00:04Z'))
+        self.assertEqual(ahead['data_status'], 'partial')
+        self.assertIn('event_clock_ahead', ahead['gaps'])
         for change in ({'event_time': '2026-10-30T08:00:00'}, {'received_at': None},
                        {'clock_uncertainty_seconds': True}, {'clock_uncertainty_seconds': float('nan')}):
             with self.assertRaises(ValueError):
