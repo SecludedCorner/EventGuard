@@ -1,5 +1,12 @@
 # 證據與時間日誌
 
+## 2026-10-31 桌面回條發布交接已固定時序驗證
+
+新增實際Tk＋合成SQLite有界故障閘：強制set_status／confirm回條先入結果佇列、worker尚未清pending，再由UI接收。既有deferred會一次接續confirm，保存／確認各一次，journal清空、人工歷程一筆、pending2／ACK0；沒有猜測性修改產品worker順序。verify-desktop-receipt-handoff-20261031-01：三模組11/11、0skip、356語法／編譯、379來源hash一致，自有Job自然0、無殘留／強停；build見reports/build-desktop-receipt-handoff-20261031-01。
+
+此證據排除該固定交接時序直接漏確認的假設，不證明前次03單次逾時的根因；舊失敗與新增逾時診斷保留，不重跑整套洗結果。原NAS真來源／模型批准／真人及實機關卡未完成；不啟CI、設備或模型。
+
+
 ## 2026-10-31 桌面刷新不再保留外部更新前的人工狀態
 
 真Tk＋合成SQLite重現：外部CLI改為handled後，刷新列表已更新但詳情／按鈕仍new（verify-desktop-refresh-regression-20261031-01：0/1，失敗保留）。修gui.refresh明確刷新重讀選中事件；週期snapshot發現人工狀態改變時排唯讀inspect，不以列表覆寫詳情；loading／失敗停用人工寫入，切換事件保留原關聯檢查，不新增ACK／採集／模型。
