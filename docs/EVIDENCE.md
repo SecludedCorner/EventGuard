@@ -1,5 +1,10 @@
 # 證據與時間日誌
 
+## 2026-10-31 NAS 本包去識別與時間平移核心完成
+
+新增 nas_sample_minimize.minimize_fixture_row：顯式固定合成 schema、呼叫者提供32-byte key，HMAC綁包／來源／欄位；缺身分／offset留unknown，不造跨匯出去重，日期平移明示artificial。未知欄位／結果、非法日期與小數秒offset固定拒絕，錯誤鏈不外洩原值；輸出為私有衍生fixture，不能貼模型或當真事件。verify-nas-sample-minimize-20261031-02：26/26、0skip、351語法／編譯、374來源hash一致；Job自然0、無殘留／強停。六模組合成驗證，不是DSM實機；build見reports/build-nas-sample-minimize-20261031-02。下一接整批轉換與僅無值摘要的合成示範入口；不連設備／啟模型／GitHub CI。
+
+
 ## 2026-10-31 NAS 最小 CSV 結構檢查已可離線使用
 
 新增 nas_sample_probe.inspect_structure 純函式：64KiB／10邏輯列／32欄、顯式分隔符、UTF-8/BOM、多行、固定錯誤碼；只回枚舉／計數／bool，不回 header、值、hash 或例外。schema／來源真實性保持未驗，未接真資料或產品佇列。verify-nas-sample-probe-20261031-01：22/22、0skip、349語法／編譯、372來源hash一致；Job自然0、無殘留／強停，五模組合成測試，非DSM相容性驗收。build見reports/build-nas-sample-probe-20261031-01。下一接本包去識別與本機無值預覽；取樣界線／期限仍待確認，不連NAS、不啟模型，不使用GitHub CI。

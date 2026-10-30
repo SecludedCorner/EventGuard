@@ -77,3 +77,5 @@
 ## 2026-10-31 離線實作進度
 
 `nas_sample_probe.inspect_structure` 已提供有界、無值的 CSV 結構摘要純函式；無檔案／網路 I/O，輸入批准由呼叫端負責，本次僅以合成值測試。結構可讀不等於 schema 已知或 DSM 相容；來源固定未驗、語意 not_assessed，錯誤不回原文。22/22／0skip、349編譯通過，詳最新 EVIDENCE；完整去識別、本機選檔、來源批准／保留與真匯出前邊界仍未就緒。
+
+本包去識別核心 `nas_sample_minimize.minimize_fixture_row` 已用固定 `nas-login-local-fixture-v1` 合成 schema 驗證；key 必須由呼叫者提供，HMAC 綁 package/source/field，時間是保留 offset 的 canonical shifted 值，不宣稱原格式 bytes 不變。私有輸出不對 agent 公開；26/26、351編譯。真 DSM schema、選檔／保存及取樣批准仍未就緒。
