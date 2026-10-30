@@ -1,5 +1,12 @@
 # EventGuard 接手
 
+## 2026-10-30 修復已整合／下一次03真模型範圍已備妥
+
+完整bundle與無模型四探測閘道已在49c95a7整合main；30/30、0skip、339編譯，實際runtime-20261030-03四probe自然0／remaining0／無強停，無模型。02缺host真模型失敗與已消耗批准保留，本次未重試。
+
+下一個具體動作：讀investigation-acceptance-eventguard-single-20261030-03/AUTHORIZATION_REQUEST.md及preparation-audit.json；尚未批准／入列／啟模型，只有取得對03另次具體批准後記原文UTC/scope，再以已固定runtime03執行單任務180秒、不重試。scope c5f6a9f79e8a5dbc5ec2ffdafff8afbb348b461bc027c49953eb13937fd7a449，版本與event詳STATUS；新source／binary／preflight改動需新scope，不能靜默換版。現有可變hash不是獨立信任根；code-mode至MCP相容性仍未驗。其餘真人／browser等產品關卡保留，無排程／會話外自動恢復。
+
+
 ## 2026-10-30 無模型預檢接入批准閘道
 
 調查prepare及execute現在都重核完整bundle、四探測命令／輸出／退出與證據hash；缺預檢、改證據、改companion或新增未綁資源在入列前拒絕。verify-investigation-preflight-20261030-01：30/30、0skip、339語法／編譯、362來源hash一致，Job自然0無殘留／強停；真SDK＋明示fake CLI維持通過，模型0。新增prepare_codex_runtime.py固定複製＋預檢入口，不啟模型／sandbox setup、不修改原安裝／設定；完整操作見docs/AGENT_SERVICE.md。下一準備新待批包並唯讀重核，02失敗保留、不重試。

@@ -1,5 +1,10 @@
 # EventGuard 工作提醒
 
+## 2026-10-30 CLI修復完成／下次僅03另次批准
+
+完整CLI四檔＋無模型預檢已接調查入列閘道並整合main；固定副本runtime-20261030-03，待批investigation-acceptance-eventguard-single-20261030-03。不要沿用舊主exe單檔快照或02已消耗批准，不修改code mode／安全設定解決相容性。新包尚未批准／入列／啟模型；使用者本次明示不要重試，完成準備後僅列清另次批准範圍。詳STATUS及AUTHORIZATION_REQUEST；所有私人runtime／具體批准回條留忽略reports。
+
+
 ## 2026-10-30 02批准已消耗／禁止重試
 
 02真模型因固定副本缺code-mode host失敗，四工具0／pending1；舊「待批／未執行」段落已過時。使用者只授權完整套件與無模型預檢修復、測試後commit／push／整合main及準備下次範圍；本次不得重試模型。不改code mode／帳戶／系統設定；完整runtime只留忽略reports。

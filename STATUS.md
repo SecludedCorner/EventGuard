@@ -1,5 +1,18 @@
 # EventGuard 現況
 
+## 2026-10-30 CLI完整套件及無模型預檢已修復／03包待另次批准
+
+產品修復49c95a7（前序03eb297／7fb7327／dc83b3a）均已逐單元推送開發分支、普通快轉整合origin/main。最新受影響6模組verify-investigation-preflight-20261030-01：30/30、0skip、339語法／編譯，build-investigation-preflight-20261030-01核362來源hash；不是全庫回歸。缺host／其他companion、改套件、未知資源、缺預檢、改證據、錯命令、失敗／強停／截斷皆不放行；明示fake CLI＋真SDK四步回歸仍通過，未冒充新真模型。
+
+正式入口prepare_codex_runtime.py建立reports/agent-investigation-runtime-20261030-03完整四檔（476252352bytes），CLI 0.166.0-alpha.5.1／Python3.13.3／SDK1.6.0。preflight/verification.json核版本、exec help、host help及host stdio空輸入EOF各私有Job自然0／remaining0／無強停／完整輸出；沒有執行command runner或sandbox setup、模型、掃描、browser或系統設定變更。四檔hash與命令／退出證據在調查prepare及execute入列前重核；這不保證code-mode模型至MCP trace相容性。
+
+新待批reports/investigation-acceptance-eventguard-single-20261030-03：事件evt-5cb8362c8e1f4e778e17b7a17218e1ca，scope c5f6a9f79e8a5dbc5ec2ffdafff8afbb348b461bc027c49953eb13937fd7a449。AUTHORIZATION_REQUEST.md、version-metadata.json、investigation-scope.json與preparation-audit.json列完整版本／四檔SHA／預檢及資源界線；approval=false、enqueued0／stages0／pending0、未啟模型，未批准閘道實際拒絕，362來源仍一致。
+
+下一次範圍僅03單自有合成listener、單CLI任務、180秒任務期限（自有Job清理／證據收尾另計），預期receive/query/save_investigation/ACK各一次及自然退出；CLI既有預設模型，內部請求數／token／費用無硬上限保證。無原生查詢／shell／browser／處置／設定變更，輸出各4MiB、摘要400字元、完成記錄沿4KiB契約；必要證據缺失、錯序、工具失敗、逾時、強停或殘留均判失敗並保存實際ACK／pending，不重試。批准原文／UTC／scope須另次有效人類答覆且24小時內，不沿用02批准。
+
+02真模型已失敗（缺host，四工具0、pending1／receipt0、CLI自然0／MCP自然1／Job無殘留），原communication-result.json與原runtime完整保留；本次修復沒有再次執行模型。真模型四步調查、真人六項、browser政策／200%、原生身分partial、長跑／reboot、可信恢復與真防守仍未驗；不把此次準備當整體AI盯哨完成。
+
+
 ## 2026-10-30 無模型預檢接入批准閘道
 
 調查prepare及execute現在都重核完整bundle、四探測命令／輸出／退出與證據hash；缺預檢、改證據、改companion或新增未綁資源在入列前拒絕。verify-investigation-preflight-20261030-01：30/30、0skip、339語法／編譯、362來源hash一致，Job自然0無殘留／強停；真SDK＋明示fake CLI維持通過，模型0。新增prepare_codex_runtime.py固定複製＋預檢入口，不啟模型／sandbox setup、不修改原安裝／設定；完整操作見docs/AGENT_SERVICE.md。下一準備新待批包並唯讀重核，02失敗保留、不重試。

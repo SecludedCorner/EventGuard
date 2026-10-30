@@ -1,5 +1,14 @@
 # 證據與時間日誌
 
+## 2026-10-30 修復最終驗證與03未執行證據
+
+verify-investigation-preflight-20261030-01／build-investigation-preflight-20261030-01：6相關模組30/30、0skip、339語法／編譯、362來源hash一致、10.737秒，guardian自然0／remaining0／無強停。fake CLI／真SDK證據仍是合成；不累加前序4／8／23次重疊測試或冒稱全庫。
+
+正式命令prepare_codex_runtime.py --source同版安裝codex.exe --root reports/agent-investigation-runtime-20261030-03回no_model_preflight_passed；該包bundle.json與preflight/verification.json保存完整四檔476252352bytes及四probe命令、完整64KiB上限輸出與自然退出證據。每項10秒執行期限加既有Job收尾；host stdio僅空輸入EOF，不是模型調用或MCP協定閉環。
+
+validate_delivery.py investigation --root reports/investigation-acceptance-eventguard-single-20261030-03 --codex-executable reports/agent-investigation-runtime-20261030-03/codex.exe回prepared_only_no_model_invoked。preparation-audit.json於2026-10-30T07:20:29Z核scope完全相同、批准false／未批准拒絕、enqueued0／stages0／pending0、無stage目錄與模型，362來源仍匹配；version-metadata與AUTHORIZATION_REQUEST保存下一範圍。02 communication-result保留真失敗，本次模型重試0，未更改原安裝、系統／帳戶或安全設定，runtime／授權記錄／截圖不納Git。
+
+
 ## 2026-10-30 無模型預檢接入批准閘道
 
 調查prepare及execute現在都重核完整bundle、四探測命令／輸出／退出與證據hash；缺預檢、改證據、改companion或新增未綁資源在入列前拒絕。verify-investigation-preflight-20261030-01：30/30、0skip、339語法／編譯、362來源hash一致，Job自然0無殘留／強停；真SDK＋明示fake CLI維持通過，模型0。新增prepare_codex_runtime.py固定複製＋預檢入口，不啟模型／sandbox setup、不修改原安裝／設定；完整操作見docs/AGENT_SERVICE.md。下一準備新待批包並唯讀重核，02失敗保留、不重試。
