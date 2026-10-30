@@ -1,5 +1,12 @@
 # EventGuard 接手
 
+## 2026-10-30 NAS-001 合成事件契約第一單元
+
+新增獨立nas-security-fixture-v1純函式：DSM登入成敗、opaque設備／來源／epoch／record參照、UTC與原offset／clock uncertainty、證據hash與有界去重；同秒不同record不誤合併，同record不同內容拒絕，亂序與重送結果一致。只接受synthetic、trust=unverified；拒絕原始log／秘密欄位，不接現有2.0事件白名單、runtime、收件器、模型或處置。verify-nas-contract-20261030-02：4/4、0skip、341語法／編譯、364來源hash一致，guardian自然0／remaining0／無強停；模型／NAS連線0。下一實作來源coverage純契約。
+
+新增原始碼使03 source綁定失效，原scope／approval未改，source-binding-invalidated.json記實際差異；仍approved=false／enqueued0／stages0，未消耗或重試。未來模型需重新準備範圍，不直接執行03；NAS真日誌／live調查仍未接通，不能宣稱已保護NAS。
+
+
 ## 2026-10-30 下一階段目標已排入既有佇列
 
 使用者要求安排目標並提供Prompt；docs/MAINTENANCE_GOAL.md新增P1-AGENT-INVESTIGATION-03與M1範圍批准／M2單次真閉環／M3證據保存。這次只有規劃文件，沒有新模型批准／執行、probe重跑或產品變更；沿用f5d5b9b的30/30／339編譯，提交前核362來源hash及證據路徑。App既有大目標仍blocked且工具不支援直接替換未完成目標，未冒稱已更新平台目標。下一讀03範圍，僅在另次有效批准後執行一次；其餘獨立產品驗收仍保留。

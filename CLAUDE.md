@@ -1,5 +1,10 @@
 # EventGuard 工作提醒
 
+## 2026-10-30 NAS-001離線單元／03綁定已失效
+
+NAS合作沿本專案既有開發權限，僅合成契約與測試，尚未接收件／真資料／模型／設備。第一事件契約單元4/4與341編譯通過，下一來源coverage；詳STATUS。新src使03 source hash不同，已保存source-binding-invalidated.json；未批准／入列／啟模型，舊scope保留不可執行。後續模型須另備新範圍，不沿用03；本次不下載／部署／變更設備或帳戶，不把NAS合成契約當現場防護。
+
+
 ## 2026-10-30 CLI修復完成／下次僅03另次批准
 
 完整CLI四檔＋無模型預檢已接調查入列閘道並整合main；固定副本runtime-20261030-03，待批investigation-acceptance-eventguard-single-20261030-03。不要沿用舊主exe單檔快照或02已消耗批准，不修改code mode／安全設定解決相容性。新包尚未批准／入列／啟模型；使用者本次明示不要重試，完成準備後僅列清另次批准範圍。詳STATUS及AUTHORIZATION_REQUEST；所有私人runtime／具體批准回條留忽略reports。
