@@ -1,5 +1,12 @@
 # 證據與時間日誌
 
+## 2026-10-30 CLI固定副本與新版待批包
+
+原01 scope重核因bound executable不存在而失敗（無模型／未入列），查核顯示App目前安裝0.166.0-alpha.5.1。reports/agent-investigation-runtime-20261030-01/snapshot.json核原檔與本專案忽略副本SHA256相同，368970544bytes；version／help兩次capture均完整、自然exit0／remaining0／無強停／模型0，原檔及系統／帳戶設定未改。副本可避免後續app更新移除安裝路徑導致待批包再失效，不自行更新已綁副本。
+
+reports/investigation-acceptance-eventguard-single-20261030-02/version-metadata.json／AUTHORIZATION_REQUEST核code/binary/source/launch，human-approval=false、enqueued0／stages0，真模型未執行；01只追加superseded.json。355來源hash仍匹配既有late-failure-01測試／build，無新模型或native/browser／真人結果，不改寫原合成及歷史真收件scope。
+
+
 ## 2026-10-30 調查增量整合、版本與未執行範圍
 
 verify-agent-investigation-integration-20261030-01（f4bd4aa）：14模組90/90／0skip、332語法、87.652秒／source_unchanged、Job自然0／remaining0／無強停。後續9b288b5晚期失敗回報修正另有verify-investigation-late-failure-20261030-01：14/14／0skip、332語法、29.739秒、相同自然退出範圍；build355hash／332編譯。兩scope不可相加或稱全庫，皆模型0。

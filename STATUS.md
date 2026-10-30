@@ -1,5 +1,16 @@
 # EventGuard 現況
 
+## 2026-10-30 恢復後核到CLI已更新／待批包改用固定副本
+
+恢復目標不構成模型授權。db9ee8e後產品／測試355來源hash均未變，沿用9b288b5的14/14／0skip與332編譯；沒有重跑相同測試。重新核scope發現原0ab0e7a8f3779036/codex.exe已被應用更新移除，01包不再有效，不能沿用上一節scope_matches=true。
+
+目前安裝22cfb1d302613eae/codex.exe為0.166.0-alpha.5.1；只複製本專案reports/agent-investigation-runtime-20261030-01/codex.exe（368970544bytes），原檔／副本SHA256同3097c909fb6d5cd63510d44aceb1d42df9f6e85722a3e447e477def1ecf60e16，未改原檔／帳戶／全域設定。固定副本--version與exec --help各私有Job自然exit0、remaining0／無強停／完整擷取，既有必要flags皆存在，模型0；snapshot.json存證，binary被Git忽略，不提交。
+
+新reports/investigation-acceptance-eventguard-single-20261030-02：事件evt-a39ef0f7b9924655b6806691d48ee22a，scope hash f5d676f807601738cc953ccdc3d93544cd9d1bc636987e241a2fce8f433e2b17，code/binary/source/launch已核，human-approval=false、enqueued0／stages0。01原證據保留並追加superseded.json指向02；舊批准不能轉用，不能因goal active就執行模型。一次事件／一次任務／180秒及四工具／輸出／收尾限制同原待批包；AUTHORIZATION_REQUEST明列新版本與固定副本範圍。
+
+本次是移除版本變動造成的實際前置失效，非真agent驗收或新產品功能。桌面人工處置工程／合成Tk證據沿用，真人六項／browser政策／24h／reboot／原生身分partial／可信恢復及真防守仍獨立未驗；不重問相同開發權限、不換工具繞過。兩工作區乾淨、remote已唯讀核db9ee8e（本文件提交後以Git最新為準），不宣稱整體完成。
+
+
 ## 2026-10-30 單事件調查已具備接線／等待當次真模型範圍
 
 產品code 9b288b5：新增synthetic-only四工具receive→query保存facts→save_investigation獨立保存不可信分析→ACK，保存失敗不可ACK；hash綁event/query/evidence/report，人工handled獨立。原子保存／保留／重啟與舊三工具相容，不改監看預設，不代表真實防守完成。

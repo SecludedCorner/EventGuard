@@ -1,5 +1,10 @@
 # EventGuard 接手
 
+## 2026-10-30 待批包02取代已失效01
+
+CLI app更新移除原0.165執行檔，01加superseded.json而保留原證據。現行0.166.0-alpha.5.1已固定副本於reports/agent-investigation-runtime-20261030-01，與安裝檔hash相同，--version／exec --help皆私有Job自然0無殘留／強停、模型0。新待批包reports/investigation-acceptance-eventguard-single-20261030-02，事件evt-a39ef0f7b9924655b6806691d48ee22a，scope f5d676f807601738cc953ccdc3d93544cd9d1bc636987e241a2fce8f433e2b17；human-approval=false、未入列／未執行。先取得對02當次模型範圍批准再記原文UTC/hash，不能用舊01或goal恢復取代批准。355來源未變，沿用既有14/14／332編譯；本次不重跑同測試、真人／browser等關卡保留，詳STATUS。
+
+
 ## 2026-10-30 下一步是當次單事件真模型驗收
 
 四工具及保存閘道已接，產品9b288b5；受影響90/90與後續修正14/14各0skip／332編譯，真SDK＋明示fake CLI／SQLite／MCP HANDLE自然退出有證據，模型0。待批reports/investigation-acceptance-eventguard-single-20261030-01的AUTHORIZATION_REQUEST／version-metadata／scope已核，事件evt-4bdbd2b0b15046c496d09acef0f6a60e、CLI 0.165.0-alpha.1.2。human-approval=false且未入列／未執行；不能把舊批准或fake升格。先取得當次一事件／一任務／180秒模型範圍，記原文UTC/hash後執行同validate_delivery.py investigation命令加--execute；不重試已用目錄，核四步內容與真退出。真人六項最後一次參與，browser政策未驗不繞過，其餘獨立產品關卡仍保留；詳STATUS與docs/AGENT_SERVICE.md。

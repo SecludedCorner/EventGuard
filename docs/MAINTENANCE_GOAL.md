@@ -1,5 +1,10 @@
 # EventGuard 目前目標
 
+## 2026-10-30 單事件待批版本已固定／整體目標active
+
+恢復後實核CLI已被app更新，原01 scope失效。已用現行0.166固定副本完成無模型版本／flags預檢並準備02包，保留01／原範圍，產品355來源hash未變、不重跑同測試。下一只在02具體批准後按既有四步驗收，不把goal active當模型授權；真人／browser／原生／長跑／恢復／真防守等必要關卡仍保留，詳STATUS。這是實際環境前置修復，不是整體完成或真agent調查通過。
+
+
 ## 2026-10-30 P1-AGENT-INVESTIGATION 接線完成／真模型範圍待批准
 
 新使用者目標：一件自有事件，真agent收件、讀保存證據、保存有引用／缺口的分析再ACK，自然退出；不以handled或舊固定decision代替。工程／SDK／明示fake CLI已驗，產品9b288b5，90/90及後續修正14/14各0skip；新真模型未驗，scope目錄與版本詳STATUS。下一取得具體一次模型範圍批准，記原文UTC/hash再執行已準備investigation case並核真四步／退出，不重用已消耗批准／不自動重試。真人操作依答覆最後一次參與；browser政策／原生／長跑／恢復／真防守各關卡不縮小。這是新可用工程增量，未把舊blocked整體平台goal宣稱complete或自動resume。
