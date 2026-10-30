@@ -1,5 +1,10 @@
 # EventGuard 現況
 
+## 2026-10-31 改為本機驗證，普通推送不自動用 CI
+
+依使用者額度指示，唯一 tests.yml workflow 改僅 workflow_dispatch，不手動執行；提交保留 [skip ci]，本機驗證要求不變。verify-local-only-policy-20261031-01：11/11、0skip、347 語法／編譯、370 來源 hash 一致；自有 Job 自然退出0、無殘留或強停。範圍為兩個 verify 模組及 workflow 內容審查，不是全庫或 GitHub CI 實跑；證據 reports/build-local-only-policy-20261031-01。下一繼續 NAS 離線最小資料工具，不連設備或啟模型。
+
+
 ## 2026-10-30 NAS-002 DSM 最小取樣方案待確認
 
 已與 NAS 任務核對既有證據並完成隱私審查，方案 NAS-002-DSM-SAMPLE-01 見 [DSM 最小取樣方案](docs/NAS_DSM_SAMPLING_PLAN.md)。僅單一 DSM 登入來源，一次／最多 10 筆／64 KiB／24h 窗口候選；匯出前限制尚無證據，本機去識別／無值摘要工具未實作，真取樣未就緒。原始 24h／衍生 7 日為待確認上限，原文及衍生樣本不進聊天／Git，agent 僅收固定無值摘要。

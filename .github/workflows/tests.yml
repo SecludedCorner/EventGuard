@@ -1,5 +1,7 @@
 name: Offline verification
-on: [push, pull_request, workflow_dispatch]
+# Automatic runs are disabled by the repository owner's CI budget policy.
+# Keep local verification mandatory; manual dispatch requires a new request.
+on: [workflow_dispatch]
 permissions:
   contents: read
 env:
