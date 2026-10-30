@@ -1,5 +1,14 @@
 # EventGuard 現況
 
+## 2026-10-31 桌面刷新不再保留外部更新前的人工狀態
+
+真Tk＋合成SQLite重現：外部CLI改為handled後，刷新列表已更新但詳情／按鈕仍new（verify-desktop-refresh-regression-20261031-01：0/1，失敗保留）。修gui.refresh明確刷新重讀選中事件；週期snapshot發現人工狀態改變時排唯讀inspect，不以列表覆寫詳情；loading／失敗停用人工寫入，切換事件保留原關聯檢查，不新增ACK／採集／模型。
+
+最終 verify-desktop-detail-refresh-20261031-04：8模組70/70、0skip，355語法／編譯、378來源hash一致；Job自然0／remaining0／無強停，無Tk析構錯誤，build見reports/build-desktop-detail-refresh-20261031-01。涵蓋明確／週期刷新、外部調查更新、切換／錯誤與既有處置、篩選、pending頁／歷史返回。這是程式驅動實際Tk，不是真人／原生輸入或Web200%驗收。
+
+02失敗前出現非UI執行緒回收前案Tk變數的錯誤，fixture改在新worker前由UI執行緒gc.collect；未關閉GC或延長逾時。03仍有單次核對回條逾時，原因未充分證實；隔離11/11與加固定狀態／自有worker函式堆疊診斷後同組04通過，所有失敗保留、不宣稱其根因已解決。下一如再現依診斷定位，不盲目重跑。GitHub CI仍不啟動；NAS真schema／取樣、真agent及真人／實機關卡未完成。
+
+
 ## 2026-10-31 NAS 離線整批準備與合成 CLI 預覽完成
 
 新增 nas_sample_prepare：CSV結構→固定fixture schema→整批去識別→private_rows／summary分離；錯列整批拒絕、不輸出半批，缺成敗類別或欄位為partial，摘要無header／值／HMAC／原例外。preview_nas_sample.py只接受--synthetic，內建合成資料，不接受路徑／設備／真log。verify-nas-sample-prepare-20261031-01：30/30、0skip、354語法／編譯、377來源hash一致；Job自然0／remaining0／無強停。build見reports/build-nas-sample-prepare-20261031-01。

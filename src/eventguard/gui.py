@@ -589,7 +589,12 @@ class EventGuardWindow(PendingView):
                              else "正在停止自動處理；事件仍保留。")
 
     def refresh(self):
-        self.show_pending(self._pending_offset) if self._pending_mode else self._request("snapshot")
+        if self._pending_mode:
+            self.show_pending(self._pending_offset)
+        elif self._request("snapshot"):
+            selected = self.events.selection()
+            if selected:
+                self._refresh_selected_detail(selected[0])
 
     def _refresh(self):
         if not self._busy:
@@ -694,6 +699,17 @@ class EventGuardWindow(PendingView):
             else:
                 self.sources.insert("", "end", iid=source, values=row)
         self.filter_events() if self._pending_mode else self._render_events(view)
+        # A different entry point can change the human state while this detail
+        # stays selected. Queue a read, never overwrite it from the list alone.
+        detail = self._detail_document or {}
+        status = detail.get("status")
+        if not self._pending_mode and isinstance(status, str) and status in HUMAN_STATES:
+            events = self._recent_document.get("events")
+            changed = isinstance(events, list) and any(isinstance(row, dict)
+                and row.get("event_id") == self._last_event
+                and row.get("handling_status") != detail["status"] for row in events)
+            if changed:
+                self._refresh_selected_detail(self._last_event)
         if view["error"]:
             self.message.set("尚未完成：" + view["error"])
 

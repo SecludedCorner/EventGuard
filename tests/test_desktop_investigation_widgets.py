@@ -1,9 +1,13 @@
 """Real own Tk button -> DesktopController -> synthetic Catalog/SQLite."""
 from datetime import datetime, timedelta
+import gc
+import json
 from pathlib import Path
 import tempfile
 import threading
+import sys
 import time
+import traceback
 import unittest
 from unittest.mock import Mock, patch
 
@@ -16,6 +20,9 @@ from test_event_investigation import fixture_events, NOW
 
 class DesktopInvestigationWidgetTests(unittest.TestCase):
     def setUp(self):
+        # Prior closed Tk cycles must finalize on this UI thread, before the
+        # next worker can trigger cyclic GC outside the UI thread.
+        gc.collect()
         try:
             import tkinter as tk
         except ImportError:
@@ -62,7 +69,13 @@ class DesktopInvestigationWidgetTests(unittest.TestCase):
             if condition():
                 return
             time.sleep(.005)
-        self.fail('own Tk integration did not reach expected state')
+        frame = sys._current_frames().get(self.ui.worker.thread.ident)
+        stack = [(Path(f.filename).name, f.name, f.lineno) for f in traceback.extract_stack(frame)] if frame else []
+        state = {'busy': self.ui._busy, 'pending': self.ui.worker.pending,
+                 'deferred': self.ui._deferred_request[0] if self.ui._deferred_request else None,
+                 'detail_state': (self.ui._detail_document or {}).get('status'),
+                 'snapshot_due': self.ui._snapshot_due, 'worker_stack': stack}
+        self.fail('own Tk integration did not reach expected state: '+json.dumps(state))
 
     def select(self, event_id):
         self.ui.events.selection_set(event_id)
