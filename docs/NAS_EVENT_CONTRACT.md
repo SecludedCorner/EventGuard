@@ -20,3 +20,22 @@
 現有證據：verify-nas-coverage-20261030-02，8/8／0skip、343語法／編譯；磁碟滿與中斷僅輸入fixture，未填滿磁碟或操作設備。
 
 下一階段須另做格式adapter、實際來源註冊／身份驗證、受控收件及持久化／重啟／缺漏量測；取得明確設備／資料範圍前不連線。live NAS調查不在03合成模型包範圍，且新增src已使03原source綁定失效，須另備新範圍。
+
+## NAS-002來源確認與候選CSV解析（2026-10-30）
+
+與NAS聊天依既有紀錄協作；沒有重新連設備或取新log。來源確認如下：
+
+| 來源 | 既有依據 | 尚未確認 |
+| --- | --- | --- |
+| DSM | Log Center UI曾見時間／服務／結果／帳戶／來源類別 | 無實際CSV／HTML／syslog樣本、標頭、語系、時區與record ID模板 |
+| SSH | 既有auth.log讀取被拒 | 無可解析樣本／格式；不提權補讀 |
+| WebStation | 已知有套件 | 各站access/error格式、來源與轉送映射未知 |
+| EBG15 | 官方手冊有System Log等頁 | 本機韌體遠送／匯出格式未知 |
+
+[官方Log Sending](https://kb.synology.com/en-us/DSM/help/LogCenter/logcenter_client?version=6)說明RFC3164／5424選項，不定義DSM登入payload；[EBG15手冊](https://dlcdnets.asus.com/pub/ASUS/wireless/EBG15/E23348_ExpertWiFi_EBG15_UM_WEB.pdf?model=EBG15)亦不能證明本機遠送已接通。無真模板時不猜欄位或標DSM-compatible。
+
+`nas_csv.parse_fixture_csv(raw, context, profile='nas-csv-fixture-v1')`只處理本專案定義的合成候選交換格式：UTF-8（可BOM），固定CSV標頭`record_ref,subject_ref,event_time,outcome,evidence_ref`。context必含synthetic=True、已綁source、received_at與clock_uncertainty_seconds；CSV不可覆寫設備身分。空subject/time表示未知；缺record或無時區日期拒絕。不用時間分桶／內容雜湊冒充穩定紀錄ID。
+
+輸入上限64KiB／256列／單列1024字元；支援CSV引號，未知標頭／非法編碼／形狀／語法錯誤使用固定碼。有效列仍保留，語法截斷後不猜測剩餘列；input_complete僅代表CSV已讀完，不代表無errors、來源完整或健康。證據hash綁UTC正規化後的最小化欄位投影，不是原始log bytes。下游需另核去重／衝突與coverage。
+
+隱私範圍：目前只用全合成fixture，無真樣本批准／收集。真實樣本若日後另行批准，帳戶／來源IP等須在受控邊界先去識別，EventGuard只接opaque參照、不接HMAC secret。原文、cookie/token/session、hostname、query/body/path與無關私人內容不落盤／回傳／上模型；來源／時間窗／目的地／保留期限與刪除方式須另定，不默認30天。解析器不保證Python記憶體安全抹除，不提供真資料入口或檔案讀寫。

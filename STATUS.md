@@ -1,5 +1,10 @@
 # EventGuard 現況
 
+## 2026-10-30 NAS-002候選CSV解析／來源隱私已確認
+
+NAS任務依既有記錄確認沒有真CSV／syslog模板；DSM／SSH／WebStation／EBG15格式與未驗範圍已記NAS_EVENT_CONTRACT.md。新增nas-csv-fixture-v1嚴格離線bytes解析，context綁來源，固定最小欄位、BOM／引號／UTC、逐筆固定錯誤、不回傳原文、64KiB／256列上限；僅合成候選，非DSM-compatible。verify-nas-csv-20261030-02：12/12、0skip、345語法／編譯、368來源hash一致，Job自然0／remaining0／無強停。下一批次衝突整群排除及coverage連接；不連設備／收真log／下載／模型，03失效未執行維持。
+
+
 ## 2026-10-30 NAS-001來源coverage及離線驗收完成
 
 新增nas_coverage純函式：同source／epoch的區間計數、heartbeat／last_success、錯誤／漏件／截斷／中斷／儲存失敗分離。新鮮heartbeat不隱藏partial；未知／過期／未來時間／窗口錯序皆unknown，歷史成功保留，無安全結論／處置。事件另補超前時鐘gap。verify-nas-coverage-20261030-02：8/8、0skip、343語法／編譯、366來源hash一致，Job自然0／remaining0／無強停；是兩模組合成契約驗收，不是全庫／實機／真模型。完整欄位與限制見docs/NAS_EVENT_CONTRACT.md。
