@@ -1,5 +1,10 @@
 # EventGuard 現況
 
+## 2026-10-30 可重現無模型CLI／host預檢
+
+新增codex_preflight固定四探測：CLI版本／exec help、host help／stdio空輸入EOF；各10秒、64KiB輸出、自有Job，核固定launch hash、PID／creation、完整擷取、自然exit0／remaining0／無強停及輸出內容，最後重核bundle及證據hash。verify-codex-preflight-20261030-01：23/23、0skip、337語法／編譯、360來源hash；實際runtime-20261030-02/preflight/verification.json同四探測通過，模型0。僅啟動／EOF驗證，並非code-mode模型至MCP閉環；下一接入調查批准閘道，不重試02。
+
+
 ## 2026-10-30 入列前核完整runtime
 
 調查scope現綁四檔bytes／SHA256；缺任何companion或批准後改動皆在enqueue／stage前拒絕，pending保持0。verify-investigation-runtime-20261030-01：8/8、0skip、335語法／編譯、358來源hash一致；包含明示fake CLI＋真SDK回歸，模型0、Job自然0無殘留／強停。實際完整副本四次無模型探測皆自然0（cli-bundle-probes-20261030-01）；下一把其固定探測與退出證據自動核對接進scope，尚不可宣稱真模型閉環成功。
