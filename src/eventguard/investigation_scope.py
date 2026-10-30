@@ -9,6 +9,7 @@ from .acceptance_process import launch_hash
 from .agent_dispatch import command, ROOT
 from .agent_investigation import PROFILE, PROMPT, TOOLS, digest
 from .codex_runtime import inventory
+from .codex_preflight import verified as verified_preflight
 from .events.store import event_payload_hash
 from .local_paths import _guard
 
@@ -21,6 +22,7 @@ def file_hash(path):
 def scope(root, manifest, codex):
     root, codex = _guard(root), _guard(codex)
     runtime = inventory(codex)
+    preflight = verified_preflight(codex, runtime)
     events = manifest['events']
     if manifest['case'] != 'investigation' or len(events) != 1 or events[0]['synthetic'] is not True:
         raise ValueError('single_synthetic_investigation_required')
@@ -31,7 +33,7 @@ def scope(root, manifest, codex):
                    root/'stage-1', investigation=True)
     body = dict(kind=PROFILE, root=str(root), event_id=identity, event_hash=event_payload_hash(events[0]),
         codex_executable=str(codex), codex_sha256=file_hash(codex), runtime_bundle=runtime, python=sys.version.split()[0],
-        source_hash=digest(sources), launch_hash=launch_hash(args, PROMPT), tasks=1, events=1,
+        runtime_preflight=preflight, source_hash=digest(sources), launch_hash=launch_hash(args, PROMPT), tasks=1, events=1,
         timeout_seconds=180, expected_tools=list(TOOLS), native_queries=0, remediation=False,
         model='existing CLI default; one ephemeral task, no guaranteed token/cost cap', retries=0)
     return dict(body, scope_hash=digest(body))
@@ -51,6 +53,8 @@ def prepare(root, manifest, codex):
     text = ('# 單事件真模型調查批准請求\n\n'
         f"事件：{bound['event_id']}；profile：{PROFILE}；Python：{bound['python']}。\n\n"
         f"CLI：{bound['codex_executable']}；SHA256：{bound['codex_sha256']}。\n\n"
+        f"版本：{preflight_version(bound)}；四檔完整清單／SHA及無模型預檢證據hash見investigation-scope.json。\n\n"
+        '預檢僅證明CLI與host啟動／stdio EOF，不保證模型至MCP協定成功；不得關閉code mode或放寬驗收。\n\n'
         f"source hash：{bound['source_hash']}；scope hash：{bound['scope_hash']}。\n\n"
         '僅一件自有合成 listener、一個短期 CLI 任務、180 秒，預期 receive/query/save_investigation/ACK 各一次；'
         '使用 CLI 既有預設模型，模型內部請求數與token／費用無硬上限保證。失敗不重試。\n\n'
@@ -61,6 +65,10 @@ def prepare(root, manifest, codex):
         '執行前須把本次人類批准原文、UTC時間與scope hash寫入human-approval.json；目前未批准／未啟動模型。\n')
     (root/'AUTHORIZATION_REQUEST.md').write_text(text, encoding='utf-8')
     return bound
+
+
+def preflight_version(bound):
+    return bound['runtime_preflight'].get('version', 'unknown')
 
 
 def require_approval(root, manifest, codex):

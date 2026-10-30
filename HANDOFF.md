@@ -1,5 +1,10 @@
 # EventGuard 接手
 
+## 2026-10-30 無模型預檢接入批准閘道
+
+調查prepare及execute現在都重核完整bundle、四探測命令／輸出／退出與證據hash；缺預檢、改證據、改companion或新增未綁資源在入列前拒絕。verify-investigation-preflight-20261030-01：30/30、0skip、339語法／編譯、362來源hash一致，Job自然0無殘留／強停；真SDK＋明示fake CLI維持通過，模型0。新增prepare_codex_runtime.py固定複製＋預檢入口，不啟模型／sandbox setup、不修改原安裝／設定；完整操作見docs/AGENT_SERVICE.md。下一準備新待批包並唯讀重核，02失敗保留、不重試。
+
+
 ## 2026-10-30 可重現無模型CLI／host預檢
 
 新增codex_preflight固定四探測：CLI版本／exec help、host help／stdio空輸入EOF；各10秒、64KiB輸出、自有Job，核固定launch hash、PID／creation、完整擷取、自然exit0／remaining0／無強停及輸出內容，最後重核bundle及證據hash。verify-codex-preflight-20261030-01：23/23、0skip、337語法／編譯、360來源hash；實際runtime-20261030-02/preflight/verification.json同四探測通過，模型0。僅啟動／EOF驗證，並非code-mode模型至MCP閉環；下一接入調查批准閘道，不重試02。

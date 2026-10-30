@@ -13,10 +13,18 @@
 
 摘要是明示不可信的 agent 評估，hash 證明內容綁定，不是來源認證或安全結論。所有結果維持 `incident_conclusion=not_assessed`、無處置；本模式不代表真實原生覆蓋或防守成功。
 
-準備一個新目錄（不呼叫模型）：
+先從同一版安裝目錄複製完整四檔套件並執行無模型預檢（只寫本專案忽略的 reports，不下載）：
 
 ```powershell
-py -3.13 -B scripts/validate_delivery.py investigation --root reports/investigation-NEW --codex-executable "<已核對的原生 codex.exe>"
+py -3.13 -B scripts/prepare_codex_runtime.py --source "<安裝目錄中的 codex.exe>" --root reports/codex-runtime-NEW
+```
+
+固定檢查主程式、code-mode host、command runner、sandbox setup 的大小／SHA256與已知平面布局；只執行 CLI 版本／exec help、host help／stdio空輸入EOF，各10秒加自有Job清理。後兩個 companion 只複製／雜湊，不啟動。任何失敗保留證據，不覆寫或靜默換版；64KiB完整輸出、命令、自然退出與bundle前後一致才產生 preflight/verification.json。
+
+這是無模型啟動檢查，不能保證code-mode模型至MCP協定成功；本機可變證據hash不是獨立來源認證。調查準備／執行皆重新核對這些證據，缺件／改動在入列前拒絕。使用新固定副本準備驗收（仍不呼叫模型）：
+
+```powershell
+py -3.13 -B scripts/validate_delivery.py investigation --root reports/investigation-NEW --codex-executable reports/codex-runtime-NEW/codex.exe
 ```
 
 先讀該目錄 `AUTHORIZATION_REQUEST.md`／`investigation-scope.json`，取得當次有效模型批准，將批准原文、UTC 時間與 scope hash 寫入 `human-approval.json`。未批准時該檔預設 false，不能自行改成批准；fixture 批准不算人類授權。相同命令加 `--execute` 才執行；使用過的目錄不重試，來源／binary／launch 改變需重新準備及核對範圍。

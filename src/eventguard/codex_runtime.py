@@ -1,6 +1,5 @@
 """Known Windows Codex runtime bundle: copy/hash only, never start a model."""
 import hashlib
-from pathlib import Path
 import shutil
 
 from .acceptance_control import write_json
@@ -21,6 +20,8 @@ def inventory(executable):
     executable = _guard(executable)
     if executable.name != 'codex.exe':
         raise ValueError('codex_bundle_executable_required')
+    if {item.name for item in executable.parent.iterdir()} - set(REQUIRED) - {'bundle.json', 'preflight'}:
+        raise ValueError('codex_runtime_layout_unrecognized')
     files = {}
     for name in REQUIRED:
         path = _guard(executable.parent/name)
