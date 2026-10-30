@@ -1,5 +1,10 @@
 # EventGuard 現況
 
+## 2026-10-30 下一階段目標已排入既有佇列
+
+使用者要求安排目標並提供Prompt；docs/MAINTENANCE_GOAL.md新增P1-AGENT-INVESTIGATION-03與M1範圍批准／M2單次真閉環／M3證據保存。這次只有規劃文件，沒有新模型批准／執行、probe重跑或產品變更；沿用f5d5b9b的30/30／339編譯，提交前核362來源hash及證據路徑。App既有大目標仍blocked且工具不支援直接替換未完成目標，未冒稱已更新平台目標。下一讀03範圍，僅在另次有效批准後執行一次；其餘獨立產品驗收仍保留。
+
+
 ## 2026-10-30 CLI完整套件及無模型預檢已修復／03包待另次批准
 
 產品修復49c95a7（前序03eb297／7fb7327／dc83b3a）均已逐單元推送開發分支、普通快轉整合origin/main。最新受影響6模組verify-investigation-preflight-20261030-01：30/30、0skip、339語法／編譯，build-investigation-preflight-20261030-01核362來源hash；不是全庫回歸。缺host／其他companion、改套件、未知資源、缺預檢、改證據、錯命令、失敗／強停／截斷皆不放行；明示fake CLI＋真SDK四步回歸仍通過，未冒充新真模型。

@@ -1,5 +1,28 @@
 # EventGuard 目前目標
 
+## 2026-10-30 下一階段目標：P1-AGENT-INVESTIGATION-03
+
+**產品目標**：推進「資安AI盯哨」的喚醒與調查環節，讓一件自有合成事件由真Codex agent接收、讀取保存證據、保存可追溯分析、產生契約ACK，並取得CLI／MCP自然退出證據。這是階段目標，不代表原生威脅偵測、防守處置或整體產品完成。
+
+**現有基準**：f5d5b9b以前的完整CLI／無模型閘道修復已推送開發分支及main；30/30相關測試、0skip、339編譯及四項原生無模型probe通過。02真模型缺host失敗、批准已消耗；不得重試02、重算通過或以fixture代替真模型。03目前未批准／未入列／未啟動。
+
+| 里程碑 | 預期成果／驗收條件 | 依賴與下一動作 |
+| --- | --- | --- |
+| M1 範圍與批准就緒 | Git與工作樹已核；03 scope、四檔bundle、既有preflight及source／launch完全匹配；當次有效人類批准已保存 | 先唯讀核對，不重跑已通過probe、不啟模型；缺批准時一次列清範圍，規劃／此目標本身不是批准 |
+| M2 單次真實閉環 | 同一event／query／report的receive、query、save_investigation、ACK各一次，內容與durable結果相符；來源ACK核實；CLI及MCP自然退出、無殘留／強停 | 只在M1完成後執行03一次；180秒任務期限加既有自有Job收尾；不重試 |
+| M3 結果核對與保存 | 真實通過或失敗及每步證據寫入STATUS／EVIDENCE／HANDOFF；可獨立保存的修復經測試／build後commit、push並整合main | 若M2失敗，保留原包、pending／ACK與退出事實；可修無模型缺陷，但不以重試／放寬標準取得通過 |
+
+**固定範圍**：reports/investigation-acceptance-eventguard-single-20261030-03，事件evt-5cb8362c8e1f4e778e17b7a17218e1ca，scope c5f6a9f79e8a5dbc5ec2ffdafff8afbb348b461bc027c49953eb13937fd7a449；完整CLI位於reports/agent-investigation-runtime-20261030-03，0.166.0-alpha.5.1／Python3.13.3／MCP SDK1.6.0。完整檔案／命令hash與限制見該包AUTHORIZATION_REQUEST.md、investigation-scope.json及version-metadata.json。
+
+**授權與資源**：一件自有合成listener、一個CLI任務、執行期限180秒、失敗不重試。既有預設模型的內部請求數／token／費用無硬上限保證；stdout／stderr各4MiB、摘要400可列印字元、完成記錄沿既有4KiB契約。不做原生查詢、shell、瀏覽器、處置或系統／帳戶設定變更；不關閉code mode或降低驗收。取得對03的另次有效答覆後才保存批准原文／UTC／scope，24小時內且綁定未變才可單次使用。scope改變則先重新準備並列清新範圍，不沿用批准。
+
+**完成判準**：僅M1／M2／M3全部有當前真實證據才完成本階段。人工handled不是ACK；ACK不是威脅已排除。錯序、工具失敗、證據缺失／不符、逾時、強停或殘留皆驗收失敗，保存實際狀態。無模型預檢與合成測試不能替代M2。若只能繼續無模型修復，就持續已授權工作；沒有可執行工作時明示缺少的具體批准／外部條件，不反覆研究或重跑同一驗證。
+
+**保存節奏**：每單元測試／build通過後，指定檔案stage、type(scope): summary提交、立即普通push開發分支及沿既有整合worktree快轉至main並核對遠端SHA。工作樹與origin/main...HEAD各自不得累積超過500行，約200行先拆分；不改寫歷史、不重設保留的本地main、不提交runtime／具體批准回條／秘密／私人附件。不建立排程或承諾會話外運行。
+
+**獨立待驗**：原生來源身分partial、真實偵測／授權防守與恢復、24小時運行／重開機／桌面喚醒、真人六項、browser政策及200%驗收、可信恢復與合法競品比較保留；不得用03合成事件替代或宣稱整體AI盯哨已完成。
+
+
 ## 2026-10-30 P0完整CLI／無模型閘道已完成，真調查仍未通過
 
 02真模型曾批准並執行，因固定副本缺host失敗，批准已消耗；舊未執行段落失效。使用者另授權的完整bundle／無模型預檢修復已實作、30/30相關測試及實際CLI／host四探測通過，逐單元commit／push／整合main，詳STATUS。下一P1是03單事件真調查閉環（依賴新有效批准、固定bundle／scope），批准前只能準備與核對，不重試02；03目前未批准／未入列／未啟模型。無模型startup不能代替code-mode至MCP／保存／ACK及自然退出驗收。原真人／browser政策／原生／長跑／恢復／真防守關卡保留，不宣稱整體complete或平台goal已自動恢復。
