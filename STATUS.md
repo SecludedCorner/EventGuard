@@ -1,5 +1,12 @@
 # EventGuard 現況
 
+## 2026-10-30 三次相同外部前置未解除／goal已blocked
+
+在原生桌面增量ece330a完成後，continuation-resumed-impasse-20261030-01／02／03連續三輪核對相同外部條件未變，無新可重現未修缺陷、已授權可執行單元或活體工作可等；不假稱verified wait。02模型批准仍false、enqueued0／stages0，真人結果仍未取得；browser政策路徑、24h/reboot、原生身分partial、可信無損恢復及真防守／競品可比資料各缺口保留。
+
+本turn update_goal已回blocked，回條記於03/goal-status.json；完整目標未縮小或標complete。這僅是阻塞狀態保存，不是新產品工程／測試：355來源hash未變，沿既有build332與原生兩case證據，無新模型／掃描／browser／相同fixture重跑，不重複提問。下一由已存在02單次模型批准問題的有效答覆、真人可參與或其他具體前置變化接續；不能以普通繼續／goal active取代模型授權。工作樹與遠端以本checkpoint最後Git核對為準，沒有背景程序／排程可自行恢復。
+
+
 ## 2026-10-30 補齊桌面原生備份核對／歷史限制與忽略→新增
 
 先核現有native-host-20261029-02僅有read／handled及篩選原生證據，本次補尚未原生操控驗證的路徑；沿既有合成GUI授權，使用computer-use技能目前受支援的node_repl＋@oai/sky，只選唯一自有Tk，沒有browser呼叫或繞過URL政策。非widget.invoke／fixture callback、非真人參與。

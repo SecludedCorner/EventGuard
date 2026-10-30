@@ -1,5 +1,10 @@
 # 證據與時間日誌
 
+## 2026-10-30 原生增量後的三次阻塞審核
+
+reports/continuation-resumed-impasse-20261030-01／02／03：相同模型批准false、無真人metrics與其餘獨立外部條件，沒有新工程／測試、活體wait或新提問；兩自有GUI程序均已terminal exit0／remaining0。03/goal-status.json記本turn update_goal實際回blocked，完整目標保留。355來源hash仍匹配既有build332，本次純狀態文件不升格新產品驗收；native兩case與14/14各維持原scope，未新跑模型／掃描／browser。
+
+
 ## 2026-10-30 尚缺的原生Tk路徑驗收
 
 reports/desktop-ux-native-history-20261030-01/acceptance-summary.json：native sky點擊備份／明確核對／返回選取及查看歷史限制；只讀SQLite＋production snapshot/preview核2筆備份匹配、身分衝突0、pending4／receipt0，備份頁明示未知信任／未還原／未ACK。native-status-20261030-01重開同scope，真點忽略→新增，僅listener增加兩不同gui operation_id，原defender兩歷程及備份保留；未確認要求0、pending4／receipt0。兩摘要passed、兩guardian自然exit0／remaining0／無強停／GUI worker退出，原生fresh清單確認自有窗口消失。
