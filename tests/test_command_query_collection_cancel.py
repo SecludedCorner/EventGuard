@@ -41,11 +41,14 @@ class SyntheticCollector:
         self.interrupted=False
         self.signaller=None
     def interrupt(self,update):
-        if update["phase"]==sys.argv[2].removeprefix("signal_") and not self.interrupted and self.runner.last_process.get("pid"):
+        if update["phase"]==sys.argv[2].removeprefix("signal_") and not self.interrupted:
             self.interrupted=True
             if sys.argv[2].startswith("signal_"):
                 self.signaller=threading.Thread(target=signal_self)
                 self.signaller.start()
+                if update["phase"]=="launch":
+                    import time
+                    time.sleep(.15)  # Keep the launch callback before OS creation.
                 return
             raise KeyboardInterrupt("SYNTHETIC_PRIVATE")
     def collect(self,section,cancel=None):
@@ -93,19 +96,26 @@ class CommandQueryCollectionCancellationTests(unittest.TestCase):
             self.assertFalse(receipt["forcibly_terminated"])
             self.assertEqual(receipt["remaining_owned_processes"], 0)
             owned = json.loads((Path(temporary) / "collector-receipt.json").read_text())
-            self.assertTrue(owned["managed"])
+            launched = phase.removeprefix("signal_") != "launch"
+            self.assertEqual(owned["managed"], launched)
             self.assertTrue(owned["child_exited"])
             self.assertFalse(owned["forcibly_terminated"])
-            self.assertEqual(owned["remaining_owned_processes"], 0)
+            if launched:
+                self.assertEqual(owned["remaining_owned_processes"], 0)
+            else:
+                self.assertNotIn("pid", owned)
             frames = Path(temporary) / "interrupt-frames.json"
             self.assertFalse(frames.exists(), frames.read_text() if frames.exists() else "")
             self.assertEqual(child.returncode, 130)
             self.assertFalse(bool(err), "unexpected_stderr_omitted")
             result = json.loads(out)
             self.assertEqual((result["status"], result["error_code"], result["rows"]), ("cancelled", "source_cancelled", []))
-            self.assertTrue(result["coverage"]["process"]["child_exited"])
-            self.assertFalse(result["coverage"]["process"]["forcibly_terminated"])
-            self.assertEqual(result["coverage"]["process"]["remaining_owned_processes"], 0)
+            if launched:
+                self.assertTrue(result["coverage"]["process"]["child_exited"])
+                self.assertFalse(result["coverage"]["process"]["forcibly_terminated"])
+                self.assertEqual(result["coverage"]["process"]["remaining_owned_processes"], 0)
+            else:
+                self.assertNotIn("process", result["coverage"])
             self.assertNotIn("SYNTHETIC_PRIVATE", out.decode("utf-8"))
             expected = {"collector-receipt.json"}
             if phase.startswith("signal_"):
@@ -116,3 +126,8 @@ class CommandQueryCollectionCancellationTests(unittest.TestCase):
 
     def test_native_control_event_while_waiting_has_owned_exit_evidence(self):
         self.check_interrupt("signal_waiting", "1.6")
+
+    def test_launch_interrupt_never_creates_a_collector_process(self):
+        for phase in ("launch", "signal_launch"):
+            with self.subTest(phase=phase):
+                self.check_interrupt(phase, ".6")

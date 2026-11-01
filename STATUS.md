@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-02 CMD-016啟動通知前取消亦可回傳
+
+launch進度通知的KB過去仍穿透CLI，現回cancelled_before_query，不呼叫process factory、不建立collector，不捏造PID／Job退出。UTC2026-11-01T16:41:35，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-launch-cancel-20261102-01 --timeout-seconds 90 --module test_command_query_collection_cancel --module test_collectors_diagnostics`：28/28、0skip、374語法、source_unchanged；build-query-launch-cancel-20261102-01編譯374／0error，guardian自然0／remaining0／無強停。修前regression-01 2/3，launch注入及真自有console兩subtest都失敗；修後均exit130、rows空、無collector PID／coverage process，另以禁止factory spy核對。waiting／completed與等待中真控制事件仍過，無模型／原生採集；不宣稱OS create任意指令或輸出寫入瞬間已完整取消驗收。
+
+cb2dd454428b66527a3f24eacc591eb2edd0332d（test(cli): verify native Ctrl+C during an owned synthetic query [skip ci]，+56/-4）已核兩遠端同SHA，git-query-native-collection-remote-20261102-01；無CI。下一核對query未適用結果的機器退出語意，不觸碰正式模型或真來源。
+
 ## 2026-11-02 派送後真私有console取消已補驗
 
 UTC2026-11-01T16:35:37，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-native-collection-cancel-20261102-01 --timeout-seconds 60 --module test_command_query_collection_cancel`：2/2、0skip、374語法、source_unchanged；build-query-native-collection-cancel-20261102-01編譯374／0error，guardian自然0／remaining0／無強停。新增waiting後真控制事件：GetConsoleProcessList恰為自有CLI才送一次Ctrl+C，collector為1.6秒自有Python fixture，回exit130／cancelled／rows空、coverage退出true／remaining0／無強停；控制事件與collector回條一致。原waiting／completed KB注入仍過。未查Windows來源／呼叫模型，不替代真OS、啟動或任意收尾瞬間取消驗收。

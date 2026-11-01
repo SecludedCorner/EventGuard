@@ -103,6 +103,17 @@ class RunnerTests(unittest.TestCase):
             self.assertTrue(runner._active["done"].wait(1))
         self.assertFalse(runner.pending)
 
+    def test_launch_interrupt_never_calls_process_factory(self):
+        def forbidden(*_args, **_kwargs):
+            raise AssertionError("process factory must not run")
+        def progress(value):
+            if value["phase"] == "launch":
+                raise KeyboardInterrupt("synthetic launch interrupt")
+        runner = Runner(forbidden)
+        result = runner.run("STATIC", progress=progress)
+        self.assertEqual((result["status"], result["note"], result["process"]), ("cancelled", "cancelled_before_query", {}))
+        self.assertFalse(runner.pending)
+
     def test_nonzero_invalid_json_schema_and_limit(self):
         children = [Child(code=1), Child(b"bad"), Child(b"[]"), Child(b'{"rows":null}'), Child(b"a"*(MAX_OUTPUT_BYTES+1))]
         for child in children:

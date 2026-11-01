@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-02 launch通知取消且不建立collector
+
+verify-query-launch-cancel-regression-20261102-01：3項／2通過，launch及signal_launch兩subtest中斷皆穿透；只存安全frames metadata，無原始stderr。修後UTC2026-11-01T16:41:35，verify-query-launch-cancel-20261102-01（命令見STATUS）：28/28、0skip、374語法、source_unchanged；build-query-launch-cancel-20261102-01編譯374／0error，guardian自然0／remaining0／無強停。launch callback注入KB及真CTRL_C_EVENT各驗一種；真訊號仍只在console恰含自有CLI時送一次，callback停留至事件到達、尚未進入OS建立。CLI exit130／source_cancelled／rows空、stdout單JSON／stderr空；shutdown回未管理且無PID，coverage不造process欄位，禁止process factory spy未被呼叫。不存在collector不宣稱自然退出；外層CLI自有Job實際已退出。已有waiting／completed／等待中真訊號及unmanaged pending回歸仍通過。無模型／真OS採集，未涵蓋任意CreateProcess或輸出寫入中斷。
+
+cb2dd454428b66527a3f24eacc591eb2edd0332d（test(cli): verify native Ctrl+C during an owned synthetic query [skip ci]，+56/-4）兩遠端同SHA，git-query-native-collection-remote-20261102-01；無CI。
+
 ## 2026-11-02 已派送合成query的真console控制事件
 
 UTC2026-11-01T16:35:37，verify-query-native-collection-cancel-20261102-01（命令見STATUS）：2/2、0skip、374語法、source_unchanged；build-query-native-collection-cancel-20261102-01編譯374／0error，guardian自然0／remaining0／無強停。新增test_native_control_event_while_waiting_has_owned_exit_evidence：只有自身console恰含CLI自身才GenerateConsoleCtrlEvent一次，未匹配就不送；signal記錄確認own=true／sent=1，合成collector無OS查詢，真自有Python子程序／CLI自然退出。JSON status=cancelled／source_cancelled／rows空、exit130／stderr空，coverage.process已退出／remaining0／無強停，與collector獨立回條一致。測試平台明示Windows owned Job，未以mock或KB注入冒充本次真訊號；collector仍是fixture，未冒稱真來源／真人／任意執行窗口已驗。

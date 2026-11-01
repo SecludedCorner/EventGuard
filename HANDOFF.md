@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-02 啟動通知中斷已補
+
+verify-query-launch-cancel-20261102-01：28/28、374編譯，launch KB／真私有console均在process factory前取消，exit130、無collector PID／coverage process；未建立不當成退出，修前2/3保留。見build-query-launch-cancel-20261102-01；waiting／completed回歸仍過，自有Job無殘留強停、模型／OS採集0。cb2dd45兩遠端已核同步。下一以隔離CLI核對query not_applicable的退出碼；OS建立及任意收尾窗口、真來源與外部關卡仍獨立未驗。
+
 ## 2026-11-02 CMD-016派送後真控制事件完成補驗
 
 verify-query-native-collection-cancel-20261102-01：2/2、374編譯，真Ctrl+C僅在私有console成員恰為自有CLI時送一次，已派送的合成collector／CLI自然退出，coverage與實際回條相符、無強停殘留。原KB兩階段回歸沿用其範圍，產品a7ff9b3未變且兩遠端已核同步。真OS採集、launch／任意收尾窗口仍未完整取消驗收；不讀新來源／啟模型或擴大歷史06批准。

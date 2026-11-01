@@ -144,7 +144,10 @@ class Runner:
             return result("busy", "query_admission_managed_job_required")
         # Never invoke an observer while holding the runner state lock: an
         # observer may query pending/last_process when publishing its snapshot.
-        observer.emit("launch")
+        try:
+            observer.emit("launch")
+        except KeyboardInterrupt:
+            return result("cancelled", "cancelled_before_query")
         launch_problem, busy = None, None
         with self._lock:
             if self._active and self._unresolved(self._active):
