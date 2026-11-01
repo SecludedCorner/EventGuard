@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-01 CMD-006事件身分綁定CLI
+
+UTC13:51:42，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-status-identity-20261101-01 --timeout-seconds 120 --module test_command_status_identity --module test_command_status_retry --module test_desktop_pending_control`：8/8、0skip、362語法、source_unchanged，guardian自然0／remaining0／無強停；build-command-status-identity-20261101-01編譯362、0error。實際CLI子程序涵蓋detail hash→寫入→冪等重送、格式錯誤、hash不符、fixture內變更有效payload後舊決定拒絕，DB bytes及pending1/receipt0保持；GUI pending control同受影響例外子類亦重驗。不查OS／啟模型／CI／設備；hash不是身分認證。
+
+29c2f7191db92344c8a3720bfd1a18f12f46eef5（feat(cli): query saved handling operation results [skip ci]，+113/-4）已同步開發分支及main，git-command-operation-remote-20261101-01直接核兩ref，相關Git Job自然0、無殘留／強停。
+
 ## 2026-11-01 CMD-005 CLI跨命令結果查回
 
 UTC13:47:43，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-operation-20261101-01 --timeout-seconds 120 --module test_command_operation_result --module test_command_status_retry --module test_command_pending_requests`：9/9、0skip、361語法、source_unchanged=true；guardian自然0／remaining0／無強停，build-command-operation-20261101-01編譯361、0error。實際獨立CLI程序跑set-status→operation-result→另一set-status→原operation-result；原操作不變、current更新、重讀DB bytes不變、pending1/receipt0。另驗not_recorded／非法ID／缺庫不建立／legacy NULL hash／保留歷程但anchor缺失，stdout單JSON、stderr空及exit0/2/5分開。文字呈現新增但未另算真人或原生輸入驗收。

@@ -5,7 +5,8 @@
 | 能力／輸入 | CLI | API／共用核心／GUI | 輸出與預算 | 權限／副作用／證據與缺口 |
 | --- | --- | --- | --- | --- |
 | 已存事件篩選／詳情 | `events list/detail --namespace test` | `EventCatalog.list/detail`；Web、Tk 同核心 | JSON，limit 1..1000、offset、severity/source/status | 唯讀；既有 test_event_catalog、test_cli_workflow；缺庫空列表不代表安全 |
-| 人工處置／重送 | `events set-status --event-id ID --status handled --operation-id OP` | `EventCatalog.set_status` → `EventStore.set_disposition`；Web／Tk | JSON，固定狀態，操作ID 1..128 | 寫狀態／歷程，不 ACK；CMD-003 補 CLI 操作ID；test_command_status_retry 實際程序驗收 |
+| 人工處置／重送 | `events set-status --event-id ID --status handled --operation-id OP --expected-payload-hash SHA256` | `EventCatalog.set_status` → `EventStore.set_disposition`；Web／Tk | JSON，固定狀態，操作ID 1..128、hash64；兩新選項可省略 | CMD-003/006已驗，test_command_status_retry/status_identity；hash不符exit2不寫，人工狀態不ACK |
+| agent接收權限 | CLI待接 | `agent_access.status/set_enabled`；Tk set_agent_delivery另協作停止其自有worker | 本工具本機接收gate布林；不是模型執行批准 | CMD-007；agent start依賴gate，目前CLI需改用API／GUI設定，不夠完整 |
 | GUI 未決請求發現 | `events pending-requests` | `EventCatalog.pending_requests`、`DesktopController.pending_requests` | namespace、limit 1..100、offset 0..128；固定event ID排序 | 唯讀；CMD-004已驗：test_command_pending_requests／test_desktop_pending_catalog；unknown=exit5，零件available=exit0 |
 | 原人工操作結果查回 | `events operation-result --event-id ID --operation-id OP` | `EventCatalog.operation_result` | schema1.0、operation原結果／current現況、available/not_recorded/unknown | CMD-005 API／CLI已驗：test_disposition_operation_read、test_command_operation_result；unknown=5、不確認journal |
 | 保存 metadata 調查／版本 | `events investigate/detail` | `EventCatalog.investigate/detail`；Web／Tk | 有界候選／成員／版本、gaps、非因果聲明 | investigate 寫調查；detail 唯讀；既有 test_investigation*；真agent分析另有契約 |
@@ -35,3 +36,7 @@ CMD-004已接線並驗收，可用 `EventGuard.cmd --format json events pending-
 官方 [Velociraptor](https://github.com/Velocidex/velociraptor/tree/61daa5f66b8bbaf946ab5d57dd8b087e07663762)，固定SHA `61daa5f66b8bbaf946ab5d57dd8b087e07663762`；`services/launcher/flows.go:GetFlowDetails` 以client_id+flow_id查持久context。根LICENSE AGPLv3，具體檔頭AGPL-3.0-or-later，無子模組內容採用。官方 [Shuffle](https://github.com/Shuffle/Shuffle/tree/c439ab39ee3780d629219fa3cd0e08aec795cb3b)，本機HEAD已核 `c439ab39ee3780d629219fa3cd0e08aec795cb3b`；`backend/go-app/test-suite/execution_e2e_test.go:getExecution/TestExecutionLifecycle`按execution_id讀結果、核對重讀與持久歷史一致。根LICENSE AGPLv3，該測試檔無另標授權。
 
 採用契約：操作與讀回結果分開，固定ID、原結果／現況分離；EventGuard觸點為既有record_attempt表及新disposition_operation_read／catalog API，對應test_disposition_operation_read。未採用遠端執行、授權token、VQL或第三方程式；僅以既有Python標準庫獨立實作，不複製／執行第三方碼，不新增依賴。hash僅核資料一致性，不證明操作者或來源可信。
+
+## 參考對照 R-CMD-003
+
+[psutil](https://github.com/giampaolo/psutil/tree/c24bae0a977d31f79ac820f3d18cfb33e1465a32)本機HEAD已核`c24bae0a977d31f79ac820f3d18cfb33e1465a32`，根LICENSE為BSD-3-Clause；`psutil/__init__.py:Process._get_ident/_raise_if_pid_reused`結合PID與建立時間、拒讀保留無法判定，`psutil/_pswindows.py:wrap_exceptions`區分讀取失敗類別。這些檔案未另列不同授權、無子模組被使用。借鏡「短ID不足以支持後續操作、須核身分且錯誤類別分離」，EventGuard只暴露既有payload hash交易綁定並新增型別化衝突碼，對應test_command_status_identity。不複製／執行psutil、不新增採集、PID處置或重試；hash不是OS程序身分或可信簽章，不能宣稱完成原生身分覆蓋。

@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-01 CMD-006綁定寫入已驗
+
+expected-payload-hash與固定event_payload_conflict已接CLI，8/8、362編譯見verify-command-status-identity-20261101-01／build-command-status-identity-20261101-01。CMD-005命令29c2f71已同步兩遠端。下一CMD-007：GUI使用agent_access.set_enabled，但CLI未提供其接收權限設定；只接共用核心並明示是設定，不承諾GUI自有worker已退出，不啟模型或替人批准。既有正常監看零模型／私有Job／04失效邊界不變。
+
 ## 2026-11-01 CMD-005 命令已接線
 
 events operation-result的9/9實際CLI整合及361編譯見verify-command-operation-20261101-01／build-command-operation-20261101-01，原結果不隨current更新，unknown=5，不確認GUI journal或ACK。API947cd1a已同步兩遠端。下一CMD-006補set-status的expected-payload-hash入口與固定身分衝突碼，沿用交易內檢查；不要用CLI source去重送GUI operation ID。主工作樹唯一寫入仍為本聊天，封存聊天不再追蹤／改檔。

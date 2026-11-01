@@ -31,6 +31,10 @@ class StoreError(RuntimeError):
     pass
 
 
+class EventIdentityChangedError(StoreError):
+    """The requested mutation was bound to a different event payload."""
+
+
 class CapacityError(StoreError):
     """The transaction was rolled back, including detector state changes."""
 
@@ -670,7 +674,7 @@ class EventStore:
                 # lock, before creating or updating any handling state.
                 self._row(event_row)
                 if expected_payload_hash is not None and event_row["payload_hash"] != expected_payload_hash:
-                    raise StoreError("event_status_identity_changed")
+                    raise EventIdentityChangedError("event_status_identity_changed")
                 exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_dispositions'").fetchone()
                 previous = db.execute("SELECT status,updated_at FROM event_dispositions WHERE event_id=?", (event_id,)).fetchone() if exists else None
                 previous_status = previous["status"] if previous else "new"

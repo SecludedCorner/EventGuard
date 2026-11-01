@@ -160,6 +160,7 @@ def parser():
     handling.add_argument("--event-id",required=True)
     handling.add_argument("--status",choices=("new","read","handled","ignored"),required=True)
     handling.add_argument("--operation-id",help="選填。回條遺失後重送須沿用此識別；不同請求不可共用。")
+    handling.add_argument("--expected-payload-hash",help="選填。綁定events detail的SHA256；事件身分不符拒絕寫入。")
     handling.add_argument("--event-source",type=Path,help="選填。test範圍內既有的合成事件source。")
     history_backup=eventsub.add_parser("backup-history",help="明確保存歷程快照到 reports；不清理、不 ACK。")
     history_backup.add_argument("--namespace",choices=("live","test"),default="live")
@@ -346,7 +347,8 @@ def execute(args,runtime,progress=None):
                 if len(content)>MAX_EXPORT_BYTES+1024:
                     raise ValueError("history_backup_bytes_limit")
                 return catalog.preview_handling_history(json.loads(content,object_pairs_hook=_unique_json_object))
-            return catalog.set_status(args.event_id,args.status,source="cli",operation_id=args.operation_id)
+            return catalog.set_status(args.event_id,args.status,source="cli",operation_id=args.operation_id,
+                                      expected_payload_hash=args.expected_payload_hash)
         if args.event_command=="receive":
             return operator.call("receive_event",args.event_id,args.namespace)
         if args.event_command=="ack":
@@ -490,5 +492,9 @@ def main(argv=None,root=None):
         show({"status":"invalid_request","error_code":"input_or_config_validation_failed","raw_error_omitted":True})
         return 2
     except Exception as error:
+        from .events.store import EventIdentityChangedError
+        if isinstance(error,EventIdentityChangedError):
+            show({"status":"conflict","error_code":"event_payload_conflict","raw_error_omitted":True})
+            return 2
         show({"status":"error","error_code":"capacity_or_storage_failure" if type(error).__name__ in ("CapacityError","StoreError") else "operation_failed","raw_error_omitted":True})
         return 4

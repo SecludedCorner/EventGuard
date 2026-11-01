@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-01 CMD-006 命令處置可綁定事件身分
+
+set-status新增選填expected-payload-hash，沿用核心交易內檢查；不符以型別化StoreError子類回固定event_payload_conflict／exit2，格式錯誤仍exit2，省略維持相容。UTC13:51:42，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-status-identity-20261101-01 --timeout-seconds 120 --module test_command_status_identity --module test_command_status_retry --module test_desktop_pending_control`：8/8、0skip、362語法／編譯、source_unchanged，Job自然0／remaining0／無強停；build-command-status-identity-20261101-01。實際CLI detail→綁定寫→重送，錯hash／事件payload變更不寫，pending／ACK保留。
+
+CMD-005命令29c2f7191db92344c8a3720bfd1a18f12f46eef5，feat(cli): query saved handling operation results [skip ci]，+113/-4，兩遠端同SHA、工作樹乾淨，git-command-operation-remote-20261101-01。下一CMD-007補既有agent接收權限設定的命令入口，只操作本工具設定、不啟模型，實測仍限隔離合成資料；04失效維持。
+
 ## 2026-11-01 CMD-005 CLI原操作查回已驗
 
 新增 `events operation-result --event-id ID --operation-id OP`，同catalog API；schema1.0分離原結果／目前狀態。not_recorded僅指當前可核保存庫沒有該筆，exit0；缺庫／身分或歷程不明unknown=exit5，格式錯誤exit2。UTC13:47:43，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-operation-20261101-01 --timeout-seconds 120 --module test_command_operation_result --module test_command_status_retry --module test_command_pending_requests`：9/9、0skip、361語法／編譯、來源未變，guardian自然0／remaining0／無強停，build-command-operation-20261101-01。實際跨程序寫→查→新狀態→查、重讀DB不變、legacy hash／anchor缺失保持unknown，pending／ACK保留。

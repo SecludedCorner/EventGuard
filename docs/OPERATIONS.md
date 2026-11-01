@@ -26,6 +26,8 @@ monitor 需要由人類明確啟動；另一同專案終端 `py -3.13 -B scripts
 
 operation-result的operation是原結果，current是目前狀態；相同要求重送不回退後來狀態。not_recorded表示該保存庫沒有此筆，不證明外部未執行。unknown及exit5表示資料不足，不能判安全；非法輸入exit2。pending-requests只發現待確認要求，將其event_id傳入events detail可查看原ID；查閱不重送、不確認GUI回條、不ACK。合成案例加`--namespace test`，不讀主機新資料。
 
+可先以events detail讀payload_hash，再在set-status加`--expected-payload-hash <該hash>`，使交易只接受相同事件內容；不符回event_payload_conflict／exit2，原決定不寫入。hash只檢查保存內容一致性，不是操作者或事件來源的信任證明。
+
 事件頁「查看」後，按「建立／更新保存的調查」。它只讀目前來源 SQLite 的允許 metadata，保存一份案件與時間線；不呼叫模型、不採集、不 ACK、不改人工處置狀態。CLI 使用相同 EventCatalog：
 
 ```powershell
