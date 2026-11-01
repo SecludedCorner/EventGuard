@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-02 建立中斷由低階Job至CLI的證據鏈
+
+verify-query-creation-cancel-regression-20261102-01為4/5，真pre-Resume合成子程序清理後Runner無接回條，CLI異常逸出／shutdown錯呈未管理。JobPopen現只把本身Job在關閉前查得的process_started／退出碼／剩餘數／強停事實放入固定LaunchInterrupted；不帶原始例外或以該資料授權任何處置。Runner在spawn窗口接收，無原始child可觀察時仍保存回條；若沒有可信回條則unknown／pending、後續busy、不以PID終止或宣稱退出。未建子程序的空Job回process_started=false、child_exited／exit_code=null，沒有捏造PID或成功退出。
+
+UTC2026-11-01T18:45:51，verify-query-creation-cancel-20261102-02（命令見STATUS）64/64、0skip、379語法／source_unchanged，build-query-creation-cancel-20261102-01編譯379／0error；source ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1。guardian自然0／remaining0／無強停；lifecycle-evidence的creation CLI exit130，collector child_exited=true／exit1460／remaining0／force=true／launch_failure，未被改寫為自然；decode仍保留自然0。真空Job中斷及後續合成Python自然退出驗過，未知factory的call_count1／pending=true／shutdown unknown且finish被禁止；不作新原生採集／模型。原低階test更新為固定訊息子類並核同一真實回條；初版62與最終64各保留、不相加。b92c0a42ee42d2a59412e83a6e89466ac9a4329f兩遠端已核，git-query-decode-cancel-remote-20261102-01；07失效不變。
+
 ## 2026-11-02 解碼階段KB逸出CLI的失敗與修正
 
 verify-query-decode-cancel-regression-20261102-01：3/4，合成collector真私有Job已自然退出，在Runner.loads注入KB後interrupt-frames顯示由Runner.run→DiagnosticAPI.query→cli.main逸出；無結構JSON，原失敗保留。新增兩行捕捉並回cancelled_late_output_ignored後，UTC2026-11-01T18:35:58的verify-query-decode-cancel-20261102-01五模組65/65、0skip、379語法／source_unchanged（命令見STATUS）。為保留實際程序證據而增self.evidence，UTC18:36:56的verify-query-decode-evidence-20261102-01單模組4/4，build-query-decode-cancel-20261102-02編譯379／0error；guardian自然0／remaining0／無強停。已讀lifecycle-evidence，decode結果cancelled／source_cancelled／rows=[]、CLI exit130，collector原exit0／remaining0／force=false；不把取消當查詢成功，不重查／啟模型。測試為實際CLI＋合成程序＋例外注入，不是真OS資料／真人鍵盤。

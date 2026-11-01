@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-02 建立中斷回條已接通，07仍失效
+
+LaunchInterrupted帶實際Job清理回條，Runner／CLI取消可保留pre-Resume故障1460／force=true／remaining0；空Job不捏造child exit，未知建立事實維持null／pending並拒絕再launch。verify-query-creation-cancel-20261102-02四模組64/64、379編譯，build-query-creation-cancel-20261102-01 source ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1；修前4/5／初版62保留，lifecycle-evidence已核CLI130及兩個邊界。無新原生採集／模型，非真人所有窗口驗收；b92c0a4兩遠端已同步。07因先前改source仍禁止執行，確認必要修正已保存後才準備新scope；NAS／真人／長跑／防守恢復仍待前置。
+
 ## 2026-11-02 解碼中斷已修，07禁止執行
 
 Runner解碼輸出時KB不再逸出CLI，cancelled／exit130／rows空仍帶原collector自然0／remaining0／無強停。修前3/4，修後五模組65/65；補回條的verify-query-decode-evidence-20261102-01為4/4、379編譯，build-query-decode-cancel-20261102-02 source9439cb84696ea236cc416f4781084e4b3352a3a24d99c1d0d2caeb6b5dc1406d，無新採集／模型。07 source已失效，包頂及source-binding-invalidated均記錄，approved=false／未入列／未啟；不可採用舊07詢問或06批准。必要修正後才準備新scope，避免在修正中重複發問；其餘真環境關卡保留。5e751be兩遠端已核同步。

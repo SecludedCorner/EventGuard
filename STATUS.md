@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-11-02 CMD-016程序建立中斷可回傳真實清理事實
+
+verify-query-creation-cancel-regression-20261102-01為4/5：pre-Resume子程序已由constructor清理，但Runner遺失回條、CLI例外逸出，shutdown錯呈未管理／已退出。現由LaunchInterrupted（KeyboardInterrupt子類、固定訊息）攜帶自有Job關閉前的實際事實，Runner保留為取消結果及shutdown回條，不重啟／補造自然退出。尚未建立子程序明示process_started=false／child_exited及exit_code=null、無PID；缺建立證據則各事實null、pending=true，後續查詢busy且不作任何PID動作。
+
+UTC2026-11-01T18:45:51，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-creation-cancel-20261102-02 --timeout-seconds 140 --module test_command_query_collection_cancel --module test_process_governance --module test_collector_progress --module test_collector_contract`：64/64、0skip、379語法、source_unchanged；build-query-creation-cancel-20261102-01編譯379／0error，source ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1。guardian自然0／remaining0／無強停；已讀lifecycle-evidence，CLI creation exit130，collector實際1460／force=true／launch_failure／remaining0，與decode的自然0分開。空Job未執行任何子程序、無假退出碼且下次合成查詢可成功；無證據factory只呼叫1次、後續busy、不終止程序。初版62/62及新增邊界後64/64分別保存，不相加。
+
+這是合成程序與例外注入，未證真人／真原生所有取消窗口，未啟模型。07仍失效、未入列／未啟，必要修正完成後才準備新包。b92c0a42ee42d2a59412e83a6e89466ac9a4329f（fix(collectors): return cancellation when query output decoding is interrupted [skip ci]，+33/-4）兩遠端已核同步，git-query-decode-cancel-remote-20261102-01；NAS與其他實機關卡保留，CI0。
+
 ## 2026-11-02 CMD-016解碼輸出時中斷已修／07來源失效
 
 真CLI及自有合成查詢在子程序自然退出後、bounded JSON解碼時注入KB，verify-query-decode-cancel-regression-20261102-01為3/4：例外逸出CLI而無結構取消。Runner現捕捉該解碼窗口，忽略輸出並回cancelled，不重啟／重查／終止已退出程序。UTC2026-11-01T18:35:58，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-decode-cancel-20261102-01 --timeout-seconds 120 --module test_command_query_collection_cancel --module test_command_query_cancellation --module test_collectors_diagnostics --module test_collector_contract --module test_collector_progress`：65/65、0skip、379語法、source_unchanged。補存實際回條後，UTC18:36:56的verify-query-decode-evidence-20261102-01（75秒、僅test_command_query_collection_cancel）4/4；build-query-decode-cancel-20261102-02編譯379／0error，source hash 9439cb84696ea236cc416f4781084e4b3352a3a24d99c1d0d2caeb6b5dc1406d。guardian自然0／remaining0／無強停；lifecycle-evidence中CLI exit130、source_cancelled／rows空，collector自然exit0／remaining0／force=false，無新原生採集／模型。

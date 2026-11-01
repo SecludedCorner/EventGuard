@@ -20,6 +20,11 @@ if sys.argv[2]=="decode":
     def interrupt_decode(_content):
         raise KeyboardInterrupt("SYNTHETIC_PRIVATE")
     runner_module.loads=interrupt_decode
+if sys.argv[2]=="creation":
+    from eventguard import processes
+    def interrupt_creation(_thread_handle):
+        raise KeyboardInterrupt("SYNTHETIC_PRIVATE")
+    processes.kernel().ResumeThread=interrupt_creation
 if sys.argv[2].startswith("signal_"):
     import ctypes as C,os,signal
     from ctypes import wintypes as W
@@ -83,6 +88,9 @@ raise SystemExit(code)
 
 @unittest.skipUnless(os.name == "nt", "actual Windows owned Job required")
 class CommandQueryCollectionCancellationTests(unittest.TestCase):
+    def test_creation_interrupt_returns_cancelled_and_preserves_forced_launch_failure(self):
+        self.check_interrupt("creation", ".1")
+
     def test_interrupt_during_output_decode_returns_cancelled_with_original_exit_evidence(self):
         self.check_interrupt("decode", ".1")
 
@@ -107,7 +115,7 @@ class CommandQueryCollectionCancellationTests(unittest.TestCase):
             launched = phase.removeprefix("signal_") != "launch"
             self.assertEqual(owned["managed"], launched)
             self.assertTrue(owned["child_exited"])
-            self.assertFalse(owned["forcibly_terminated"])
+            self.assertEqual(owned["forcibly_terminated"], phase == "creation")
             if launched:
                 self.assertEqual(owned["remaining_owned_processes"], 0)
             else:
@@ -120,8 +128,9 @@ class CommandQueryCollectionCancellationTests(unittest.TestCase):
             self.assertEqual((result["status"], result["error_code"], result["rows"]), ("cancelled", "source_cancelled", []))
             if launched:
                 self.assertTrue(result["coverage"]["process"]["child_exited"])
-                self.assertFalse(result["coverage"]["process"]["forcibly_terminated"])
+                self.assertEqual(result["coverage"]["process"]["forcibly_terminated"], phase == "creation")
                 self.assertEqual(result["coverage"]["process"]["remaining_owned_processes"], 0)
+                self.assertEqual(result["coverage"]["process"]["exit_code"], 1460 if phase == "creation" else 0)
             else:
                 self.assertNotIn("process", result["coverage"])
             self.assertNotIn("SYNTHETIC_PRIVATE", out.decode("utf-8"))
@@ -131,8 +140,8 @@ class CommandQueryCollectionCancellationTests(unittest.TestCase):
                 value = json.loads((Path(temporary) / "console-signal.json").read_text())
                 self.assertEqual(value, {"owned_console": True, "signals_sent": 1})
             self.assertEqual({p.name for p in Path(temporary).iterdir()}, expected)
-            if phase == "decode":
-                self.evidence = dict(scope="real CLI and owned synthetic collector; injected output-decode interrupt, no native query/model",
+            if phase in {"decode", "creation"}:
+                self.evidence = dict(scope="real CLI and owned synthetic collector; injected interrupt, no native query/model",
                     phase=phase, cli_process=receipt, collector_process=owned, result=result, model_calls=0)
 
     def test_native_control_event_while_waiting_has_owned_exit_evidence(self):

@@ -25,6 +25,13 @@ class JobError(OSError):
     """Win32 error code only, never command/path or account text."""
 
 
+class LaunchInterrupted(KeyboardInterrupt):
+    """Fixed cancellation plus facts observed before closing our private Job."""
+    def __init__(self, receipt):
+        super().__init__("owned_process_launch_interrupted")
+        self.receipt = dict(receipt)
+
+
 class STARTUPINFO(C.Structure):
     _fields_ = [("cb", DWORD), ("lpReserved", C.c_wchar_p), ("lpDesktop", C.c_wchar_p),
                 ("lpTitle", C.c_wchar_p), ("dwX", DWORD), ("dwY", DWORD), ("dwXSize", DWORD),
@@ -199,7 +206,7 @@ class JobPopen(ORIGINAL_POPEN):
         self.cleanup_lock = threading.RLock()
         try:
             super().__init__(*args, **kwargs)
-        except BaseException:
+        except BaseException as error:
             try:
                 self.job.terminate("launch_failure")
                 if getattr(self, "_child_created", False):
@@ -207,8 +214,19 @@ class JobPopen(ORIGINAL_POPEN):
                         self.wait(timeout=3)
                     except subprocess.TimeoutExpired:
                         pass
+                if isinstance(error, KeyboardInterrupt):
+                    started = bool(getattr(self, "_child_created", False))
+                    code = self.returncode if started else None
+                    receipt = dict(managed=True, process_started=started,
+                        child_exited=code is not None if started else None, exit_code=code,
+                        remaining_owned_processes=self.job.active(),
+                        forcibly_terminated=self.job.forced, reason="launch_failure")
+                    if started:
+                        receipt.update(pid=self.pid, created_at=self.created_at, job_name=self.job.name)
             finally:
                 self.job.close()
+            if isinstance(error, KeyboardInterrupt):
+                raise LaunchInterrupted(receipt) from None
             raise
         with _LOCK:
             _OWNED.add(self)

@@ -12,7 +12,7 @@ import uuid
 from .contract import evidence, error_from_exception
 from .progress import Progress
 from .bounded_json import BoundedJSONError, loads, MAX_JSON_BYTES
-from ..processes import spawn, finish, JobPopen, ORIGINAL_POPEN
+from ..processes import spawn, finish, JobPopen, ORIGINAL_POPEN, LaunchInterrupted
 from ..runtime import QueryAdmissionError
 
 MAX_OUTPUT_BYTES = MAX_JSON_BYTES
@@ -37,6 +37,10 @@ class Runner:
 
     @staticmethod
     def _unresolved(job):
+        if job.get("launch_interrupted"):
+            receipt = job["process"]
+            return (receipt.get("remaining_owned_processes") != 0
+                    or receipt.get("process_started") is True and receipt.get("child_exited") is not True)
         if not job["done"].is_set():
             return True
         if isinstance(job.get("child"), JobPopen):
@@ -119,13 +123,14 @@ class Runner:
                 "policy" if status in ("busy", "cancelled", "timeout") or note.startswith("query_admission_") else "provider", note,
                 exception_type="RunnerState", operation="PowerShellQuery", status=status)
             if self.evidence_sink is not None:
+                process = self._process_metadata(job) if job else {}
                 self.evidence_sink({"kind": "native_worker_process" if _argv else "powershell_process", "argv": argv,
-                    "process": self._process_metadata(job) if job else {},
+                    "process": process,
                     "status": status, "reason_code": note, "elapsed_ms": elapsed,
-                    "process_started": job is not None,
-                    "child_exited": job is not None and job["done"].is_set(),
-                    "pid": job["child"].pid if job is not None and hasattr(job["child"], "pid") else None,
-                    "exit_code": job.get("returncode") if job else None,
+                    "process_started": process.get("process_started", job is not None),
+                    "child_exited": process.get("child_exited", job is not None and job["done"].is_set()),
+                    "pid": process.get("pid", getattr(job.get("child"), "pid", None) if job else None),
+                    "exit_code": process.get("exit_code", job.get("returncode") if job else None),
                     "stdout": job.get("stdout", b"").decode("utf-8-sig", errors="replace") if job else "",
                     "stderr": job.get("stderr", b"").decode("utf-8-sig", errors="replace") if job else "",
                     "exception_text": str(error)[:8192] if error else None})
@@ -160,14 +165,25 @@ class Runner:
                     job_name = "Global\\EventGuard-" + uuid.uuid4().hex if managed else None
                     admission = self.admission(job_name) if self.admission is not None else nullcontext()
                     with admission:
-                        child = spawn(argv, popen_factory=self._popen,
+                        try:
+                            child = spawn(argv, popen_factory=self._popen,
                                             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), shell=False,
                                             **({"job_name": job_name} if managed else {}))
-                        job = {"child": child, "done": threading.Event(), "output_lock": threading.Lock(),
-                               "output_limit": threading.Event(), "output_total": 0}
-                        self._active = job
-                        threading.Thread(target=self._watch, args=(job,), daemon=True).start()
+                        except KeyboardInterrupt as error:
+                            receipt = dict(error.receipt) if isinstance(error, LaunchInterrupted) and managed else dict(
+                                managed=None, process_started=None, child_exited=None, exit_code=None,
+                                remaining_owned_processes=None, forcibly_terminated=None)
+                            job = dict(done=threading.Event(), process=receipt, launch_interrupted=True)
+                            job["done"].set()
+                            self._active = job
+                            launch_problem = ("cancelled", "interrupted_query_launch_exit_unconfirmed" if self._unresolved(job)
+                                              else "cancelled_during_query_launch", None)
+                        else:
+                            job = {"child": child, "done": threading.Event(), "output_lock": threading.Lock(),
+                                   "output_limit": threading.Event(), "output_total": 0}
+                            self._active = job
+                            threading.Thread(target=self._watch, args=(job,), daemon=True).start()
                 except QueryAdmissionError as error:
                     allowed = {"query_admission_busy", "query_admission_storage_unavailable", "query_admission_release_unconfirmed",
                                "query_admission_previous_query_unconfirmed", "query_admission_invalid_scope"}
@@ -238,6 +254,8 @@ class Runner:
     def shutdown(self, grace=2):
         with self._lock:
             job = self._active
+        if job and job.get("launch_interrupted"):
+            return self._process_metadata(job)
         if job and isinstance(job["child"], JobPopen):
             job["process"] = finish(job["child"], "cancelled", grace=grace)
             job["done"].wait(3)

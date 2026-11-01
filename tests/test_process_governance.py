@@ -256,7 +256,7 @@ class JobTests(FixtureRoot):
         with patch.object(processes.JobPopen, '_execute_child', new=observe_execute), \
              patch.object(processes.kernel(), 'ResumeThread', side_effect=interrupt_resume), \
              patch.object(Job, 'close', new=observe_close):
-            with self.assertRaisesRegex(KeyboardInterrupt, 'SYNTHETIC_LAUNCH_INTERRUPT'):
+            with self.assertRaisesRegex(processes.LaunchInterrupted, '^owned_process_launch_interrupted$') as caught:
                 spawn(argv)
         child = created['child']
         self.assertTrue(created['assigned_before_resume'])
@@ -264,6 +264,9 @@ class JobTests(FixtureRoot):
         self.assertIsNone(child.job.handle)
         self.assertFalse(marker.exists())
         self.assertEqual(closed, [dict(active=0, forced=True, reason='launch_failure')])
+        self.assertEqual(caught.exception.receipt['exit_code'], 1460)
+        self.assertTrue(caught.exception.receipt['forcibly_terminated'])
+        self.assertEqual(caught.exception.receipt['remaining_owned_processes'], 0)
         self.evidence = dict(scope='actual owned Windows process suspended before first instruction; injected Ctrl+C exception',
             assigned_before_resume=True, child_exited=True, exit_code=child.returncode,
             remaining_owned_processes=0, forcibly_terminated=True, reason='launch_failure',
@@ -273,6 +276,50 @@ class JobTests(FixtureRoot):
         with patch("eventguard.acceptance_process.write_json", side_effect=OSError("synthetic filesystem failure")):
             self.assertEqual(capture([sys.executable, "-B", "-c", "import time;time.sleep(60)"], self.root, "d"*32, "fixture", timeout_seconds=.1), 2)
         self.assertEqual(remaining_owned(), 0)
+
+    def test_runner_interrupted_before_child_creation_has_no_invented_child_exit(self):
+        from eventguard import processes
+        records = []
+        runner = Runner(evidence_sink=records.append)
+        with patch.object(processes.JobPopen, '_execute_child', side_effect=KeyboardInterrupt('SYNTHETIC_PRIVATE')):
+            result = runner.run('synthetic', _argv=[sys.executable, '-B', '-c', 'pass'])
+        process = result['process']
+        self.assertEqual(result['status'], 'cancelled')
+        self.assertIs(process['process_started'], False)
+        self.assertIsNone(process['child_exited'])
+        self.assertIsNone(process['exit_code'])
+        self.assertNotIn('pid', process)
+        self.assertEqual(process['remaining_owned_processes'], 0)
+        self.assertIs(process['forcibly_terminated'], False)
+        self.assertIs(records[0]['process_started'], False)
+        self.assertIsNone(records[0]['child_exited'])
+        self.assertEqual(runner.shutdown(), process)
+        self.assertFalse(runner.pending)
+        resumed = runner.run('synthetic', _argv=[sys.executable, '-B', '-c', 'print(\'{"rows":[]}\')'])
+        self.assertEqual(resumed['status'], 'ok')
+        self.assertEqual(resumed['process']['remaining_owned_processes'], 0)
+        self.evidence = dict(scope='actual empty private Job interrupted before CreateProcess; no child/model/query',
+                             process=process, subsequent_synthetic_query=resumed['process'], model_calls=0)
+
+    def test_unobserved_launch_interrupt_stays_unknown_and_blocks_relaunch_without_pid_actions(self):
+        records = []
+        with patch('eventguard.collectors.runner.finish', side_effect=AssertionError('no observed child to stop')):
+            factory = unittest.mock.Mock(side_effect=KeyboardInterrupt('SYNTHETIC_PRIVATE'))
+            runner = Runner(popen_factory=factory, evidence_sink=records.append)
+            result = runner.run('synthetic')
+            self.assertEqual(result['status'], 'cancelled')
+            self.assertEqual(result['note'], 'interrupted_query_launch_exit_unconfirmed')
+            self.assertIsNone(result['process']['process_started'])
+            self.assertIsNone(result['process']['child_exited'])
+            self.assertIsNone(result['process']['forcibly_terminated'])
+            self.assertIsNone(records[0]['process_started'])
+            self.assertIsNone(records[0]['child_exited'])
+            self.assertTrue(runner.pending)
+            self.assertEqual(runner.shutdown(), result['process'])
+            self.assertEqual(runner.run('synthetic')['status'], 'busy')
+            self.assertEqual(factory.call_count, 1)
+        self.evidence = dict(scope='injected factory without any child/exit proof; no PID actions/model',
+                             process=result['process'], pending=True, launch_calls=1, model_calls=0)
 
 
 class GapTests(FixtureRoot):
