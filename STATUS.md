@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-11-02 外部前置與已連接App狀態稽核
+
+UTC2026-11-01T18:58:37，本次唯讀呼叫一次mcp__eventguard_app__status，指定live入口回blocked／application_not_running／automatic_retry_allowed=false／model_calls0，未回任何活體程序handle；不是verified wait，也不外推全機程序或伺服器受測來源。最小回覆與限制保存reports/command-first-runtime-audit-20261102-01/audit.json。未啟App／採集／模型／ACK／處置；connected不代表持續盯哨已運作。
+
+08 approved=false、enqueued/stages0、無stage-1，既有批准詢問尚無新答覆；NAS格式資訊、真人／特定200%能力、真原生／長跑／reboot、可信無損恢復及實際防守各缺前置。先前07待批、改source後08待批、此次核對為連續三個goal turns的等價當前模型批准／實機前置阻擋；前兩turn仍完成必要工程，不把這些成果誤當真驗收。本次依實際矩陣／工作佇列未找到新的可執行必要單元，不新增重複fixture／文件作工程進度；整體目標未達成。新批准／具體資料或新可重現缺陷到達後沿既有Git及證據接續。
+
+af83ee9b48ec4da6e250871ba5ed55f76c1b175b（docs(acceptance): record current stdio evidence and prepared scope 08 [skip ci]，+23/-2）兩遠端已核同步，git-investigation-current-scope-remote-20261102-01。本次只保存稽核文件，同來源build-query-creation-cancel-20261102-01（379／0error）及verify-investigation-process-regression-20261102-01（6/6）證據沿用、不冒稱本次重測；src/scripts hash仍ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1，CI0。
+
 ## 2026-11-02 現行程序核心的調查stdio回歸通過／08待批准
 
 UTC2026-11-01T18:49:24，`py -3.13 -B scripts/verify.py --run-dir reports/verify-investigation-process-regression-20261102-01 --timeout-seconds 140 --module test_investigation_acceptance --module test_investigation_launch_binding --module test_investigation_stdio`：6/6、0skip、379語法、source_unchanged。明示FAKE CLI＋實際SDK／stdio／SQLite／私有Job／HANDLE；已讀分類case的lifecycle-evidence：receive/query/save/ACK依序、saved／ACK／launch hash一致，分類保留，MCP ACK flushed／自然0，CLI自然0／remaining0／force=false。未升格真模型。純文件更新沿用build-query-creation-cancel-20261102-01的同src/scripts hash ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1（379／0error），不重跑未受影響測試。

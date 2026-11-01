@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-02 單次App MCP觀測與外部前置稽核
+
+UTC2026-11-01T18:58:37，已連接mcp__eventguard_app__status({})一次回namespace live／state blocked／reason application_not_running／model_calls0／automatic_retry_allowed=false。只保存固定狀態與限制於reports/command-first-runtime-audit-20261102-01/audit.json，不保存原始私人資料；未啟App／採集／ACK／處置。這不是新模型、全機程序盤點、當前source的native證明或活體程序等待。08人工批准檔仍false、manifest enqueued/stages0、stage-1不存在，既有詢問未收到新答覆；07失效及06消耗維持。
+
+矩陣及工作佇列的已知必要CLI／API切片已各有有限證據，未以此宣稱完整盯哨；當前模型批准、真DSM schema、真人／特定200%能力、原生partial／長跑reboot、可信恢復來源與容量、真防守結果仍缺外部前置。等價阻擋連續三goal turns，本次無新可執行必要單元，不能用重複fixture或文件代替進度。af83ee9b48ec4da6e250871ba5ed55f76c1b175b兩遠端已核（git-investigation-current-scope-remote-20261102-01）；本次純稽核文件沿用同ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1來源build379／stdio6/6，不冒稱重測／完成。
+
 ## 2026-11-02 現行程序核心的調查鏈路回歸及08準備
 
 UTC2026-11-01T18:49:24，verify-investigation-process-regression-20261102-01（命令見STATUS）6/6、0skip、379語法、source_unchanged，guardian自然0／remaining0／無強停。讀取lifecycle-evidence的classified case，scope明示FAKE CLI／實際SDK私有Jobs HANDLE SQLite／model_calls0；classification_preserved=true、completed_tools四步依序、investigation_saved／outbox_acknowledged／approved_launch_hash_matches皆true，MCP exit驗收passed／natural=true／ACK flushed=true／exit0，capture.process exit0／remaining0／force=false。此沿production acceptance的正常路徑，驗證共用processes修正後協定仍可完成，不替代真模型。build沿用相同ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1來源的build-query-creation-cancel-20261102-01（379／0error）；本單元僅文件／忽略的準備包。
