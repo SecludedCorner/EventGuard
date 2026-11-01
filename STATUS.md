@@ -1,5 +1,15 @@
 # EventGuard 現況
 
+## 2026-11-02 CMD-018分類決策CLI／共用投影已接
+
+提交前新增cache型別回歸，5/6重現Python equality將matched=1／rule_index=false當成正確boolean／整數；現對cache分類另用嚴格validate_decision。最終UTC2026-11-01T17:29:35，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-rule-decision-20261102-02 --timeout-seconds 180 --module test_command_rule_decision --module test_rule_decision_storage --module test_operator_api --module test_event_catalog --module test_investigation_diagnostics`：71/71、0skip、379語法、source_unchanged；build-command-rule-decision-20261102-02編譯379／0error，guardian自然0／remaining0／無強停，模型／OS0。以下70與4各保留原來源範圍、不相加。
+
+event_view供detail／inspect／Operator共用保存的classification；不載目前規則重算，legacy缺欄位與新matched=false分開，文字顯示保存rule ID／hash。舊診斷快取只接受既有完整投影或新完整投影，含分類時須與事件一致；缺新欄位不補造快取歷史。
+
+UTC2026-11-01T17:22:42，verify-command-rule-decision-20261102-01五模組70/70、0skip；同產品來源新增CLI串接後，UTC17:24:48 `py -3.13 -B scripts/verify.py --run-dir reports/verify-command-rule-decision-flow-20261102-01 --timeout-seconds 90 --module test_command_rule_decision`：4/4、0skip、379語法、source_unchanged；build-command-rule-decision-20261102-01編譯379／0error，guardian自然0／remaining0／無強停。真CLI monitor fixture→events list→detail取得from-monitor快照；另驗壞現行config不影響讀原決策、DB bytes／ACK不變、legacy缺欄位、未命中記錄及即使重算payload hash也拒絕壞快照。模型／OS／CI0；專用inbox的同資料流下一核對，不宣稱新真agent驗收。
+
+ebdfd7d8a18687682bc5a81d11c1baff06703d7c（feat(events): persist validated rule decisions with detector transactions [skip ci]，+109/-7）兩遠端同SHA，git-rule-decision-storage-remote-20261102-01。
+
 ## 2026-11-02 CMD-018事件schema／監看原子保存已接
 
 Event 2.0新增可選classification，驗winner條件／內容hash／severity綁定，並納入既有8KiB UTF-8上限與payload hash。Monitor使用共用classify，決策隨事件及detector state原子提交，無額外DB表／旁路資料；舊事件不新增欄位。API回傳使用同一UTF-8事件預算，不對Unicode另加ASCII大小限制。CLI／agent共用投影下一單元接入。

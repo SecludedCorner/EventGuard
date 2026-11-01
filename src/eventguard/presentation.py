@@ -364,6 +364,11 @@ def render(result, command="", operation=""):
         event=result.get("event",{})
         lines=["事件觀察與查證",*_event_lines([event]),"查證模式："+text(result.get("mode"))]
         lines+=_row_lines(event.get("facts") and [event["facts"]])
+        decision=event.get("classification")
+        if isinstance(decision,dict) and decision.get("matched") is True:
+            lines.append("保存的分類規則："+text(decision.get("rule",{}).get("id"))+"；內容hash="+text(decision.get("rule_hash")))
+        else:
+            lines.append("分類決策："+("當時未有啟用規則命中" if isinstance(decision,dict) else "原紀錄未保存"))
         for observed in result.get("observations",[]):
             if isinstance(observed,dict):
                 lines.append("查詢："+text(observed.get("operation"))+" / "+state(observed.get("status")))

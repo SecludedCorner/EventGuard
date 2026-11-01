@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from types import SimpleNamespace
 
 from eventguard.events.schema import validate_event, EventValidationError, MAX_EVENT_BYTES
 from eventguard.events.store import EventStore, event_payload_hash, CapacityError
@@ -68,3 +69,24 @@ class RuleDecisionStorageTests(unittest.TestCase):
         self.assertGreater(len(json.dumps(event).encode("utf-8")), MAX_EVENT_BYTES)
         with self.assertRaisesRegex(EventValidationError, "event_size_limit"):
             validate_event(event)
+
+    def test_historical_review_without_trace_is_readable_but_forged_trace_is_not(self):
+        from eventguard.diagnostics.review import review, validate_saved_review
+        event = classify(self.events, self.rules)[0]
+        event["synthetic"] = True
+        self.store.enqueue(event)
+        saved = self.store.get_event(event["event_id"])
+        api = SimpleNamespace(query=lambda *_args, **_kw: {"status": "ok", "source": "listeners", "rows": [], "coverage": {}})
+        value = dict(review(saved, api, refresh=True), namespace="test")
+        value["event"].pop("classification")
+        self.store.save_review(event["event_id"], value["payload_hash"], value)
+        self.assertEqual(validate_saved_review(value, saved), value)
+        forged = copy.deepcopy(value)
+        forged["event"]["classification"] = dict(event["classification"], rule_hash="0" * 64)
+        with self.assertRaisesRegex(ValueError, "saved_review_invalid"):
+            validate_saved_review(forged, saved)
+        for field, spoof in (("matched", 1), ("rule_index", False)):
+            forged = copy.deepcopy(value)
+            forged["event"]["classification"] = dict(event["classification"], **{field: spoof})
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "saved_review_invalid"):
+                validate_saved_review(forged, saved)

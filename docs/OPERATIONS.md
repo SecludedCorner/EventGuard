@@ -1,5 +1,7 @@
 # 本機操作與故障排除
 
+新監看事件會保存`classification`：原severity、規則集內容hash，以及最後命中規則的ID／條件快照／hash。以`events detail`或`events inspect`的`event.classification`查閱，會讀當時資料，不使用目前rules.json重算。legacy事件沒有此欄位，代表未保存；`matched=false`才表示當時有記錄但未有啟用規則命中。只保存winner條件，完整規則集只有hash，不能當完整規則備份或來源認證；分類不是處置授權。舊診斷快取可能仍缺此欄位，保留原內容不補造。
+
 CLI的not_applicable／not_requested結果現在回exit5（過去可能0），表示沒有可用的完整結果。query的operation_view_not_supported回exit2；product_not_allowlisted仍為2、health成功仍為0。JSON schema與status不變；串接時檢查exit及status，不將未適用、未請求或空rows解讀為已查證安全。
 
 `budget status`現在以exit2回報state=blocked（過去可能exit0），ready仍回0。自動化須同時檢查exit與state；缺帳本、用量未知、額度耗盡、未結attempt或損壞都不能當可派送。此查詢不初始化或重設帳本，既有帳本交易可維護時鐘；initialize/reconcile原錯誤exit4不變。這是本工具的模型任務准入政策，不是帳戶token或費用硬上限。

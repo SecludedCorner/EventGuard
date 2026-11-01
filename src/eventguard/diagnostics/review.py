@@ -187,13 +187,15 @@ def row_view(row, *, _include_entries=True):
     return result
 
 
-def _event_view(event, projector):
+def _event_view(event, projector, *, include_classification=True):
     clean = validate_event(event)
     evidence = clean["evidence"]
     result = {key: clean[key] for key in ("event_id", "transition", "severity", "synthetic", "observed_at")}
     result.update(event_type=enum(clean["event_type"], EVENT_TYPES), coverage_status=clean["coverage"]["status"],
                   facts=projector(evidence), data_trust="untrusted_data", incident_conclusion="not_assessed",
                   explanation=EXPLANATIONS.get(clean["event_type"], "事件型別尚無確定性說明；保留未知。"))
+    if include_classification and "classification" in clean:
+        result["classification"] = clean["classification"]
     for field in ("delivery_status", "attempts"):
         if field in event:
             result[field] = enum(event[field], {"pending", "retry", "ack", "failed"}) if field == "delivery_status" else number(event[field], 8)
@@ -406,14 +408,19 @@ def validate_saved_review(value, event):
         raise ValueError("saved_review_invalid")
     expected = event_view(event)
     saved = value["event"]
-    if not isinstance(saved, dict) or set(saved) != set(expected):
-        raise ValueError("saved_review_invalid")
+    if isinstance(saved, dict) and "classification" in saved:
+        from ..rules.decisions import validate_decision
+        try:
+            validate_decision(saved["classification"], validate_event(event))
+        except (ValueError, TypeError):
+            raise ValueError("saved_review_invalid") from None
     # Projection 1.0 used a smaller fixed scalar vocabulary. Accept exactly
-    # that historical projection or today's complete projection, not arbitrary
-    # cached text or a new schema bolted onto an old result.
-    legacy = _event_view(event, _legacy_row_view)
-    immutable = set(expected) - {"delivery_status", "attempts"}
-    if not any(all(saved[key] == candidate[key] for key in immutable) for candidate in (expected, legacy)):
+    # either scalar vocabulary with or without the optional classification.
+    candidates = (expected, _event_view(event, _legacy_row_view),
+                  _event_view(event, row_view, include_classification=False),
+                  _event_view(event, _legacy_row_view, include_classification=False))
+    if not isinstance(saved, dict) or not any(set(saved) == set(candidate) and all(
+            saved[key] == candidate[key] for key in set(candidate) - {"delivery_status", "attempts"}) for candidate in candidates):
         raise ValueError("saved_review_invalid")
     if (saved.get("delivery_status") not in {"pending", "retry", "ack", "failed"} or type(saved.get("attempts")) is not int
             or not 0 <= saved["attempts"] <= 8 or value["schema_version"] != "1.0" or value["mode"] != "current_read_only"

@@ -1,5 +1,11 @@
 # EventGuard 接手
 
+## 2026-11-02 分類trace的CLI與共用event_view已接
+
+最終verify-command-rule-decision-20261102-02為71/71、379編譯／source_unchanged；build-command-rule-decision-20261102-02。提交前cache型別5/6失敗保留，已阻擋matched=1與rule_index=false的equality混淆，舊缺欄位版式仍精確相容。專用inbox實作位於queue_inbox.py／scripts/eventguard_inbox_mcp.py，下一核對，未啟模型。
+
+70/70及新增CLI流程4/4、379編譯見verify-command-rule-decision-20261102-01／verify-command-rule-decision-flow-20261102-01／build-command-rule-decision-20261102-01。真CLI monitor→list→detail可讀原分類，壞現行config不影響snapshot／不ACK；legacy缺欄位、matched=false及壞hash拒絕有別。舊診斷快取精確相容、不補造歷史。下一核對專用agent inbox的receive/query是否保留此資料，僅fixture／已安裝SDK、無模型；ebdfd7d兩遠端已核同步。
+
 ## 2026-11-02 CMD-018新事件已保存分類決策／接查閱
 
 schema可選classification與Monitor原子保存已接，108/108、378編譯見verify-rule-decision-storage-20261102-02／build-rule-decision-storage-20261102-01。原hash／條件／severity驗證、UTF-8 8KiB上限及預算共用；legacy不加欄位，改config不覆寫歷史。初輪測試None期望錯誤保留並修正。下一改共用event_view，真CLI detail／inspect驗舊決策、legacy未記錄、不讀現有config、無ACK／模型；3d35ca2兩遠端已核同步。

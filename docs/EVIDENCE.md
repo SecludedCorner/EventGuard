@@ -1,5 +1,13 @@
 # 證據與時間日誌
 
+## 2026-11-02 分類快照透過CLI／共用投影查閱
+
+最終型別審查新增verify-rule-decision-cache-types-regression-20261102-01：5/6，cached matched=1／rule_index=false兩subtest被Python equality放過。修為cache有分類即執行同一嚴格驗證器後，UTC2026-11-01T17:29:35的verify-command-rule-decision-20261102-02五模組71/71、0skip、379語法、source_unchanged，build-command-rule-decision-20261102-02編譯379／0error；guardian自然0／remaining0／無強停，模型／OS0。原70及4證據仍各保留原來源、未相加冒稱總數。
+
+UTC2026-11-01T17:22:42，verify-command-rule-decision-20261102-01五模組70/70、0skip、379語法，含cache相容與偽造快照拒絕；產品未再改，新增串接測試後UTC17:24:48的verify-command-rule-decision-flow-20261102-01四項4/4、0skip、379語法、source_unchanged；build-command-rule-decision-20261102-01編譯379／0error，guardian自然0／remaining0／無強停。真CLI隔離安裝以monitor fixture→events list回ID→detail核port18181／rule from-monitor，無模型；另驗detail/inspect在目前rules.json已損壞時仍讀舊快照、DB bytes與pending／ACK不改，legacy缺欄位與新未命中有別，重算payload_hash也不能讓壞rule_hash通過。JSON／文字可見保存ID／hash，不查OS。舊review缺分類的精確版式可讀、添加不符事件的分類即拒絕，未改舊快取內容。專用inbox取證仍待接續，不當新真agent成功。
+
+ebdfd7d8a18687682bc5a81d11c1baff06703d7c（feat(events): persist validated rule decisions with detector transactions [skip ci]，+109/-7）兩遠端同SHA，git-rule-decision-storage-remote-20261102-01；無CI。
+
 ## 2026-11-02 分類決策隨事件原子落盤
 
 verify-rule-decision-storage-20261102-01為26/27，只有新測試期望無state為{}而實際原契約是None；改為嚴格assertIsNone並加真容量回滾後，UTC2026-11-01T17:14:46的02六模組108/108、0skip、378語法、source_unchanged（命令見STATUS）；build-rule-decision-storage-20261102-01編譯378／0error，guardian自然0／remaining0／無強停。五個新存儲案例：EventSchema保留決策且payload hash涵蓋、重開SQLite後改config仍留舊快照、壞決策整批拒絕、容量1的兩事件交易不留任何事件／state、legacy hash不變、事件總UTF-8上限仍拒絕超量。另擴原Monitor fixture測試比對8080 high／8081 critical各自snapshot及不同config hash，後續設定info不改原紀錄；pending保留、模型0。CLI／agent投影下一接，不宣稱真來源／真agent新驗收。
