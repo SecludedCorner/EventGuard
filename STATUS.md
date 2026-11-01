@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-11-02 CMD-016查詢runner等待／完成通知中斷已修
+
+runner在等待階段捕捉KeyboardInterrupt，走既有自有Job合作清理及退出核對；未受管理fixture不強停／仍pending。completed進度通知中斷則丟棄晚到結果，回cancelled、不冒充成功。未確認退出使用固定unconfirmed原因，保留實際process metadata。
+
+UTC2026-11-01T16:30:40，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-collection-cancel-20261102-03 --timeout-seconds 120 --module test_command_query_collection_cancel --module test_collectors_diagnostics --module test_command_query_cancellation --module test_command_query_console_cancel`：29/29、0skip、374語法、source_unchanged；build-query-collection-cancel-20261102-01編譯374／0error，guardian自然0／remaining0／無強停。真CLI＋真自有合成子程序，在waiting／completed通知注入KB，exit130／單JSON／rows空、source_cancelled、coverage退出true／remaining0／無強停。這不是原生Windows來源或派送後真console訊號驗收；下一補自有console控制事件。
+
+首輪fixture太短，中斷落在completed；原0/1、28/29及安全frames除錯均保留。固定HEAD runner的隔離基線另證waiting穿透，probe-query-collection-baseline-20261102-01（stderr只存有無、不存原文）；兩種中斷現均驗過。前單元e074e4726fe3fac41df5737471178bc7dd010fa5（fix(cli): return non-success when budget status is blocked [skip ci]，+107/-1）兩遠端同SHA，git-budget-status-remote-20261102-01；模型／原生採集／CI0。
+
 ## 2026-11-02 CMD-015預算受阻狀態不再誤回成功
 
 budget status的state=blocked過去仍exit0，現專門回exit2；ready仍0，initialize/reconcile原錯誤4不改。UTC2026-11-01T16:17:47，`py -3.13 -B scripts/verify.py --run-dir reports/verify-budget-status-20261102-01 --timeout-seconds 120 --module test_command_budget_status --module test_agent_budget`：45/45、0skip、373語法、source_unchanged；build-budget-status-20261102-01編譯373／0error，自有Job自然0／remaining0／無強停。修前regression-01為1/4，三項明確blocked卻exit0；修後六項真CLI合成帳本涵蓋missing／bootstrap unknown／exhausted／active reservation／corrupt／ready及initialize失敗。未初始化缺庫、不修復損壞、不清用量，未讀寫正式帳本／啟模型；本預算不是帳戶token或費用硬上限。

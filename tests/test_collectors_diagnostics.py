@@ -85,6 +85,24 @@ class RunnerTests(unittest.TestCase):
         self.assertTrue(runner._active["done"].wait(1))
         self.assertEqual(runner.run("STATIC", cancel=cancel)["status"], "cancelled")
 
+    def test_interrupt_does_not_terminate_or_forget_an_unmanaged_fixture(self):
+        gate = threading.Event()
+        runner = Runner(lambda *_args, **_kwargs: Child(gate=gate))
+        interrupted = False
+        def progress(_value):
+            nonlocal interrupted
+            if _value["phase"] == "waiting" and runner._active is not None and not interrupted:
+                interrupted = True
+                raise KeyboardInterrupt("synthetic interrupt")
+        try:
+            result = runner.run("STATIC", progress=progress)
+            self.assertEqual((result["status"], result["note"]), ("cancelled", "cancelled_no_process_termination"))
+            self.assertTrue(runner.pending)
+        finally:
+            gate.set()
+            self.assertTrue(runner._active["done"].wait(1))
+        self.assertFalse(runner.pending)
+
     def test_nonzero_invalid_json_schema_and_limit(self):
         children = [Child(code=1), Child(b"bad"), Child(b"[]"), Child(b'{"rows":null}'), Child(b"a"*(MAX_OUTPUT_BYTES+1))]
         for child in children:

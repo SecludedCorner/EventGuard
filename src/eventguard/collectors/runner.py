@@ -110,7 +110,10 @@ class Runner:
         observer = Progress(progress, source_id, "native" if _argv else "powershell")
 
         def result(status, note, data=None, error=None):
-            observer.emit("completed")
+            try:
+                observer.emit("completed")
+            except KeyboardInterrupt:
+                status, note, data, error = "cancelled", "cancelled_late_output_ignored", None, None
             elapsed = int((time.monotonic() - started) * 1000)
             problem = error_from_exception(error, "launch", "PowerShellLaunch", note) if error else evidence(
                 "policy" if status in ("busy", "cancelled", "timeout") or note.startswith("query_admission_") else "provider", note,
@@ -178,28 +181,37 @@ class Runner:
         if launch_problem is not None:
             status, note, error = launch_problem
             return result(status, note, error=error)
-        while not job["done"].wait(0.025):
-            observer.emit("waiting")
-            if job["output_limit"].is_set():
-                if isinstance(child, JobPopen):
-                    job["process"] = finish(child, "output_limit")
-                    job["done"].wait(3)
-                # Injected fixtures/unmanaged children remain pending until
-                # their owner ends them; exceeding a limit never grants PID
-                # termination authority.
-                return result("error", "query_output_limit_exceeded")
-            if cancel is not None and cancel.is_set():
-                if isinstance(child, JobPopen):
-                    job["process"] = finish(child, "cancelled")
-                    job["done"].wait(3)
-                    return result("cancelled", "cancelled_owned_job_stopped")
-                return result("cancelled", "cancelled_no_process_termination")
-            if time.monotonic() - started >= timeout:
-                if isinstance(child, JobPopen):
-                    job["process"] = finish(child, "timeout")
-                    job["done"].wait(3)
-                    return result("timeout", "deadline_exceeded_owned_job_stopped")
-                return result("timeout", "deadline_exceeded_no_process_termination")
+        try:
+            while not job["done"].wait(0.025):
+                observer.emit("waiting")
+                if job["output_limit"].is_set():
+                    if isinstance(child, JobPopen):
+                        job["process"] = finish(child, "output_limit")
+                        job["done"].wait(3)
+                    # Injected fixtures/unmanaged children remain pending until
+                    # their owner ends them; exceeding a limit never grants PID
+                    # termination authority.
+                    return result("error", "query_output_limit_exceeded")
+                if cancel is not None and cancel.is_set():
+                    if isinstance(child, JobPopen):
+                        job["process"] = finish(child, "cancelled")
+                        job["done"].wait(3)
+                        return result("cancelled", "cancelled_owned_job_stopped")
+                    return result("cancelled", "cancelled_no_process_termination")
+                if time.monotonic() - started >= timeout:
+                    if isinstance(child, JobPopen):
+                        job["process"] = finish(child, "timeout")
+                        job["done"].wait(3)
+                        return result("timeout", "deadline_exceeded_owned_job_stopped")
+                    return result("timeout", "deadline_exceeded_no_process_termination")
+        except KeyboardInterrupt:
+            if isinstance(child, JobPopen):
+                job["process"] = finish(child, "cancelled")
+                job["done"].wait(3)
+                receipt = self._process_metadata(job)
+                confirmed = receipt.get("child_exited") is True and receipt.get("remaining_owned_processes") == 0
+                return result("cancelled", "cancelled_owned_job_stopped" if confirmed else "interrupted_owned_job_exit_unconfirmed")
+            return result("cancelled", "cancelled_no_process_termination")
         if cancel is not None and cancel.is_set():
             return result("cancelled", "late_output_ignored")
         if job.get("oversize"):

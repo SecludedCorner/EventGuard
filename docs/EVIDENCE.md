@@ -1,5 +1,13 @@
 # 證據與時間日誌
 
+## 2026-11-02 runner等待與completed通知的中斷
+
+原regression-01 0/1、修後01 28/29仍失敗；精簡frames除錯發現fixture只跑0.6秒，waiting有一秒節流，注入實際落在completed。原證據保留，不當等待重現。改為明確phase與1.6秒fixture；Git HEAD e074e47的原runner唯讀擷取至git-query-collection-baseline-20261102-01，probe-query-collection-baseline-20261102-01保存source/program hash及單次範圍，真CLI／自有子程序在waiting時KB仍穿透，exit3221225786／stdout空；子程序安全收尾自然0，無殘留／強停。只存函式／行號metadata與stderr有無，未保存原始例外內容。
+
+完成兩階段修正後UTC2026-11-01T16:30:40，verify-query-collection-cancel-20261102-03（四模組及命令見STATUS）：29/29、0skip、374語法、source_unchanged；build-query-collection-cancel-20261102-01編譯374／0error，guardian自然0／remaining0／無強停。真CLI查詢只注入synthetic collector，其真Python子程序不查OS；waiting／completed通知注入KB皆exit130、stdout單JSON／stderr空，status=cancelled／source_cancelled／rows空，coverage.process為已退出／remaining0／無強停，與自有程序回條相符。另驗unmanaged fixture保持pending，僅owner放行後自然結束、不強停。既有stdin真控制事件回歸也通過，但派送後仍只是KB注入，下一補真自有console事件；不升格原生來源／真入侵驗收。
+
+e074e4726fe3fac41df5737471178bc7dd010fa5（fix(cli): return non-success when budget status is blocked [skip ci]，+107/-1）已核兩遠端同SHA，git-budget-status-remote-20261102-01；模型／原生採集／CI0。
+
 ## 2026-11-02 budget status的blocked非成功碼
 
 verify-budget-status-regression-20261102-01：4項／1通過，missing、bootstrap unknown、exhausted都已有blocked JSON卻exit0，原失敗保留。修後UTC2026-11-01T16:17:47，verify-budget-status-20261102-01（完整命令見STATUS）：45/45、0skip、373語法、source_unchanged；build-budget-status-20261102-01編譯373／0error，guardian自然0／remaining0／無強停。六項新真CLI測試只在reports下臨時合成authority路徑執行；missing不建檔、corrupt bytes不變、未知／耗盡／active reservation不回成功，ready=0、重複initialize錯誤4及used值保留。既有帳本status交易可維護時鐘，不宣稱全部bytes不變；沒有讀寫正式帳本、模型或原生採集，不代表帳戶token／費用限制。
