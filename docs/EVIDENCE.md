@@ -1,5 +1,12 @@
 # 證據與時間日誌
 
+## 2026-11-01 Command First 規則與新聊天目標已落地
+
+AGENTS／CLAUDE 已記錄 Command First、GUI Second；完整 Prompt 見 COMMAND_FIRST_GOAL_PROMPT.md，既有 MAINTENANCE_GOAL 新增 CMD-001 能力矩陣與 CMD-002 指令缺口實作入口。工程輪次不限但未擴權；核心、真 agent／DSM 等未驗範圍保留。參考 Git 保存不代表能力已整合，下一新聊天先核最小缺口並直接實作，不停在研究。
+
+本次僅文件，核對內容／路徑／diff；來源 379 hash 與 verify-desktop-receipt-handoff-20261031-01 相同，沿用 11/11、0skip 與 build-desktop-receipt-handoff-20261031-01 的 356 編譯，非本次重跑。未啟 CI、模型、設備或第三方工具；新聊天待文件 checkpoint 推送與 main 核對後建立，主聊天交出實作寫入權，避免共享工作樹平行修改。
+
+
 ## 2026-11-01 14份參考Git資料已保存／Windows展開限制明示
 
 清單與固定SHA見research/OPEN_SOURCE_REFERENCES.md；D:\Github Project\Eventguard Reference已保存14庫、269個遞迴子模組。13庫checkout完整；osquery的libdevmapper／libudev保留檔名及libiptables大小寫衝突無法完整在Windows展開，3份自包含bundle與完整Git資料已驗證，不假報全樹乾淨。短gitdir修復深層metadata路徑；419份自有Git Job皆退出／無殘留，5次歷史失敗保留、0強停。

@@ -1,5 +1,14 @@
 # EventGuard 目前目標
 
+## 2026-11-01 Command First 目標與開源參考接續
+
+最新架構優先序為指令核心 → CLI／API 實測 → GUI 入口；最終資安 AI 盯哨目標與各真實驗收關卡不變。完整執行指令見 COMMAND_FIRST_GOAL_PROMPT.md；不設固定工程輪次，不把平台／模型批准當作無限制。
+
+- P1-CMD-001：核對現有 CLI／API／GUI 及共用服務，建立 COMMAND_CAPABILITY_MATRIX.md，選定首個可重現缺口。依賴現有程式與參考 Git 快照；已知下載完成但尚無能力矩陣，不涉及設備／模型。驗收：每個已盤點能力有命令／呼叫路徑、證據與缺口；下一步直接實作優先切片，不能只交報告。
+- P1-CMD-002：逐一補齊矩陣最高優先且已授權的指令能力，參考庫結論綁定 SHA／檔案／授權；實際 CLI／API 正反例、串接與錯誤輸出通過後保存並整合 main。依賴 CMD-001 的實際缺口；此為未實作佇列，後續需拆為具體產品成果與驗收條件，不能提前標 DONE。
+- 既有 04 真 agent 批准、真 DSM schema／取樣、真人／原生長跑與恢復仍獨立待驗；來源修改後重核 04 綁定。沒有該批准不執行，繼續已授權 CLI 工程；不回頭重做未受影響的 GUI 測試。
+
+
 ## 2026-11-01 P1-AGENT-INVESTIGATION-04 待單次批准
 
 04取代失效03的待驗範圍；來源checkpoint 772c818、完整四檔CLI與舊無模型預檢已核對，見STATUS及本機reports/investigation-acceptance-eventguard-single-20261031-04/AUTHORIZATION_REQUEST.md。M1僅準備部分完成，批准未取得；M2真receive/query/save/ACK與自然退出仍未驗；M3實際結果核對保存須在M2後執行。目標／準備文件本身不是批准，02不可重試，03不可執行。

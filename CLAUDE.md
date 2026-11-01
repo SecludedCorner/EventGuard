@@ -1,5 +1,12 @@
 # EventGuard 工作提醒
 
+## 2026-11-01 指令核心優先與持續工程目標
+
+採用 Command First、GUI Second：所有能力先有可組合／串接／自動化的 CLI／API 與實測，再提供 GUI；GUI 只能使用共用核心，不限制命令能力。完整可貼用目標見 docs/COMMAND_FIRST_GOAL_PROMPT.md，缺口與優先序沿用 MAINTENANCE_GOAL，不以研究報告或 GUI 完成宣稱產品完成。
+
+工程輪次／任務數不設固定上限，但不擴大模型、設備、敏感操作批准或平台額度；04 真調查仍待批准，來源改變先標失效。參考庫只讀、逐檔核授權，三項 Windows checkout 限制保留。每單元先本機 build／相關測試，立即 commit、普通 push 開發分支並整合／push main；不啟 CI，工作樹與待整合 diff 各不超過 500 行，約 200 行先拆。保留他人修改及保留的本地 main 歷史。
+
+
 ## 2026-11-01 最新真調查候選為04，CI不阻擋保存
 
 04包investigation-acceptance-eventguard-single-20261031-04已核來源／完整CLI與既有無模型預檢，尚未批准／入列／啟模型；02已消耗、03失效，不沿用歷史待批文字。先讀STATUS與本機04 AUTHORIZATION_REQUEST；新明確單次批准前不執行。GitHub CI不觸發，沿用本機build／相關測試、每單元commit／push／整合main與500行上限；NAS真資料仍待既定條件。
