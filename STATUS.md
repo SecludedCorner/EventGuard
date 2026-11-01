@@ -1,5 +1,12 @@
 # EventGuard 現況
 
+## 2026-11-01 開源參考清單已落地／下載進行中
+
+依使用者明確要求，整理13份官方參考庫（12軟體＋Sigma開放規則），見docs/research/OPEN_SOURCE_REFERENCES.md；目標D:\Github Project\Eventguard Reference，完整clone與遞迴子模組，不安裝／執行第三方程式、不連設備／啟模型。已查官方metadata與授權並另作唯讀審查；下載結果仍進行中，不能把清單當全數完成。
+
+本次只有研究文件；379來源hash與既有verify-desktop-receipt-handoff-20261031-01一致，沿用11/11、0skip及356編譯，另檢查官方URL／文件內容與diff。不使用CI。下一逐庫核HEAD、非shallow、子模組、Git物件／連通性及自有Job退出，完整下載證據只放D槽；產品真agent／NAS與其他待驗關卡維持。
+
+
 ## 2026-11-01 保存已同步／04真調查包僅完成準備
 
 直接ls-remote核對origin/main與origin/feat/local-codex-acceptance皆772c818，無待推commit、兩工作樹乾淨；唯一workflow僅workflow_dispatch，本次不啟GitHub CI。桌面交接11/11、0skip與356編譯沿用既有證據；379來源檔重新核對未變，單次回條逾時根因仍未證實。

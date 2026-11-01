@@ -1,5 +1,12 @@
 # 證據與時間日誌
 
+## 2026-11-01 開源參考清單已落地／下載進行中
+
+依使用者明確要求，整理13份官方參考庫（12軟體＋Sigma開放規則），見research/OPEN_SOURCE_REFERENCES.md；目標D:\Github Project\Eventguard Reference，完整clone與遞迴子模組，不安裝／執行第三方程式、不連設備／啟模型。已查官方metadata與授權並另作唯讀審查；下載結果仍進行中，不能把清單當全數完成。
+
+本次只有研究文件；379來源hash與既有verify-desktop-receipt-handoff-20261031-01一致，沿用11/11、0skip及356編譯，另檢查官方URL／文件內容與diff。不使用CI。下一逐庫核HEAD、非shallow、子模組、Git物件／連通性及自有Job退出，完整下載證據只放D槽；產品真agent／NAS與其他待驗關卡維持。
+
+
 ## 2026-11-01 04包準備核對，非真模型驗收
 
 命令：py -3.13 -B scripts/validate_delivery.py investigation --root reports/investigation-acceptance-eventguard-single-20261031-04 --codex-executable reports/agent-investigation-runtime-20261030-03/codex.exe（不含--execute）。輸出prepared_only_no_model_invoked。11月1日重算scope與保存值相等，四檔bundle及四項既有preflight證據重驗hash；不啟動CLI／host。approved=false、enqueued0／stages0；scope d846a523b3fad8fe9ae28ffd770e60312670b4ae92a5ad3c24f4606528649953，詳細本機preparation-review.json／AUTHORIZATION_REQUEST.md。
