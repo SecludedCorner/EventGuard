@@ -1,5 +1,10 @@
 # EventGuard 工作提醒
 
+## 2026-11-01 最新真調查候選為04，CI不阻擋保存
+
+04包investigation-acceptance-eventguard-single-20261031-04已核來源／完整CLI與既有無模型預檢，尚未批准／入列／啟模型；02已消耗、03失效，不沿用歷史待批文字。先讀STATUS與本機04 AUTHORIZATION_REQUEST；新明確單次批准前不執行。GitHub CI不觸發，沿用本機build／相關測試、每單元commit／push／整合main與500行上限；NAS真資料仍待既定條件。
+
+
 ## 2026-10-31 NAS 離線工具已可示範，真資料入口仍待條件
 
 結構檢查、本包去識別、整批summary分離與preview_nas_sample.py --synthetic已完成；30/30、354編譯、真Python合成CLI自然退出通過，詳STATUS。目前無真DSM schema／匯出前限制證據，無真檔選擇或保存入口，不自動連線／讀log／啟模型。下一受控真檔工具需可核對schema／來源範圍，取樣前一次列清具體批准；不重跑相同fixture取代實機。使用者要求不使用CI，本機驗證後照常commit／push／整合main，每單元500行內。

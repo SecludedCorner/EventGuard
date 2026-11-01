@@ -1,5 +1,12 @@
 # EventGuard 接手
 
+## 2026-11-01 先核04範圍，勿執行舊02／03
+
+已直接核遠端開發分支與main同772c818；GitHub CI僅手動且本次不觸發，照常本機測試後push／整合。04包reports/investigation-acceptance-eventguard-single-20261031-04的來源、完整runtime及既有無模型證據已核對；批准請求已補清180秒與收尾、輸出限制、單次不重試及舊批准失效，尚未批准／入列／啟模型。
+
+接續先讀04 AUTHORIZATION_REQUEST.md與preparation-review.json；只在對04明確批准後保存原文／UTC／scope並執行一次，src／scripts或bundle再變即不可沿用。沿用11/11、356編譯，379來源hash一致；原桌面單次逾時仍未解，不反覆重跑洗結果。NAS真格式／取樣、真人及其他真環境關卡仍保留；不連設備、不自行啟模型或CI。
+
+
 ## 2026-10-31 桌面回條發布交接已固定時序驗證
 
 新增實際Tk＋合成SQLite有界故障閘：強制set_status／confirm回條先入結果佇列、worker尚未清pending，再由UI接收。既有deferred會一次接續confirm，保存／確認各一次，journal清空、人工歷程一筆、pending2／ACK0；沒有猜測性修改產品worker順序。verify-desktop-receipt-handoff-20261031-01：三模組11/11、0skip、356語法／編譯、379來源hash一致，自有Job自然0、無殘留／強停；build見reports/build-desktop-receipt-handoff-20261031-01。

@@ -1,5 +1,14 @@
 # EventGuard 現況
 
+## 2026-11-01 保存已同步／04真調查包僅完成準備
+
+直接ls-remote核對origin/main與origin/feat/local-codex-acceptance皆772c818，無待推commit、兩工作樹乾淨；唯一workflow僅workflow_dispatch，本次不啟GitHub CI。桌面交接11/11、0skip與356編譯沿用既有證據；379來源檔重新核對未變，單次回條逾時根因仍未證實。
+
+reports/investigation-acceptance-eventguard-single-20261031-04已準備並重新核對四檔CLI、既有無模型預檢及目前source／launch綁定；見AUTHORIZATION_REQUEST.md、version-metadata.json及preparation-review.json。CLI 0.166.0-alpha.5.1／Python3.13.3／MCP1.6.0；一件自有合成事件、一個任務、180秒（清理收尾另計）、四工具各一次、失敗不重試，token／費用無硬上限保證。approved=false、enqueued0、stages0，未啟模型；02已消耗、03失效，不沿用舊批准。
+
+本次只完善本機驗收範圍及狀態文件，不新增產品或真環境通過結論。下一須04具體批准才可真調查；NAS仍缺真schema與匯出前有界證據及取樣範圍確認，真人／Web200%／長跑／重開機／真防守恢復各自未驗，不由CI狀態阻擋可執行本機工作。
+
+
 ## 2026-10-31 桌面回條發布交接已固定時序驗證
 
 新增實際Tk＋合成SQLite有界故障閘：強制set_status／confirm回條先入結果佇列、worker尚未清pending，再由UI接收。既有deferred會一次接續confirm，保存／確認各一次，journal清空、人工歷程一筆、pending2／ACK0；沒有猜測性修改產品worker順序。verify-desktop-receipt-handoff-20261031-01：三模組11/11、0skip、356語法／編譯、379來源hash一致，自有Job自然0、無殘留／強停；build見reports/build-desktop-receipt-handoff-20261031-01。

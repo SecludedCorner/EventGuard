@@ -1,5 +1,12 @@
 # EventGuard 目前目標
 
+## 2026-11-01 P1-AGENT-INVESTIGATION-04 待單次批准
+
+04取代失效03的待驗範圍；來源checkpoint 772c818、完整四檔CLI與舊無模型預檢已核對，見STATUS及本機reports/investigation-acceptance-eventguard-single-20261031-04/AUTHORIZATION_REQUEST.md。M1僅準備部分完成，批准未取得；M2真receive/query/save/ACK與自然退出仍未驗；M3實際結果核對保存須在M2後執行。目標／準備文件本身不是批准，02不可重試，03不可執行。
+
+下一動作只在04明確批准且scope未變後執行一件合成事件／一個CLI任務／180秒（收尾另計）／重試0，失敗保存真實結果。NAS真schema／匯出前限制／取樣確認、真人與真環境關卡仍獨立保留；桌面單次逾時根因未解，現有固定時序測試11/11不代替根因。GitHub CI不啟動，已授權本機工程逐單元測試、commit、普通push並整合main，工作樹及待整合diff各不超500行。
+
+
 ## 2026-10-31 DESKTOP-DETAIL-REFRESH 已修／整體目標保留
 
 外部人工狀態更新後列表／詳情不同步已有真Tk失敗重現與修正，最終8模組70/70、355編譯；明確刷新亦讀回外部新調查。測試途中單次回條逾時仍保留未解原因與固定worker診斷，不放寬等待或省略失敗。參見最新STATUS／EVIDENCE；下一只依新缺陷或獨立關卡的實際前置接續，原NAS真來源、真agent批准／閉環、真人六任務、200%、原生／長跑／重開機、可信恢復與防守均未完成，不重做既有通過單元。

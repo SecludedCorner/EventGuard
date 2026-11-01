@@ -1,5 +1,12 @@
 # 證據與時間日誌
 
+## 2026-11-01 04包準備核對，非真模型驗收
+
+命令：py -3.13 -B scripts/validate_delivery.py investigation --root reports/investigation-acceptance-eventguard-single-20261031-04 --codex-executable reports/agent-investigation-runtime-20261030-03/codex.exe（不含--execute）。輸出prepared_only_no_model_invoked。11月1日重算scope與保存值相等，四檔bundle及四項既有preflight證據重驗hash；不啟動CLI／host。approved=false、enqueued0／stages0；scope d846a523b3fad8fe9ae28ffd770e60312670b4ae92a5ad3c24f4606528649953，詳細本機preparation-review.json／AUTHORIZATION_REQUEST.md。
+
+本次文件變更沿用verify-desktop-receipt-handoff-20261031-01的11/11、0skip與build-desktop-receipt-handoff-20261031-01的356編譯；379來源hash一致，另檢查文件差異及引用。不是新增真收件／調查通過，02失敗、03失效保留。git ls-remote實核兩遠端refs皆772c818；CI未執行，推送與整合仍可直接進行。
+
+
 ## 2026-10-31 桌面回條發布交接已固定時序驗證
 
 新增實際Tk＋合成SQLite有界故障閘：強制set_status／confirm回條先入結果佇列、worker尚未清pending，再由UI接收。既有deferred會一次接續confirm，保存／確認各一次，journal清空、人工歷程一筆、pending2／ACK0；沒有猜測性修改產品worker順序。verify-desktop-receipt-handoff-20261031-01：三模組11/11、0skip、356語法／編譯、379來源hash一致，自有Job自然0、無殘留／強停；build見reports/build-desktop-receipt-handoff-20261031-01。
