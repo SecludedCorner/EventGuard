@@ -15,6 +15,7 @@
 | 採集與生命週期 | `monitor/stop`、`background`、`run`、`app status/start/pause/resume/stop/shutdown` | Monitor／OperatorAPI／Application，GUI共用 | fixture/max-cycles、期限、操作ID、退出回條 | 明確採集或控制自有Job；正常模型0；既有 test_application*、test_background_jobs；長跑未驗 |
 | 規則與playbook | `rules list/validate`、`playbook validate/simulate` | configured／playbooks；Web只展示規則 | 固定schema、JSON；設定檔編輯 | simulate 不執行處置；無敏感處置授權；既有 test_rules_playbooks |
 | 明確唯讀診斷 | `query`（--args文字或 - 讀stdin）、`events diagnose/inspect` | DiagnosticAPI／OperatorAPI；MCP；共用bounded_json | 8KiB UTF-8／32層／重複key拒絕，stdin可BOM、TTY拒絕，來源Job預算 | CMD-008/010：test_command_query_json/stdin，含真PowerShell→.cmd管線；query/diagnose可查OS、health/inspect只讀 |
+| 指令取消 | query stdin讀取中斷回固定結果；status=cancelled為exit130 | CLI輸入邊界／DiagnosticAPI既有取消狀態 | schema1.0、query_input_cancelled；輸入階段不dispatch，stdout結果／stderr診斷分開 | CMD-012注入取消實際CLI已驗；真console／原生來源中途取消未驗，不能把取消當安全或成功 |
 | 接收／ACK／重試／報告 | `events receive/ack/retry`、`report export` | OperatorAPI、共享inbox | event/query 綁定、JSON／escaped HTML | 明確保存收件／ACK或重試；既有 test_cli_workflow；ACK非結案 |
 | agent 派送／投遞證據 | `agent start/status/pause/resume/stop/capabilities/inspect/export` | agent_service／event_ingress；Web限制控制 | 七欄CloudEvents，耐久預算／Job | start預設檢查、execute須有效批准；06短期合成調查通過，正式來源／桌面喚醒另驗 |
 | 合成真調查批准綁定 | `scripts/validate_delivery.py investigation`預設只準備；execute需新scope批准 | investigation_scope／delivery_validation，共用builder與私有Job | 一事件／一任務／180秒；原生路徑正規化、capture前及事後launch hash核對 | CMD-009已修；06實際四步／分析／ACK／launch／自然退出通過；05綁定未完整通過仍保留，禁止重跑已消耗範圍 |
@@ -50,3 +51,7 @@ CMD-004已接線並驗收，可用 `EventGuard.cmd --format json events pending-
 ## 參考對照 R-CMD-005
 
 [Timesketch](https://github.com/google/timesketch/tree/ea3d2ddabb91f096da596d0959adad5925a58446)本機HEAD已核`ea3d2ddabb91f096da596d0959adad5925a58446`；`timesketch/api/v1/resources/sketch.py:SketchListResource.get`以paginate取得items／total／has_next，回objects與meta。根LICENSE及該檔頭為Apache-2.0，無子模組內容使用。借鏡有界清單同時表達總數及下一頁，避免把100筆窗口當全部；EventGuard以標準庫SQLite獨立實作case_page並重用既有判讀，對應test_advisory_case_page／test_command_advisory_cases。不複製／執行Timesketch或引入Flask／SQLAlchemy；不借此宣稱跨命令凍結快照、遠端查詢或真威脅關聯。
+
+## 參考對照 R-CMD-006
+
+[osquery](https://github.com/osquery/osquery/tree/99ea20493a2614eab939cbc02ebfaa114a3caecb)本機HEAD已核`99ea20493a2614eab939cbc02ebfaa114a3caecb`；`osquery/sql/sqlite_util.cpp:readRows`讀取結果後要求SQLITE_DONE，其他終態／finalize錯誤回failure，該檔狀態名稱表含SQLITE_INTERRUPT。根LICENSE及檔頭明列Apache-2.0 OR GPL-2.0-only，未使用子模組。借鏡「有結果或收到取消不等於成功終態」；EventGuard只獨立補CLI既有cancelled狀態的非成功碼及輸入中斷結果，對應test_command_query_cancellation。不複製／執行osquery、不引SQL引擎或原始錯誤文字，也不宣稱其Windows來源／取消語意與EventGuard完全相同；既有三項Windows子模組checkout限制保留。

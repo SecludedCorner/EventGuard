@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-01 CMD-012取消不誤判成功
+
+verify-query-cancel-regression-20261101-01為0/2，實際CLI子程序注入DiagnosticAPI cancelled時原exit0，注入stdin KeyboardInterrupt原exit3221225786、無結構結果；子程序stderr僅檢查有無，不將原內容寫入測試紀錄。修後UTC15:22:06執行`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-cancel-20261101-01 --timeout-seconds 120 --module test_command_query_cancellation --module test_command_query_stdin --module test_command_query_json --module test_cli_workflow`：18/18、0skip、369語法、source_unchanged，guardian自然0／remaining0／無強停；build-query-cancel-20261101-01編譯369、0error。
+
+兩個取消子程序自然exit130、stdout單JSON／stderr空，輸入中斷固定query_input_cancelled、不呼叫被禁用的query spy、不外洩注入文字、不建runtime。其他stdin／JSON／既有CLI流程仍通過。此為注入KeyboardInterrupt／API結果，未冒稱真console鍵盤、collector中途取消或整機驗收；模型／原生採集／網路0。前單元c43555cb191351e707cbfa4a5c49d7df1807a93a（test(advisories): verify case page snapshots during concurrent writes [skip ci]，+57/-1）兩遠端同SHA，git-advisory-concurrency-remote-20261101-01；Git Jobs自然0／remaining0／無強停，無CI。
+
 ## 2026-11-01 公告案件單頁並行快照
 
 UTC15:13:34，`py -3.13 -B scripts/verify.py --run-dir reports/verify-advisory-page-concurrency-20261101-01 --timeout-seconds 90 --module test_advisory_case_page`：4/4、0skip、368語法、source_unchanged，guardian自然0／remaining0／無強停；build-advisory-page-concurrency-20261101-01編譯368、0error。新增實際SQLite writer在首案投影前更新較後案件，已準備寫入但commit等待讀快照結束；整頁保留舊資料、之後detail見新版，writer thread有界join且未殘留。只改測試，無模型／網路／原生採集，不代表跨命令固定快照或多主機一致性。

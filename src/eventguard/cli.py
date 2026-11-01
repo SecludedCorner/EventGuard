@@ -336,7 +336,11 @@ def execute(args,runtime,progress=None):
             stream=getattr(sys.stdin,"buffer",sys.stdin)
             if stream is None or stream.isatty():
                 raise ValueError("query_stdin_required")
-            content=stream.read(8193)
+            try:
+                content=stream.read(8193)
+            except KeyboardInterrupt:
+                return {"schema_version":"1.0","status":"cancelled","error_code":"query_input_cancelled",
+                        "system_query_executed":False,"model_calls":0}
             if isinstance(content,bytes):
                 if len(content)>8192:
                     raise ValueError("query_input_limit")
@@ -482,6 +486,8 @@ def main(argv=None,root=None):
         result=execute(args,Runtime(root),ProgressPrinter(sys.stderr) if human and args.command=="monitor" else None)
         show(result)
         if isinstance(result,dict):
+            if result.get("status")=="cancelled":
+                return 130
             if args.command=="agent" and args.agent_command=="access" and result.get("setting_saved") is False:
                 return 4
             if args.command=="events" and args.event_command in {"pending-requests","operation-result"} and result.get("state")=="unknown":

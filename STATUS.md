@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-01 CMD-012取消結果不再回成功
+
+新增stdin讀取中斷的固定cancelled／query_input_cancelled結果，明示system_query_executed=false、model_calls0；CLI對status=cancelled回exit130，原本取消API結果可能exit0。UTC15:22:06，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-cancel-20261101-01 --timeout-seconds 120 --module test_command_query_cancellation --module test_command_query_stdin --module test_command_query_json --module test_cli_workflow`：18/18、0skip、369語法／編譯、source_unchanged，私有Job自然0／remaining0／無強停，新增模型／原生查詢0；build-query-cancel-20261101-01。
+
+regression-01保留0/2：注入API取消原exit0，stdin KeyboardInterrupt原無結構結果且OS exit3221225786。修後兩個實際CLI子程序皆stdout單JSON／stderr空／exit130、不建runtime；此為注入取消，不是真console鍵盤／原生查詢中途取消驗收。前一單元c43555cb191351e707cbfa4a5c49d7df1807a93a（test(advisories): verify case page snapshots during concurrent writes [skip ci]，+57/-1）已核兩遠端同SHA與乾淨工作樹，git-advisory-concurrency-remote-20261101-01；無CI／設備／新模型。
+
 ## 2026-11-01 公告頁面並行寫入快照已驗
 
 新增真SQLite並行fixture：頁面開始投影後，另一writer更新較後案件並等待commit；頁內保持舊版本、完成讀取後writer自然提交，下一次detail才見新版。UTC15:13:34，`py -3.13 -B scripts/verify.py --run-dir reports/verify-advisory-page-concurrency-20261101-01 --timeout-seconds 90 --module test_advisory_case_page`：4/4、0skip、368語法／編譯、source_unchanged，worker thread已join、自有Job自然0／remaining0／無強停，新增模型／網路0；build-advisory-page-concurrency-20261101-01。僅加驗測、不改案件規則，跨命令多頁仍不凍結。

@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-01 CMD-012查詢輸入取消與exit契約已修
+
+stdin讀取KeyboardInterrupt回固定cancelled且不dispatch，status=cancelled的CLI結果統一exit130，避免原exit0被當成功。18/18、369編譯見verify-query-cancel-20261101-01／build-query-cancel-20261101-01，修前0/2保留；是實際CLI注入取消，未驗真console或原生query中斷，不新增模型。上一公告快照測試c43555c已同步兩遠端，06歷史合成通過仍保留原來源／已消耗批准。
+
 ## 2026-11-01 公告單頁快照並行驗測補齊
 
 case_page真SQLite並行writer測試4/4與368編譯通過，證明同頁不混入中途變更、writer在讀取後自然提交，新detail才見新版；跨頁不凍結。見verify-advisory-page-concurrency-20261101-01／build-advisory-page-concurrency-20261101-01；無新模型／網路。CMD-011 CLI d7050ff兩遠端已核一致；既有外部DSM／真人／長跑／恢復前置仍各自保留，不反覆重跑未受影響測試。
