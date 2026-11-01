@@ -503,6 +503,8 @@ def main(argv=None,root=None):
         if isinstance(result,dict):
             if result.get("status")=="cancelled":
                 return 130
+            if args.command=="budget" and args.budget_command=="status" and result.get("state")=="blocked":
+                return 2
             if args.command=="agent" and result.get("setting_saved") is False and (args.agent_command=="access" or
                     args.agent_command=="automation" and result.get("failure_kind")=="io"):
                 return 4

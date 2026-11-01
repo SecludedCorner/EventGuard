@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-02 CMD-015預算受阻狀態不再誤回成功
+
+budget status的state=blocked過去仍exit0，現專門回exit2；ready仍0，initialize/reconcile原錯誤4不改。UTC2026-11-01T16:17:47，`py -3.13 -B scripts/verify.py --run-dir reports/verify-budget-status-20261102-01 --timeout-seconds 120 --module test_command_budget_status --module test_agent_budget`：45/45、0skip、373語法、source_unchanged；build-budget-status-20261102-01編譯373／0error，自有Job自然0／remaining0／無強停。修前regression-01為1/4，三項明確blocked卻exit0；修後六項真CLI合成帳本涵蓋missing／bootstrap unknown／exhausted／active reservation／corrupt／ready及initialize失敗。未初始化缺庫、不修復損壞、不清用量，未讀寫正式帳本／啟模型；本預算不是帳戶token或費用硬上限。
+
+cb155f76e4e174021f29987e6d884804a3e4bc9c（feat(cli): manage automatic agent opt-in through shared settings API [skip ci]，+129/-4）已核兩遠端同SHA，git-command-automation-remote-20261102-01；無CI。06歷史合成批准已消耗，真人／DSM／原生／長跑／防守恢復關卡保留。
+
 ## 2026-11-02 CMD-014 CLI自動opt-in設定已驗
 
 新增agent automation status/enable/disable（enable選填--codex-executable），與GUI共用describe/configure；只管理持久選項、不啟停worker／模型／採集或改接收gate。schema1.0／設定state、dispatcher_state=not_verified／child_exited=null。接收拒絕／無效exe／壞設定exit2，I/O保存失敗exit4；status/disable的無關exe選項拒絕。後續桌面明確Start可使用opt-in，既有接收gate／模型批准／預算仍適用。

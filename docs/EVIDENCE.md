@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-02 budget status的blocked非成功碼
+
+verify-budget-status-regression-20261102-01：4項／1通過，missing、bootstrap unknown、exhausted都已有blocked JSON卻exit0，原失敗保留。修後UTC2026-11-01T16:17:47，verify-budget-status-20261102-01（完整命令見STATUS）：45/45、0skip、373語法、source_unchanged；build-budget-status-20261102-01編譯373／0error，guardian自然0／remaining0／無強停。六項新真CLI測試只在reports下臨時合成authority路徑執行；missing不建檔、corrupt bytes不變、未知／耗盡／active reservation不回成功，ready=0、重複initialize錯誤4及used值保留。既有帳本status交易可維護時鐘，不宣稱全部bytes不變；沒有讀寫正式帳本、模型或原生採集，不代表帳戶token／費用限制。
+
+cb155f76e4e174021f29987e6d884804a3e4bc9c（feat(cli): manage automatic agent opt-in through shared settings API [skip ci]，+129/-4）已核兩遠端同SHA，git-command-automation-remote-20261102-01；所有Git Job自然0／remaining0／無強停、無CI。
+
 ## 2026-11-02 自動opt-in設定真CLI
 
 UTC2026-11-01T16:08:38，verify-command-automation-20261102-01（命令見STATUS）五模組52/52、0skip、372語法、source_unchanged；build-command-automation-20261102-01編譯372／0error，guardian自然0／remaining0／無強停。五項新測試包含真CLI status不建檔、接收gate拒絕不保存、獨立access enable後保存／重送／disable及API查回、無效wrapper／missing exe及無關參數拒絕、壞設定保留後明確修復、I/O失敗exit4、文字錯誤不偽裝停用成功。設定回dispatcher_state=not_verified／child_exited=null，inert exe未執行；只存預期設定檔，DB bytes與pending1／receipt0未變，模型／原生採集／正式設定修改0。桌面dispatcher是mock，非新真agent或worker退出證據。

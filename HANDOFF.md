@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-02 CMD-015預算狀態退出碼已修
+
+budget status受阻回2、ready回0，initialize/reconcile失敗4相容。verify-budget-status-20261102-01：45/45、373編譯，六種真CLI合成帳本狀態、缺庫不初始化／壞庫不修復／用量不重設，未讀寫正式帳本／啟模型；修前1/4保留。build-budget-status-20261102-01及Git Job自然退出／無殘留強停。cb155f7兩遠端已核同步；不把本工具預算當帳戶費用限制，外部驗收關卡仍各自保留。
+
 ## 2026-11-02 CMD-014 CLI／API設定均已驗
 
 agent automation status/enable/disable與GUI共用configure；52/52、372編譯見verify-command-automation-20261102-01／build-command-automation-20261102-01。只管理設定、不啟停worker／模型，dispatcher_state未驗／child_exited=null；接收拒絕／無效輸入／壞設定exit2，I/O失敗exit4。正式設定未改，API ebf0979兩遠端已核同步。不能把停用設定當既有GUI worker退出；其controller合作取消與真人／原生／DSM／長跑／恢復各關卡獨立保留。

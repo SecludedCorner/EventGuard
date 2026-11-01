@@ -23,7 +23,7 @@
 | 公告追蹤／適用性 | `advisories start/check/status/stop/cases` | intelligence engine/service；Web投影 | config白名單、來源狀態、案件證據 | check/start會擷取；本次不執行；既有公告證據，非真防守 |
 | 保存公告完整列舉 | `advisories cases --limit 100 --offset 100`；case-id/event-id選單案 | `IntelligenceStore.case_page`與advisory共用投影 | schema1.0／limit1..100／offset／total／has_more；單頁交易快照 | CMD-011 API44/44／CLI12/12；跨頁不凍結，不擷取／啟模型，missing selector=unknown/exit5 |
 | 合成／mock | `synthetic emit`、`deliver --adapter mock`、`mock process/status` | synthetic／transport.adapters | test namespace、明示mock | 不是真agent；既有 test_events_transport |
-| 預算／MCP | `budget status/initialize/reconcile`、`mcp` | BudgetAuthority／RemoteApplication | 耐久installation預算、固定工具 | initialize/reconcile明確寫入；不自動重設；MCP observer不冷啟App |
+| 預算／MCP | `budget status/initialize/reconcile`、`mcp` | BudgetAuthority／RemoteApplication | 耐久installation預算、固定工具；status blocked=exit2、ready=0 | CMD-015真CLI／預算45/45；initialize/reconcile明確寫入、錯誤4相容，不自動重設；MCP observer不冷啟App |
 
 CMD-003..009推進可追溯處置、GUI未決發現、結果查回、身分綁定、接收設定、輸入與批准契約，已逐單元實作及驗證。餘項依實際缺口增補，不代表所有CLI契約、原生覆蓋或整體盯哨已完整驗收。
 
