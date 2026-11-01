@@ -29,6 +29,12 @@ CMD-003..009推進可追溯處置、GUI未決發現、結果查回、身分綁�
 
 CMD-004已接線並驗收，可用 `EventGuard.cmd --format json events pending-requests --namespace test --limit 1`，再以 `events detail --namespace test --event-id <回傳ID>` 讀原operation ID；offset用於下一頁。查閱不確認或重送GUI要求。schema沿用catalog欄位，unknown時events空但total/request_total/has_more為null，不能解讀為零項。CMD-005可按operation ID查原結果；重送的目前狀態不等於原操作結果。
 
+## 參考對照 R-CMD-007：分類規則身分與版本
+
+[pySigma](https://github.com/SigmaHQ/pySigma/tree/2555624e3689e82824e7f2710397ae0c7c5adfd3)本機固定SHA同連結；sigma/rule/base.py的SigmaRuleBase保存id／modified／level／source，SigmaYAMLLoader拒絕duplicate key。根LICENSE為LGPL-2.1，具體檔案未另列授權；只讀設計，未複製或執行／引入YAML依賴。EventGuard已拒絕duplicate，實際缺口是自訂severity的分類來源未保存。
+
+[SigmaHQ/sigma](https://github.com/SigmaHQ/sigma/tree/05d1031f537e830b76da53bae2400c5814c89165)固定同SHA；rules/windows/process_creation/proc_creation_win_powershell_base64_encoded_obfusc.yml明列id／status／modified／logsource。根LICENSE將規則列為DRL 1.1，未採用規則內容或條件，不宣稱Sigma相容。只借鏡明確規則身分與版本；獨立實作decisions.classify及test_rule_decisions，保留winner條件快照與hash，不保存完整規則集、不把hash當來源認證／處置授權。API已驗，落盤及查閱為CMD-018下一步。
+
 ## 參考對照 R-CMD-001
 
 官方 [dfir-iris/iris-web](https://github.com/dfir-iris/iris-web) 固定 `37c5521ac009bd018a2fac7bc01d70735d130c6c`；其 `iris-backend` 子模組 `f94eb25b9de60cb994184da417d0353da3405d62`，`source/app/datamgmt/manage/manage_cases_db.py` 的 `close_case`／`reopen_case` 將案件狀態與保存動作分開。具體檔頭為 LGPL-3.0-or-later，根 `LICENSE.txt` 為 LGPLv3；本次只讀、未複製或執行第三方碼，沒有引入依賴。

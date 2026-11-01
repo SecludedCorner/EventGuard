@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-02 CMD-018分類決策API已驗／落盤待接
+
+既有自訂規則只改severity，原detector rule_ref不含分類者；新增rules.decisions.classify，與apply_rules共用最後命中判定，產生winner條件快照／hash、完整規則集hash、原severity及未命中記錄。不存顯示名稱、不變事件ID／detector ref；重算新副本保留原severity且冪等，來源內容hash不是授權。每批最多1000、事件含決策仍8KiB，舊apply_rules輸出相容；完整規則集未備份、歷史事件不補造。
+
+UTC2026-11-01T17:07:48，`py -3.13 -B scripts/verify.py --run-dir reports/verify-rule-decisions-20261102-02 --timeout-seconds 120 --module test_rule_decisions --module test_configured_rules`：23/23、0skip、377語法、source_unchanged；build-rule-decisions-20261102-01編譯377／0error，guardian自然0／remaining0／無強停，模型／OS0。API已驗，事件schema／monitor／CLI投影尚未接，下一立即整合持久決策，不以目前config重算冒充當時依據。a98c5b08fa719eb50ab2a5dfc41d037e7ace8143（fix(cli): distinguish unavailable query outcomes from success [skip ci]，+84/-3）兩遠端同SHA，git-query-outcomes-remote-20261102-01；無CI。
+
 ## 2026-11-02 CMD-017未適用／未請求不再回成功
 
 CLI status=not_applicable／not_requested現回exit5，operation_view_not_supported列為不合法要求exit2；JSON schema／status及既有product_not_allowlisted=2、health=0保持。UTC2026-11-01T16:47:20，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-outcomes-20261102-01 --timeout-seconds 120 --module test_command_query_outcomes --module test_core_cli --module test_cli_workflow`：31/31、0skip、375語法、source_unchanged；build-query-outcomes-20261102-01編譯375／0error，guardian自然0／remaining0／無強停。修前2/4，兩來源subtest及不支援view皆exit0；修後真CLI＋DiagnosticAPI、固定collector／禁止採集spy驗結果／退出碼，root不建runtime，模型／OS採集0。不是實機來源或已安全證據。

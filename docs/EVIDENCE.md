@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-11-02 規則判斷可追溯API
+
+UTC2026-11-01T17:07:48，verify-rule-decisions-20261102-02（命令見STATUS）：23/23、0skip、377語法、source_unchanged；build-rule-decisions-20261102-01編譯377／0error，guardian自然0／remaining0／無強停。五個新API案例核最後命中、原severity／detector身分與輸入保留、規則變更後舊副本不變、冪等／disabled／未命中、hash／條件／型別竄改及1000筆界線拒絕；共用舊分類器測試亦過。只為合成候選；落盤／CLI尚未接、不宣稱歷史trace已存在。a98c5b08fa719eb50ab2a5dfc41d037e7ace8143（fix(cli): distinguish unavailable query outcomes from success [skip ci]，+84/-3）兩遠端同SHA，git-query-outcomes-remote-20261102-01；模型／OS／CI0。
+
 ## 2026-11-02 query的未適用／未請求與要求錯誤
 
 verify-query-outcomes-regression-20261102-01：4項／2通過，來源not_applicable及not_requested兩subtest與unsupported view皆誤exit0。修後UTC2026-11-01T16:47:20，verify-query-outcomes-20261102-01（命令見STATUS）：31/31、0skip、375語法、source_unchanged；build-query-outcomes-20261102-01編譯375／0error，guardian自然0／remaining0／無強停。真CLI呼叫真DiagnosticAPI但僅注入固定collector，來源n/a／未請求=exit5，unsupported view在禁止採集spy前拒絕=2；health保留成功0、不允許產品保留2，stdout單JSON／stderr空、root不建runtime，無OS或模型。JSON schema及source狀態未改，這只證明CLI契約，不是實機來源或主機安全結論。

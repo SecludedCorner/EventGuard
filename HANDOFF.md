@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-02 CMD-018分類trace API完成／立即接落盤
+
+decisions.classify與舊apply_rules共用winner，保存條件快照與hash／base severity，23/23、377編譯見verify-rule-decisions-20261102-02／build-rule-decisions-20261102-01；API已驗但schema與monitor未接。下一允許並驗證可選classification欄位、監看原子提交與共用event_view讀取，測試改config後仍查回原決策、舊事件不補造。只用合成fixture、模型／OS0；a98c5b0兩遠端已核同步，NAS缺資料不阻擋此工程。
+
 ## 2026-11-02 CMD-017來源未適用／未請求退出碼已修
 
 verify-query-outcomes-20261102-01：31/31、375編譯，CLI來源not_applicable/not_requested=5、unsupported view=2，health=0／product白名單拒絕2相容；JSON schema未改、真CLI搭固定／禁止collector，無OS／模型／runtime。修前2/4保留；build-query-outcomes-20261102-01。50c4453兩遠端已核同步。下一NAS-002仍缺DSM／Log Center版本、紀錄類型及官方schema，已發文字資訊詢問，未取得不假定格式；真人／長跑／防守恢復等前置保留，06已消耗批准不重跑。

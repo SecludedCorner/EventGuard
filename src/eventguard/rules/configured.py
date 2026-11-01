@@ -182,6 +182,14 @@ def _matches(event, condition):
     return value == expected if op == "eq" else value in expected
 
 
+def _winner(event, configured):
+    for index in range(len(configured) - 1, -1, -1):
+        rule = configured[index]
+        if rule["enabled"] and all(_matches(event, item) for item in rule["conditions"]):
+            return index, rule
+    return None, None
+
+
 def apply_rules(events, rules):
     """Classify all candidates without mutating inputs or dropping any event."""
     configured = validate_rules(rules)
@@ -189,7 +197,7 @@ def apply_rules(events, rules):
         raise RulesValidationError("rules_invalid_events")
     result = copy.deepcopy(events)
     for event in result:
-        for rule in configured:
-            if rule["enabled"] and all(_matches(event, item) for item in rule["conditions"]):
-                event["severity"] = rule["severity"]
+        _, rule = _winner(event, configured)
+        if rule is not None:
+            event["severity"] = rule["severity"]
     return result
