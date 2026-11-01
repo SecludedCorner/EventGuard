@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-01 CMD-005 原操作結果API已驗／CLI待接
+
+EventCatalog.operation_result(event_id,operation_id)重用既有歷程表及唯讀交易，schema_version=1.0，分開operation原結果／current現況；available／not_recorded／unknown不混用。缺庫、壞schema／hash／來源／時間、anchor消失均unknown，不建庫／遷移／確認GUI journal／ACK。UTC13:44:20，`py -3.13 -B scripts/verify.py --run-dir reports/verify-operation-result-api-20261101-02 --timeout-seconds 120 --module test_disposition_operation_read --module test_disposition_history_read`：11/11、0skip、360語法／編譯，Job自然0、remaining0、無強停，來源未變；build-operation-result-api-20261101-01。01是加schema檢查／noop案例前的10/10，非最終scope、不累加。下一接CLI及實際跨命令驗收。
+
+CMD-004 c36cae4904cbad08eb0d409a5da8c238f774ef0c，+130/-3，已直接核兩遠端同SHA、工作樹乾淨，證據git-command-pending-remote-20261101-02。封存舊聊天後原整合checkout不在worktree清單；兩次因cwd不存在而未建立Git子程序，已保留失敗目錄，從origin/main重建同一路徑detached checkout後ff-only及push成功，未更動保留本地main。未啟模型／設備／CI，04失效維持。
+
 ## 2026-11-01 CMD-004 未決人工操作已可由命令發現
 
 新增 `events pending-requests --namespace test --limit 1 --offset 0`，直接呼叫 GUI 使用的 EventCatalog.pending_requests；JSON／文字皆可用。缺庫或離頁身分不符保持 unknown、exit5，與已核零件 available/exit0 分開；不派送、不確認回條、不 ACK。可將回傳 event_id 串接 events detail 讀取原要求。

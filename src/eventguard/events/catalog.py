@@ -277,6 +277,15 @@ class EventCatalog:
                                                                limit=1, event_id=event_id)
             return result
 
+    def operation_result(self, event_id, operation_id):
+        """Read a saved human operation; never replay it or confirm a GUI reply."""
+        from .disposition_history import OPERATION
+        from .disposition_operation_read import read_result
+        _identifier(event_id)
+        if type(operation_id) is not str or OPERATION.fullmatch(operation_id) is None:
+            raise ValueError("invalid_history_identity")
+        return read_result(self, event_id, operation_id)
+
     def handling_history_snapshot(self):
         """Explicit read-only snapshot; no backup file, deletion or ACK."""
         from .disposition_history_backup import snapshot

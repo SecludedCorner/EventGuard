@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-01 CMD-005原操作結果API
+
+UTC13:44:20：`py -3.13 -B scripts/verify.py --run-dir reports/verify-operation-result-api-20261101-02 --timeout-seconds 120 --module test_disposition_operation_read --module test_disposition_history_read`，11/11、0skip、360語法、source_unchanged，guardian自然exit0／remaining0／無強停。build-operation-result-api-20261101-01編譯360、0error；01為新增schema／noop測試前10/10，不累加。合成SQLite API驗證原結果／目前分離、跨事件不可讀取他案結果、缺庫不建立、anchor消失、hash/null/schema/source/time/status/changed損壞、noop及未確認GUI要求保留，DB bytes／pending／ACK不變。CLI尚未接，非真agent／採集／防守驗收。
+
+CMD-004保存：c36cae4904cbad08eb0d409a5da8c238f774ef0c，feat(cli): expose read-only pending request discovery [skip ci]，+130/-3；git-command-pending-remote-20261101-02證明兩遠端ref同SHA。integrate-01及push-main-01因封存後cwd不存在未建立子程序，未假報成功；recreate-integration-01由origin/main重建detached checkout，integrate-02／push-main-02成功且自然退出、無殘留／強停。原保留main refs未改寫，無CI。
+
 ## 2026-11-01 CMD-004實際CLI唯讀發現
 
 UTC13:38:05，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-pending-20261101-02 --timeout-seconds 120 --module test_command_pending_requests --module test_desktop_pending_catalog --module test_cli_workflow`：16/16、0skip、358語法、source_unchanged=true；guardian自然exit0、remaining0／無強停，逐測無殘留。build-command-pending-20261101-01/build.json編譯358、errors0。三個新實際CLI案例涵蓋pending頁→detail串接、文字／JSON、missing/verified-empty、離頁hash不符與邊界拒絕；讀取DB bytes不變，pending3/receipt0。catalog既有101事件分頁測試本次因入口相關重驗，非原生或真agent驗收。

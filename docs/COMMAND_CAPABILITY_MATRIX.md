@@ -7,6 +7,7 @@
 | 已存事件篩選／詳情 | `events list/detail --namespace test` | `EventCatalog.list/detail`；Web、Tk 同核心 | JSON，limit 1..1000、offset、severity/source/status | 唯讀；既有 test_event_catalog、test_cli_workflow；缺庫空列表不代表安全 |
 | 人工處置／重送 | `events set-status --event-id ID --status handled --operation-id OP` | `EventCatalog.set_status` → `EventStore.set_disposition`；Web／Tk | JSON，固定狀態，操作ID 1..128 | 寫狀態／歷程，不 ACK；CMD-003 補 CLI 操作ID；test_command_status_retry 實際程序驗收 |
 | GUI 未決請求發現 | `events pending-requests` | `EventCatalog.pending_requests`、`DesktopController.pending_requests` | namespace、limit 1..100、offset 0..128；固定event ID排序 | 唯讀；CMD-004已驗：test_command_pending_requests／test_desktop_pending_catalog；unknown=exit5，零件available=exit0 |
+| 原人工操作結果查回 | CLI待接 | `EventCatalog.operation_result(event_id,operation_id)` | schema1.0、operation原結果／current現況、available/not_recorded/unknown | CMD-005 API已驗，test_disposition_operation_read；只讀現有表、不確認journal；CLI實驗下一切片 |
 | 保存 metadata 調查／版本 | `events investigate/detail` | `EventCatalog.investigate/detail`；Web／Tk | 有界候選／成員／版本、gaps、非因果聲明 | investigate 寫調查；detail 唯讀；既有 test_investigation*；真agent分析另有契約 |
 | 人工歷程備份／預檢 | `events backup-history/preview-history` | catalog + disposition_history_backup；Tk | reports 固定名稱不覆寫；stdin 有界 JSON | 明確匯出／唯讀預檢，不恢復；既有 test_disposition_history_preview_cli |
 | 七來源已存觀察／概覽 | `sources list/show`、`overview/status/activity` | `source_status`、`OperatorAPI`；Web／Tk／MCP | JSON、limit，coverage/freshness 分開 | 唯讀；既有 test_operator_status、test_operator_success_contradictions；原生partial仍待驗 |
@@ -28,3 +29,9 @@ CMD-004已接線並驗收，可用 `EventGuard.cmd --format json events pending-
 官方 [dfir-iris/iris-web](https://github.com/dfir-iris/iris-web) 固定 `37c5521ac009bd018a2fac7bc01d70735d130c6c`；其 `iris-backend` 子模組 `f94eb25b9de60cb994184da417d0353da3405d62`，`source/app/datamgmt/manage/manage_cases_db.py` 的 `close_case`／`reopen_case` 將案件狀態與保存動作分開。具體檔頭為 LGPL-3.0-or-later，根 `LICENSE.txt` 為 LGPLv3；本次只讀、未複製或執行第三方碼，沒有引入依賴。
 
 適用：人工狀態是獨立耐久操作，必須保留其來源與歷程。不適用：IRIS close 並不能作 EventGuard 收件ACK或已排除威脅的證據，也不能證明此版本提供 EventGuard 所需冪等契約。EventGuard 以既有標準庫交易實作，觸點 `cli.py` → `EventCatalog.set_status` → `record_attempt`；驗收 `test_command_status_retry` 檢查重送、後續狀態、衝突與 pending/ACK 分離。
+
+## 參考對照 R-CMD-002
+
+官方 [Velociraptor](https://github.com/Velocidex/velociraptor/tree/61daa5f66b8bbaf946ab5d57dd8b087e07663762)，固定SHA `61daa5f66b8bbaf946ab5d57dd8b087e07663762`；`services/launcher/flows.go:GetFlowDetails` 以client_id+flow_id查持久context。根LICENSE AGPLv3，具體檔頭AGPL-3.0-or-later，無子模組內容採用。官方 [Shuffle](https://github.com/Shuffle/Shuffle/tree/c439ab39ee3780d629219fa3cd0e08aec795cb3b)，本機HEAD已核 `c439ab39ee3780d629219fa3cd0e08aec795cb3b`；`backend/go-app/test-suite/execution_e2e_test.go:getExecution/TestExecutionLifecycle`按execution_id讀結果、核對重讀與持久歷史一致。根LICENSE AGPLv3，該測試檔無另標授權。
+
+採用契約：操作與讀回結果分開，固定ID、原結果／現況分離；EventGuard觸點為既有record_attempt表及新disposition_operation_read／catalog API，對應test_disposition_operation_read。未採用遠端執行、授權token、VQL或第三方程式；僅以既有Python標準庫獨立實作，不複製／執行第三方碼，不新增依賴。hash僅核資料一致性，不證明操作者或來源可信。

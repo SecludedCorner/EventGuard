@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-01 CMD-005 API可用，接續CLI
+
+operation_result提供schema1.0的原人工操作／目前狀態分離，不新增表，missing/legacy壞schema／payload不符／anchor消失為unknown，讀取不確認GUI回條。11/11、360編譯，證據verify-operation-result-api-20261101-02／build-operation-result-api-20261101-01。下一直接接events operation-result與實際CLI串接及exit5，不把API測試當命令已驗。CMD-004 c36cae4兩遠端已核同SHA；整合detached checkout已安全重建，路徑沿用，原本地main refs保留。
+
 ## 2026-11-01 CMD-004完成／唯一寫入已轉交本聊天
 
 使用者明確指定本聊天接手寫入；另外兩個EventGuard聊天及其唯讀審查已交回成果、確認無執行中mutation後封存，保留歷史與refs。CMD-003 fbb7203已同步開發分支／main。CMD-004命令pending-requests共用catalog，unknown=exit5、唯讀不resolve/dispatch/ACK；16/16、358編譯及失敗修正證據見STATUS／EVIDENCE。下一CMD-005操作結果查回應重用既有operation表，原操作與目前狀態分開，缺anchor/hash/schema維持unknown；不可把GUI未決journal當可自動重送或已確認。
