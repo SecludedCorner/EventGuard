@@ -12,7 +12,7 @@
 | CMD-007／P1 | 接收權限agent_access的CLI入口，已驗 | verify-command-agent-access-20261101-02：34/34、363編譯 | 保存整合；僅本工具設定，receiver／模型／退出證據獨立，正式設定未變 |
 | CMD-008／P0 | query JSON輸入歧義已修／已驗 | verify-command-query-json-20261101-02：32/32、364編譯，修前0/1保留 | 保存整合；8KiB／32層、duplicate/depth固定碼exit2，不dispatch／不建runtime |
 | CMD-009／P0 | 批准launch綁定正規化／前後核對已修 | verify-investigation-launch-binding-20261101-01：5/5、365編譯；明示fake CLI＋真SDK | 保存整合；路徑／參數drift在capture前拒絕，原05的完整launch驗收仍未過 |
-| CMD-010／P1 | query有界stdin與真.cmd管線已實作／已驗 | verify-query-stdin-20261101-01：16/16、366編譯；修前.cmd失敗保留，模型0 | 保存整合；8KiB／32層／duplicate-key、TTY／超量且未EOF拒絕，保留literal相容 |
+| CMD-010／P1 | query有界stdin與真.cmd管線已實作／已驗 | 初驗16/16；分段／精確8KiB／普通檔案補驗6/6、371編譯；模型0 | 保存整合；8KiB／32層／duplicate-key、TTY／超量且未EOF拒絕，保留literal相容 |
 | CMD-011／P1 | 保存公告案件完整列舉，API／CLI／並行頁快照均已驗 | API44/44、CLI12/12；並行snapshot模組4/4、368編譯，模型／網路0 | 保存整合；cases陣列相容，missing selector=unknown/exit5，跨命令不凍結資料 |
 | CMD-012／P0 | CLI取消非成功、Windows管線EOF前取消均已修／已驗 | 真私有console控制事件＋相關六模組31/31、371編譯；修前失敗保留 | 保存整合；空／半份JSON在EOF前exit130、不dispatch；真人鍵盤／原生中斷獨立保留 |
 | AGENT-05／P1 | 批准已消耗；四步／ACK／退出成立，完整launch綁定未過 | 05 scope-launch-audit／post-fix-readonly-audit；相對／絕對路徑唯一差異，原資料保留 | 不重跑05；修正保存後只能準備新scope及另次明確批准，不能把fake回歸升格真驗 |

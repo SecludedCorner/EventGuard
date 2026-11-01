@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-01 stdin成功分段與邊界已補驗
+
+verify-query-input-boundaries-20261101-01：6/6、371編譯，真CLI四段BOM／JSON不提前dispatch、EOF後保留識別；恰8KiB管線／普通檔案成功、超一byte且未EOF拒絕，自有程序自然退出／無強停殘留。只增加測試，產品來源b88310d及31/31取消／stdio證據沿用其範圍；b88310d兩遠端已核同SHA、工作樹乾淨，無新模型。
+
 ## 2026-11-01 CMD-012真Windows管線取消已補
 
 先保留真私有console探測04及regression的EOF延遲失敗，改用共用_InputPipe的有界可用資料讀取後31/31、371編譯通過，見verify-query-console-cancel-20261101-01／build-query-console-cancel-20261101-01。空／半份JSON都以真控制事件在EOF前取消exit130、不dispatch，自有Job自然退出／無強停或殘留。訊號只針對精確核對只有自有CLI的私有console；未驗真人鍵盤或原生來源中途取消。下一補成功分段與恰好8KiB／檔案重導向的實際CLI邊界，模型0；779510a已同步兩遠端。

@@ -1,5 +1,9 @@
 # EventGuard 現況
 
+## 2026-11-01 stdin分段／上限／檔案重導向補驗
+
+UTC15:48:49，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-input-boundaries-20261101-01 --timeout-seconds 90 --module test_command_query_stdin`：6/6、0skip、371語法、source_unchanged；build-query-input-boundaries-20261101-01編譯371／0error，自有Job自然0／remaining0／無強停。真CLI分四段接BOM／JSON且每段仍等待EOF，完成後保留request_id；管線及普通檔案重導向恰8192bytes成功、8193且未EOF拒絕。只擴測試，產品來源沿用b88310df5f5692c7242aa57a2656080743248dfb（fix(cli): cancel Windows query pipe input before producer EOF [skip ci]，+151/-6），已同步兩遠端，git-query-console-remote-20261101-01；新增模型／原生採集／CI0。
+
 ## 2026-11-01 CMD-012 Windows管線即時取消已修／真控制事件已驗
 
 真私有console探測04證明原read(8193)收到Ctrl+C仍等EOF；前01..03因console歸屬不符／未接通未發訊號，保留原結果。新增command_input.read_bounded_stdin，對全新且唯一讀者的Windows stdin pipe重用application_stdio._InputPipe按可用量輪詢，最多讀取剩餘預算；不建reader thread／改handle模式，regular file及注入stream保留原讀法。私有pipe讀取可用上限參數，MCP預設64KiB相容。

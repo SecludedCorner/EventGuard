@@ -18,12 +18,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class CommandQueryStdinTests(unittest.TestCase):
-    def call(self, content, *, keep_open=False):
+    def call(self, content, *, keep_open=False, input_file=None):
         with tempfile.TemporaryDirectory() as temporary:
             child = spawn([sys.executable, "-B", "-c",
                 "import sys; from eventguard.cli import main; raise SystemExit(main(sys.argv[2:],root=sys.argv[1]))",
                 temporary, "--format", "json", "query", "health", "--args", "-"],
-                env=dict(os.environ, PYTHONPATH=str(ROOT / "src")), stdin=subprocess.PIPE,
+                env=dict(os.environ, PYTHONPATH=str(ROOT / "src")), stdin=input_file if input_file is not None else subprocess.PIPE,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             try:
                 if keep_open:
@@ -32,8 +32,15 @@ class CommandQueryStdinTests(unittest.TestCase):
                     child.wait(timeout=10)  # Size refusal must not wait for producer EOF.
                     out, err = child.stdout.read(), child.stderr.read()
                     child.stdin.close()
+                elif isinstance(content, tuple):
+                    for chunk in content:
+                        child.stdin.write(chunk)
+                        child.stdin.flush()
+                        with self.assertRaises(subprocess.TimeoutExpired):
+                            child.wait(timeout=.1)  # No dispatch before real EOF.
+                    out, err = child.communicate(timeout=10)
                 else:
-                    out, err = child.communicate(input=content, timeout=10)
+                    out, err = child.communicate(input=content if input_file is None else None, timeout=10)
             finally:
                 receipt = finish(child, reason="test_teardown", grace=1)
             self.assertTrue(receipt["child_exited"])
@@ -67,6 +74,22 @@ class CommandQueryStdinTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary, patch("sys.stdin", Terminal()), redirect_stdout(output):
             code = main(["--format", "json", "query", "health", "--args", "-"], root=temporary)
         self.assertEqual((code, json.loads(output.getvalue())["status"]), (2, "invalid_request"))
+
+    def test_fragmented_bom_and_json_wait_for_eof_then_preserve_identity(self):
+        code, value = self.call((b"\xef", b"\xbb", b'\xbf{"request_id":', b'"fragmented-input"}'))
+        self.assertEqual((code, value["status"], value["request_id"]), (0, "ok", "fragmented-input"))
+
+    def test_exact_byte_limit_and_regular_file_redirection(self):
+        raw = b'{"request_id":"exact-byte-limit"}'
+        exact = raw + b" " * (8192 - len(raw))
+        for from_file in (False, True):
+            with self.subTest(from_file=from_file), tempfile.TemporaryFile() as source:
+                source.write(exact)
+                source.seek(0)
+                code, value = self.call(exact, input_file=source if from_file else None)
+                self.assertEqual((code, value["status"], value["request_id"]), (0, "ok", "exact-byte-limit"))
+        code, value = self.call(exact + b" ", keep_open=True)
+        self.assertEqual((code, value["status"]), (2, "invalid_request"))
 
     @unittest.skipUnless(os.name == "nt" and shutil.which("pwsh.exe"), "Windows PowerShell unavailable")
     def test_windows_wrapper_accepts_json_pipeline(self):

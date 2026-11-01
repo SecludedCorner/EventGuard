@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-01 stdin分段、精確byte界線與普通檔案
+
+UTC15:48:49，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-input-boundaries-20261101-01 --timeout-seconds 90 --module test_command_query_stdin`：6/6、0skip、371語法、source_unchanged；build-query-input-boundaries-20261101-01編譯371／0error。真CLI producer把BOM切三段及JSON分開送，每段等待0.1秒仍不退出，EOF後得到同request_id；恰8192bytes在管線／TemporaryFile重導向皆成功，8193bytes且producer未EOF即exit2。stdout單JSON／stderr空、root無runtime，自有Job自然0／remaining0／無強停；僅合成health／模型0。
+
+產品來源未變，前單元b88310df5f5692c7242aa57a2656080743248dfb（fix(cli): cancel Windows query pipe input before producer EOF [skip ci]，+151/-6）已核開發／main兩遠端同SHA，git-query-console-remote-20261101-01；之前31/31取消／stdio證據沿用而非本次重跑，06真CLI合成證據及已消耗批准保留原範圍，無CI。
+
 ## 2026-11-01 Windows管線Ctrl+C不再等待EOF
 
 reports/probe-query-native-cancel-20261101-01..03保留console不相符／Attach不可用的結果，訊號皆0；04改由自有CLI核GetConsoleProcessList恰含自身後GenerateConsoleCtrlEvent一次，確實送出但2秒未退出，關閉producer後才自然exit130。probe-source.py／scope／result／controller保留，未碰其他console／程序。產品回歸verify-query-console-cancel-regression-20261101-01：一個測試的空／半份JSON均失敗cancellation_waited_for_producer_eof，無強停／殘留。
