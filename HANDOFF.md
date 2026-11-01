@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-01 CMD-011 CLI／API案件分頁均已驗
+
+advisories cases可用limit/offset與total/has_more列舉全部保存案，保留cases陣列與合法單案結果；missing selector改unknown/exit5、參數衝突exit2、壞庫／記錄exit4，清單missing/empty分開。12/12、368編譯見verify-command-advisory-pages-20261101-01／build-command-advisory-pages-20261101-01；新增模型／網路0，不凍結跨命令頁面。核心API9225df9已同步兩遠端。06歷史合成真CLI證據不擴成此次新來源的模型／實機驗證，無重跑。
+
 ## 2026-11-01 CMD-011 API已驗，接續公告cases命令分頁
 
 case_page重用advisory投影，44/44、367編譯見verify-advisory-case-page-20261101-01／build-advisory-case-page-20261101-01。同頁交易快照，跨命令頁面不承諾凍結資料；readonly呼叫不改庫／查網路／啟模型。下一加advisories cases --limit/--offset並保留原cases陣列及detail selector，實測超100案、missing/empty/corrupt與參數拒絕；API通過不等於CLI已接。CMD-010 b0a3d21已同步兩遠端。

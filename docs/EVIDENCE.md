@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-01 CMD-011公告案件真CLI分頁
+
+UTC15:05:49，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-advisory-pages-20261101-01 --timeout-seconds 120 --module test_command_advisory_cases --module test_advisory_case_page --module test_application_advisories`：12/12、0skip、368語法、source_unchanged，guardian自然0／remaining0／無強停；build-command-advisory-pages-20261101-01編譯368、0error。真CLI子程序以101合成案跑100+1頁→末案detail，total/has_more正確且無重複，unknown不提升安全、讀取DB bytes不變。另驗missing庫不建目錄、已初始化空庫、missing selector=exit5、越界／selector合分頁=exit2、壞JSON=exit4且無cases半批輸出。CLI stdout單JSON／stderr空；模型／網路0，非真公告／原生環境。
+
+核心API9225df9d0cb1c9fdc7be825fdf772f92a353c038（feat(advisories): expose bounded saved case pages [skip ci]，+123/-25）已同步兩遠端，git-advisory-page-remote-20261101-01；fetch的工具觀察曾先返回session，已以該fetch receipt.json核自然0／remaining0後才整合，未重啟fetch。所有Git Job自然退出／無殘留／強停，無CI。
+
 ## 2026-11-01 CMD-011保存公告案件分頁API
 
 UTC14:57:43，`py -3.13 -B scripts/verify.py --run-dir reports/verify-advisory-case-page-20261101-01 --timeout-seconds 120 --module test_advisory_case_page --module test_intelligence_store`：44/44、0skip、367語法、source_unchanged，guardian自然0／remaining0／無強停；build-advisory-case-page-20261101-01編譯367、0error。101個合成case以100+1完整讀取且與既有advisory投影相同、身分無重複，unknown評估不提升安全；界線／超尾空頁及損壞JSON整頁拒絕、讀前後DB bytes一致。此為API／SQLite驗證，CLI尚未接，無網路／新模型／真公告或實機驗收。

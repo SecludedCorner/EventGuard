@@ -51,6 +51,8 @@ def parser():
     stop_intel=intel_sub.add_parser("stop",help="合作停止本工具的公告背景程序")
     stop_intel.add_argument("--grace-seconds",type=float,default=15)
     cases=intel_sub.add_parser("cases",help="查閱本機公告及適用性證據。不送給模型。")
+    cases.add_argument("--limit",type=int,help="清單每頁1..100案，預設100；不可與單案selector合用。")
+    cases.add_argument("--offset",type=int,help="清單起點，預設0；不可與單案selector合用。")
     case_selector=cases.add_mutually_exclusive_group()
     case_selector.add_argument("--case-id")
     case_selector.add_argument("--event-id")
@@ -251,13 +253,23 @@ def execute(args,runtime,progress=None):
         if args.advisory_command=="_serve":
             return service.serve(args.host_root,args.run_id,args.job_name)
         from .intelligence.store import IntelligenceStore
+        listing=not args.event_id and not args.case_id
+        if not listing and (args.limit is not None or args.offset is not None):
+            raise ValueError("case_selector_pagination_conflict")
+        limit,offset=args.limit if args.limit is not None else 100,args.offset if args.offset is not None else 0
+        IntelligenceStore.validate_case_page(limit,offset)
         path=runtime.path("data/advisories/intelligence.sqlite3")
         if not path.exists():
-            return {"cases":[],"state":"not_started","model_calls":0}
+            if not listing:
+                return {"state":"unknown","reason":"advisory_store_not_started","model_calls":0}
+            return {"schema_version":"1.0","cases":[],"state":"not_started","model_calls":0,
+                    "total":None,"limit":limit,"offset":offset,"has_more":None}
         store=IntelligenceStore(path,readonly=True)
         if args.event_id:
-            return store.event_case(args.event_id) or {"state":"unknown","reason":"event_case_not_found"}
-        return store.advisory(args.case_id) if args.case_id else {"cases":store.cases(),"model_calls":0}
+            return store.event_case(args.event_id) or {"state":"unknown","reason":"event_case_not_found","model_calls":0}
+        if args.case_id:
+            return store.advisory(args.case_id) or {"state":"unknown","reason":"case_not_found","model_calls":0}
+        return store.case_page(limit=limit,offset=offset)
     operator=OperatorAPI(runtime.root)
     if args.command=="run":
         if not args.fixture and args.max_cycles is not None:

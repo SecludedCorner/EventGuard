@@ -4,6 +4,8 @@
 
 ## 前景監看與事件
 
+保存公告案件可用`EventGuard.cmd --format json advisories cases --limit 100 --offset 0`，依total/has_more增加offset讀下一頁，再用`--case-id <ID>`或`--event-id <ID>`查單案。預設cases陣列保留、分頁欄位為新增，單頁同一交易，跨命令期間資料仍可能改變；查閱不擷取公告／採集或呼叫模型。selector不可和limit/offset合用（exit2）。missing單案現在回unknown/exit5（舊case-id曾null/exit0），自動化應先檢查exit及state；missing保存庫清單仍not_started且total/has_more為null，不等於已核零案。
+
 `EventGuard.cmd agent access status`唯讀查看本工具接收權限；enable／disable明確保存此gate。這是接收設定，receiver狀態仍須另外驗證；它不授權模型、啟動／停止程序或確認退出，既有程序用其owner的控制入口。保存失敗exit4，壞設定blocked=exit2；正常等待不呼叫模型。實際執行enable仍由使用者決定，本次開發只操作隔離合成安裝。
 
 ```powershell

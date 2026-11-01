@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-01 CMD-011公告案件CLI已可完整分頁
+
+advisories cases新增--limit1..100／--offset，預設cases陣列仍為100案，另有schema1.0／total／has_more等欄位，使用已驗共用case_page；可分頁→case-id詳情。missing庫清單保留not_started但total/has_more為null、不建目錄；有庫空頁為available/total0。單案找不到改unknown／exit5（舊case-id曾null/exit0），selector與分頁選項合用或越界exit2，損壞記錄exit4且不輸出半批。
+
+UTC15:05:49，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-advisory-pages-20261101-01 --timeout-seconds 120 --module test_command_advisory_cases --module test_advisory_case_page --module test_application_advisories`：12/12、0skip、368語法／編譯、source_unchanged，自有Job自然0／remaining0／無強停，新增模型／網路0；build-command-advisory-pages-20261101-01。實際CLI驗101案、selector／missing/empty/corrupt／界線及DB bytes不變，不是新公告／模型／實機驗收。API9225df9d0cb1c9fdc7be825fdf772f92a353c038（feat(advisories): expose bounded saved case pages [skip ci]，+123/-25）已核兩遠端同SHA、乾淨工作樹，git-advisory-page-remote-20261101-01。
+
 ## 2026-11-01 CMD-011公告案件分頁API已驗／CLI待接
 
 既有advisories cases固定只讀最早100案且無分頁欄位；新增IntelligenceStore.case_page，limit1..100／offset，回schema1.0／total／has_more，同一交易讀ID、總數、案件及既有評估投影，不另實作判讀規則。舊cases/advisory API相容；損壞資料不回完整或半批成功。UTC14:57:43，`py -3.13 -B scripts/verify.py --run-dir reports/verify-advisory-case-page-20261101-01 --timeout-seconds 120 --module test_advisory_case_page --module test_intelligence_store`：44/44、0skip、367語法／編譯、source_unchanged，自有Job自然0／remaining0／無強停，模型／網路0；build-advisory-case-page-20261101-01。API驗101案分頁、空頁／界線、unknown及DB bytes保留，下一直接接CLI。
