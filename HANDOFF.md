@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-02 分類來源與既有接收／派送擴大相容驗證
+
+verify-classification-compatibility-20261102-01四模組43/43、379編譯／source_unchanged，build-classification-compatibility-20261102-01；一般inbox／fixture批准／fake dispatcher回歸及新增九種保存來源的分類investigate→重開→detail均過，gaps／unknown／無允許處置／ACK不變。e9f409b兩遠端已核同步；src/scripts未變，07 scope保持，但明確批准尚未到達，仍不得執行。NAS資訊詢問亦待答，其餘真人／原生／長跑／恢復關卡不因合成測試通過而完成；不重跑相同未受影響來源當進度。
+
 ## 2026-11-02 分類故障恢復完成／07待具體批准
 
 verify-classification-recovery-20261102-02兩模組16/16、379編譯；最大分類＋400字元Unicode報告經保存／ACK後完成檔／finalize故障與零TTL，重開保留原query／分類／分析、pin可收尾且無第二次來源ACK。首輪15/16為新測試對缺result誤期望null，已修測試；無產品改動／模型，source hash仍757df523347fc167648e34440a7049af28b3159b0d82bcc76f2277586f918324。build-classification-recovery-20261102-01及lifecycle-evidence可核，ba978ef兩遠端已同步。

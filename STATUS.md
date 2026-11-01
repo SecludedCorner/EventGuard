@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-02 新分類來源與既有接收／派送契約相容
+
+UTC2026-11-01T18:25:04，`py -3.13 -B scripts/verify.py --run-dir reports/verify-classification-compatibility-20261102-01 --timeout-seconds 180 --module test_queue_inbox --module test_investigation_scope --module test_agent_dispatch --module test_investigation_source_golden`：43/43、0skip、379語法、source_unchanged；build-classification-compatibility-20261102-01編譯379／0error，guardian自然0／remaining0／無強停。新增九種已存來源的分類版本，透過真catalog investigate→重開→detail查回快照，逐案例保留既有gaps、owner unknown、not_assessed、allowed_actions空與未ACK；同九種legacy版本仍缺分類，未補造。接收一般profile、fixture批准及明示fake dispatcher回歸亦通過；非真LLM或新主機資料，不把各舊來源測試數相加。
+
+e9f409bded157fc8f3d3b2ad2dbdee84c5a4c66e（test(inbox): cover classified report recovery across finalization faults [skip ci]，+85/-3）兩遠端已核同步，git-classification-recovery-remote-20261102-01。本次只改測試／文件，07仍綁定source757df523347fc167648e34440a7049af28b3159b0d82bcc76f2277586f918324且未入列／未啟；已發具體批准詢問，尚未收到。NAS格式資訊及真人／實機關卡仍缺前置；整體盯哨未完成，無新模型／OS／CI。
+
 ## 2026-11-02 CMD-018分類證據故障恢復已驗／07只準備未執行
 
 UTC2026-11-01T18:19:10，`py -3.13 -B scripts/verify.py --run-dir reports/verify-classification-recovery-20261102-02 --timeout-seconds 100 --module test_queue_investigation --module test_inbox_retention_recovery`：16/16、0skip、379語法、source_unchanged；build-classification-recovery-20261102-01編譯379／0error，guardian自然0／remaining0／無強停。新增最大12條件分類＋400字元Unicode報告，注入保存、ACK後完成檔及finalize失敗，實際重開SQLite／inbox並以零TTL清理：原分類／query／分析保留、回條受pin保護，重開收尾後pin0、pending0，不再ACK來源。首輪15/16僅新測試把未保存的result缺欄位誤期望null，已按既有契約改assertNotIn，失敗證據保留；產品程式未變、模型／OS0。

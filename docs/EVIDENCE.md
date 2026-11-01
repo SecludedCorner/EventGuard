@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-11-02 九種保存來源分類調查與接收／派送相容性
+
+UTC2026-11-01T18:25:04，verify-classification-compatibility-20261102-01四模組43/43、0skip、379語法、source_unchanged（命令見STATUS），build-classification-compatibility-20261102-01編譯379／0error；guardian自然0／remaining0／無強停。test_investigation_source_golden新增classified=True版本，九種fixture每種兩事件，真SQLite／catalog調查後重開detail比對原分類及保存調查；各expected gaps／成員數、owner unknown、not_assessed、allowed_actions空、missing diagnostic及原payload hash／delivery狀態均保留。舊classified=False九案例仍無classification，不補歷史。lifecycle-evidence各列9 synthetic_cases及gaps_preserved／source_ack_unchanged。一般QueueInbox、source-bound fixture approval、明示fake dispatcher相關回歸通過，未啟真模型或新原生採集，不與不同source hash的舊測試數相加。e9f409bded157fc8f3d3b2ad2dbdee84c5a4c66e兩遠端已核，git-classification-recovery-remote-20261102-01；07源未變、批准仍未取得。
+
 ## 2026-11-02 分類與Unicode報告的保存／最終化故障恢復
 
 UTC2026-11-01T18:19:10，verify-classification-recovery-20261102-02（命令見STATUS）16/16、0skip、379語法、source_unchanged；build-classification-recovery-20261102-01編譯379／0error，guardian自然0／remaining0／無強停。新增真SQLite／檔案API測試，最大12條條件快照與400字元非BMP Unicode摘要，先注入保存失敗確認pending1／receipt0且無result；重開保存後分別注入ACK後完成檔、finalize失敗，兩者真實pending0／receipt1／pin1。零TTL清掉原event仍保留pinned回條，重開maintenance恢復完整query／分析／分類並解除pin；以禁止EventStore.acknowledge的patch確認恢復及重播無第二次來源ACK。lifecycle-evidence列兩故障的classification_preserved／finalization_pins0。首輪15/16是測試誤讀缺result為null，不是產品缺陷，原unit-tests保留。無模型／原生採集。

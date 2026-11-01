@@ -37,6 +37,12 @@ def golden_events(case, now=NOW):
 
 class SourceGoldenTests(unittest.TestCase):
     def test_saved_source_shapes_known_relationships_and_explicit_unknowns(self):
+        self.check_saved_source_shapes(classified=False)
+
+    def test_saved_classification_preserves_all_source_gaps_and_readback_identity(self):
+        self.check_saved_source_shapes(classified=True)
+
+    def check_saved_source_shapes(self, *, classified):
         cases = json.loads(FIXTURE.read_text(encoding="utf-8"))["cases"]
         self.assertEqual(len(cases), 9)
         with tempfile.TemporaryDirectory() as temporary, patch("subprocess.Popen",side_effect=AssertionError("no child/model/collector")):
@@ -46,6 +52,12 @@ class SourceGoldenTests(unittest.TestCase):
                     source = root / "reports" / case["id"] / "source"
                     store = EventStore(source)
                     events = golden_events(case)
+                    if classified:
+                        from eventguard.rules.configured import ENUM_FIELDS
+                        from eventguard.rules.decisions import classify
+                        events = classify(events, [dict(id='golden-classifier', name='inert fixture',
+                            enabled=True, severity='high', conditions=[dict(field='coverage_status',
+                            op='in', value=sorted(ENUM_FIELDS['coverage_status']))])])
                     for event in events:
                         store.enqueue(event)
                     before = [(row["event_id"],event_payload_hash(validate_event(row)),row["delivery_status"]) for row in store.list_events()]
@@ -58,8 +70,16 @@ class SourceGoldenTests(unittest.TestCase):
                     self.assertEqual(value["allowed_actions"],[])
                     self.assertEqual(value["incident_conclusion"],"not_assessed")
                     self.assertEqual(value["diagnostic_context"]["state"],"missing")
-                    self.assertEqual(saved,EventCatalog(root,"test",directory=source).detail(events[0]["event_id"])["investigation"])
+                    detail = EventCatalog(root,"test",directory=source).detail(events[0]["event_id"])
+                    self.assertEqual(saved,detail["investigation"])
+                    if classified:
+                        self.assertEqual(detail["event"]["classification"], events[0]["classification"])
+                    else:
+                        self.assertNotIn("classification", detail["event"])
                     self.assertEqual(before,[(row["event_id"],event_payload_hash(validate_event(row)),row["delivery_status"]) for row in store.list_events()])
+        self.evidence = dict(scope='nine saved synthetic source shapes through catalog investigate/reopen/detail',
+            synthetic_cases=len(cases), classified=classified, model_calls=0, native_queries=0,
+            gaps_preserved=True, source_ack_unchanged=True)
 
 
 if __name__=="__main__":
