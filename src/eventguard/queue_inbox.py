@@ -27,6 +27,7 @@ MAX_RECORD_BYTES = 16 * 1024
 MAX_STATE_BYTES = 8 * 1024 * 1024
 MAX_EVENTS = 1000
 STAGE_RESERVE = 4096
+INVESTIGATION_STAGE_RESERVE = MAX_RECORD_BYTES
 EVENT_TYPES = frozenset({"coverage.degraded", "listener.changed", "persistence.changed", "protection.changed", "monitor_gap", "advisory.changed"})
 DECISIONS = frozenset({"reviewed_metadata", "needs_more_evidence"})
 _ID = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
@@ -196,6 +197,10 @@ class QueueInbox:
     def _usage(self):
         return sum(_guard(p).stat().st_size for p in self.state_dir.iterdir() if p.is_file())
 
+    @property
+    def _stage_reserve_bytes(self):
+        return INVESTIGATION_STAGE_RESERVE if self.investigation else STAGE_RESERVE
+
     def _reserve(self, replacing=None):
         total = 0
         for path in self.state_dir.glob("snapshot-*.json"):
@@ -206,7 +211,7 @@ class QueueInbox:
             for stage in ("query", "result", "completed"):
                 candidate = self._path(stage, identity)
                 if candidate != replacing and not candidate.exists():
-                    total += STAGE_RESERVE
+                    total += self._stage_reserve_bytes
         return total
 
     def _pending_finalizations(self):
@@ -282,6 +287,7 @@ class QueueInbox:
                 usage -= size
                 removed += 1
         return {"completed_removed": removed, "storage_bytes": self._usage(), "reserved_bytes": self._reserve(),
+                "stage_reserve_bytes": self._stage_reserve_bytes,
                 "active_events": len(list(self.state_dir.glob("snapshot-*.json"))),
                 "completed_events": len(list(self.state_dir.glob("completed-*.json"))), "limits": dict(self.policy)}
 
@@ -375,7 +381,7 @@ class QueueInbox:
                 if existing != value:
                     raise QueueInboxError("inbox_immutable_record_conflict")
                 return
-            if path.name.startswith(("query-", "result-", "completed-")) and len(encoded) > STAGE_RESERVE:
+            if path.name.startswith(("query-", "result-", "completed-")) and len(encoded) > self._stage_reserve_bytes:
                 raise QueueInboxError("inbox_stage_reserve_exceeded")
             # Existing legacy triples may exceed the new reservation budget;
             # still let them make progress while actual bytes fit. New receive
@@ -482,8 +488,8 @@ class QueueInbox:
                     raise QueueInboxError("inbox_event_capacity_pending_preserved")
                 record = {"event_id": identity, "payload_hash": source["payload_hash"],
                           "snapshot": source["snapshot"], "received_at": _utc()}
-                self._maintain(needed=len(_bytes(record)), reserve_extra=3*STAGE_RESERVE)
-                if self._usage()+len(_bytes(record))+self._reserve()+3*STAGE_RESERVE > min(MAX_STATE_BYTES, self.policy["max_bytes"]):
+                self._maintain(needed=len(_bytes(record)), reserve_extra=3*self._stage_reserve_bytes)
+                if self._usage()+len(_bytes(record))+self._reserve()+3*self._stage_reserve_bytes > min(MAX_STATE_BYTES, self.policy["max_bytes"]):
                     raise QueueInboxError("inbox_state_capacity_pending_preserved")
                 self._immutable(self._path("snapshot", identity), record)
             else:
@@ -537,7 +543,7 @@ class QueueInbox:
             candidate = {key: value[key] for key in ("summary", "finding", "limitations", "next_step")}
             candidate["fact_keys"] = list(value["observations"])
             checked = report(candidate, query["saved_evidence"], query["query_id"])
-            if checked != value:
+            if _bytes(checked) != _bytes(value):
                 raise ValueError()
             return checked
         except (ValueError, TypeError, KeyError):
@@ -568,7 +574,7 @@ class QueueInbox:
                 recorded_at=_utc(), incident_conclusion="not_assessed", real_agent_wake_verified=False)
             bundle = dict(kind="inbox-completed-v1", snapshot=record, query=query, result=result,
                           acked_at=result["recorded_at"])
-            if len(_bytes(bundle)) > STAGE_RESERVE:
+            if len(_bytes(bundle)) > self._stage_reserve_bytes:
                 raise QueueInboxError("inbox_stage_reserve_exceeded")
             self._immutable(self._path("result", identity), result)
             return {**result, "outbox_acknowledged": False}

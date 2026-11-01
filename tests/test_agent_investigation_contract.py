@@ -1,5 +1,6 @@
 """Synthetic evidence references, bounded agent prose, no model or native query."""
 import json
+from copy import deepcopy
 import unittest
 
 from eventguard.agent_investigation import evidence, report, result_id
@@ -37,3 +38,18 @@ class AgentInvestigationContractTests(unittest.TestCase):
         self.event['synthetic'] = False
         with self.assertRaisesRegex(ValueError, 'synthetic_event_required'):
             evidence(self.event)
+
+    def test_saved_classification_is_citable_and_report_does_not_alias_source(self):
+        from eventguard.rules.decisions import classify
+        rule = dict(id='saved-classifier', name='PRIVATE DISPLAY NAME', enabled=True, severity='critical',
+                    conditions=[dict(field='event_type', op='eq', value=self.event['event_type'])])
+        event = classify([self.event], [rule])[0]
+        observed = evidence(event)
+        self.assertIn('classification', observed['facts'])
+        self.assertEqual(observed['facts']['classification'], event['classification'])
+        self.assertNotIn('PRIVATE', json.dumps(observed))
+        before = deepcopy(observed)
+        saved = report(dict(self.value, fact_keys=['classification']), observed, 'query-one')
+        self.assertEqual(saved['observations']['classification'], event['classification'])
+        saved['observations']['classification']['matched'] = False
+        self.assertEqual(observed, before)

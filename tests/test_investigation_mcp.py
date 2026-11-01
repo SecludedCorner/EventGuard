@@ -1,6 +1,7 @@
 """Installed SDK four-tool path; no model and no native collection."""
 import importlib.util
 import json
+from copy import deepcopy
 from pathlib import Path
 import tempfile
 import unittest
@@ -55,3 +56,36 @@ class InvestigationMCPTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('features.shell_tool=false', args)
         with self.assertRaises(ValueError):
             command('codex', 'python', 'source', 'state', self.identity, self.root, investigation=True, allow_live=True)
+
+    async def test_sdk_carries_saved_classification_only_in_synthetic_investigation_evidence(self):
+        from eventguard.rules.decisions import classify
+        from eventguard.queue_inbox import QueueInboxError
+        rule = dict(id='sdk-classifier', name='inert fixture', enabled=True, severity='critical',
+                    conditions=[dict(field='event_type', op='eq', value=self.event['event_type'])])
+        event = classify([self.event], [rule])[0]
+        source = self.root / 'classified-source'
+        EventStore(source).enqueue(event)
+        legacy = self.module.build_server(source, self.root/'minimal', self.identity)
+        received = json.loads((await legacy.call_tool('receive_event', {}))[0].text)
+        self.assertEqual(set(received['snapshot']), {'event_id','event_type','transition','severity','synthetic','observed_at','coverage_status'})
+        minimal = json.loads((await legacy.call_tool('query_evidence', {'event_id': self.identity}))[0].text)
+        self.assertNotIn('saved_evidence', minimal)
+        server = self.module.build_server(source, self.root/'classified-state', self.identity, investigation=True)
+        await server.call_tool('receive_event', {})
+        queried = json.loads((await server.call_tool('query_evidence', {'event_id': self.identity}))[0].text)
+        observed = queried['saved_evidence']
+        self.assertEqual(observed['facts']['classification'], event['classification'])
+        value = dict(summary='Saved classification still needs evidence.', finding='metadata_requires_followup',
+            fact_keys=['classification'], limitations=observed['limitations'], next_step='request_authorized_evidence')
+        saved = json.loads((await server.call_tool('save_investigation', dict(event_id=self.identity,
+            query_id=queried['query_id'], report=value)))[0].text)
+        backend = server._inbox_backend
+        record = backend.evidence(self.identity)['result']['investigation']
+        self.assertEqual(record['observations']['classification'], event['classification'])
+        forged = deepcopy(record)
+        forged['observations']['classification']['matched'] = 1
+        with self.assertRaisesRegex(QueueInboxError, 'inbox_investigation_invalid'):
+            backend._investigation_report(forged, {'saved_evidence': observed, 'query_id': queried['query_id']})
+        self.assertEqual(EventStore(source).stats()['pending'], 1)
+        await server.call_tool('ack_event', dict(event_id=self.identity, query_id=queried['query_id'], decision='needs_more_evidence'))
+        self.assertEqual(EventStore(source).stats()['pending'], 0)

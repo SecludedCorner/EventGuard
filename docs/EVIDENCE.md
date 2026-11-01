@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-02 合成調查保存分類引用與提前預留
+
+verify-investigation-classification-regression-20261102-01為3/4，原facts丟分類；新增後SDK／API13/13，但最大12條合法條件的budget-regression-01為4/5，query成功／save因4KiB combined stage不足而拒絕，pending1／receipt0保留。調查profile以既有MAX_RECORD_BYTES16KiB作每個缺少stage預留、三階段接收前保留；一般4KiB及全域8MiB未放寬。原oversize注入測試改patch調查常數，仍驗ACK前拒絕。
+
+UTC2026-11-01T17:46:37，verify-investigation-classification-20261102-02（命令見STATUS）24/24、0skip、379語法、source_unchanged；build-investigation-classification-20261102-01編譯379／0error，guardian自然0／remaining0／無強停。新案例驗分類可引用／hash綁定／沒有private name/path/summary、report副本不改source；SDK直接呼叫回傳TextContent的JSON確有分類並可保存／ACK，一般模式即使source有分類也只七欄且不回saved_evidence。偽造nested matched=1被canonical report比對拒絕；大快照完成ACK，小state第二件在receive前拒絕且未丟pending。此SDK為in-process非wire，未證新model／MCP程序退出；下一補owned stdio。5a28a537ec9334100bc02528225588a8d5903396（feat(cli): expose saved rule decisions through shared event views [skip ci]，+167/-9）兩遠端同SHA，git-command-rule-decision-remote-20261102-01；模型／OS／CI0。
+
 ## 2026-11-02 分類快照透過CLI／共用投影查閱
 
 最終型別審查新增verify-rule-decision-cache-types-regression-20261102-01：5/6，cached matched=1／rule_index=false兩subtest被Python equality放過。修為cache有分類即執行同一嚴格驗證器後，UTC2026-11-01T17:29:35的verify-command-rule-decision-20261102-02五模組71/71、0skip、379語法、source_unchanged，build-command-rule-decision-20261102-02編譯379／0error；guardian自然0／remaining0／無強停，模型／OS0。原70及4證據仍各保留原來源、未相加冒稱總數。

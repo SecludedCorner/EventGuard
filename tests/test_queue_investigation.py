@@ -35,6 +35,27 @@ class QueueInvestigationTests(unittest.TestCase):
     def ack(self):
         return self.inbox.ack_event(self.identity, self.query['query_id'], 'needs_more_evidence')
 
+    def test_large_legal_classification_fits_reserved_investigation_stages(self):
+        from eventguard.rules.configured import ENUM_FIELDS
+        from eventguard.rules.decisions import classify
+        rule = dict(id='wide-classifier', name='inert bounded fixture', enabled=True, severity='critical',
+            conditions=[dict(field='coverage_status', op='in', value=sorted(ENUM_FIELDS['coverage_status'])) for _ in range(12)])
+        event = classify([self.event], [rule])[0]
+        source = self.root/'large-source'
+        store = EventStore(source)
+        store.enqueue(event)
+        inbox = QueueInbox(source, self.root/'large-inbox', self.identity, investigation=True)
+        inbox.receive_event()
+        query = inbox.query_evidence(self.identity)
+        value = dict(self.report, fact_keys=['classification'], limitations=query['saved_evidence']['limitations'])
+        try:
+            inbox.save_investigation(self.identity, query['query_id'], value)
+        except QueueInboxError:
+            self.assertEqual((store.stats()['pending'], store.stats()['receipt_count']), (1, 0))
+            raise
+        inbox.ack_event(self.identity, query['query_id'], 'needs_more_evidence')
+        self.assertEqual((store.stats()['pending'], store.stats()['receipt_count']), (0, 1))
+
     def test_separate_save_restart_and_ack_preserve_traceable_report(self):
         with self.assertRaisesRegex(QueueInboxError, 'saved_investigation_required'):
             self.ack()
@@ -74,7 +95,21 @@ class QueueInvestigationTests(unittest.TestCase):
         self.assertEqual(self.store.stats()['pending'], 1)
 
     def test_oversized_completion_is_rejected_before_source_ack(self):
-        with patch('eventguard.queue_inbox.STAGE_RESERVE', 100):
+        with patch('eventguard.queue_inbox.INVESTIGATION_STAGE_RESERVE', 100):
             with self.assertRaisesRegex(QueueInboxError, 'stage_reserve_exceeded'):
                 self.save()
         self.assertEqual(self.store.stats()['pending'], 1)
+
+    def test_investigation_receive_reserves_all_stages_before_disclosing_second_event(self):
+        second = dict(self.event, event_id=self.identity+'-second')
+        self.store.enqueue(second)
+        state = self.root/'bounded-inbox'
+        limits = dict(max_events=3, max_bytes=65536)
+        first = QueueInbox(self.root/'source', state, self.identity, investigation=True, limits=limits)
+        first.receive_event()
+        self.assertEqual(first.maintain()['reserved_bytes'], 3*16384)
+        other = QueueInbox(self.root/'source', state, second['event_id'], investigation=True, limits=limits)
+        with self.assertRaisesRegex(QueueInboxError, 'capacity'):
+            other.receive_event()
+        self.assertEqual(len(list(state.glob('snapshot-*.json'))), 1)
+        self.assertEqual((self.store.stats()['pending'], self.store.stats()['receipt_count']), (2, 0))

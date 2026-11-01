@@ -1,5 +1,7 @@
 # 本機操作與故障排除
 
+合成調查profile的`saved_evidence.facts.classification`可引用事件已保存的分類，沒有決策時不補造；一般七欄inbox仍不包含此資料，live不能啟用合成調查profile。報告最多引用10個實際fact。合成調查會在接收前為query／result／completed各保留16KiB；一般profile仍各4KiB，所有模式都受既有每記錄16KiB及state總8MiB限制，容量不足不ACK／不丟pending。這些調查資料不是模型啟動批准。
+
 新監看事件會保存`classification`：原severity、規則集內容hash，以及最後命中規則的ID／條件快照／hash。以`events detail`或`events inspect`的`event.classification`查閱，會讀當時資料，不使用目前rules.json重算。legacy事件沒有此欄位，代表未保存；`matched=false`才表示當時有記錄但未有啟用規則命中。只保存winner條件，完整規則集只有hash，不能當完整規則備份或來源認證；分類不是處置授權。舊診斷快取可能仍缺此欄位，保留原內容不補造。
 
 CLI的not_applicable／not_requested結果現在回exit5（過去可能0），表示沒有可用的完整結果。query的operation_view_not_supported回exit2；product_not_allowlisted仍為2、health成功仍為0。JSON schema與status不變；串接時檢查exit及status，不將未適用、未請求或空rows解讀為已查證安全。

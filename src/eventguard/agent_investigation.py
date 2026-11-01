@@ -1,6 +1,7 @@
 """Bounded synthetic investigation evidence and untrusted agent report contract."""
 import hashlib
 import json
+import copy
 
 from .diagnostics.review import row_view
 from .events.schema import validate_event
@@ -23,6 +24,8 @@ def evidence(event):
     projected = row_view(event['evidence'])
     facts = {key: projected[key] for key in sorted(FACTS & projected.keys()) if projected[key] is not None}
     facts['coverage_status'] = event['coverage']['status']
+    if 'classification' in event:
+        facts['classification'] = copy.deepcopy(event['classification'])
     gaps = ['synthetic_only', 'current_native_state_unverified', 'host_safety_not_assessed']
     if event['coverage']['status'] != 'ok':
         gaps.append('source_incomplete')
@@ -40,7 +43,7 @@ def report(value, observed, query_id):
     if (type(summary) is not str or not 1 <= len(summary) <= 400
             or not summary.strip() or not summary.isprintable()):
         raise ValueError('investigation_summary_invalid')
-    if (type(keys) is not list or not 1 <= len(keys) <= 9
+    if (type(keys) is not list or not 1 <= len(keys) <= len(FACTS) + 2
             or any(type(key) is not str or key not in observed['facts'] for key in keys)
             or len(set(keys)) != len(keys)):
         raise ValueError('investigation_fact_reference_invalid')
@@ -52,7 +55,7 @@ def report(value, observed, query_id):
     return dict(profile=PROFILE, event_id=observed['event_id'], query_id=query_id,
         payload_hash=observed['payload_hash'], evidence_hash=observed['evidence_hash'],
         summary=summary, finding=value['finding'],
-        observations={key: observed['facts'][key] for key in sorted(keys)}, limitations=sorted(gaps),
+        observations={key: copy.deepcopy(observed['facts'][key]) for key in sorted(keys)}, limitations=sorted(gaps),
         next_step=value['next_step'], data_trust='untrusted_agent_assessment',
         incident_conclusion='not_assessed', remediation_performed=False)
 

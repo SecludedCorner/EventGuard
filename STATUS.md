@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-11-02 CMD-018合成調查inbox可引用原分類／stdio待補
+
+僅investigation合成profile的saved_evidence.facts在事件已帶決策時附classification，report可引用並深複製，引用上限10；evidence hash綁整份資料。一般fixed-minimal七欄snapshot保持、不新增live揭露。落盤報告改canonical bytes比對防boolean／整數混淆。合成調查各階段依既有16KiB記錄上限預留；一般profile仍4KiB，全域8MiB不變，接收前先保留三個缺少stage，避免合法大快照晚到save才失敗。
+
+UTC2026-11-01T17:46:37，`py -3.13 -B scripts/verify.py --run-dir reports/verify-investigation-classification-20261102-02 --timeout-seconds 180 --module test_agent_investigation_contract --module test_investigation_mcp --module test_queue_investigation --module test_investigation_evidence --module test_inbox_retention_recovery`：24/24、0skip、379語法、source_unchanged；build-investigation-classification-20261102-01編譯379／0error，guardian自然0／remaining0／無強停。原3/4缺欄位、最大快照4/5因舊4KiB預留不足均保留；修後最大12條件可存／ACK、64KiB小state在第二件前拒絕且未ACK、SDK直接四工具確認實際serialized資料與報告。只是in-process SDK／合成，下一真stdio及退出證據，不冒稱真agent；模型／OS／CI0。
+
+5a28a537ec9334100bc02528225588a8d5903396（feat(cli): expose saved rule decisions through shared event views [skip ci]，+167/-9）兩遠端同SHA，git-command-rule-decision-remote-20261102-01。
+
 ## 2026-11-02 CMD-018分類決策CLI／共用投影已接
 
 提交前新增cache型別回歸，5/6重現Python equality將matched=1／rule_index=false當成正確boolean／整數；現對cache分類另用嚴格validate_decision。最終UTC2026-11-01T17:29:35，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-rule-decision-20261102-02 --timeout-seconds 180 --module test_command_rule_decision --module test_rule_decision_storage --module test_operator_api --module test_event_catalog --module test_investigation_diagnostics`：71/71、0skip、379語法、source_unchanged；build-command-rule-decision-20261102-02編譯379／0error，guardian自然0／remaining0／無強停，模型／OS0。以下70與4各保留原來源範圍、不相加。

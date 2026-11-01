@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-02 分類資料已進合成調查profile，續驗stdio
+
+investigation=true才在facts帶原classification，七欄snapshot／一般profile不擴揭露；24/24、379編譯見verify-investigation-classification-20261102-02／build-investigation-classification-20261102-01。最大合法快照的4KiB晚期失敗已保留／修復，合成調查stage預留16KiB、全域8MiB仍固定，第二件空間不足在receive前拒絕；舊超量測試改注入該profile的budget常數，未放寬上限。SDK直接四工具與typed report／deep copy已驗，下一用既有owned stdio與已安裝SDK補wire／自然退出，無模型；5a28a53兩遠端已核同步。
+
 ## 2026-11-02 分類trace的CLI與共用event_view已接
 
 最終verify-command-rule-decision-20261102-02為71/71、379編譯／source_unchanged；build-command-rule-decision-20261102-02。提交前cache型別5/6失敗保留，已阻擋matched=1與rule_index=false的equality混淆，舊缺欄位版式仍精確相容。專用inbox實作位於queue_inbox.py／scripts/eventguard_inbox_mcp.py，下一核對，未啟模型。
