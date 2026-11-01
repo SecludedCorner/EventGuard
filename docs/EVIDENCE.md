@@ -1,5 +1,12 @@
 # 證據與時間日誌
 
+## 2026-11-01 14份參考Git資料已保存／Windows展開限制明示
+
+清單與固定SHA見research/OPEN_SOURCE_REFERENCES.md；D:\Github Project\Eventguard Reference已保存14庫、269個遞迴子模組。13庫checkout完整；osquery的libdevmapper／libudev保留檔名及libiptables大小寫衝突無法完整在Windows展開，3份自包含bundle與完整Git資料已驗證，不假報全樹乾淨。短gitdir修復深層metadata路徑；419份自有Git Job皆退出／無殘留，5次歷史失敗保留、0強停。
+
+本機README.md／DOWNLOAD_STATUS.md／download-manifest.json及_download-audit-20261101保存來源、SHA、子模組、Git物件／連通性、LFS及退出證據；未安裝或執行第三方程式，不連設備、不啟模型或CI。379來源hash未變，文件範圍沿用11/11、0skip與356編譯；另驗證清單與diff。下一可從psutil／osquery來源語意、Fluent Bit日誌契約與Velociraptor任務契約作具體工程比較；原真agent／NAS與真人等獨立驗收未完成，下載不是產品完成。
+
+
 ## 2026-11-01 開源參考清單已落地／下載進行中
 
 依使用者明確要求，整理13份官方參考庫（12軟體＋Sigma開放規則），見research/OPEN_SOURCE_REFERENCES.md；目標D:\Github Project\Eventguard Reference，完整clone與遞迴子模組，不安裝／執行第三方程式、不連設備／啟模型。已查官方metadata與授權並另作唯讀審查；下載結果仍進行中，不能把清單當全數完成。
