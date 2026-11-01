@@ -11,7 +11,9 @@
 | CMD-006／P1 | CLI人工處置可綁定已讀payload，已驗 | verify-command-status-identity-20261101-01：8/8、362編譯 | 保存整合；交易內檢查及固定衝突碼，省略新選項仍相容 |
 | CMD-007／P1 | 接收權限agent_access的CLI入口，已驗 | verify-command-agent-access-20261101-02：34/34、363編譯 | 保存整合；僅本工具設定，receiver／模型／退出證據獨立，正式設定未變 |
 | CMD-008／P0 | query JSON輸入歧義已修／已驗 | verify-command-query-json-20261101-02：32/32、364編譯，修前0/1保留 | 保存整合；8KiB／32層、duplicate/depth固定碼exit2，不dispatch／不建runtime |
-| AGENT-04／P1 | 真agent閉環待外部批准且原scope失效 | 原包source-binding-invalidated.json；02已消耗、03失效 | 未來重新準備明確版本scope並取得單次批准；本次不啟模型 |
+| AGENT-05／P1 | 新scope已準備，真agent調查待單次批准 | 05包preparation-review／AUTHORIZATION_REQUEST；approved=false、入列0；04/03失效、02已消耗 | 問題已提出，核最新答覆；有效批准後一次receive/query/save/ACK／退出驗收，180秒／重試0；未批准不執行 |
+| NAS-002／P1 | 真DSM格式與接入仍待前置 | 既有fixture工具／解析已驗；真schema與匯出前有界證據未有 | 取得可核來源／格式與取樣範圍再作真來源adapter；目前不連設備／取新log |
+| HUMAN-LIVE／P2 | 真人／200%／原生partial／長跑及恢復各自未驗 | 既有對應證據／限制沿用；命令驗收不替代 | 依既有有效來源／時間預算與最後一次真人參與安排，不重複相同採集或自行批准長跑／處置 |
 
 ## 2026-11-01 Command First 目標與開源參考接續
 

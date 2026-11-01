@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-11-01 指令切片已同步／05合成真調查只準備未批准
+
+CMD-003至008已逐單元本機驗證、commit／普通push／ff-only整合main；最新產品2be0746318254eb643e77ec26fe175bb368ea41b（fix(presentation): guard receive permission result shapes [skip ci]，+18/-2），git-access-presentation-remote-20261101-01核兩遠端同SHA，當時兩工作樹乾淨。各單元scope／失敗／測試數見下段及EVIDENCE，不累加成整套或真環境通過；未啟CI。最小矩陣含共用路徑、CLI契約與四項固定SHA／授權研究對照，沒有拷第三方碼／新增依賴。
+
+UTC14:09:29，只執行無模型準備reports/prepare-command-first-investigation.py，新包reports/investigation-acceptance-eventguard-single-20261101-05。CLI0.166.0-alpha.5.1／Python3.13.3／MCP1.6.0，四檔runtime與既有預檢hash已核、未重跑probe；source 8e5a108051a136ddf440791a54ee64e43a4c3e52734071a49a3d189b3af38f56，scope 0611c2a6d1f9cc44ae6a0cd91629772d5a6375f093261d4b82176d32980d92ad。approved=false、enqueued/stages/pending/receipts皆0、未啟模型；preparation-review.json及AUTHORIZATION_REQUEST.md可查。04失效保留，02已消耗、03失效，不沿用舊批准。
+
+05僅一件自有合成事件、一個真CLI任務、180秒（自有Job清理另計）、四工具各一次預期、失敗不重試；模型內部請求數／token／費用無硬上限保證。只在取得此scope的有效單次批准後執行；目前已提出具體請求，未假設答覆。核心盯哨仍未完成：真agent調查、真DSM schema／匯出前有界樣本、真人／200%／原生partial、長跑／重開機及可信處置恢復各自待驗。本次不連設備、不改正式接收設定／系統、不啟模型或排程。
+
 ## 2026-11-01 接收設定文字入口維持型別防護
 
 將render通用dict檢查置於新增access呈現前，非物件結果維持「回傳格式未知」，避免診斷文字入口拋錯；無核心或設定變更。UTC14:06:31，`py -3.13 -B scripts/verify.py --run-dir reports/verify-access-presentation-20261101-01 --timeout-seconds 60 --module test_application_cli_text`：6/6、0skip、364語法／編譯、來源未變，Job自然0／remaining0／無強停；build-access-presentation-20261101-01。另直接API煙測None／list／str三型態皆unknown文字，非真人驗收。

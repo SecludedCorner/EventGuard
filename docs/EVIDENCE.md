@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-01 05只準備／未啟真模型
+
+UTC14:09:29，`py -3.13 -B reports/prepare-command-first-investigation.py`只呼叫既有delivery_validation.prepare及investigation_scope.prepare／scope；新建05專用合成空庫、固定四檔runtime／原始預檢檔hash核對，無新probe／子程序／模型。preparation-review.json：source_bound=true、runtime_file_count4、runtime_preflight_reused=true、approved=false、enqueued/stages/pending/receipts皆0。source hash 8e5a108051a136ddf440791a54ee64e43a4c3e52734071a49a3d189b3af38f56；scope hash 0611c2a6d1f9cc44ae6a0cd91629772d5a6375f093261d4b82176d32980d92ad。AUTHORIZATION_REQUEST列事件／版本／四工具／180秒／成本限制／失敗不重試與證據標準；本聊天已提出具體一次批准問題，尚未取得答覆或執行。
+
+最新產品2be0746318254eb643e77ec26fe175bb368ea41b（fix(presentation): guard receive permission result shapes [skip ci]，+18/-2）已普通push開發分支、ff-only整合及push main，git-access-presentation-remote-20261101-01直接核兩ref同SHA；所有相關Git Job自然0、remaining0／無強停。文件範圍以verify-access-presentation-20261101-01的387來源hash逐檔核對後沿用6/6、364編譯；不是重跑或整庫測試。舊04失效及失敗歷史保留，無CI／設備／原生採集或正式設定變更。
+
 ## 2026-11-01 接收設定文字型別防護
 
 UTC14:06:31，`py -3.13 -B scripts/verify.py --run-dir reports/verify-access-presentation-20261101-01 --timeout-seconds 60 --module test_application_cli_text`：6/6、0skip、364語法、source_unchanged，guardian自然0／remaining0／無強停；build-access-presentation-20261101-01編譯364、0error。直接API煙測render(None/list/str,agent,access)皆回既有「回傳格式未知」；未新增鏡像測試或重跑其他不受影響模組，不是原生輸入／真人驗收。

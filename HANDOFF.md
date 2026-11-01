@@ -1,5 +1,11 @@
 # EventGuard 接手
 
+## 2026-11-01 當前候選05，先核批准不要自行執行
+
+本聊天是唯一寫入者；重複聊天已交接封存。產品最新2be0746已同步開發分支及main；CMD-003/004/005/006/007/008的冪等處置、未決發現、原結果查回、payload綁定、接收gate及JSON輸入歧義皆有定向實測及編譯。下一外部關卡為05包，路徑reports/investigation-acceptance-eventguard-single-20261101-05；source/scope完整hash及版本見STATUS與原包。approved=false、入列0／stages0，不啟模型；04/03失效、02已消耗。
+
+新具體一次批准問題已在本聊天提出，先核最新使用者答覆；若未批准就保留，不重問既有一般開發權限、不執行舊scope、不重跑同hash已通過測試。若批准，必須原文／UTC／scope保存、require_approval重核後僅一次，核receive→query→保存分析→ACK及CLI/MCP自然退出；180秒加既有清理、失敗重試0，成本無硬上限保證。後續只在有實際未完成且已授權缺口時實作，不以新周邊或反覆研究維持執行。真DSM／真人／長跑／恢復仍依各自前置，整體目標未完成。
+
 ## 2026-11-01 型別防護已修，準備穩定來源候選
 
 新增access文字分支前的通用型別防護已恢復，6/6／364編譯及三型態直接API煙測見STATUS／EVIDENCE；CMD-008 4c8940d兩遠端已核。此後來源若穩定，可準備新的investigation候選；只能讀既有四檔runtime／預檢證據，不重跑模型或相同原生probe。舊04失效保留，沒有新批准不enqueue／execute，完整目標未完成。
