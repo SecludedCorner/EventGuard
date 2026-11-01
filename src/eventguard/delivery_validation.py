@@ -80,24 +80,28 @@ def enqueue(root, manifest, events):
     write_json(root / "manifest.json", manifest)
 
 
-def stage(root, manifest, event_id, codex, *, read_only=False):
+def stage(root, manifest, event_id, codex, *, read_only=False, expected_launch_hash=None):
     """Use the same command, SDK tools, capture, assessor and durable inbox as dispatch."""
     directory = root / ("stage-" + str(len(manifest["stages"]) + 1))
-    directory.mkdir(exist_ok=False)
-    token = uuid.uuid4().hex
-    row = {"event_id": event_id, "name": directory.name, "attempt_id": token,
-           "read_only": read_only, "started_at": utc()}
     investigation = manifest["case"] == "investigation"
     if investigation:
-        row["investigation"] = True
-    manifest["stages"].append(row)
-    # Persist ownership BEFORE starting a child; incomplete stages cannot be retried silently.
-    write_json(root / "manifest.json", manifest)
+        codex = str(_guard(codex))
     args = command(codex, sys.executable, root / "source", root / "inbox", event_id,
                    directory, allow_ack=not read_only, **({"investigation": True} if investigation else {}))
     prompt = READ_PROMPT if read_only else PROMPT
     if investigation:
         from .agent_investigation import PROMPT as prompt
+        if launch_hash(args, prompt) != expected_launch_hash:
+            raise ValueError("investigation_launch_scope_mismatch")
+    directory.mkdir(exist_ok=False)
+    token = uuid.uuid4().hex
+    row = {"event_id": event_id, "name": directory.name, "attempt_id": token,
+           "read_only": read_only, "started_at": utc()}
+    if investigation:
+        row["investigation"] = True
+    manifest["stages"].append(row)
+    # Persist ownership BEFORE starting a child; incomplete stages cannot be retried silently.
+    write_json(root / "manifest.json", manifest)
     event = next(event for event in manifest["events"] if event["event_id"] == event_id)
     capture_code = capture(args, directory, token, prompt, timeout_seconds=180)
     try:
@@ -140,6 +144,13 @@ def verify_stage(root, row):
         from .investigation_evidence import assess
         from .mcp_lifecycle import assess_mcp_exit
         checked = assess(trace, evidence, row["event_id"], receipt.get("codex_exit_code"), acked)
+        approved_hash = read_json(root / "investigation-scope.json").get("launch_hash")
+        actual_hash = read_json(directory / "capture-launch-intent.json").get("launch_hash")
+        matches = (type(approved_hash) is str and re.fullmatch(r"[a-f0-9]{64}", approved_hash) is not None
+                   and actual_hash == approved_hash)
+        checked["approved_launch_hash_matches"] = matches
+        if not matches:
+            checked.update(passed=False, evidence_errors=[*checked["evidence_errors"], "investigation_launch_scope_mismatch"])
         lifecycle = assess_mcp_exit(directory, row["attempt_id"], investigation=True)
         checked.update(passed=checked["passed"] and lifecycle["passed"], mcp_server_exit=lifecycle)
         checked.setdefault("event_id", row["event_id"])
@@ -640,9 +651,11 @@ def execute(root, manifest, codex):
         raise ValueError("existing_mcp_sdk_required")
     if manifest["stages"] or manifest["enqueued"]:
         raise ValueError("existing_execution_refused_inspect_evidence")
+    bound = None
     if manifest["case"] == "investigation":
         from .investigation_scope import require_approval
-        require_approval(root, manifest, native)
+        native = str(_guard(native))
+        bound = require_approval(root, manifest, native)
         if EventStore(root / "source").stats()["pending"]:
             raise ValueError("dedicated_empty_investigation_source_required")
     if manifest["case"] == "service":
@@ -655,7 +668,8 @@ def execute(root, manifest, codex):
         if manifest["case"] == "recovery":
             read = stage(root, manifest, event["event_id"], native, read_only=True)
             pending_proof(root, event["event_id"], read["query_id"])
-        stage(root, manifest, event["event_id"], native)
+        stage(root, manifest, event["event_id"], native,
+              **({"expected_launch_hash": bound["launch_hash"]} if bound is not None else {}))
     return verify(root, manifest)
 
 

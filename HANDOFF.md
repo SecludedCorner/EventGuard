@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-01 勿重跑05：模型批准已消耗且launch綁定未完整通過
+
+05真CLI四步／保存調查／ACK／CLI與MCP自然0均有證據，pending0/receipt1；但相對／絕對codex路徑造成實際launch hash不同於批准scope。scope-launch-audit與post-fix-readonly-audit保存唯一差異及完整驗收未過，原validation/trace不覆寫，不把協定成功升格整體批准驗收或桌面喚醒。最新P0-CMD-009正規化路徑、capture前／事後都核launch，fake CLI＋真SDK 5/5、365編譯見STATUS。後續新source需新包及新明確批准；05／02已消耗，03／04失效，不自動重試。
+
 ## 2026-11-01 當前候選05，先核批准不要自行執行
 
 本聊天是唯一寫入者；重複聊天已交接封存。產品最新2be0746已同步開發分支及main；CMD-003/004/005/006/007/008的冪等處置、未決發現、原結果查回、payload綁定、接收gate及JSON輸入歧義皆有定向實測及編譯。下一外部關卡為05包，路徑reports/investigation-acceptance-eventguard-single-20261101-05；source/scope完整hash及版本見STATUS與原包。approved=false、入列0／stages0，不啟模型；04/03失效、02已消耗。

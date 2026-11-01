@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-11-01 05批准已消耗／四步與退出成立，完整launch綁定未過
+
+人類明確批准05後保存原文／UTC／scope並重核，執行一次真原生CLI合成調查。UTC14:14:22原驗證器報passed：receive/query/save_investigation/ACK各一次，同event/query/result，已保存有觀察／缺口的分析，source ack1／pending0／receipt1；CLI及MCP自然exit0、ACK flushed、自有Job remaining0、無強停。這是短期CLI協定證據，不是桌面喚醒、獨立provider身分證明或真主機安全。
+
+完整稽核另發現：本次呼叫使用相對codex路徑，批准scope記絕對路徑，launch hash不符。scope-launch-audit.json確認唯一差異是同一執行檔路徑表示，canonical_executable_path_matches=true；原協定／分析／ACK／退出證據成立，但overall_approved_launch_acceptance_passed=false。原validation與trace保留，不重寫成全成功；05已消耗、不重跑。修正後唯讀post-fix-readonly-audit.json亦僅報investigation_launch_scope_mismatch，原證據／SQLite bytes未變。
+
+P0-CMD-009已修：execute正規化原生路徑；stage在寫stage／capture前核批准launch hash，事後verifier亦核實際intent。UTC14:20:35，`py -3.13 -B scripts/verify.py --run-dir reports/verify-investigation-launch-binding-20261101-01 --timeout-seconds 120 --module test_investigation_launch_binding --module test_investigation_scope --module test_investigation_acceptance`：5/5、0skip、365語法／編譯、source_unchanged，Job自然0／remaining0／無強停，明示fake CLI＋真SDK／SQLite，新增模型0；build-investigation-launch-binding-20261101-01。regression-01 fixture引用不存在常數的2error與修fixture後regression-02的0/2真失敗均保留。下一新scope只能另備並取得新批准，不能沿用05。
+
 ## 2026-11-01 指令切片已同步／05合成真調查只準備未批准
 
 CMD-003至008已逐單元本機驗證、commit／普通push／ff-only整合main；最新產品2be0746318254eb643e77ec26fe175bb368ea41b（fix(presentation): guard receive permission result shapes [skip ci]，+18/-2），git-access-presentation-remote-20261101-01核兩遠端同SHA，當時兩工作樹乾淨。各單元scope／失敗／測試數見下段及EVIDENCE，不累加成整套或真環境通過；未啟CI。最小矩陣含共用路徑、CLI契約與四項固定SHA／授權研究對照，沒有拷第三方碼／新增依賴。

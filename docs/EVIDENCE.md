@@ -1,5 +1,13 @@
 # 證據與時間日誌
 
+## 2026-11-01 05真CLI結果及P0 launch綁定修正
+
+批准原文「批准 05 單次合成調查」與UTC／scope保存在05 human-approval.json；啟動前require_approval通過。實際一次`py -3.13 -B scripts/validate_delivery.py investigation --root reports/investigation-acceptance-eventguard-single-20261101-05 --codex-executable reports/agent-investigation-runtime-20261030-03/codex.exe --execute`於UTC14:14:22自然exit0。四工具恰各一次、順序與保存query/result／分析hash相符，source ack1/pending0/receipt1，saved analysis保留synthetic_only/current_native_state_unverified/host_safety_not_assessed，decision=needs_more_evidence、未處置。capture-exit與MCP retained-HANDLE回條均自然0，ACK flushed、remaining0、無強停；不是既有桌面被喚醒或獨立模型provider身分證據。
+
+原validation.json／assessment報protocol passed，後續完整scope稽核發現批准launch hash34f2cbd2…10a81d與實際8dd352a3…75496不同。scope-launch-audit.json以同一builder只變原生exe路徑字串重建兩hash，證明相對／絕對為唯一差異、canonical路徑相同；完整批准綁定驗收未過。原證據全部保留，05已消耗、模型重試0。修正後只讀verify_stage另存post-fix-readonly-audit.json：passed=false、唯一error為investigation_launch_scope_mismatch，四步／ACK／退出仍成立；SQLite／trace／completed檔hash未變。
+
+修正：execute正規化native、將require_approval回傳的launch hash交stage；capture與stage保存前核對，事後verifier亦比對scope及intent。regression-01新fixture引用不存在ROOT的2error保留，修fixture後regression-02為0/2，實際重現路徑未正規化及command drift未阻擋。UTC14:20:35，`py -3.13 -B scripts/verify.py --run-dir reports/verify-investigation-launch-binding-20261101-01 --timeout-seconds 120 --module test_investigation_launch_binding --module test_investigation_scope --module test_investigation_acceptance`：5/5、0skip、365語法、source_unchanged；guardian自然0/remaining0/無強停，build-investigation-launch-binding-20261101-01編譯365/0error。是明示fake CLI＋真SDK／私有Job／SQLite，無新模型／原生採集／設備／CI。
+
 ## 2026-11-01 05只準備／未啟真模型
 
 UTC14:09:29，`py -3.13 -B reports/prepare-command-first-investigation.py`只呼叫既有delivery_validation.prepare及investigation_scope.prepare／scope；新建05專用合成空庫、固定四檔runtime／原始預檢檔hash核對，無新probe／子程序／模型。preparation-review.json：source_bound=true、runtime_file_count4、runtime_preflight_reused=true、approved=false、enqueued/stages/pending/receipts皆0。source hash 8e5a108051a136ddf440791a54ee64e43a4c3e52734071a49a3d189b3af38f56；scope hash 0611c2a6d1f9cc44ae6a0cd91629772d5a6375f093261d4b82176d32980d92ad。AUTHORIZATION_REQUEST列事件／版本／四工具／180秒／成本限制／失敗不重試與證據標準；本聊天已提出具體一次批准問題，尚未取得答覆或執行。
