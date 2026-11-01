@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-02 CMD-016解碼輸出時中斷已修／07來源失效
+
+真CLI及自有合成查詢在子程序自然退出後、bounded JSON解碼時注入KB，verify-query-decode-cancel-regression-20261102-01為3/4：例外逸出CLI而無結構取消。Runner現捕捉該解碼窗口，忽略輸出並回cancelled，不重啟／重查／終止已退出程序。UTC2026-11-01T18:35:58，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-decode-cancel-20261102-01 --timeout-seconds 120 --module test_command_query_collection_cancel --module test_command_query_cancellation --module test_collectors_diagnostics --module test_collector_contract --module test_collector_progress`：65/65、0skip、379語法、source_unchanged。補存實際回條後，UTC18:36:56的verify-query-decode-evidence-20261102-01（75秒、僅test_command_query_collection_cancel）4/4；build-query-decode-cancel-20261102-02編譯379／0error，source hash 9439cb84696ea236cc416f4781084e4b3352a3a24d99c1d0d2caeb6b5dc1406d。guardian自然0／remaining0／無強停；lifecycle-evidence中CLI exit130、source_cancelled／rows空，collector自然exit0／remaining0／force=false，無新原生採集／模型。
+
+07包仍未入列／未啟模型，human-approval=false；新增source-binding-invalidated.json並在AUTHORIZATION_REQUEST頂部標失效。舊07詢問不可沿用，source-bound gate亦將拒絕；必要修正完成後再準備新包，暫不發重複批准詢問。06已消耗不重跑，NAS資訊及真人／原生／長跑／防守恢復仍待前置。5e751becbbb55f697f78ed37fb1b2e34dd7d6e12（test(processes): verify interrupted suspended launch cleanup [skip ci]，+52/-1）兩遠端已核同步，git-creation-interrupt-remote-20261102-01；CI0。
+
 ## 2026-11-02 OS建立後／Resume前中斷的私有Job清理已補驗
 
 UTC2026-11-01T18:30:34，`py -3.13 -B scripts/verify.py --run-dir reports/verify-creation-interrupt-20261102-01 --timeout-seconds 140 --module test_process_governance`：23/23、0skip、379語法、source_unchanged；build-creation-interrupt-20261102-01編譯379／0error，guardian自然0／remaining0／無強停。新增真Windows程序已建立、尚未Resume的KeyboardInterrupt注入：確有_child_created且專用Job active1，未執行合成marker程式，constructor保留例外並只清理自有Job，實際子程序退出1460、Job關閉前active0。此故障子程序明示forcibly_terminated=true／launch_failure，絕非自然退出；不與guardian自然退出混淆。既有Job／gap／fixture及固定Python版本worker回歸過，未作新全機盤點／模型。

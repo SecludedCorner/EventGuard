@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-02 解碼階段KB逸出CLI的失敗與修正
+
+verify-query-decode-cancel-regression-20261102-01：3/4，合成collector真私有Job已自然退出，在Runner.loads注入KB後interrupt-frames顯示由Runner.run→DiagnosticAPI.query→cli.main逸出；無結構JSON，原失敗保留。新增兩行捕捉並回cancelled_late_output_ignored後，UTC2026-11-01T18:35:58的verify-query-decode-cancel-20261102-01五模組65/65、0skip、379語法／source_unchanged（命令見STATUS）。為保留實際程序證據而增self.evidence，UTC18:36:56的verify-query-decode-evidence-20261102-01單模組4/4，build-query-decode-cancel-20261102-02編譯379／0error；guardian自然0／remaining0／無強停。已讀lifecycle-evidence，decode結果cancelled／source_cancelled／rows=[]、CLI exit130，collector原exit0／remaining0／force=false；不把取消當查詢成功，不重查／啟模型。測試為實際CLI＋合成程序＋例外注入，不是真OS資料／真人鍵盤。
+
+本次產品source改為9439cb84696ea236cc416f4781084e4b3352a3a24d99c1d0d2caeb6b5dc1406d；07的source-binding-invalidated.json保存舊scope與新hash，AUTHORIZATION_REQUEST頂部明示禁止執行。確認human-approval=false、manifest enqueued/stages空且無stage-1，沒有消耗模型；舊詢問／06批准不得套用。5e751becbbb55f697f78ed37fb1b2e34dd7d6e12兩遠端已核，git-creation-interrupt-remote-20261102-01。
+
 ## 2026-11-02 真Windows程序建立後／Resume前故障清理
 
 UTC2026-11-01T18:30:34，verify-creation-interrupt-20261102-01（命令見STATUS）23/23、0skip、379語法、source_unchanged，build-creation-interrupt-20261102-01編譯379／0error。新增test_interrupt_after_creation_before_resume以真JobPopen／CreateProcessW建立合成Python，只有ResumeThread被換為KB注入；注入時_child_created=true且新專用Job.active=1。未呼叫真正ResumeThread、marker不存在；constructor的既有失敗處理經真Job終止、wait與關閉，actual returncode1460、closed前active0／forced=true／reason launch_failure，HANDLE已關。lifecycle-evidence明列child_code_executed=false及強停事實；guardian自己的自然0／remaining0／force=false不得取代故障子程序結果。測試無新原生來源／模型，既有相關Job／固定Python版本worker／gap回歸過；這不證明Runner／CLI任意窗口的結構取消。f0d5056b983ada5e17d6c17f0023af7e95dfe210兩遠端已核，git-classification-compatibility-remote-20261102-01，07產品來源未變、仍未批准／未啟。

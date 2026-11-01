@@ -15,6 +15,11 @@ from pathlib import Path
 from eventguard.collectors.runner import Runner
 from eventguard.diagnostics import api
 folder=Path(sys.argv[1])
+if sys.argv[2]=="decode":
+    import eventguard.collectors.runner as runner_module
+    def interrupt_decode(_content):
+        raise KeyboardInterrupt("SYNTHETIC_PRIVATE")
+    runner_module.loads=interrupt_decode
 if sys.argv[2].startswith("signal_"):
     import ctypes as C,os,signal
     from ctypes import wintypes as W
@@ -78,6 +83,9 @@ raise SystemExit(code)
 
 @unittest.skipUnless(os.name == "nt", "actual Windows owned Job required")
 class CommandQueryCollectionCancellationTests(unittest.TestCase):
+    def test_interrupt_during_output_decode_returns_cancelled_with_original_exit_evidence(self):
+        self.check_interrupt("decode", ".1")
+
     def test_interrupted_owned_query_returns_cancelled_with_exit_evidence(self):
         for phase, seconds in (("waiting", "1.6"), ("completed", ".6")):
             with self.subTest(phase=phase):
@@ -123,6 +131,9 @@ class CommandQueryCollectionCancellationTests(unittest.TestCase):
                 value = json.loads((Path(temporary) / "console-signal.json").read_text())
                 self.assertEqual(value, {"owned_console": True, "signals_sent": 1})
             self.assertEqual({p.name for p in Path(temporary).iterdir()}, expected)
+            if phase == "decode":
+                self.evidence = dict(scope="real CLI and owned synthetic collector; injected output-decode interrupt, no native query/model",
+                    phase=phase, cli_process=receipt, collector_process=owned, result=result, model_calls=0)
 
     def test_native_control_event_while_waiting_has_owned_exit_evidence(self):
         self.check_interrupt("signal_waiting", "1.6")

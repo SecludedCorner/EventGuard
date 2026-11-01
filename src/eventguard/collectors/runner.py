@@ -227,6 +227,8 @@ class Runner:
             data = loads(job.get("stdout", b"").decode("utf-8-sig"))
             if not isinstance(data, dict) or not isinstance(data.get("rows"), list):
                 raise ValueError()
+        except KeyboardInterrupt:
+            return result("cancelled", "cancelled_late_output_ignored")
         except BoundedJSONError as error:
             return result("error", error.reason)
         except (ValueError, UnicodeError):

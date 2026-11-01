@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-02 解碼中斷已修，07禁止執行
+
+Runner解碼輸出時KB不再逸出CLI，cancelled／exit130／rows空仍帶原collector自然0／remaining0／無強停。修前3/4，修後五模組65/65；補回條的verify-query-decode-evidence-20261102-01為4/4、379編譯，build-query-decode-cancel-20261102-02 source9439cb84696ea236cc416f4781084e4b3352a3a24d99c1d0d2caeb6b5dc1406d，無新採集／模型。07 source已失效，包頂及source-binding-invalidated均記錄，approved=false／未入列／未啟；不可採用舊07詢問或06批准。必要修正後才準備新scope，避免在修正中重複發問；其餘真環境關卡保留。5e751be兩遠端已核同步。
+
 ## 2026-11-02 pre-Resume中斷清理補驗
 
 verify-creation-interrupt-20261102-01：process governance 23/23、379編譯／source_unchanged，build-creation-interrupt-20261102-01。新增真Windows已建立但未執行的子程序，私有Job active1後注入KB，constructor只清自有Job；子程序1460／force=true／launch_failure，關閉前active0且marker未執行。guardian自然0／remaining0／無強停是另一層，不能混稱子程序自然退出；lifecycle-evidence明列。這非Runner／CLI所有取消窗口驗收；原生真來源、任意收尾、07批准及其他實機關卡仍待條件。f0d5056兩遠端已核同步，產品source未變，不新增模型。
