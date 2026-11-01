@@ -1,5 +1,15 @@
 # 證據與時間日誌
 
+## 2026-11-01 06完整launch／合成調查通過與無模型擴大驗證
+
+批准原文「批准 06 單次合成調查」及UTC／scope保存在06 human-approval；scope 4c301ac292c0119b4c546ede8ff389a3b1e0672eb8b41c8c6091f6b5c0b5fc78，source9ad0db6f1ab54fd796043ddff2f7b3b49576a2a5531032887d84d6ec9e7d1a82。一次執行`py -3.13 -B scripts/validate_delivery.py investigation --root <06絕對路徑> --codex-executable <固定四檔runtime的codex.exe絕對路徑> --execute`；UTC14:28:14 exit0，approved_launch_hash_matches=true，四工具各一次、單event/query/result、分析與原始trace／query／SQLite相符，source ack1/pending0/receipt1。capture-exit、MCP retained-HANDLE及stdio回條均自然0、ACK flushed、remaining0／無強停；final-review再次唯讀核對。是實際原生CLI合成協定，不是獨立模型provider身分、桌面閒置喚醒、原生防守或恢復；05完整launch未過的原始證據保留，不升格。06批准已消耗，無自動重試。
+
+依使用者「請你盡量測試」擴大執行：`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-core-expanded-20261101-01 --timeout-seconds 300 --module test_delivery_validation --module test_investigation_evidence --module test_investigation_runtime --module test_investigation_mcp --module test_investigation_stdio --module test_queue_investigation --module test_capture_receipt --module test_operator_clients --module test_event_catalog --module test_codex_runtime --module test_codex_preflight`；UTC14:31:16，88/88、0skip、365語法、source_unchanged、guardian自然0／remaining0／無強停，新增模型0。含fixture／fake CLI、真SDK／私有Job／SQLite、並行stdio、損壞／重送與退出契約，不是整庫或原生全來源驗收。
+
+另`py -3.13 -B reports/verify-cmd-entry.py`：固定三種實際EventGuard.cmd入口（health、空args、壞JSON），3/3、exit0/0/2、stdout單JSON／stderr空，三個自有Job自然退出、remaining0／無強停、模型0，見verify-cmd-entry-20261101-01/verification.json。來源未變，388來源hash核對後沿用build-investigation-launch-binding-20261101-01的365編譯；不把不同scope測試相加或當GUI／真環境通過。
+
+06 turn.completed回條記input_tokens116668（cached_input_tokens76672）、output_tokens487；這是CLI回報用量，不推斷帳戶費用或獨立provider證明，已說明模型透過CLI/API仍有token，正常監看／無模型測試不啟推理。產品2770ad7131865c455ca9e9054f523e9f76245991（fix(acceptance): bind canonical launches before capture and verification [skip ci]，+96/-10）兩遠端同SHA，git-launch-binding-remote-20261101-01；無CI／設備／原生來源重掃／系統變更。
+
 ## 2026-11-01 05真CLI結果及P0 launch綁定修正
 
 批准原文「批准 05 單次合成調查」與UTC／scope保存在05 human-approval.json；啟動前require_approval通過。實際一次`py -3.13 -B scripts/validate_delivery.py investigation --root reports/investigation-acceptance-eventguard-single-20261101-05 --codex-executable reports/agent-investigation-runtime-20261030-03/codex.exe --execute`於UTC14:14:22自然exit0。四工具恰各一次、順序與保存query/result／分析hash相符，source ack1/pending0/receipt1，saved analysis保留synthetic_only/current_native_state_unverified/host_safety_not_assessed，decision=needs_more_evidence、未處置。capture-exit與MCP retained-HANDLE回條均自然0，ACK flushed、remaining0、無強停；不是既有桌面被喚醒或獨立模型provider身分證據。

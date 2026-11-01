@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-11-01 06合成真CLI完整通過／擴大無模型驗證88項與入口3項
+
+人類明確批准06後保存原文／UTC／scope，以絕對路徑執行一次真原生CLI任務；UTC14:28:14 validation通過，approved_launch_hash_matches=true。四工具各一次、單event/query/result、分析已保存、source ack1/pending0/receipt1；CLI及MCP retained-HANDLE自然exit0，ACK flushed，remaining0／無強停。06 final-review.json再次核scope／intent一致及SQLite；批准已消耗，不再追加模型。這是合成短期原生CLI協定／調查／退出驗收，不是獨立provider身分、既有桌面閒置喚醒、真主機防守或恢復。05原失敗及全部證據保留，不改判通過。
+
+使用者要求盡量測試後，UTC14:31:16完成verify-command-core-expanded-20261101-01：11個相關模組88/88、0skip、365語法、source_unchanged，自有guardian自然0／remaining0／無強停，新增模型0；命令與模組清單見該verification-summary.json及EVIDENCE。verify-cmd-entry-20261101-01另以私有Job啟動實際EventGuard.cmd，health／空args／壞JSON三案例3/3、exit0/0/2、stderr空、無殘留，新增模型0。來源未變，編譯沿用build-investigation-launch-binding-20261101-01的365檔，388來源hash重新核對，不重跑無關GUI／原生來源。
+
+06 CLI自身usage回條：input_tokens116668、cached_input_tokens76672、output_tokens487；不是帳戶帳單或費用保證。已向使用者說明模型回合及讀取工具結果仍有token，普通無模型CLI/API操作不需模型。後續沿Command First優先無模型指令／API與fixture，不由「工具不限」推定無限免費推理。最新產品2770ad7131865c455ca9e9054f523e9f76245991（fix(acceptance): bind canonical launches before capture and verification [skip ci]，+96/-10）已核兩遠端同SHA、工作樹乾淨；git-launch-binding-remote-20261101-01。真DSM／真人／200%／原生partial、長跑／重開機及可信處置恢復仍待各自前置；整體資安盯哨未完成，無CI／設備／系統變更。
+
 ## 2026-11-01 05批准已消耗／四步與退出成立，完整launch綁定未過
 
 人類明確批准05後保存原文／UTC／scope並重核，執行一次真原生CLI合成調查。UTC14:14:22原驗證器報passed：receive/query/save_investigation/ACK各一次，同event/query/result，已保存有觀察／缺口的分析，source ack1／pending0／receipt1；CLI及MCP自然exit0、ACK flushed、自有Job remaining0、無強停。這是短期CLI協定證據，不是桌面喚醒、獨立provider身分證明或真主機安全。

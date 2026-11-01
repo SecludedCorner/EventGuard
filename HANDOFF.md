@@ -1,5 +1,11 @@
 # EventGuard 接手
 
+## 2026-11-01 06完成，05仍保留launch失敗
+
+06在使用者另次具體批准後單次執行，四工具／保存調查／ACK／CLI與MCP自然退出及approved launch hash均通過；pending0/receipt1，詳06 validation／final-review。05協定證據成立但完整綁定未過，保留原始資料，不重跑；02/05/06批准已消耗、03/04失效。產品2770ad7已同步兩遠端，來源hash9ad0db6f1ab54fd796043ddff2f7b3b49576a2a5531032887d84d6ec9e7d1a82。
+
+使用者要求擴大CLI/API測試：11模組88/88、0skip與實際.cmd入口3/3皆完成，新增模型0，365編譯／388來源hash沿用並重新核對；見最新STATUS/EVIDENCE。06回條顯示模型仍有token用量，已釐清普通工具操作與模型回合，優先無模型驗證；不再以CLI標籤假設免費或不經有效範圍追加模型。已知CMD-003..009切片完成；下一只依實際新缺口或既有真DSM／真人／長跑／恢復前置變化增量推進，不反覆相同測試或擴成未批准系統操作。核心目標仍未完成。
+
 ## 2026-11-01 勿重跑05：模型批准已消耗且launch綁定未完整通過
 
 05真CLI四步／保存調查／ACK／CLI與MCP自然0均有證據，pending0/receipt1；但相對／絕對codex路徑造成實際launch hash不同於批准scope。scope-launch-audit與post-fix-readonly-audit保存唯一差異及完整驗收未過，原validation/trace不覆寫，不把協定成功升格整體批准驗收或桌面喚醒。最新P0-CMD-009正規化路徑、capture前／事後都核launch，fake CLI＋真SDK 5/5、365編譯見STATUS。後續新source需新包及新明確批准；05／02已消耗，03／04失效，不自動重試。

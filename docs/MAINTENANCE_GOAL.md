@@ -13,6 +13,8 @@
 | CMD-008／P0 | query JSON輸入歧義已修／已驗 | verify-command-query-json-20261101-02：32/32、364編譯，修前0/1保留 | 保存整合；8KiB／32層、duplicate/depth固定碼exit2，不dispatch／不建runtime |
 | CMD-009／P0 | 批准launch綁定正規化／前後核對已修 | verify-investigation-launch-binding-20261101-01：5/5、365編譯；明示fake CLI＋真SDK | 保存整合；路徑／參數drift在capture前拒絕，原05的完整launch驗收仍未過 |
 | AGENT-05／P1 | 批准已消耗；四步／ACK／退出成立，完整launch綁定未過 | 05 scope-launch-audit／post-fix-readonly-audit；相對／絕對路徑唯一差異，原資料保留 | 不重跑05；修正保存後只能準備新scope及另次明確批准，不能把fake回歸升格真驗 |
+| AGENT-06／P1 | 單次合成真CLI調查及完整launch綁定已通過 | 06 validation／final-review；四工具各1、ack1/pending0/receipt1、CLI/MCP自然0，批准已消耗 | 保存結果；不重跑、不宣稱桌面／原生防守完成；新模型工作須明確有效範圍且有必要 |
+| CLI-EXPANDED／P2 | 使用者要求的擴大無模型驗證完成 | command-core-expanded-01：88/88、365語法；cmd-entry-01：3/3，新增模型0 | 保存，僅新改動／失敗／新關切才續驗，不重跑相同來源冒充進度 |
 | NAS-002／P1 | 真DSM格式與接入仍待前置 | 既有fixture工具／解析已驗；真schema與匯出前有界證據未有 | 取得可核來源／格式與取樣範圍再作真來源adapter；目前不連設備／取新log |
 | HUMAN-LIVE／P2 | 真人／200%／原生partial／長跑及恢復各自未驗 | 既有對應證據／限制沿用；命令驗收不替代 | 依既有有效來源／時間預算與最後一次真人參與安排，不重複相同採集或自行批准長跑／處置 |
 

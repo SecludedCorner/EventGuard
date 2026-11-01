@@ -16,15 +16,15 @@
 | 規則與playbook | `rules list/validate`、`playbook validate/simulate` | configured／playbooks；Web只展示規則 | 固定schema、JSON；設定檔編輯 | simulate 不執行處置；無敏感處置授權；既有 test_rules_playbooks |
 | 明確唯讀診斷 | `query`、`events diagnose/inspect` | DiagnosticAPI／OperatorAPI；MCP；共用bounded_json | 型別化操作、8KiB args、32層／重複key拒絕、來源Job預算 | CMD-008：test_command_query_json；query/diagnose可查OS、health/inspect只讀；拒讀不能安全 |
 | 接收／ACK／重試／報告 | `events receive/ack/retry`、`report export` | OperatorAPI、共享inbox | event/query 綁定、JSON／escaped HTML | 明確保存收件／ACK或重試；既有 test_cli_workflow；ACK非結案 |
-| agent 派送／投遞證據 | `agent start/status/pause/resume/stop/capabilities/inspect/export` | agent_service／event_ingress；Web限制控制 | 七欄CloudEvents，耐久預算／Job | start預設檢查，execute須有效批准；04失效待重新準備，真閉環未驗 |
-| 合成真調查批准綁定 | `scripts/validate_delivery.py investigation`預設只準備；execute需新scope批准 | investigation_scope／delivery_validation，共用builder與私有Job | 一事件／一任務／180秒；原生路徑正規化、capture前及事後launch hash核對 | CMD-009已修、fake＋真SDK 5/5；05四步／退出成立但hash綁定未完整通過，禁止重跑 |
+| agent 派送／投遞證據 | `agent start/status/pause/resume/stop/capabilities/inspect/export` | agent_service／event_ingress；Web限制控制 | 七欄CloudEvents，耐久預算／Job | start預設檢查、execute須有效批准；06短期合成調查通過，正式來源／桌面喚醒另驗 |
+| 合成真調查批准綁定 | `scripts/validate_delivery.py investigation`預設只準備；execute需新scope批准 | investigation_scope／delivery_validation，共用builder與私有Job | 一事件／一任務／180秒；原生路徑正規化、capture前及事後launch hash核對 | CMD-009已修；06實際四步／分析／ACK／launch／自然退出通過；05綁定未完整通過仍保留，禁止重跑已消耗範圍 |
 | 公告追蹤／適用性 | `advisories start/check/status/stop/cases` | intelligence engine/service；Web投影 | config白名單、來源狀態、案件證據 | check/start會擷取；本次不執行；既有公告證據，非真防守 |
 | 合成／mock | `synthetic emit`、`deliver --adapter mock`、`mock process/status` | synthetic／transport.adapters | test namespace、明示mock | 不是真agent；既有 test_events_transport |
 | 預算／MCP | `budget status/initialize/reconcile`、`mcp` | BudgetAuthority／RemoteApplication | 耐久installation預算、固定工具 | initialize/reconcile明確寫入；不自動重設；MCP observer不冷啟App |
 
-首個切片 CMD-003 推進「保存證據／可追溯人工處置」；下一 CMD-004 讓命令可發現 GUI 中回條未確認的請求，避免只靠畫面恢復。餘項持續依實際缺口增補，不代表所有 CLI 契約已完整驗收。
+CMD-003..009推進可追溯處置、GUI未決發現、結果查回、身分綁定、接收設定、輸入與批准契約，已逐單元實作及驗證。餘項依實際缺口增補，不代表所有CLI契約、原生覆蓋或整體盯哨已完整驗收。
 
-CMD-004已接線並驗收，可用 `EventGuard.cmd --format json events pending-requests --namespace test --limit 1`，再以 `events detail --namespace test --event-id <回傳ID>` 讀原operation ID；offset用於下一頁。查閱不確認或重送GUI要求。schema沿用catalog欄位，unknown時events空但total/request_total/has_more為null，不能解讀為零項。下一CMD-005按operation ID查原結果；重送的目前狀態不等於原操作結果。
+CMD-004已接線並驗收，可用 `EventGuard.cmd --format json events pending-requests --namespace test --limit 1`，再以 `events detail --namespace test --event-id <回傳ID>` 讀原operation ID；offset用於下一頁。查閱不確認或重送GUI要求。schema沿用catalog欄位，unknown時events空但total/request_total/has_more為null，不能解讀為零項。CMD-005可按operation ID查原結果；重送的目前狀態不等於原操作結果。
 
 ## 參考對照 R-CMD-001
 
