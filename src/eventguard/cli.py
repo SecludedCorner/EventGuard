@@ -149,6 +149,7 @@ def parser():
     handling.add_argument("--namespace",choices=("live","test"),default="live")
     handling.add_argument("--event-id",required=True)
     handling.add_argument("--status",choices=("new","read","handled","ignored"),required=True)
+    handling.add_argument("--operation-id",help="選填。回條遺失後重送須沿用此識別；不同請求不可共用。")
     handling.add_argument("--event-source",type=Path,help="選填。test範圍內既有的合成事件source。")
     history_backup=eventsub.add_parser("backup-history",help="明確保存歷程快照到 reports；不清理、不 ACK。")
     history_backup.add_argument("--namespace",choices=("live","test"),default="live")
@@ -331,7 +332,7 @@ def execute(args,runtime,progress=None):
                 if len(content)>MAX_EXPORT_BYTES+1024:
                     raise ValueError("history_backup_bytes_limit")
                 return catalog.preview_handling_history(json.loads(content,object_pairs_hook=_unique_json_object))
-            return catalog.set_status(args.event_id,args.status,source="cli")
+            return catalog.set_status(args.event_id,args.status,source="cli",operation_id=args.operation_id)
         if args.event_command=="receive":
             return operator.call("receive_event",args.event_id,args.namespace)
         if args.event_command=="ack":
@@ -460,6 +461,10 @@ def main(argv=None,root=None):
     except (ValueError,TypeError,json.JSONDecodeError) as error:
         from .rules.configured import RulesValidationError
         from .event_ingress import EventIngressError
+        from .events.disposition_history_store import HistoryConflictError
+        if isinstance(error,HistoryConflictError):
+            show({"status":"invalid_request","error_code":"operation_id_conflict","raw_error_omitted":True})
+            return 2
         if isinstance(error,EventIngressError):
             show({"status":"invalid_request","error_code":str(error),"raw_error_omitted":True})
             return 2

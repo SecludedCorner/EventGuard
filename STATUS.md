@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-01 CMD-003 命令處置重送已驗
+
+新增 `events set-status --operation-id`，共用既有交易／歷程核心；相同請求重送不重寫、不回退後續狀態，不同內容／事件共用識別碼回 `operation_id_conflict`、exit 2。省略參數維持舊用法。能力矩陣見 docs/COMMAND_CAPABILITY_MATRIX.md，下一 CMD-004 補 GUI 未決請求的唯讀命令。
+
+本次命令 `py -3.13 -B scripts/verify.py --run-dir reports/verify-command-status-20261101-03 --timeout-seconds 120 --module test_command_status_retry --module test_cli_workflow`，UTC 13:32:20 完成12/12、0skip、無殘留／強停；build-command-status-20261101-01 編譯357檔。01保留新測試收尾原因碼誤用的兩error；修正後02通過，再加固定衝突碼的最終03通過，未累加。04來源hash已失效，證據在原包source-binding-invalidated.json；未批准／入列／啟模型。真agent、DSM、真人與長跑／防守恢復仍未驗。
+
 ## 2026-11-01 Command First 規則與新聊天目標已落地
 
 AGENTS／CLAUDE 已記錄 Command First、GUI Second；完整 Prompt 見 docs/COMMAND_FIRST_GOAL_PROMPT.md，既有 MAINTENANCE_GOAL 新增 CMD-001 能力矩陣與 CMD-002 指令缺口實作入口。工程輪次不限但未擴權；核心、真 agent／DSM 等未驗範圍保留。參考 Git 保存不代表能力已整合，下一新聊天先核最小缺口並直接實作，不停在研究。

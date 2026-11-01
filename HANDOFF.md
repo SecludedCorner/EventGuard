@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-01 Command First 已進入實作
+
+CMD-003補 CLI `events set-status --operation-id` 與固定衝突碼；12/12實際CLI／既有workflow、0skip，357編譯，自有Job退出無殘留。最終證據 reports/verify-command-status-20261101-03、build-command-status-20261101-01，非真agent驗收。04 source-binding-invalidated.json已保存、不可執行舊scope。下一CMD-004從EventCatalog.pending_requests接唯讀命令，unknown須exit5，不能在讀取時重送或ACK；矩陣及具體佇列見docs。
+
 ## 2026-11-01 Command First 規則與新聊天目標已落地
 
 AGENTS／CLAUDE 已記錄 Command First、GUI Second；完整 Prompt 見 docs/COMMAND_FIRST_GOAL_PROMPT.md，既有 MAINTENANCE_GOAL 新增 CMD-001 能力矩陣與 CMD-002 指令缺口實作入口。工程輪次不限但未擴權；核心、真 agent／DSM 等未驗範圍保留。參考 Git 保存不代表能力已整合，下一新聊天先核最小缺口並直接實作，不停在研究。

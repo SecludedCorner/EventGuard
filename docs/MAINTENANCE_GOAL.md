@@ -1,5 +1,14 @@
 # EventGuard 目前目標
 
+## 2026-11-01 具體命令切片
+
+| ID／優先 | 產品成果／狀態 | 依賴、證據／未驗 | 下一動作與完成條件 |
+| --- | --- | --- | --- |
+| CMD-001／P1 | 最小能力矩陣已建立，依實際路徑增補 | COMMAND_CAPABILITY_MATRIX；非全能力本次重驗 | 跟隨缺口更新命令／API／GUI及驗收 |
+| CMD-003／P1 | CLI人工狀態可冪等重送，已驗 | 既有catalog交易；verify-command-status-20261101-03 12/12、357編譯；非ACK | 逐單元保存後接CMD-004；不同事件／內容須exit2且不寫入 |
+| CMD-004／P1 | CLI查閱GUI未決請求，待實作 | EventCatalog.pending_requests；不需採集／模型；目前只有GUI | 接有界分頁命令，missing/corrupt/off-page mismatch維持unknown及exit5；不寫／不dispatch／不ACK |
+| AGENT-04／P1 | 真agent閉環待外部批准且原scope失效 | 原包source-binding-invalidated.json；02已消耗、03失效 | 未來重新準備明確版本scope並取得單次批准；本次不啟模型 |
+
 ## 2026-11-01 Command First 目標與開源參考接續
 
 最新架構優先序為指令核心 → CLI／API 實測 → GUI 入口；最終資安 AI 盯哨目標與各真實驗收關卡不變。完整執行指令見 COMMAND_FIRST_GOAL_PROMPT.md；不設固定工程輪次，不把平台／模型批准當作無限制。

@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-01 CMD-003 真CLI重送（合成資料）
+
+`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-status-20261101-03 --timeout-seconds 120 --module test_command_status_retry --module test_cli_workflow`：UTC13:32:20，12/12、0skip、357語法、source_unchanged=true；guardian自然exit0、remaining0、強停false。新測試以私有Job啟真正Python CLI，驗遺失回條重送、後續狀態不回退、跨事件／內容衝突exit2、無ID相容、JSON stdout／空stderr與pending1／receipt0。01兩error為新測試收尾原因碼錯用，保留原失敗；02修正通過；03是固定衝突碼後的最終來源，數字不累加。
+
+`py -3.13 -B reports/command-first-ops.py build build-command-status-20261101-01`：357檔compile、0error，source hash `4ec9c53443301eea01ad73e0037c38ac38fb13fdb875d2f1e21a4374eed63217`。原04 hash不符，原包另存source-binding-invalidated.json，未啟模型／原生採集／CI。矩陣R-CMD-001記錄IRIS根／子模組SHA、檔案與LGPL邊界；只借契約未拷碼。
+
 ## 2026-11-01 Command First 規則與新聊天目標已落地
 
 AGENTS／CLAUDE 已記錄 Command First、GUI Second；完整 Prompt 見 COMMAND_FIRST_GOAL_PROMPT.md，既有 MAINTENANCE_GOAL 新增 CMD-001 能力矩陣與 CMD-002 指令缺口實作入口。工程輪次不限但未擴權；核心、真 agent／DSM 等未驗範圍保留。參考 Git 保存不代表能力已整合，下一新聊天先核最小缺口並直接實作，不停在研究。
