@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-01 型別防護已修，準備穩定來源候選
+
+新增access文字分支前的通用型別防護已恢復，6/6／364編譯及三型態直接API煙測見STATUS／EVIDENCE；CMD-008 4c8940d兩遠端已核。此後來源若穩定，可準備新的investigation候選；只能讀既有四檔runtime／預檢證據，不重跑模型或相同原生probe。舊04失效保留，沒有新批准不enqueue／execute，完整目標未完成。
+
 ## 2026-11-01 P0-CMD-008輸入歧義已修
 
 query參數重用bounded_json、8KiB及32層限制、duplicate/depth固定碼exit2，32/32與364編譯見verify-command-query-json-20261101-02／build-command-query-json-20261101-01；修前health duplicate回0/ok的失敗證據保留。CMD-007 d8c6b90已同步兩遠端。接續核已知P0/P1範圍，來源穩定後可只準備新的單事件真調查候選，沿用已核runtime與無模型預檢，未有新具體批准不執行；04不得沿用，DSM／真人／長跑及防守恢復仍獨立。

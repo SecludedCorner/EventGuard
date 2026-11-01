@@ -108,13 +108,13 @@ def mcp_lifecycle_text(value):
 
 
 def render(result, command="", operation=""):
+    if not isinstance(result,dict):
+        return "EventGuard：回傳格式未知。"
     if command=="agent" and operation=="access":
         return "\n".join(["Agent接收權限："+state(result.get("status")),
             "設定原因："+text(result.get("reason")),
             "接收器驗證："+text(result.get("receiver_state")),
             "只操作EventGuard接收設定；模型仍需有效批准與明確啟動，程序退出須另外核對。"])
-    if not isinstance(result,dict):
-        return "EventGuard：回傳格式未知。"
     if result.get("status") in {"error","invalid_request","conflict"}:
         return "EventGuard 無法完成操作："+text(result.get("reason",result.get("error_code",result["status"])))
     if command=="app":

@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-01 接收設定文字入口維持型別防護
+
+將render通用dict檢查置於新增access呈現前，非物件結果維持「回傳格式未知」，避免診斷文字入口拋錯；無核心或設定變更。UTC14:06:31，`py -3.13 -B scripts/verify.py --run-dir reports/verify-access-presentation-20261101-01 --timeout-seconds 60 --module test_application_cli_text`：6/6、0skip、364語法／編譯、來源未變，Job自然0／remaining0／無強停；build-access-presentation-20261101-01。另直接API煙測None／list／str三型態皆unknown文字，非真人驗收。
+
+P0-CMD-008 4c8940d79b321a3f4c5724ec060e74c02a45610e（fix(cli): reject ambiguous and overdeep query arguments [skip ci]，+69/-3）兩遠端同SHA，git-command-query-remote-20261101-01；工作樹當時乾淨。已知命令切片完成後準備新真調查候選，不執行失效04、不啟模型／CI／設備。
+
 ## 2026-11-01 P0-CMD-008拒絕含糊query參數
 
 query --args改用共用bounded_json，保留8KiB輸入與型別驗證，重複／escaped重名欄位、超過32層結構在dispatch前拒絕；固定query_input_duplicate_key／query_input_depth_exceeded、exit2，不輸出原值。UTC14:02:22，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-query-json-20261101-02 --timeout-seconds 120 --module test_command_query_json --module test_core_cli --module test_scanner_hardening`：32/32、0skip、364語法／編譯，source_unchanged，Job自然0／remaining0／無強停；build-command-query-json-20261101-01。regression-01實際health證明修正前重複key仍exit0/ok，0/1失敗保留；正式01因測試模組名誤填在啟動前拒絕，未計通過；02為最終。

@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-01 接收設定文字型別防護
+
+UTC14:06:31，`py -3.13 -B scripts/verify.py --run-dir reports/verify-access-presentation-20261101-01 --timeout-seconds 60 --module test_application_cli_text`：6/6、0skip、364語法、source_unchanged，guardian自然0／remaining0／無強停；build-access-presentation-20261101-01編譯364、0error。直接API煙測render(None/list/str,agent,access)皆回既有「回傳格式未知」；未新增鏡像測試或重跑其他不受影響模組，不是原生輸入／真人驗收。
+
+P0-CMD-008 4c8940d79b321a3f4c5724ec060e74c02a45610e，fix(cli): reject ambiguous and overdeep query arguments [skip ci]，+69/-3；git-command-query-remote-20261101-01直接核兩遠端同SHA，Git Job自然0／無殘留／強停，無CI／模型。
+
 ## 2026-11-01 P0-CMD-008實際JSON參數邊界
 
 verify-command-query-json-regression-20261101-01：1項實際query health測試0/1，重複request_id原先exit0/status ok，無OS採集／模型、Job自然exit1／remaining0／無強停。修CLI使用既有bounded_json後，UTC14:02:22執行`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-query-json-20261101-02 --timeout-seconds 120 --module test_command_query_json --module test_core_cli --module test_scanner_hardening`：32/32、0skip、364語法、source_unchanged；guardian自然0／remaining0／無強停。build-command-query-json-20261101-01編譯364、0error。正式01誤填不存在test_collector_bounded_json，驗證器啟動前exit2，無測試及run-dir，不列通過。
