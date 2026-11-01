@@ -321,7 +321,8 @@ def execute(args,runtime,progress=None):
     if args.command=="query":
         if len(args.args.encode("utf-8"))>8192:
             raise ValueError("query_input_limit")
-        values=json.loads(args.args)
+        from .collectors.bounded_json import loads
+        values=loads(args.args)
         if not isinstance(values,dict):
             raise ValueError("query_args_must_be_object")
         from .diagnostics.api import DiagnosticAPI
@@ -485,6 +486,12 @@ def main(argv=None,root=None):
                 return 5
         return 0
     except (ValueError,TypeError,json.JSONDecodeError) as error:
+        from .collectors.bounded_json import BoundedJSONError
+        if args.command=="query" and isinstance(error,BoundedJSONError):
+            code={"query_json_duplicate_key":"query_input_duplicate_key",
+                  "query_json_depth_exceeded":"query_input_depth_exceeded"}.get(error.reason,"query_input_invalid")
+            show({"status":"invalid_request","error_code":code,"raw_error_omitted":True})
+            return 2
         from .rules.configured import RulesValidationError
         from .event_ingress import EventIngressError
         from .events.disposition_history_store import HistoryConflictError

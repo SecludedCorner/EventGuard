@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-01 P0-CMD-008實際JSON參數邊界
+
+verify-command-query-json-regression-20261101-01：1項實際query health測試0/1，重複request_id原先exit0/status ok，無OS採集／模型、Job自然exit1／remaining0／無強停。修CLI使用既有bounded_json後，UTC14:02:22執行`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-query-json-20261101-02 --timeout-seconds 120 --module test_command_query_json --module test_core_cli --module test_scanner_hardening`：32/32、0skip、364語法、source_unchanged；guardian自然0／remaining0／無強停。build-command-query-json-20261101-01編譯364、0error。正式01誤填不存在test_collector_bounded_json，驗證器啟動前exit2，無測試及run-dir，不列通過。
+
+新CLI案例涵蓋重複／unicode escaped重名key、33層物件+陣列、截斷JSON、超8KiB及合法health輸入；拒絕時stdout固定JSON／stderr空／exit2，成功保留schema1.0與request ID；全部不建runtime。既有parser及核心CLI因共用邊界相關重驗，非原生coverage。CMD-007 d8c6b9006920d4a06251aff9d881ab0eda7b955e（feat(cli): control agent receive permission through shared gate [skip ci]，+94/-2）兩遠端同SHA，git-command-access-remote-20261101-01，Git Job自然0／無殘留／強停。
+
 ## 2026-11-01 CMD-007接收設定實際命令
 
 UTC13:56:52，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-agent-access-20261101-02 --timeout-seconds 120 --module test_command_agent_access --module test_agent_access --module test_core_cli`：34/34、0skip、363語法、source_unchanged，guardian自然0／remaining0／無強停，build-command-agent-access-20261101-01編譯363、0error。實際CLI status→enable→重送enable→disable與核心guard一致，只新增隔離fixture內agent-delivery.json；缺設定不建檔、壞設定status不修檔、明確disable修正本工具設定、目標為目錄造成真儲存失敗exit4／setting_saved=false、pending1/receipt0與DB bytes不變。此為接收設定，無receiver／模型／退出成功宣稱，正式安裝設定未變。

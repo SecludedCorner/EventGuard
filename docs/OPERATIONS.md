@@ -16,6 +16,8 @@ monitor 需要由人類明確啟動；另一同專案終端 `py -3.13 -B scripts
 
 `events list --namespace live` 查看已存 ID，`events inspect --namespace live --event-id EVENT_ID` 查看當時事實。只有明確 `events diagnose` 才執行事件綁定唯讀查詢；不接受自由命令。合成資料用 test namespace，不拿 test 結果判真主機安全。`report export` 只寫本機 JSON／HTML。
 
+query的`--args`限一筆完整JSON物件、8KiB／32層；重複欄位（含unicode escaped同名）及過深結構在查詢前exit2，固定query_input_duplicate_key／query_input_depth_exceeded，不採最後值覆蓋。`query health --args '{"request_id":"health-1"}'`只查工具能力，不查Windows來源。
+
 ## 保存事件調查
 
 人工處置可用固定operation ID重送及唯讀查回原結果；每個不同要求用不同ID：

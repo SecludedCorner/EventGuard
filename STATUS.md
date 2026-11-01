@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-01 P0-CMD-008拒絕含糊query參數
+
+query --args改用共用bounded_json，保留8KiB輸入與型別驗證，重複／escaped重名欄位、超過32層結構在dispatch前拒絕；固定query_input_duplicate_key／query_input_depth_exceeded、exit2，不輸出原值。UTC14:02:22，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-query-json-20261101-02 --timeout-seconds 120 --module test_command_query_json --module test_core_cli --module test_scanner_hardening`：32/32、0skip、364語法／編譯，source_unchanged，Job自然0／remaining0／無強停；build-command-query-json-20261101-01。regression-01實際health證明修正前重複key仍exit0/ok，0/1失敗保留；正式01因測試模組名誤填在啟動前拒絕，未計通過；02為最終。
+
+CMD-007 d8c6b9006920d4a06251aff9d881ab0eda7b955e，feat(cli): control agent receive permission through shared gate [skip ci]，+94/-2，git-command-access-remote-20261101-01核兩遠端同SHA／工作樹乾淨。核心指令切片保存後再準備新有效真調查候選；04仍失效、未啟模型／設備／CI，不把health／fixture當實機或真agent閉環。
+
 ## 2026-11-01 CMD-007 agent接收設定命令已驗
 
 新增agent access status/enable/disable，共用agent_access；只保存本工具接收設定，receiver仍not_verified，不啟模型／採集／程序控制。預設status不建檔，壞設定blocked=exit2，保存失敗exit4且setting_saved=false。UTC13:56:52，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-agent-access-20261101-02 --timeout-seconds 120 --module test_command_agent_access --module test_agent_access --module test_core_cli`：34/34、0skip、363語法／編譯、source_unchanged，Job自然0／remaining0／無強停；build-command-agent-access-20261101-01。01的22/22為匯入名稱明確化前範圍，不累加；正式安裝設定未改。

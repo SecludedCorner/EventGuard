@@ -14,7 +14,7 @@
 | 七來源已存觀察／概覽 | `sources list/show`、`overview/status/activity` | `source_status`、`OperatorAPI`；Web／Tk／MCP | JSON、limit，coverage/freshness 分開 | 唯讀；既有 test_operator_status、test_operator_success_contradictions；原生partial仍待驗 |
 | 採集與生命週期 | `monitor/stop`、`background`、`run`、`app status/start/pause/resume/stop/shutdown` | Monitor／OperatorAPI／Application，GUI共用 | fixture/max-cycles、期限、操作ID、退出回條 | 明確採集或控制自有Job；正常模型0；既有 test_application*、test_background_jobs；長跑未驗 |
 | 規則與playbook | `rules list/validate`、`playbook validate/simulate` | configured／playbooks；Web只展示規則 | 固定schema、JSON；設定檔編輯 | simulate 不執行處置；無敏感處置授權；既有 test_rules_playbooks |
-| 明確唯讀診斷 | `query`、`events diagnose/inspect` | DiagnosticAPI／OperatorAPI；MCP | 型別化操作、8KiB args、來源Job預算 | query/diagnose 可查OS；inspect只讀；既有 test_core_cli；拒讀不能安全 |
+| 明確唯讀診斷 | `query`、`events diagnose/inspect` | DiagnosticAPI／OperatorAPI；MCP；共用bounded_json | 型別化操作、8KiB args、32層／重複key拒絕、來源Job預算 | CMD-008：test_command_query_json；query/diagnose可查OS、health/inspect只讀；拒讀不能安全 |
 | 接收／ACK／重試／報告 | `events receive/ack/retry`、`report export` | OperatorAPI、共享inbox | event/query 綁定、JSON／escaped HTML | 明確保存收件／ACK或重試；既有 test_cli_workflow；ACK非結案 |
 | agent 派送／投遞證據 | `agent start/status/pause/resume/stop/capabilities/inspect/export` | agent_service／event_ingress；Web限制控制 | 七欄CloudEvents，耐久預算／Job | start預設檢查，execute須有效批准；04失效待重新準備，真閉環未驗 |
 | 公告追蹤／適用性 | `advisories start/check/status/stop/cases` | intelligence engine/service；Web投影 | config白名單、來源狀態、案件證據 | check/start會擷取；本次不執行；既有公告證據，非真防守 |
@@ -40,3 +40,7 @@ CMD-004已接線並驗收，可用 `EventGuard.cmd --format json events pending-
 ## 參考對照 R-CMD-003
 
 [psutil](https://github.com/giampaolo/psutil/tree/c24bae0a977d31f79ac820f3d18cfb33e1465a32)本機HEAD已核`c24bae0a977d31f79ac820f3d18cfb33e1465a32`，根LICENSE為BSD-3-Clause；`psutil/__init__.py:Process._get_ident/_raise_if_pid_reused`結合PID與建立時間、拒讀保留無法判定，`psutil/_pswindows.py:wrap_exceptions`區分讀取失敗類別。這些檔案未另列不同授權、無子模組被使用。借鏡「短ID不足以支持後續操作、須核身分且錯誤類別分離」，EventGuard只暴露既有payload hash交易綁定並新增型別化衝突碼，對應test_command_status_identity。不複製／執行psutil、不新增採集、PID處置或重試；hash不是OS程序身分或可信簽章，不能宣稱完成原生身分覆蓋。
+
+## 參考對照 R-CMD-004
+
+[Fluent Bit](https://github.com/fluent/fluent-bit/tree/ad9867358257123c34b529860fe984e92a69844c)本機HEAD已核`ad9867358257123c34b529860fe984e92a69844c`；根LICENSE與`src/flb_pack.c`檔頭Apache-2.0。`flb_json_tokenise`區分INVAL／PART，`flb_pack_json_state`明確處理串流尾端不完整訊息。只借「解析失敗有明確界線、不得混作有效範圍」契約；該檔不是EventGuard duplicate/depth策略的來源或保證。本次不讀／採用其第三方parser子庫，不複製／執行C碼、不引依賴。EventGuard CLI是一筆完整JSON命令，不採串流接收或保留半批；重用自有bounded_json拒絕重複key／超深輸入，對應test_command_query_json／test_scanner_hardening，尚非NAS或Fluent Bit相容性驗收。

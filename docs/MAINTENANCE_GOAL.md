@@ -10,7 +10,7 @@
 | CMD-005／P1 | 按operation_id查回原結果，API／CLI已驗 | API11/11；verify-command-operation-20261101-01：9/9、361編譯 | 保存整合；原結果／目前分離、不確認journal／ACK；真agent未驗 |
 | CMD-006／P1 | CLI人工處置可綁定已讀payload，已驗 | verify-command-status-identity-20261101-01：8/8、362編譯 | 保存整合；交易內檢查及固定衝突碼，省略新選項仍相容 |
 | CMD-007／P1 | 接收權限agent_access的CLI入口，已驗 | verify-command-agent-access-20261101-02：34/34、363編譯 | 保存整合；僅本工具設定，receiver／模型／退出證據獨立，正式設定未變 |
-| CMD-008／P0 | query JSON輸入拒絕重複欄位與過深結構，待實作 | CLI目前普通json.loads；collector已有bounded_json；health可無採集重現 | 重用有界parser保留8KiB，duplicate/depth→exit2且不dispatch；成功／錯誤／不建runtime實際CLI驗收 |
+| CMD-008／P0 | query JSON輸入歧義已修／已驗 | verify-command-query-json-20261101-02：32/32、364編譯，修前0/1保留 | 保存整合；8KiB／32層、duplicate/depth固定碼exit2，不dispatch／不建runtime |
 | AGENT-04／P1 | 真agent閉環待外部批准且原scope失效 | 原包source-binding-invalidated.json；02已消耗、03失效 | 未來重新準備明確版本scope並取得單次批准；本次不啟模型 |
 
 ## 2026-11-01 Command First 目標與開源參考接續
