@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from datetime import datetime
+import shutil
 
 from .runtime import Runtime, atomic_json, read_json, utc_now
 
@@ -50,3 +51,33 @@ def set_enabled(root, enabled, executable=None):
     atomic_json(Runtime(root).path(PATH), {"kind": KIND, "enabled": enabled,
         "executable": candidate or "", "updated_at": utc_now()}, 8192)
     return status(root)
+
+
+def describe(root):
+    """Project settings only; no dispatcher or process liveness observation."""
+    policy = status(root)
+    return {"schema_version": "1.0", **policy,
+            "state": "blocked" if policy.get("blocked") else "available",
+            "dispatcher_state": "not_verified", "child_exited": None, "model_calls": 0}
+
+
+def configure(root, enabled, executable=None):
+    """Shared explicit opt-in policy; never start or stop a dispatcher."""
+    if type(enabled) is not bool:
+        raise ValueError("automation_boolean_required")
+    if enabled:
+        from .agent_access import guard
+        if guard(root, "live") is not None:
+            return {**describe(root), "state": "blocked", "setting_saved": False,
+                    "reason": "agent_receive_permission_required"}
+    try:
+        if enabled:
+            policy = status(root)
+            candidate = executable if type(executable) is str and executable else policy["executable"] or shutil.which("codex.exe")
+            set_enabled(root, True, candidate)
+        else:
+            set_enabled(root, False)
+    except (OSError, ValueError, TypeError, RuntimeError):
+        return {**describe(root), "state": "blocked", "setting_saved": False,
+                "reason": "native_codex_or_setting_unavailable" if enabled else "automation_setting_write_failed"}
+    return {**describe(root), "setting_saved": True}

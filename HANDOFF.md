@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-02 CMD-014共用opt-in設定API完成／接CLI
+
+describe/configure與GUI共用接收gate及設定寫入，35/35、371編譯見verify-automation-core-20261102-02／build-automation-core-20261102-01；首輪mock呼叫簽章失敗保留並維持舊呼叫修復。API不啟停worker，state描述設定、dispatcher_state未驗／child_exited=null；GUI既有明確啟動／合作停用行為仍在controller。下一加agent automation status/enable/disable，真CLI隔離資料核對設定、不啟模型；fce1786已同步兩遠端，正式安裝未改。
+
 ## 2026-11-01 CMD-013歷程stdin取消接入共用核心
 
 preview-history真私有console取消及真CLI多區塊／超量輸入9/9、371編譯通過，見verify-history-input-cancel-20261101-02／build-history-input-cancel-20261101-01；取消固定history_input_cancelled／exit130，JSON及文字不宣稱預檢完成／恢復授權，未派送預檢、未改DB／pending／ACK，程序自然退出無強停殘留。修前1/2保留，錯誤測試模組選擇在worker前拒絕的紀錄另存preflight。62c37e8已同步兩遠端，未新增模型、真人／原生取消及實際恢復仍未驗。

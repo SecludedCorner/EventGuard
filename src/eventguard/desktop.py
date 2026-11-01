@@ -10,7 +10,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 import re
-import shutil
 import threading
 import uuid
 from functools import wraps
@@ -248,26 +247,15 @@ class DesktopController:
                 return self._error("automatic_agent", "desktop_controller_closed")
             if type(enabled) is not bool:
                 return self._error("automatic_agent", "automatic_agent_boolean_required")
-            from .agent_automation import set_enabled, status as settings
+            from .agent_automation import configure
+            configured = configure(self.root, enabled, executable)
+            if configured.get("setting_saved") is not True or configured.get("state") == "blocked":
+                return self._error("automatic_agent", configured["reason"])
             if not enabled:
-                try:
-                    set_enabled(self.root, False)
-                except (OSError, ValueError, TypeError, RuntimeError):
-                    return self._error("automatic_agent", "automation_setting_write_failed")
                 stopped = self._stop_automatic_agent()
                 return self._remember("automatic_agent", {"state": "disabled" if stopped else "shutdown_unconfirmed",
                     "enabled": False, "child_exited": stopped,
                     "reason": None if stopped else "automatic_agent_exit_unconfirmed"})
-            from .agent_access import guard
-            blocked = guard(self.root, "live")
-            if blocked is not None:
-                return self._error("automatic_agent", "agent_receive_permission_required")
-            policy = settings(self.root)
-            candidate = executable if type(executable) is str and executable else policy["executable"] or shutil.which("codex.exe")
-            try:
-                set_enabled(self.root, True, candidate)
-            except (OSError, ValueError, TypeError, RuntimeError):
-                return self._error("automatic_agent", "native_codex_or_setting_unavailable")
             # A click while monitoring is an explicit action. A saved choice
             # in an otherwise idle window waits for the next explicit Start.
             current = background.status(self.root)

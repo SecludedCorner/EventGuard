@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-02 CMD-014自動opt-in設定共用API已驗／CLI待接
+
+盤點DesktopController.set_automatic_agent的持久設定仍只有GUI入口；新增agent_automation.describe/configure，GUI共用接收gate、原生exe選擇與保存失敗規則。此API只管理設定、不啟停dispatcher；schema1.0／dispatcher_state=not_verified／child_exited=null／model_calls=0，保存失敗保留可讀原設定、不露原錯誤。UTC2026-11-01T16:03:12，`py -3.13 -B scripts/verify.py --run-dir reports/verify-automation-core-20261102-02 --timeout-seconds 120 --module test_agent_automation --module test_desktop`：35/35、0skip、371語法、source_unchanged；build-automation-core-20261102-01編譯371／0error，自有Job自然0／remaining0／無強停。首輪34/35為停用mock要求原呼叫簽章，已保留原呼叫、不放寬測試。全為隔離fixture／dispatcher mock，未改正式設定、未啟模型或採集；下一接CLI設定命令，不把設定當接收／執行／退出證據。
+
+fce1786aecb2afc0954ace011a81aa058d017b33（fix(cli): make history preview input cooperatively cancellable [skip ci]，+104/-9）已核兩遠端同SHA，git-history-input-remote-20261101-01；無CI。真人／DSM／長跑／實際防守恢復仍獨立未驗。
+
 ## 2026-11-01 CMD-013歷程預檢可在EOF前取消
 
 events preview-history重用command_input／_InputPipe，原4MiB+1024bytes輸入上限與共用catalog預檢規則不變；取消回schema1.0／cancelled／history_input_cancelled、exit130、restore_performed=false／restore_authorized=false，文字明示取消而非預檢結果。UTC15:54:23，`py -3.13 -B scripts/verify.py --run-dir reports/verify-history-input-cancel-20261101-02 --timeout-seconds 120 --module test_command_query_console_cancel --module test_disposition_history_preview_cli`：9/9、0skip、371語法、source_unchanged；build-history-input-cancel-20261101-01編譯371／0error，自有Job自然0／remaining0／無強停。真私有console空／半份輸入及真CLI多區塊預檢／超量未EOF拒絕，DB bytes、pending／ACK均未改；修前1/2含歷程兩subtest失敗保留，非真人或恢復驗收。

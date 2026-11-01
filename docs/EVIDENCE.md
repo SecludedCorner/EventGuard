@@ -1,5 +1,13 @@
 # 證據與時間日誌
 
+## 2026-11-02 自動agent opt-in設定共用核心
+
+盤點desktop.py的set_automatic_agent與CLI parser，發現持久自動設定未有CLI入口。新增agent_automation.describe/configure及GUI共用呼叫；保留原set_enabled相容。describe不建資料夾／查程序，configure啟用前要求獨立接收gate，inert fixture.exe只檢查／保存不執行；停用失敗回原enabled=true／setting_saved=false、固定reason、不含注入原例外。
+
+verify-automation-core-20261102-01：35項／34通過，一個舊測試兩種呼叫形式都要求set_enabled(root,False)而非額外None；維持舊呼叫後UTC2026-11-01T16:03:12執行`py -3.13 -B scripts/verify.py --run-dir reports/verify-automation-core-20261102-02 --timeout-seconds 120 --module test_agent_automation --module test_desktop`：35/35、0skip、371語法、source_unchanged；build-automation-core-20261102-01編譯371／0error。guardian自然0／remaining0／無強停，dispatcher皆mock，模型／採集／正式設定修改0；不是新真agent或退出驗收。CLI尚待接入。
+
+fce1786aecb2afc0954ace011a81aa058d017b33（fix(cli): make history preview input cooperatively cancellable [skip ci]，+104/-9）兩遠端同SHA，git-history-input-remote-20261101-01；Git Jobs自然0／remaining0／無強停、無CI。
+
 ## 2026-11-01 歷程預檢輸入取消與跨區塊CLI
 
 verify-history-input-cancel-regression-20261101-01：2項／1通過，query取消仍過，preview-history空／半份JSON兩subtest失敗（stderr僅有無、未保存原文），無強停殘留；保留原結果。首個修後命令錯填不存在的test_presentation，於worker前拒絕，history-input-preflight-20261101-01保留，不能計為執行測試。
