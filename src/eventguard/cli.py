@@ -375,9 +375,14 @@ def execute(args,runtime,progress=None):
             if args.event_command=="preview-history":
                 from .events.disposition_history_backup import MAX_EXPORT_BYTES
                 stream=getattr(sys.stdin,"buffer",sys.stdin)
-                if stream.isatty():
+                if stream is None or stream.isatty():
                     raise ValueError("history_backup_stdin_required")
-                content=stream.read(MAX_EXPORT_BYTES+1025)
+                try:
+                    from .command_input import read_bounded_stdin
+                    content=read_bounded_stdin(stream,MAX_EXPORT_BYTES+1025)
+                except KeyboardInterrupt:
+                    return {"schema_version":"1.0","status":"cancelled","error_code":"history_input_cancelled",
+                            "restore_performed":False,"restore_authorized":False,"model_calls":0}
                 if len(content)>MAX_EXPORT_BYTES+1024:
                     raise ValueError("history_backup_bytes_limit")
                 return catalog.preview_handling_history(json.loads(content,object_pairs_hook=_unique_json_object))

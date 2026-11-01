@@ -45,18 +45,20 @@ sys.stdin=MarkedInput()
 from eventguard.diagnostics.api import DiagnosticAPI
 def forbidden(*args,**kwargs): raise AssertionError("query must not dispatch")
 DiagnosticAPI.query=forbidden
+from eventguard.events.catalog import EventCatalog
+EventCatalog.preview_handling_history=forbidden
 from eventguard.cli import main
-raise SystemExit(main(["--format","json","query","health","--args","-"],root=folder/"runtime"))
+raise SystemExit(main(["--format","json",*json.loads(sys.argv[2])],root=folder/"runtime"))
 '''
 
 
 @unittest.skipUnless(os.name == "nt", "owned Windows console required")
 class CommandQueryConsoleCancellationTests(unittest.TestCase):
-    def test_real_control_event_cancels_before_producer_eof(self):
+    def check_cancel(self, arguments, error_code):
         for content in (b"", b'{"request_id":'):
             with self.subTest(partial=bool(content)), tempfile.TemporaryDirectory() as temporary:
                 folder = Path(temporary)
-                child = spawn([sys.executable, "-B", "-c", PROGRAM, temporary],
+                child = spawn([sys.executable, "-B", "-c", PROGRAM, temporary, json.dumps(arguments)],
                     env=dict(os.environ, PYTHONPATH=str(ROOT / "src")), stdin=subprocess.PIPE,
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 exited_before_eof = False
@@ -87,8 +89,18 @@ class CommandQueryConsoleCancellationTests(unittest.TestCase):
                 self.assertFalse(bool(err), "unexpected_stderr_omitted")
                 self.assertEqual(child.returncode, 130)
                 result = json.loads(out)
-                self.assertEqual((result["status"], result["error_code"]), ("cancelled", "query_input_cancelled"))
-                self.assertFalse(result["system_query_executed"])
+                self.assertEqual((result["status"], result["error_code"]), ("cancelled", error_code))
+                if arguments[0] == "query":
+                    self.assertFalse(result["system_query_executed"])
+                else:
+                    self.assertFalse(result["restore_performed"])
+                    self.assertFalse(result["restore_authorized"])
                 self.assertEqual(result["model_calls"], 0)
                 self.assertFalse((folder / "runtime").exists())
                 self.assertTrue(exited_before_eof, "cancellation_waited_for_producer_eof")
+
+    def test_real_control_event_cancels_before_producer_eof(self):
+        self.check_cancel(["query", "health", "--args", "-"], "query_input_cancelled")
+
+    def test_history_preview_cancels_before_eof_without_preview_or_restore(self):
+        self.check_cancel(["events", "preview-history", "--namespace", "test"], "history_input_cancelled")

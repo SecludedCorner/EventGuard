@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-01 CMD-013歷程stdin取消接入共用核心
+
+preview-history真私有console取消及真CLI多區塊／超量輸入9/9、371編譯通過，見verify-history-input-cancel-20261101-02／build-history-input-cancel-20261101-01；取消固定history_input_cancelled／exit130，JSON及文字不宣稱預檢完成／恢復授權，未派送預檢、未改DB／pending／ACK，程序自然退出無強停殘留。修前1/2保留，錯誤測試模組選擇在worker前拒絕的紀錄另存preflight。62c37e8已同步兩遠端，未新增模型、真人／原生取消及實際恢復仍未驗。
+
 ## 2026-11-01 stdin成功分段與邊界已補驗
 
 verify-query-input-boundaries-20261101-01：6/6、371編譯，真CLI四段BOM／JSON不提前dispatch、EOF後保留識別；恰8KiB管線／普通檔案成功、超一byte且未EOF拒絕，自有程序自然退出／無強停殘留。只增加測試，產品來源b88310d及31/31取消／stdio證據沿用其範圍；b88310d兩遠端已核同SHA、工作樹乾淨，無新模型。

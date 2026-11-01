@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-01 CMD-013歷程預檢可在EOF前取消
+
+events preview-history重用command_input／_InputPipe，原4MiB+1024bytes輸入上限與共用catalog預檢規則不變；取消回schema1.0／cancelled／history_input_cancelled、exit130、restore_performed=false／restore_authorized=false，文字明示取消而非預檢結果。UTC15:54:23，`py -3.13 -B scripts/verify.py --run-dir reports/verify-history-input-cancel-20261101-02 --timeout-seconds 120 --module test_command_query_console_cancel --module test_disposition_history_preview_cli`：9/9、0skip、371語法、source_unchanged；build-history-input-cancel-20261101-01編譯371／0error，自有Job自然0／remaining0／無強停。真私有console空／半份輸入及真CLI多區塊預檢／超量未EOF拒絕，DB bytes、pending／ACK均未改；修前1/2含歷程兩subtest失敗保留，非真人或恢復驗收。
+
+前單元62c37e8b4a1ec9c4007166a576e9ef82f992fe13，test(cli): verify fragmented query input and exact byte boundaries [skip ci]，+41/-4，兩遠端同SHA／工作樹乾淨，git-query-boundary-remote-20261101-01。本次模型／原生採集／CI0，06歷史合成批准已消耗不重用。
+
 ## 2026-11-01 stdin分段／上限／檔案重導向補驗
 
 UTC15:48:49，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-input-boundaries-20261101-01 --timeout-seconds 90 --module test_command_query_stdin`：6/6、0skip、371語法、source_unchanged；build-query-input-boundaries-20261101-01編譯371／0error，自有Job自然0／remaining0／無強停。真CLI分四段接BOM／JSON且每段仍等待EOF，完成後保留request_id；管線及普通檔案重導向恰8192bytes成功、8193且未EOF拒絕。只擴測試，產品來源沿用b88310df5f5692c7242aa57a2656080743248dfb（fix(cli): cancel Windows query pipe input before producer EOF [skip ci]，+151/-6），已同步兩遠端，git-query-console-remote-20261101-01；新增模型／原生採集／CI0。

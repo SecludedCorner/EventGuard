@@ -1,5 +1,13 @@
 # 證據與時間日誌
 
+## 2026-11-01 歷程預檢輸入取消與跨區塊CLI
+
+verify-history-input-cancel-regression-20261101-01：2項／1通過，query取消仍過，preview-history空／半份JSON兩subtest失敗（stderr僅有無、未保存原文），無強停殘留；保留原結果。首個修後命令錯填不存在的test_presentation，於worker前拒絕，history-input-preflight-20261101-01保留，不能計為執行測試。
+
+修後UTC15:54:23，`py -3.13 -B scripts/verify.py --run-dir reports/verify-history-input-cancel-20261101-02 --timeout-seconds 120 --module test_command_query_console_cancel --module test_disposition_history_preview_cli`：9/9、0skip、371語法、source_unchanged；build-history-input-cancel-20261101-01編譯371／0error，guardian自然0／remaining0／無強停。真控制事件只在自身console恰含自有CLI時送出，空／未完JSON均在EOF前exit130、固定history_input_cancelled，preview spy未執行、無runtime；文字注入取消明示未完成。另以真CLI小備份／加131089bytes空白的多讀取區塊有效備份成功預檢，超MAX_EXPORT_BYTES+1024一byte且producer未EOF即exit2；單JSON／stderr空，真SQLite bytes及pending1／receipt0未變，未恢復／刪除或批准處置，模型0。此非真人鍵盤／真備份來源或恢復驗收。
+
+62c37e8b4a1ec9c4007166a576e9ef82f992fe13（test(cli): verify fragmented query input and exact byte boundaries [skip ci]，+41/-4）已核兩遠端同SHA，git-query-boundary-remote-20261101-01；Git Jobs自然0／remaining0／無強停，無CI。
+
 ## 2026-11-01 stdin分段、精確byte界線與普通檔案
 
 UTC15:48:49，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-input-boundaries-20261101-01 --timeout-seconds 90 --module test_command_query_stdin`：6/6、0skip、371語法、source_unchanged；build-query-input-boundaries-20261101-01編譯371／0error。真CLI producer把BOM切三段及JSON分開送，每段等待0.1秒仍不退出，EOF後得到同request_id；恰8192bytes在管線／TemporaryFile重導向皆成功，8193bytes且producer未EOF即exit2。stdout單JSON／stderr空、root無runtime，自有Job自然0／remaining0／無強停；僅合成health／模型0。

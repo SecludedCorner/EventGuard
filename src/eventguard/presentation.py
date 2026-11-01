@@ -326,6 +326,8 @@ def render(result, command="", operation=""):
                           "筆數="+text(result.get("records"))+"；SHA256="+text(result.get("sha256")),
                           "來源紀錄未清理；目錄項持久性未確認。此備份不能取代完整資料庫或還原驗證。"])
     if command=="events" and operation=="preview-history":
+        if result.get("status")=="cancelled":
+            return "歷程身分預檢已取消；未完成預檢、未還原或刪除。"
         if result.get("restore_performed") is not False or result.get("restore_authorized") is not False:
             return "歷程身分預檢未完成。"
         counts=result.get("counts",{})

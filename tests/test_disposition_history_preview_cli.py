@@ -4,7 +4,10 @@ from copy import deepcopy
 from pathlib import Path
 import io
 import json
+import os
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -13,6 +16,9 @@ from eventguard.cli import main
 from eventguard.events.disposition_history_backup import snapshot
 from eventguard.events.store import EventStore
 from eventguard.synthetic import make_synthetic
+from eventguard.processes import spawn, finish
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class HistoryPreviewCliTests(unittest.TestCase):
@@ -103,3 +109,54 @@ class HistoryPreviewCliTests(unittest.TestCase):
         self.assertNotEqual(self.invoke("x" * (4 * 1024 * 1024 + 1025))[0], 0)
         self.assertEqual(self.store.path.read_bytes(), before)
         self.assertFalse((self.root / "reports").exists())
+
+    def test_actual_pipe_preview_handles_multiple_read_chunks_and_open_oversize(self):
+        from eventguard.events.disposition_history_backup import MAX_EXPORT_BYTES
+        before = self.store.path.read_bytes()
+        raw = json.dumps(self.value).encode("utf-8")
+        for content, keep_open in ((raw, False), (raw + b" " * 131089, False),
+                                   (b" " * (MAX_EXPORT_BYTES + 1025), True)):
+            with self.subTest(size=len(content)):
+                child = spawn([sys.executable, "-B", "-c",
+                    "import sys; from eventguard.cli import main; raise SystemExit(main(sys.argv[2:],root=sys.argv[1]))",
+                    str(self.root), "--format", "json", "events", "preview-history", "--namespace", "test"],
+                    env=dict(os.environ, PYTHONPATH=str(ROOT / "src")), stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                try:
+                    if keep_open:
+                        child.stdin.write(content)
+                        child.stdin.flush()
+                        child.wait(timeout=10)
+                        child.stdin.close()
+                        child.stdin = None
+                        out, err = child.communicate()
+                    else:
+                        out, err = child.communicate(input=content, timeout=10)
+                finally:
+                    receipt = finish(child, reason="test_teardown", grace=1)
+                self.assertTrue(receipt["child_exited"])
+                self.assertFalse(receipt["forcibly_terminated"])
+                self.assertEqual(receipt["remaining_owned_processes"], 0)
+                self.assertFalse(bool(err), "unexpected_stderr_omitted")
+                value = json.loads(out)
+                self.assertEqual(child.returncode, 2 if keep_open else 0)
+                if not keep_open:
+                    self.assertEqual(value["counts"]["already_present"], 1)
+                    self.assertFalse(value["restore_performed"])
+                    self.assertFalse(value["restore_authorized"])
+                self.assertEqual(self.store.path.read_bytes(), before)
+                self.assertEqual((self.store.stats()["pending"], self.store.stats()["receipt_count"]), (1, 0))
+
+    def test_text_cancellation_is_explicit_and_not_a_preview_result(self):
+        class Interrupted(io.StringIO):
+            def read(self, *_args):
+                raise KeyboardInterrupt("SYNTHETIC_PRIVATE")
+        before = self.store.path.read_bytes()
+        output = io.StringIO()
+        with patch("sys.stdin", Interrupted()), redirect_stdout(output):
+            code = main(["--format", "text", "events", "preview-history", "--namespace", "test"], root=self.root)
+        self.assertEqual(code, 130)
+        self.assertIn("已取消", output.getvalue())
+        self.assertNotIn("唯讀預檢：", output.getvalue())
+        self.assertNotIn("SYNTHETIC_PRIVATE", output.getvalue())
+        self.assertEqual(self.store.path.read_bytes(), before)
