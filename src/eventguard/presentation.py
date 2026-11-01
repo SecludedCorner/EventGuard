@@ -264,6 +264,15 @@ def render(result, command="", operation=""):
             lines.append("前次查詢退出閘道："+text(gate["reason"]))
         lines.append("狀態／資料：status；sources list；事件：events list；報告：report export。")
         return "\n".join(lines)
+    if command=="events" and operation=="pending-requests":
+        lines=["待確認人工操作："+state(result.get("state")),
+               "事件數="+text(result.get("total"))+"；要求數="+text(result.get("request_total")),
+               "offset="+text(result.get("offset"))+"；更多="+text(result.get("has_more"))]
+        for event in result.get("events",[]):
+            lines.append(text(event.get("event_id"))+" / 狀態="+text(event.get("handling_status"))
+                         +" / 待確認="+text(event.get("pending_request_count")))
+        lines.append("唯讀清單；unknown 不代表零項。使用 events detail 查看要求；不重送、不 ACK。")
+        return "\n".join(lines)
     if command=="events" and operation=="list":
         suffix=" --namespace "+result["namespace"] if result.get("namespace") in {"live","test"} else ""
         rows=["事件空間="+text(result.get("namespace"))+"；符合條件="+text(result.get("total"))+"；尚有下一頁="+text(result.get("has_more",False)),

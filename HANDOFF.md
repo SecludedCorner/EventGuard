@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-01 CMD-004完成／唯一寫入已轉交本聊天
+
+使用者明確指定本聊天接手寫入；另外兩個EventGuard聊天及其唯讀審查已交回成果、確認無執行中mutation後封存，保留歷史與refs。CMD-003 fbb7203已同步開發分支／main。CMD-004命令pending-requests共用catalog，unknown=exit5、唯讀不resolve/dispatch/ACK；16/16、358編譯及失敗修正證據見STATUS／EVIDENCE。下一CMD-005操作結果查回應重用既有operation表，原操作與目前狀態分開，缺anchor/hash/schema維持unknown；不可把GUI未決journal當可自動重送或已確認。
+
 ## 2026-11-01 Command First 已進入實作
 
 CMD-003補 CLI `events set-status --operation-id` 與固定衝突碼；12/12實際CLI／既有workflow、0skip，357編譯，自有Job退出無殘留。最終證據 reports/verify-command-status-20261101-03、build-command-status-20261101-01，非真agent驗收。04 source-binding-invalidated.json已保存、不可執行舊scope。下一CMD-004從EventCatalog.pending_requests接唯讀命令，unknown須exit5，不能在讀取時重送或ACK；矩陣及具體佇列見docs。

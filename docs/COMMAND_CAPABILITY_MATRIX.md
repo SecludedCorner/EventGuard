@@ -6,7 +6,7 @@
 | --- | --- | --- | --- | --- |
 | 已存事件篩選／詳情 | `events list/detail --namespace test` | `EventCatalog.list/detail`；Web、Tk 同核心 | JSON，limit 1..1000、offset、severity/source/status | 唯讀；既有 test_event_catalog、test_cli_workflow；缺庫空列表不代表安全 |
 | 人工處置／重送 | `events set-status --event-id ID --status handled --operation-id OP` | `EventCatalog.set_status` → `EventStore.set_disposition`；Web／Tk | JSON，固定狀態，操作ID 1..128 | 寫狀態／歷程，不 ACK；CMD-003 補 CLI 操作ID；test_command_status_retry 實際程序驗收 |
-| GUI 未決請求發現 | 尚缺 CLI | `EventCatalog.pending_requests`、`DesktopController.pending_requests` | namespace、limit 1..100、offset 0..128 | 唯讀；CMD-004 待接命令並核對真正上限／拒讀語意 |
+| GUI 未決請求發現 | `events pending-requests` | `EventCatalog.pending_requests`、`DesktopController.pending_requests` | namespace、limit 1..100、offset 0..128；固定event ID排序 | 唯讀；CMD-004已驗：test_command_pending_requests／test_desktop_pending_catalog；unknown=exit5，零件available=exit0 |
 | 保存 metadata 調查／版本 | `events investigate/detail` | `EventCatalog.investigate/detail`；Web／Tk | 有界候選／成員／版本、gaps、非因果聲明 | investigate 寫調查；detail 唯讀；既有 test_investigation*；真agent分析另有契約 |
 | 人工歷程備份／預檢 | `events backup-history/preview-history` | catalog + disposition_history_backup；Tk | reports 固定名稱不覆寫；stdin 有界 JSON | 明確匯出／唯讀預檢，不恢復；既有 test_disposition_history_preview_cli |
 | 七來源已存觀察／概覽 | `sources list/show`、`overview/status/activity` | `source_status`、`OperatorAPI`；Web／Tk／MCP | JSON、limit，coverage/freshness 分開 | 唯讀；既有 test_operator_status、test_operator_success_contradictions；原生partial仍待驗 |
@@ -20,6 +20,8 @@
 | 預算／MCP | `budget status/initialize/reconcile`、`mcp` | BudgetAuthority／RemoteApplication | 耐久installation預算、固定工具 | initialize/reconcile明確寫入；不自動重設；MCP observer不冷啟App |
 
 首個切片 CMD-003 推進「保存證據／可追溯人工處置」；下一 CMD-004 讓命令可發現 GUI 中回條未確認的請求，避免只靠畫面恢復。餘項持續依實際缺口增補，不代表所有 CLI 契約已完整驗收。
+
+CMD-004已接線並驗收，可用 `EventGuard.cmd --format json events pending-requests --namespace test --limit 1`，再以 `events detail --namespace test --event-id <回傳ID>` 讀原operation ID；offset用於下一頁。查閱不確認或重送GUI要求。schema沿用catalog欄位，unknown時events空但total/request_total/has_more為null，不能解讀為零項。下一CMD-005按operation ID查原結果；重送的目前狀態不等於原操作結果。
 
 ## 參考對照 R-CMD-001
 

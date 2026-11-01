@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-01 CMD-004 未決人工操作已可由命令發現
+
+新增 `events pending-requests --namespace test --limit 1 --offset 0`，直接呼叫 GUI 使用的 EventCatalog.pending_requests；JSON／文字皆可用。缺庫或離頁身分不符保持 unknown、exit5，與已核零件 available/exit0 分開；不派送、不確認回條、不 ACK。可將回傳 event_id 串接 events detail 讀取原要求。
+
+UTC13:38:05，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-pending-20261101-02 --timeout-seconds 120 --module test_command_pending_requests --module test_desktop_pending_catalog --module test_cli_workflow`：16/16、0skip、358語法／編譯，來源未變，Job自然exit0、remaining0、無強停；build-command-pending-20261101-01。01兩個新fixture未正規化hash的error保留，改fixture後02通過；未放寬產品身分檢查。04原scope失效維持，無模型／設備／CI；下一CMD-005按operation_id唯讀查回原結果，真實驗收關卡保留。
+
 ## 2026-11-01 CMD-003 命令處置重送已驗
 
 新增 `events set-status --operation-id`，共用既有交易／歷程核心；相同請求重送不重寫、不回退後續狀態，不同內容／事件共用識別碼回 `operation_id_conflict`、exit 2。省略參數維持舊用法。能力矩陣見 docs/COMMAND_CAPABILITY_MATRIX.md，下一 CMD-004 補 GUI 未決請求的唯讀命令。

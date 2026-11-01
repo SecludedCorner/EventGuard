@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-01 CMD-004實際CLI唯讀發現
+
+UTC13:38:05，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-pending-20261101-02 --timeout-seconds 120 --module test_command_pending_requests --module test_desktop_pending_catalog --module test_cli_workflow`：16/16、0skip、358語法、source_unchanged=true；guardian自然exit0、remaining0／無強停，逐測無殘留。build-command-pending-20261101-01/build.json編譯358、errors0。三個新實際CLI案例涵蓋pending頁→detail串接、文字／JSON、missing/verified-empty、離頁hash不符與邊界拒絕；讀取DB bytes不變，pending3/receipt0。catalog既有101事件分頁測試本次因入口相關重驗，非原生或真agent驗收。
+
+01保留14passed／2error：新增fixture直接hash未正規化事件，被既有begin拒絕；僅修fixture validate_event後02通過。原04批准包失效維持，不執行或重備真模型；CI／模型／設備／採集0。CMD-003遠端保存證據沿用git-command-remote-20261101-01，兩ref同fbb720300559a5622250713490a249ef1d84dce5。
+
 ## 2026-11-01 CMD-003 真CLI重送（合成資料）
 
 `py -3.13 -B scripts/verify.py --run-dir reports/verify-command-status-20261101-03 --timeout-seconds 120 --module test_command_status_retry --module test_cli_workflow`：UTC13:32:20，12/12、0skip、357語法、source_unchanged=true；guardian自然exit0、remaining0、強停false。新測試以私有Job啟真正Python CLI，驗遺失回條重送、後續狀態不回退、跨事件／內容衝突exit2、無ID相容、JSON stdout／空stderr與pending1／receipt0。01兩error為新測試收尾原因碼錯用，保留原失敗；02修正通過；03是固定衝突碼後的最終來源，數字不累加。

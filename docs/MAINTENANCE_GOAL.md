@@ -6,7 +6,8 @@
 | --- | --- | --- | --- |
 | CMD-001／P1 | 最小能力矩陣已建立，依實際路徑增補 | COMMAND_CAPABILITY_MATRIX；非全能力本次重驗 | 跟隨缺口更新命令／API／GUI及驗收 |
 | CMD-003／P1 | CLI人工狀態可冪等重送，已驗 | 既有catalog交易；verify-command-status-20261101-03 12/12、357編譯；非ACK | 逐單元保存後接CMD-004；不同事件／內容須exit2且不寫入 |
-| CMD-004／P1 | CLI查閱GUI未決請求，待實作 | EventCatalog.pending_requests；不需採集／模型；目前只有GUI | 接有界分頁命令，missing/corrupt/off-page mismatch維持unknown及exit5；不寫／不dispatch／不ACK |
+| CMD-004／P1 | CLI查閱GUI未決請求，已驗 | verify-command-pending-20261101-02：16/16、358編譯；非真環境 | 保存並整合；unknown=exit5，穩定分頁與detail串接，不寫／dispatch／ACK |
+| CMD-005／P1 | 按operation_id唯讀查回原人工操作結果，待實作 | 既有disposition operations表及catalog RO；審查已交接，無模型依賴 | 原結果／目前狀態分開、綁event/hash；missing/schema壞/anchor消失為unknown，重讀不寫，不確認journal；實際CLI正反例後保存整合 |
 | AGENT-04／P1 | 真agent閉環待外部批准且原scope失效 | 原包source-binding-invalidated.json；02已消耗、03失效 | 未來重新準備明確版本scope並取得單次批准；本次不啟模型 |
 
 ## 2026-11-01 Command First 目標與開源參考接續
