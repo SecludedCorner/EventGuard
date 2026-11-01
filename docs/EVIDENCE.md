@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-02 現行程序核心的調查鏈路回歸及08準備
+
+UTC2026-11-01T18:49:24，verify-investigation-process-regression-20261102-01（命令見STATUS）6/6、0skip、379語法、source_unchanged，guardian自然0／remaining0／無強停。讀取lifecycle-evidence的classified case，scope明示FAKE CLI／實際SDK私有Jobs HANDLE SQLite／model_calls0；classification_preserved=true、completed_tools四步依序、investigation_saved／outbox_acknowledged／approved_launch_hash_matches皆true，MCP exit驗收passed／natural=true／ACK flushed=true／exit0，capture.process exit0／remaining0／force=false。此沿production acceptance的正常路徑，驗證共用processes修正後協定仍可完成，不替代真模型。build沿用相同ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1來源的build-query-creation-cancel-20261102-01（379／0error）；本單元僅文件／忽略的準備包。
+
+08 preparation-review保存source checkpoint f3e271a5ab2ff4b1c194057bc6d7c38eb54e775b／同source hash，scope4fa53e3b8165a2db313cec68f31814bdccd4cf4e3cb76347f83f4cfd9fa02fc7，固定三版本及runtime／無模型預檢hash皆與06一致；require_approval真實拒絕，approved=false、enqueued/stages/pending/receipt0，未啟子程序／模型／原生查詢。固定合成TCP18080、warning→high分類、無真主機安全／處置結論；只準備不構成批准或執行。07因來源改動失效保留原紀錄，08不得沿用07／06批准。f3e271a兩遠端已核，git-query-creation-cancel-remote-20261102-01。
+
 ## 2026-11-02 建立中斷由低階Job至CLI的證據鏈
 
 verify-query-creation-cancel-regression-20261102-01為4/5，真pre-Resume合成子程序清理後Runner無接回條，CLI異常逸出／shutdown錯呈未管理。JobPopen現只把本身Job在關閉前查得的process_started／退出碼／剩餘數／強停事實放入固定LaunchInterrupted；不帶原始例外或以該資料授權任何處置。Runner在spawn窗口接收，無原始child可觀察時仍保存回條；若沒有可信回條則unknown／pending、後續busy、不以PID終止或宣稱退出。未建子程序的空Job回process_started=false、child_exited／exit_code=null，沒有捏造PID或成功退出。

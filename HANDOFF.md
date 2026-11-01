@@ -1,5 +1,11 @@
 # EventGuard 接手
 
+## 2026-11-02 修正後真stdio已驗／08取代失效07待具體批准
+
+verify-investigation-process-regression-20261102-01三模組6/6、379編譯，明示FAKE CLI＋真stdio／SDK／SQLite／Jobs／HANDLE；分類及報告保存、四工具、ACK、launch hash、MCP flushed／自然0及CLI自然0／remaining0／無強停均核lifecycle-evidence。沿用同source ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1的build-query-creation-cancel-20261102-01，未啟真模型；f3e271a兩遠端已核同步。
+
+新08包reports/investigation-acceptance-eventguard-classification-20261102-08，scope4fa53e3b8165a2db313cec68f31814bdccd4cf4e3cb76347f83f4cfd9fa02fc7、event evt-eaa7084e46664cefa05b77d95ebb8048，CLI0.166.0-alpha.5.1／Python3.13.3／MCP1.6.0。preparation-review確認approved=false／未入列／未啟程序，只有具體新批准且hash仍符才一次執行。07已失效、06已消耗，不使用舊詢問回覆作08批准；失敗不重試。NAS與其他真環境關卡仍待前置，不把合成通道完成當整體防守完成。
+
 ## 2026-11-02 建立中斷回條已接通，07仍失效
 
 LaunchInterrupted帶實際Job清理回條，Runner／CLI取消可保留pre-Resume故障1460／force=true／remaining0；空Job不捏造child exit，未知建立事實維持null／pending並拒絕再launch。verify-query-creation-cancel-20261102-02四模組64/64、379編譯，build-query-creation-cancel-20261102-01 source ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1；修前4/5／初版62保留，lifecycle-evidence已核CLI130及兩個邊界。無新原生採集／模型，非真人所有窗口驗收；b92c0a4兩遠端已同步。07因先前改source仍禁止執行，確認必要修正已保存後才準備新scope；NAS／真人／長跑／防守恢復仍待前置。

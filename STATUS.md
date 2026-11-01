@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-11-02 現行程序核心的調查stdio回歸通過／08待批准
+
+UTC2026-11-01T18:49:24，`py -3.13 -B scripts/verify.py --run-dir reports/verify-investigation-process-regression-20261102-01 --timeout-seconds 140 --module test_investigation_acceptance --module test_investigation_launch_binding --module test_investigation_stdio`：6/6、0skip、379語法、source_unchanged。明示FAKE CLI＋實際SDK／stdio／SQLite／私有Job／HANDLE；已讀分類case的lifecycle-evidence：receive/query/save/ACK依序、saved／ACK／launch hash一致，分類保留，MCP ACK flushed／自然0，CLI自然0／remaining0／force=false。未升格真模型。純文件更新沿用build-query-creation-cancel-20261102-01的同src/scripts hash ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1（379／0error），不重跑未受影響測試。
+
+08已唯讀準備，reports/investigation-acceptance-eventguard-classification-20261102-08/AUTHORIZATION_REQUEST.md及preparation-review可核。事件evt-eaa7084e46664cefa05b77d95ebb8048、scope4fa53e3b8165a2db313cec68f31814bdccd4cf4e3cb76347f83f4cfd9fa02fc7，來源checkpoint f3e271a5ab2ff4b1c194057bc6d7c38eb54e775b；沿用CLI0.166.0-alpha.5.1／Python3.13.3／MCP1.6.0，四檔hash及舊無模型預檢均與06一致。gate實際拒絕，approved=false、enqueued/stages/pending/receipt0、未啟程序／模型。08取代未執行即失效的07；07／已消耗06批准不可套用。具體批准且scope仍符才1真模型任務／180秒（自有Job收尾另計）／失敗不重試；僅固定合成metadata及分類、無OS／其他工具／處置，不保證token／費用硬上限。
+
+f3e271a5ab2ff4b1c194057bc6d7c38eb54e775b（fix(processes): preserve launch interruption receipts through query cancellation [skip ci]，+128/-18）兩遠端已核同步，git-query-creation-cancel-remote-20261102-01。NAS格式資訊、真人／原生／長跑及可信防守恢復仍待前置；整體目標未完成，CI0。
+
 ## 2026-11-02 CMD-016程序建立中斷可回傳真實清理事實
 
 verify-query-creation-cancel-regression-20261102-01為4/5：pre-Resume子程序已由constructor清理，但Runner遺失回條、CLI例外逸出，shutdown錯呈未管理／已退出。現由LaunchInterrupted（KeyboardInterrupt子類、固定訊息）攜帶自有Job關閉前的實際事實，Runner保留為取消結果及shutdown回條，不重啟／補造自然退出。尚未建立子程序明示process_started=false／child_exited及exit_code=null、無PID；缺建立證據則各事實null、pending=true，後續查詢busy且不作任何PID動作。
