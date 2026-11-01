@@ -44,8 +44,10 @@ class _InputPipe:
         except (OSError, ValueError, AttributeError, TypeError):
             raise ApplicationStdioError("application_stdio_own_stdin_pipe_required") from None
 
-    def read_available(self):
+    def read_available(self, max_bytes=READ_BYTES):
         """None means real EOF; b'' means an open pipe currently has no bytes."""
+        if type(max_bytes) is not int or not 1 <= max_bytes <= READ_BYTES:
+            raise ValueError("invalid_stdin_read_limit")
         available = C.c_uint32()
         if not self.api.PeekNamedPipe(self.handle, None, 0, None, C.byref(available), None):
             if C.get_last_error() in _EOF_ERRORS:
@@ -56,7 +58,7 @@ class _InputPipe:
         try:
             # This is the sole stdin reader. Positive Peek availability bounds
             # the synchronous read; no worker can be stranded in readline().
-            chunk = os.read(self.fd, min(available.value, READ_BYTES))
+            chunk = os.read(self.fd, min(available.value, max_bytes))
             return chunk if chunk else None
         except OSError as error:
             if getattr(error, "winerror", None) in _EOF_ERRORS:

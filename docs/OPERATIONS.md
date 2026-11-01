@@ -26,7 +26,7 @@ query的`--args`限一筆完整JSON物件、8KiB／32層；重複欄位（含uni
 
 health只查工具能力，不查Windows來源。stdin限UTF-8（可BOM），上游關閉後解析；超過8KiB即拒絕，互動終端不等待。`--args`文字參數仍可用；含引號的JSON經Windows批次檔時使用stdin管線，避免shell改變內容。此入口不隱含採集、模型或ACK。
 
-stdin讀取遭KeyboardInterrupt會回固定cancelled／query_input_cancelled、exit130，且尚未派送查詢。CLI任何status=cancelled結果現回exit130（過去可能exit0），自動化應檢查exit及status，不把取消當完成。此契約不替代既有Job退出核對或保證所有console訊號／原生來源中斷已驗證。
+stdin讀取遭KeyboardInterrupt會回固定cancelled／query_input_cancelled、exit130，且尚未派送查詢。CLI任何status=cancelled結果現回exit130（過去可能exit0），自動化應檢查exit及status，不把取消當完成。Windows管線採唯一讀者輪詢，空管線或未完JSON都可在上游未EOF時取消；真私有console控制事件已驗。此契約不替代既有Job退出核對、真人鍵盤或原生來源中途取消驗收。
 
 ## 保存事件調查
 

@@ -15,7 +15,7 @@
 | 採集與生命週期 | `monitor/stop`、`background`、`run`、`app status/start/pause/resume/stop/shutdown` | Monitor／OperatorAPI／Application，GUI共用 | fixture/max-cycles、期限、操作ID、退出回條 | 明確採集或控制自有Job；正常模型0；既有 test_application*、test_background_jobs；長跑未驗 |
 | 規則與playbook | `rules list/validate`、`playbook validate/simulate` | configured／playbooks；Web只展示規則 | 固定schema、JSON；設定檔編輯 | simulate 不執行處置；無敏感處置授權；既有 test_rules_playbooks |
 | 明確唯讀診斷 | `query`（--args文字或 - 讀stdin）、`events diagnose/inspect` | DiagnosticAPI／OperatorAPI；MCP；共用bounded_json | 8KiB UTF-8／32層／重複key拒絕，stdin可BOM、TTY拒絕，來源Job預算 | CMD-008/010：test_command_query_json/stdin，含真PowerShell→.cmd管線；query/diagnose可查OS、health/inspect只讀 |
-| 指令取消 | query stdin讀取中斷回固定結果；status=cancelled為exit130 | CLI輸入邊界／DiagnosticAPI既有取消狀態 | schema1.0、query_input_cancelled；輸入階段不dispatch，stdout結果／stderr診斷分開 | CMD-012注入取消實際CLI已驗；真console／原生來源中途取消未驗，不能把取消當安全或成功 |
+| 指令取消 | query stdin讀取中斷回固定結果；status=cancelled為exit130 | CLI輸入邊界／DiagnosticAPI既有取消狀態 | schema1.0、query_input_cancelled；輸入階段不dispatch，stdout結果／stderr診斷分開 | CMD-012注入與真私有console控制事件已驗，Windows空／未完JSON管線在EOF前取消；真人鍵盤／原生來源中途取消未驗，不能把取消當安全或成功 |
 | 接收／ACK／重試／報告 | `events receive/ack/retry`、`report export` | OperatorAPI、共享inbox | event/query 綁定、JSON／escaped HTML | 明確保存收件／ACK或重試；既有 test_cli_workflow；ACK非結案 |
 | agent 派送／投遞證據 | `agent start/status/pause/resume/stop/capabilities/inspect/export` | agent_service／event_ingress；Web限制控制 | 七欄CloudEvents，耐久預算／Job | start預設檢查、execute須有效批准；06短期合成調查通過，正式來源／桌面喚醒另驗 |
 | 合成真調查批准綁定 | `scripts/validate_delivery.py investigation`預設只準備；execute需新scope批准 | investigation_scope／delivery_validation，共用builder與私有Job | 一事件／一任務／180秒；原生路徑正規化、capture前及事後launch hash核對 | CMD-009已修；06實際四步／分析／ACK／launch／自然退出通過；05綁定未完整通過仍保留，禁止重跑已消耗範圍 |

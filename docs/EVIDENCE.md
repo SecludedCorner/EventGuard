@@ -1,5 +1,13 @@
 # 證據與時間日誌
 
+## 2026-11-01 Windows管線Ctrl+C不再等待EOF
+
+reports/probe-query-native-cancel-20261101-01..03保留console不相符／Attach不可用的結果，訊號皆0；04改由自有CLI核GetConsoleProcessList恰含自身後GenerateConsoleCtrlEvent一次，確實送出但2秒未退出，關閉producer後才自然exit130。probe-source.py／scope／result／controller保留，未碰其他console／程序。產品回歸verify-query-console-cancel-regression-20261101-01：一個測試的空／半份JSON均失敗cancellation_waited_for_producer_eof，無強停／殘留。
+
+修後UTC15:43:53，verify-query-console-cancel-20261101-01含console_cancel／cancellation／stdin／query_json／cli_workflow／application_stdio_transport六模組，31/31、0skip、371語法、source_unchanged，guardian自然0／remaining0／無強停；build-query-console-cancel-20261101-01編譯371、0error。真控制事件的兩種輸入均在EOF前exit130，單JSON且stderr空、system_query_executed=false／model_calls=0、無runtime；共用pipe較小read預算與MCP舊預設亦驗。這是受控私有console，非真人鍵盤／原生來源中途取消或整機驗收。
+
+實作沿用本庫_InputPipe，僅唯一讀者的自身stdin handle先Peek再按可用量讀。Microsoft [PeekNamedPipe](https://learn.microsoft.com/en-us/windows/win32/api/namedpipeapi/nf-namedpipeapi-peeknamedpipe)記載可用於匿名pipe並指出同步多讀者的阻塞限制；此處不建立其他stdin讀者、不改handle模式，並以真CLI驗證該單一讀取路徑，未聲稱所有同步I/O均可取消。前單元779510a2d5dbb6b7870f28e329e4b031bda990ed（fix(cli): preserve cancelled query outcomes and non-success exits [skip ci]，+84/-1）兩遠端同SHA，git-query-cancel-remote-20261101-01；無模型／CI。
+
 ## 2026-11-01 CMD-012取消不誤判成功
 
 verify-query-cancel-regression-20261101-01為0/2，實際CLI子程序注入DiagnosticAPI cancelled時原exit0，注入stdin KeyboardInterrupt原exit3221225786、無結構結果；子程序stderr僅檢查有無，不將原內容寫入測試紀錄。修後UTC15:22:06執行`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-cancel-20261101-01 --timeout-seconds 120 --module test_command_query_cancellation --module test_command_query_stdin --module test_command_query_json --module test_cli_workflow`：18/18、0skip、369語法、source_unchanged，guardian自然0／remaining0／無強停；build-query-cancel-20261101-01編譯369、0error。

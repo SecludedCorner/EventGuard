@@ -84,6 +84,9 @@ class InputPipeContracts(unittest.TestCase):
         with patch.object(transport.os, "read", return_value=b"bounded") as read:
             self.assertEqual(pipe.read_available(), b"bounded")
         read.assert_called_once_with(0, transport.READ_BYTES)
+        with patch.object(transport.os, "read", return_value=b"tiny") as read:
+            self.assertEqual(pipe.read_available(4), b"tiny")
+        read.assert_called_once_with(0, 4)
 
     def test_only_known_pipe_disconnect_is_eof_and_denial_is_not_empty(self):
         pipe = self.pipe(Mock(return_value=0))

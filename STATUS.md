@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-11-01 CMD-012 Windows管線即時取消已修／真控制事件已驗
+
+真私有console探測04證明原read(8193)收到Ctrl+C仍等EOF；前01..03因console歸屬不符／未接通未發訊號，保留原結果。新增command_input.read_bounded_stdin，對全新且唯一讀者的Windows stdin pipe重用application_stdio._InputPipe按可用量輪詢，最多讀取剩餘預算；不建reader thread／改handle模式，regular file及注入stream保留原讀法。私有pipe讀取可用上限參數，MCP預設64KiB相容。
+
+UTC15:43:53，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-console-cancel-20261101-01 --timeout-seconds 120 --module test_command_query_console_cancel --module test_command_query_cancellation --module test_command_query_stdin --module test_command_query_json --module test_cli_workflow --module test_application_stdio_transport`：31/31、0skip、371語法／編譯、source_unchanged；guardian自然0／remaining0／無強停，模型／原生採集0。修前regression-01一項含空／半份JSON兩失敗，子程序仍自然退出；修後真控制事件僅在console成員恰為自有CLI時送出一次，stdin未EOF即exit130、不dispatch／建runtime。非真人鍵盤／原生collector中途取消驗收。
+
+前單元779510a2d5dbb6b7870f28e329e4b031bda990ed，fix(cli): preserve cancelled query outcomes and non-success exits [skip ci]，+84/-1，兩遠端同SHA且工作樹乾淨，git-query-cancel-remote-20261101-01。06歷史真CLI通過／消耗批准保持原範圍，本次無新模型／CI。
+
 ## 2026-11-01 CMD-012取消結果不再回成功
 
 新增stdin讀取中斷的固定cancelled／query_input_cancelled結果，明示system_query_executed=false、model_calls0；CLI對status=cancelled回exit130，原本取消API結果可能exit0。UTC15:22:06，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-cancel-20261101-01 --timeout-seconds 120 --module test_command_query_cancellation --module test_command_query_stdin --module test_command_query_json --module test_cli_workflow`：18/18、0skip、369語法／編譯、source_unchanged，私有Job自然0／remaining0／無強停，新增模型／原生查詢0；build-query-cancel-20261101-01。

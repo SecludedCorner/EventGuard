@@ -337,7 +337,8 @@ def execute(args,runtime,progress=None):
             if stream is None or stream.isatty():
                 raise ValueError("query_stdin_required")
             try:
-                content=stream.read(8193)
+                from .command_input import read_bounded_stdin
+                content=read_bounded_stdin(stream,8193)
             except KeyboardInterrupt:
                 return {"schema_version":"1.0","status":"cancelled","error_code":"query_input_cancelled",
                         "system_query_executed":False,"model_calls":0}

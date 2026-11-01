@@ -14,7 +14,7 @@
 | CMD-009／P0 | 批准launch綁定正規化／前後核對已修 | verify-investigation-launch-binding-20261101-01：5/5、365編譯；明示fake CLI＋真SDK | 保存整合；路徑／參數drift在capture前拒絕，原05的完整launch驗收仍未過 |
 | CMD-010／P1 | query有界stdin與真.cmd管線已實作／已驗 | verify-query-stdin-20261101-01：16/16、366編譯；修前.cmd失敗保留，模型0 | 保存整合；8KiB／32層／duplicate-key、TTY／超量且未EOF拒絕，保留literal相容 |
 | CMD-011／P1 | 保存公告案件完整列舉，API／CLI／並行頁快照均已驗 | API44/44、CLI12/12；並行snapshot模組4/4、368編譯，模型／網路0 | 保存整合；cases陣列相容，missing selector=unknown/exit5，跨命令不凍結資料 |
-| CMD-012／P0 | CLI取消結果不再誤回成功，已修／已驗 | verify-query-cancel-20261101-01：18/18、369編譯；修前0/2保留 | 保存整合；stdin中斷不dispatch、cancelled=exit130；真console／原生中斷取證獨立保留 |
+| CMD-012／P0 | CLI取消非成功、Windows管線EOF前取消均已修／已驗 | 真私有console控制事件＋相關六模組31/31、371編譯；修前失敗保留 | 保存整合；空／半份JSON在EOF前exit130、不dispatch；真人鍵盤／原生中斷獨立保留 |
 | AGENT-05／P1 | 批准已消耗；四步／ACK／退出成立，完整launch綁定未過 | 05 scope-launch-audit／post-fix-readonly-audit；相對／絕對路徑唯一差異，原資料保留 | 不重跑05；修正保存後只能準備新scope及另次明確批准，不能把fake回歸升格真驗 |
 | AGENT-06／P1 | 單次合成真CLI調查及完整launch綁定已通過 | 06 validation／final-review；四工具各1、ack1/pending0/receipt1、CLI/MCP自然0，批准已消耗 | 保存結果；不重跑、不宣稱桌面／原生防守完成；新模型工作須明確有效範圍且有必要 |
 | CLI-EXPANDED／P2 | 使用者要求的擴大無模型驗證完成 | command-core-expanded-01：88/88、365語法；cmd-entry-01：3/3，新增模型0 | 保存，僅新改動／失敗／新關切才續驗，不重跑相同來源冒充進度 |

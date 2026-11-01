@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-01 CMD-012真Windows管線取消已補
+
+先保留真私有console探測04及regression的EOF延遲失敗，改用共用_InputPipe的有界可用資料讀取後31/31、371編譯通過，見verify-query-console-cancel-20261101-01／build-query-console-cancel-20261101-01。空／半份JSON都以真控制事件在EOF前取消exit130、不dispatch，自有Job自然退出／無強停或殘留。訊號只針對精確核對只有自有CLI的私有console；未驗真人鍵盤或原生來源中途取消。下一補成功分段與恰好8KiB／檔案重導向的實際CLI邊界，模型0；779510a已同步兩遠端。
+
 ## 2026-11-01 CMD-012查詢輸入取消與exit契約已修
 
 stdin讀取KeyboardInterrupt回固定cancelled且不dispatch，status=cancelled的CLI結果統一exit130，避免原exit0被當成功。18/18、369編譯見verify-query-cancel-20261101-01／build-query-cancel-20261101-01，修前0/2保留；是實際CLI注入取消，未驗真console或原生query中斷，不新增模型。上一公告快照測試c43555c已同步兩遠端，06歷史合成通過仍保留原來源／已消耗批准。
