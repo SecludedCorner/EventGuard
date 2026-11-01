@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-01 CMD-007 agent接收設定命令已驗
+
+新增agent access status/enable/disable，共用agent_access；只保存本工具接收設定，receiver仍not_verified，不啟模型／採集／程序控制。預設status不建檔，壞設定blocked=exit2，保存失敗exit4且setting_saved=false。UTC13:56:52，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-agent-access-20261101-02 --timeout-seconds 120 --module test_command_agent_access --module test_agent_access --module test_core_cli`：34/34、0skip、363語法／編譯、source_unchanged，Job自然0／remaining0／無強停；build-command-agent-access-20261101-01。01的22/22為匯入名稱明確化前範圍，不累加；正式安裝設定未改。
+
+CMD-006 90d4e533ad74842861b5f8c50d42045c875d46b1，feat(cli): bind handling updates to saved event payloads [skip ci]，+95/-4，兩遠端同SHA及工作樹乾淨已核，git-command-identity-remote-20261101-01。下一P0-CMD-008：query --args仍用普通json.loads、重複key可能改變實際範圍；改共用bounded_json拒絕含糊輸入，以health／fixture驗證不採集。04失效與真環境關卡保留。
+
 ## 2026-11-01 CMD-006 命令處置可綁定事件身分
 
 set-status新增選填expected-payload-hash，沿用核心交易內檢查；不符以型別化StoreError子類回固定event_payload_conflict／exit2，格式錯誤仍exit2，省略維持相容。UTC13:51:42，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-status-identity-20261101-01 --timeout-seconds 120 --module test_command_status_identity --module test_command_status_retry --module test_desktop_pending_control`：8/8、0skip、362語法／編譯、source_unchanged，Job自然0／remaining0／無強停；build-command-status-identity-20261101-01。實際CLI detail→綁定寫→重送，錯hash／事件payload變更不寫，pending／ACK保留。

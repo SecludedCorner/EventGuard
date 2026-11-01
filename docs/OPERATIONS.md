@@ -4,6 +4,8 @@
 
 ## 前景監看與事件
 
+`EventGuard.cmd agent access status`唯讀查看本工具接收權限；enable／disable明確保存此gate。這是接收設定，receiver狀態仍須另外驗證；它不授權模型、啟動／停止程序或確認退出，既有程序用其owner的控制入口。保存失敗exit4，壞設定blocked=exit2；正常等待不呼叫模型。實際執行enable仍由使用者決定，本次開發只操作隔離合成安裝。
+
 ```powershell
 py -3.13 -B scripts/eventguard.py capabilities
 py -3.13 -B scripts/eventguard.py status

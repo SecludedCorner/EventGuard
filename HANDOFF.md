@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-01 CMD-007接收gate已可用CLI
+
+agent access三操作共用agent_access，34/34及363編譯見verify-command-agent-access-20261101-02／build-command-agent-access-20261101-01。只改EventGuard接收設定，不是模型批准、接收器證據或退出證明；測試只在隔離fixture，未切正式設定。CMD-006 90d4e53兩遠端同SHA。下一直接修P0-CMD-008：query參數解碼重複欄位／深度限制與固定輸入失敗，重用collector的bounded_json；health不查OS，保留8KiB限制及既有型別驗證。
+
 ## 2026-11-01 CMD-006綁定寫入已驗
 
 expected-payload-hash與固定event_payload_conflict已接CLI，8/8、362編譯見verify-command-status-identity-20261101-01／build-command-status-identity-20261101-01。CMD-005命令29c2f71已同步兩遠端。下一CMD-007：GUI使用agent_access.set_enabled，但CLI未提供其接收權限設定；只接共用核心並明示是設定，不承諾GUI自有worker已退出，不啟模型或替人批准。既有正常監看零模型／私有Job／04失效邊界不變。

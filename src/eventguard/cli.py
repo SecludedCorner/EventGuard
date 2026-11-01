@@ -26,6 +26,8 @@ def parser():
     sub=p.add_subparsers(dest="command",required=True)
     agents=sub.add_parser("agent",help="選配的事件派送。無事件不呼叫模型。預設只檢查。")
     agentsub=agents.add_subparsers(dest="agent_command",required=True)
+    access=agentsub.add_parser("access",help="明確設定本工具agent接收權限；不啟動receiver、採集或模型。")
+    access.add_argument("action",choices=("status","enable","disable"))
     agent_start=agentsub.add_parser("start",help="檢查專用CLI派送。加--execute才啟動背景並允許模型。")
     agent_start.add_argument("--codex-executable",required=True,help="既有原生codex.exe；不接受包裝腳本")
     agent_start.add_argument("--namespace",choices=("live","test"),default="live")
@@ -217,6 +219,10 @@ def execute(args,runtime,progress=None):
     if args.command=="agent":
         from . import agent_service, event_ingress
         action=args.agent_command
+        if action=="access":
+            from .agent_access import status as access_status, set_enabled
+            value=access_status(runtime.root) if args.action=="status" else set_enabled(runtime.root,args.action=="enable")
+            return dict(value,scope="agent_receive_permission_only",model_start_requested=False,process_control_performed=False)
         if action=="start":
             return agent_service.start(runtime.root,codex_executable=args.codex_executable,
                                        allow_live=args.namespace=="live",execute=args.execute)
@@ -453,6 +459,8 @@ def main(argv=None,root=None):
         result=execute(args,Runtime(root),ProgressPrinter(sys.stderr) if human and args.command=="monitor" else None)
         show(result)
         if isinstance(result,dict):
+            if args.command=="agent" and args.agent_command=="access" and result.get("setting_saved") is False:
+                return 4
             if args.command=="events" and args.event_command in {"pending-requests","operation-result"} and result.get("state")=="unknown":
                 return 5
             if args.command in {"app","background","run","advisories","agent"} or args.command=="stop" and "desired_enabled" in result:
