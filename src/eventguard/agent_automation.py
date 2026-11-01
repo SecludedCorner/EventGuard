@@ -77,7 +77,8 @@ def configure(root, enabled, executable=None):
             set_enabled(root, True, candidate)
         else:
             set_enabled(root, False)
-    except (OSError, ValueError, TypeError, RuntimeError):
+    except (OSError, ValueError, TypeError, RuntimeError) as error:
         return {**describe(root), "state": "blocked", "setting_saved": False,
+                "failure_kind": "io" if isinstance(error, OSError) else "validation",
                 "reason": "native_codex_or_setting_unavailable" if enabled else "automation_setting_write_failed"}
     return {**describe(root), "setting_saved": True}

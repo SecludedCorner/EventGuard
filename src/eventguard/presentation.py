@@ -117,6 +117,11 @@ def render(result, command="", operation=""):
             "只操作EventGuard接收設定；模型仍需有效批准與明確啟動，程序退出須另外核對。"])
     if result.get("status") in {"error","invalid_request","conflict"}:
         return "EventGuard 無法完成操作："+text(result.get("reason",result.get("error_code",result["status"])))
+    if command=="agent" and operation=="automation":
+        return "\n".join(["自動agent設定："+("不可讀或未保存" if result.get("state")=="blocked" else "已啟用選項" if result.get("enabled") else "已停用選項"),
+                          "原因："+text(result.get("reason")),
+                          "此命令只管理設定；未啟停worker或模型，既有dispatcher與退出未查證。",
+                          "啟用選項後，桌面明確開始採集可啟用事件派送；接收權限與執行預算仍適用。"])
     if command=="app":
         def label(mapping,value,default):
             return mapping.get(value,default) if isinstance(value,str) else default

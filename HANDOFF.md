@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-02 CMD-014 CLI／API設定均已驗
+
+agent automation status/enable/disable與GUI共用configure；52/52、372編譯見verify-command-automation-20261102-01／build-command-automation-20261102-01。只管理設定、不啟停worker／模型，dispatcher_state未驗／child_exited=null；接收拒絕／無效輸入／壞設定exit2，I/O失敗exit4。正式設定未改，API ebf0979兩遠端已核同步。不能把停用設定當既有GUI worker退出；其controller合作取消與真人／原生／DSM／長跑／恢復各關卡獨立保留。
+
 ## 2026-11-02 CMD-014共用opt-in設定API完成／接CLI
 
 describe/configure與GUI共用接收gate及設定寫入，35/35、371編譯見verify-automation-core-20261102-02／build-automation-core-20261102-01；首輪mock呼叫簽章失敗保留並維持舊呼叫修復。API不啟停worker，state描述設定、dispatcher_state未驗／child_exited=null；GUI既有明確啟動／合作停用行為仍在controller。下一加agent automation status/enable/disable，真CLI隔離資料核對設定、不啟模型；fce1786已同步兩遠端，正式安裝未改。

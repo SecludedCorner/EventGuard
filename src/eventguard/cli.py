@@ -28,6 +28,9 @@ def parser():
     agentsub=agents.add_subparsers(dest="agent_command",required=True)
     access=agentsub.add_parser("access",help="明確設定本工具agent接收權限；不啟動receiver、採集或模型。")
     access.add_argument("action",choices=("status","enable","disable"))
+    automation=agentsub.add_parser("automation",help="明確保存自動agent選項；不啟停worker或模型。後續桌面明確Start可使用此設定。")
+    automation.add_argument("action",choices=("status","enable","disable"))
+    automation.add_argument("--codex-executable",help="enable選填既有原生exe；省略沿用已存路徑或搜尋codex.exe")
     agent_start=agentsub.add_parser("start",help="檢查專用CLI派送。加--execute才啟動背景並允許模型。")
     agent_start.add_argument("--codex-executable",required=True,help="既有原生codex.exe；不接受包裝腳本")
     agent_start.add_argument("--namespace",choices=("live","test"),default="live")
@@ -219,12 +222,18 @@ def execute(args,runtime,progress=None):
         return application.monitor_control(args.app_command,source="cli",
             operation_id=args.operation_id if args.operation_id is not None else uuid.uuid4().hex)
     if args.command=="agent":
-        from . import agent_service, event_ingress
         action=args.agent_command
+        if action=="automation":
+            if args.action!="enable" and args.codex_executable is not None:
+                raise ValueError("automation_executable_only_for_enable")
+            from .agent_automation import describe, configure
+            result=describe(runtime.root) if args.action=="status" else configure(runtime.root,args.action=="enable",args.codex_executable)
+            return {**result,"model_start_requested":False,"process_control_performed":False}
         if action=="access":
             from .agent_access import status as access_status, set_enabled
             value=access_status(runtime.root) if args.action=="status" else set_enabled(runtime.root,args.action=="enable")
             return dict(value,scope="agent_receive_permission_only",model_start_requested=False,process_control_performed=False)
+        from . import agent_service, event_ingress
         if action=="start":
             return agent_service.start(runtime.root,codex_executable=args.codex_executable,
                                        allow_live=args.namespace=="live",execute=args.execute)
@@ -494,7 +503,8 @@ def main(argv=None,root=None):
         if isinstance(result,dict):
             if result.get("status")=="cancelled":
                 return 130
-            if args.command=="agent" and args.agent_command=="access" and result.get("setting_saved") is False:
+            if args.command=="agent" and result.get("setting_saved") is False and (args.agent_command=="access" or
+                    args.agent_command=="automation" and result.get("failure_kind")=="io"):
                 return 4
             if args.command=="events" and args.event_command in {"pending-requests","operation-result"} and result.get("state")=="unknown":
                 return 5

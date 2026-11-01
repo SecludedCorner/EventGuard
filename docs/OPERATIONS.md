@@ -1,5 +1,7 @@
 # 本機操作與故障排除
 
+自動agent持久選項可用`EventGuard.cmd --format json agent automation status`查閱，以`agent automation enable --codex-executable 'C:\path\codex.exe'`明確啟用（須為既有exe），或`agent automation disable`停用。enable須先有獨立接收權限；省略路徑沿用已存值或搜尋codex.exe。這些命令只管理設定，不啟停worker／模型；既有dispatcher與退出未查證，不能以設定停用當作停止成功。後續桌面明確開始採集可使用已保存opt-in，既有模型批准／預算仍適用；CLI的`agent start --execute`另有明確執行閘道。壞設定／接收拒絕／無效exe回exit2，I/O失敗回exit4且setting_saved=false；status/disable不接受exe選項。
+
 先用 [README](../README.md) 的隔離 fixture，再看 [共用介面](HUMAN_AGENT_INTERFACE.md)。以下使用既有 Python 3.13，一般權限，不安裝依賴、不啟動模型。
 
 ## 前景監看與事件

@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-02 自動opt-in設定真CLI
+
+UTC2026-11-01T16:08:38，verify-command-automation-20261102-01（命令見STATUS）五模組52/52、0skip、372語法、source_unchanged；build-command-automation-20261102-01編譯372／0error，guardian自然0／remaining0／無強停。五項新測試包含真CLI status不建檔、接收gate拒絕不保存、獨立access enable後保存／重送／disable及API查回、無效wrapper／missing exe及無關參數拒絕、壞設定保留後明確修復、I/O失敗exit4、文字錯誤不偽裝停用成功。設定回dispatcher_state=not_verified／child_exited=null，inert exe未執行；只存預期設定檔，DB bytes與pending1／receipt0未變，模型／原生採集／正式設定修改0。桌面dispatcher是mock，非新真agent或worker退出證據。
+
+ebf097992155db8f8d90d7960b85863559ba71ff（refactor(agent): share automatic opt-in configuration policy [skip ci]，+91/-18）兩遠端同SHA，git-automation-core-remote-20261102-01；Git Jobs自然0／remaining0／無強停、無CI。
+
 ## 2026-11-02 自動agent opt-in設定共用核心
 
 盤點desktop.py的set_automatic_agent與CLI parser，發現持久自動設定未有CLI入口。新增agent_automation.describe/configure及GUI共用呼叫；保留原set_enabled相容。describe不建資料夾／查程序，configure啟用前要求獨立接收gate，inert fixture.exe只檢查／保存不執行；停用失敗回原enabled=true／setting_saved=false、固定reason、不含注入原例外。

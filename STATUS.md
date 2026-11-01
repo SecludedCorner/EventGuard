@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-11-02 CMD-014 CLI自動opt-in設定已驗
+
+新增agent automation status/enable/disable（enable選填--codex-executable），與GUI共用describe/configure；只管理持久選項、不啟停worker／模型／採集或改接收gate。schema1.0／設定state、dispatcher_state=not_verified／child_exited=null。接收拒絕／無效exe／壞設定exit2，I/O保存失敗exit4；status/disable的無關exe選項拒絕。後續桌面明確Start可使用opt-in，既有接收gate／模型批准／預算仍適用。
+
+UTC2026-11-01T16:08:38，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-automation-20261102-01 --timeout-seconds 120 --module test_command_agent_automation --module test_agent_automation --module test_desktop --module test_command_agent_access --module test_cli_workflow`：52/52、0skip、372語法、source_unchanged；build-command-automation-20261102-01編譯372／0error，自有Job自然0／remaining0／無強停。全部隔離fixture／dispatcher mock，真CLI驗設定、拒絕及修復；inert exe未執行、DB bytes／pending／ACK未改，正式設定／模型／原生採集0。CLI停用設定不是既有GUI worker退出證據。
+
+API單元ebf097992155db8f8d90d7960b85863559ba71ff（refactor(agent): share automatic opt-in configuration policy [skip ci]，+91/-18）兩遠端同SHA，git-automation-core-remote-20261102-01；無CI，06歷史合成證據及已消耗批准未重跑。
+
 ## 2026-11-02 CMD-014自動opt-in設定共用API已驗／CLI待接
 
 盤點DesktopController.set_automatic_agent的持久設定仍只有GUI入口；新增agent_automation.describe/configure，GUI共用接收gate、原生exe選擇與保存失敗規則。此API只管理設定、不啟停dispatcher；schema1.0／dispatcher_state=not_verified／child_exited=null／model_calls=0，保存失敗保留可讀原設定、不露原錯誤。UTC2026-11-01T16:03:12，`py -3.13 -B scripts/verify.py --run-dir reports/verify-automation-core-20261102-02 --timeout-seconds 120 --module test_agent_automation --module test_desktop`：35/35、0skip、371語法、source_unchanged；build-automation-core-20261102-01編譯371／0error，自有Job自然0／remaining0／無強停。首輪34/35為停用mock要求原呼叫簽章，已保留原呼叫、不放寬測試。全為隔離fixture／dispatcher mock，未改正式設定、未啟模型或採集；下一接CLI設定命令，不把設定當接收／執行／退出證據。
