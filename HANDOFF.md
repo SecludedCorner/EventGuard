@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-02 CMD-016派送後真控制事件完成補驗
+
+verify-query-native-collection-cancel-20261102-01：2/2、374編譯，真Ctrl+C僅在私有console成員恰為自有CLI時送一次，已派送的合成collector／CLI自然退出，coverage與實際回條相符、無強停殘留。原KB兩階段回歸沿用其範圍，產品a7ff9b3未變且兩遠端已核同步。真OS採集、launch／任意收尾窗口仍未完整取消驗收；不讀新來源／啟模型或擴大歷史06批准。
+
 ## 2026-11-02 CMD-016查詢等待及完成通知中斷可回傳取消
 
 真CLI／自有合成子程序兩階段注入KB後29/29、374編譯通過，見verify-query-collection-cancel-20261102-03／build-query-collection-cancel-20261102-01；exit130、rows空、coverage含實際自然退出／remaining0，unmanaged仍pending不終止。原fixture時序錯誤／失敗保留，固定Git runner基線補證waiting確有缺陷。下一獨立補派送後私有console真控制事件（只自有合成程序、無原生採集／模型）；啟動／任意收尾瞬間及真OS取消仍不宣稱完整驗收。e074e47已同步兩遠端。

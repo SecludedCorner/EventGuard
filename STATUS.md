@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-02 派送後真私有console取消已補驗
+
+UTC2026-11-01T16:35:37，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-native-collection-cancel-20261102-01 --timeout-seconds 60 --module test_command_query_collection_cancel`：2/2、0skip、374語法、source_unchanged；build-query-native-collection-cancel-20261102-01編譯374／0error，guardian自然0／remaining0／無強停。新增waiting後真控制事件：GetConsoleProcessList恰為自有CLI才送一次Ctrl+C，collector為1.6秒自有Python fixture，回exit130／cancelled／rows空、coverage退出true／remaining0／無強停；控制事件與collector回條一致。原waiting／completed KB注入仍過。未查Windows來源／呼叫模型，不替代真OS、啟動或任意收尾瞬間取消驗收。
+
+產品來源未變，a7ff9b39f90a3351fc0c392dcb6e3f2af4542778（fix(collectors): preserve cancellation and owned exits on query interrupts [skip ci]，+156/-23）兩遠端同SHA，git-query-collection-remote-20261102-01；無CI。目標與外部DSM／真人／長跑／防守恢復關卡仍持續保留。
+
 ## 2026-11-02 CMD-016查詢runner等待／完成通知中斷已修
 
 runner在等待階段捕捉KeyboardInterrupt，走既有自有Job合作清理及退出核對；未受管理fixture不強停／仍pending。completed進度通知中斷則丟棄晚到結果，回cancelled、不冒充成功。未確認退出使用固定unconfirmed原因，保留實際process metadata。

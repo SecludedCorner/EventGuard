@@ -10,18 +10,43 @@ import unittest
 from eventguard.processes import spawn, finish
 
 ROOT = Path(__file__).resolve().parents[1]
-PROGRAM = '''import json,sys
+PROGRAM = '''import json,sys,threading
 from pathlib import Path
 from eventguard.collectors.runner import Runner
 from eventguard.diagnostics import api
 folder=Path(sys.argv[1])
+if sys.argv[2].startswith("signal_"):
+    import ctypes as C,os,signal
+    from ctypes import wintypes as W
+    kernel=C.WinDLL("kernel32.dll",use_last_error=True,winmode=0x800)
+    kernel.GetConsoleProcessList.argtypes=[C.POINTER(W.DWORD),W.DWORD]
+    kernel.GetConsoleProcessList.restype=W.DWORD
+    kernel.GenerateConsoleCtrlEvent.argtypes=[W.DWORD,W.DWORD]
+    kernel.GenerateConsoleCtrlEvent.restype=W.BOOL
+    kernel.SetConsoleCtrlHandler.argtypes=[C.c_void_p,W.BOOL]
+    kernel.SetConsoleCtrlHandler.restype=W.BOOL
+    if not kernel.SetConsoleCtrlHandler(None,False): raise SystemExit(3)
+    signal.signal(signal.SIGINT,signal.default_int_handler)
+    def signal_self():
+        import time
+        time.sleep(.05)
+        ids=(W.DWORD*8)()
+        count=kernel.GetConsoleProcessList(ids,len(ids))
+        own=0<count<=len(ids) and set(ids[:count])=={os.getpid()}
+        sent=bool(kernel.GenerateConsoleCtrlEvent(0,0)) if own else False
+        (folder/"console-signal.json").write_text(json.dumps({"owned_console":own,"signals_sent":int(sent)}))
 class SyntheticCollector:
     def __init__(self):
         self.runner=Runner()
         self.interrupted=False
+        self.signaller=None
     def interrupt(self,update):
-        if update["phase"]==sys.argv[2] and not self.interrupted and self.runner.last_process.get("pid"):
+        if update["phase"]==sys.argv[2].removeprefix("signal_") and not self.interrupted and self.runner.last_process.get("pid"):
             self.interrupted=True
+            if sys.argv[2].startswith("signal_"):
+                self.signaller=threading.Thread(target=signal_self)
+                self.signaller.start()
+                return
             raise KeyboardInterrupt("SYNTHETIC_PRIVATE")
     def collect(self,section,cancel=None):
         try:
@@ -30,6 +55,8 @@ class SyntheticCollector:
             return {"status":value["status"],"rows":[],"coverage":{"process":value["process"]}}
         finally:
             receipt=self.runner.shutdown(grace=2)
+            if self.signaller is not None:
+                self.signaller.join(timeout=2)
             (folder/"collector-receipt.json").write_text(json.dumps(receipt))
 collector=SyntheticCollector()
 original=api.DiagnosticAPI
@@ -46,6 +73,7 @@ raise SystemExit(code)
 '''
 
 
+@unittest.skipUnless(os.name == "nt", "actual Windows owned Job required")
 class CommandQueryCollectionCancellationTests(unittest.TestCase):
     def test_interrupted_owned_query_returns_cancelled_with_exit_evidence(self):
         for phase, seconds in (("waiting", "1.6"), ("completed", ".6")):
@@ -79,4 +107,12 @@ class CommandQueryCollectionCancellationTests(unittest.TestCase):
             self.assertFalse(result["coverage"]["process"]["forcibly_terminated"])
             self.assertEqual(result["coverage"]["process"]["remaining_owned_processes"], 0)
             self.assertNotIn("SYNTHETIC_PRIVATE", out.decode("utf-8"))
-            self.assertEqual({p.name for p in Path(temporary).iterdir()}, {"collector-receipt.json"})
+            expected = {"collector-receipt.json"}
+            if phase.startswith("signal_"):
+                expected.add("console-signal.json")
+                value = json.loads((Path(temporary) / "console-signal.json").read_text())
+                self.assertEqual(value, {"owned_console": True, "signals_sent": 1})
+            self.assertEqual({p.name for p in Path(temporary).iterdir()}, expected)
+
+    def test_native_control_event_while_waiting_has_owned_exit_evidence(self):
+        self.check_interrupt("signal_waiting", "1.6")

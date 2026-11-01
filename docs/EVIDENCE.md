@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-02 已派送合成query的真console控制事件
+
+UTC2026-11-01T16:35:37，verify-query-native-collection-cancel-20261102-01（命令見STATUS）：2/2、0skip、374語法、source_unchanged；build-query-native-collection-cancel-20261102-01編譯374／0error，guardian自然0／remaining0／無強停。新增test_native_control_event_while_waiting_has_owned_exit_evidence：只有自身console恰含CLI自身才GenerateConsoleCtrlEvent一次，未匹配就不送；signal記錄確認own=true／sent=1，合成collector無OS查詢，真自有Python子程序／CLI自然退出。JSON status=cancelled／source_cancelled／rows空、exit130／stderr空，coverage.process已退出／remaining0／無強停，與collector獨立回條一致。測試平台明示Windows owned Job，未以mock或KB注入冒充本次真訊號；collector仍是fixture，未冒稱真來源／真人／任意執行窗口已驗。
+
+只增測試，產品來源a7ff9b39f90a3351fc0c392dcb6e3f2af4542778（fix(collectors): preserve cancellation and owned exits on query interrupts [skip ci]，+156/-23）兩遠端同SHA，git-query-collection-remote-20261102-01；先前四模組29/29沿用其原範圍，不相加為新全套；模型／原生採集／CI0。
+
 ## 2026-11-02 runner等待與completed通知的中斷
 
 原regression-01 0/1、修後01 28/29仍失敗；精簡frames除錯發現fixture只跑0.6秒，waiting有一秒節流，注入實際落在completed。原證據保留，不當等待重現。改為明確phase與1.6秒fixture；Git HEAD e074e47的原runner唯讀擷取至git-query-collection-baseline-20261102-01，probe-query-collection-baseline-20261102-01保存source/program hash及單次範圍，真CLI／自有子程序在waiting時KB仍穿透，exit3221225786／stdout空；子程序安全收尾自然0，無殘留／強停。只存函式／行號metadata與stderr有無，未保存原始例外內容。
