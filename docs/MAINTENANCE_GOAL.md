@@ -19,6 +19,7 @@
 | CMD-014／P1 | 自動opt-in設定CLI／API與GUI共用政策已驗 | 真CLI＋相關fixture52/52、372編譯；dispatcher mock，正式設定未改 | 保存整合；agent automation只管理設定、不啟停worker／模型，退出證據獨立 |
 | CMD-015／P0 | 預算status受阻不再exit0，已修／已驗 | 真CLI合成帳本＋既有預算45/45、373編譯；修前1/4保留 | 保存整合；blocked=2、ready=0，初始化錯誤4相容；正式帳本未碰、不清用量／模型0 |
 | CMD-016／P0 | 查詢launch／waiting／completed通知可結構取消及回傳實際程序事實 | 初驗29/29、派送後真console2/2；launch注入／真console及回歸28/28、374編譯 | 保存整合；collector仍為合成，OS建立及任意輸出收尾窗口／真來源未完整取消驗收 |
+| CMD-017／P0 | 未適用／未請求及不支援view不再exit0 | 真CLI／DiagnosticAPI及既有CLI31/31、375編譯；修前2/4保留 | 保存整合；來源n/a／not_requested=5、unsupported view=2，health／白名單相容，不查OS／模型 |
 | AGENT-05／P1 | 批准已消耗；四步／ACK／退出成立，完整launch綁定未過 | 05 scope-launch-audit／post-fix-readonly-audit；相對／絕對路徑唯一差異，原資料保留 | 不重跑05；修正保存後只能準備新scope及另次明確批准，不能把fake回歸升格真驗 |
 | AGENT-06／P1 | 單次合成真CLI調查及完整launch綁定已通過 | 06 validation／final-review；四工具各1、ack1/pending0/receipt1、CLI/MCP自然0，批准已消耗 | 保存結果；不重跑、不宣稱桌面／原生防守完成；新模型工作須明確有效範圍且有必要 |
 | CLI-EXPANDED／P2 | 使用者要求的擴大無模型驗證完成 | command-core-expanded-01：88/88、365語法；cmd-entry-01：3/3，新增模型0 | 保存，僅新改動／失敗／新關切才續驗，不重跑相同來源冒充進度 |

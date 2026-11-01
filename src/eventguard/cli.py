@@ -520,7 +520,7 @@ def main(argv=None,root=None):
                     return 5
                 if args.command=="advisories" and state in {"partial","error"}:
                     return 5
-            if result.get("valid") is False or result.get("status") in {"invalid_request","invalid_playbooks","invalid_event","conflict"} or result.get("error_code") in {"invalid_request","process_instance_required","product_not_allowlisted"}:
+            if result.get("valid") is False or result.get("status") in {"invalid_request","invalid_playbooks","invalid_event","conflict"} or result.get("error_code") in {"invalid_request","process_instance_required","product_not_allowlisted","operation_view_not_supported"}:
                 return 2
             if result.get("status")=="busy":
                 return 3
@@ -528,7 +528,7 @@ def main(argv=None,root=None):
                 return 3 if "busy" in str(result.get("reason","")) else 2
             if result.get("status")=="error":
                 return 4
-            if result.get("status") in {"partial","denied","unknown","timeout"} or result.get("healthy") is False:
+            if result.get("status") in {"partial","denied","unknown","timeout","not_applicable","not_requested"} or result.get("healthy") is False:
                 return 5
         return 0
     except (ValueError,TypeError,json.JSONDecodeError) as error:

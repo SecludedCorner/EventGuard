@@ -1,5 +1,7 @@
 # 本機操作與故障排除
 
+CLI的not_applicable／not_requested結果現在回exit5（過去可能0），表示沒有可用的完整結果。query的operation_view_not_supported回exit2；product_not_allowlisted仍為2、health成功仍為0。JSON schema與status不變；串接時檢查exit及status，不將未適用、未請求或空rows解讀為已查證安全。
+
 `budget status`現在以exit2回報state=blocked（過去可能exit0），ready仍回0。自動化須同時檢查exit與state；缺帳本、用量未知、額度耗盡、未結attempt或損壞都不能當可派送。此查詢不初始化或重設帳本，既有帳本交易可維護時鐘；initialize/reconcile原錯誤exit4不變。這是本工具的模型任務准入政策，不是帳戶token或費用硬上限。
 
 自動agent持久選項可用`EventGuard.cmd --format json agent automation status`查閱，以`agent automation enable --codex-executable 'C:\path\codex.exe'`明確啟用（須為既有exe），或`agent automation disable`停用。enable須先有獨立接收權限；省略路徑沿用已存值或搜尋codex.exe。這些命令只管理設定，不啟停worker／模型；既有dispatcher與退出未查證，不能以設定停用當作停止成功。後續桌面明確開始採集可使用已保存opt-in，既有模型批准／預算仍適用；CLI的`agent start --execute`另有明確執行閘道。壞設定／接收拒絕／無效exe回exit2，I/O失敗回exit4且setting_saved=false；status/disable不接受exe選項。

@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-02 query的未適用／未請求與要求錯誤
+
+verify-query-outcomes-regression-20261102-01：4項／2通過，來源not_applicable及not_requested兩subtest與unsupported view皆誤exit0。修後UTC2026-11-01T16:47:20，verify-query-outcomes-20261102-01（命令見STATUS）：31/31、0skip、375語法、source_unchanged；build-query-outcomes-20261102-01編譯375／0error，guardian自然0／remaining0／無強停。真CLI呼叫真DiagnosticAPI但僅注入固定collector，來源n/a／未請求=exit5，unsupported view在禁止採集spy前拒絕=2；health保留成功0、不允許產品保留2，stdout單JSON／stderr空、root不建runtime，無OS或模型。JSON schema及source狀態未改，這只證明CLI契約，不是實機來源或主機安全結論。
+
+50c4453701f3edcfeeab3387f8b927558c4a56b9（fix(collectors): cancel launch notifications before process creation [skip ci]，+53/-8）兩遠端同SHA，git-query-launch-remote-20261102-01；無CI。剩餘NAS真格式缺版本／schema，已詢問資料，未據此擴大設備／日誌／模型授權。
+
 ## 2026-11-02 launch通知取消且不建立collector
 
 verify-query-launch-cancel-regression-20261102-01：3項／2通過，launch及signal_launch兩subtest中斷皆穿透；只存安全frames metadata，無原始stderr。修後UTC2026-11-01T16:41:35，verify-query-launch-cancel-20261102-01（命令見STATUS）：28/28、0skip、374語法、source_unchanged；build-query-launch-cancel-20261102-01編譯374／0error，guardian自然0／remaining0／無強停。launch callback注入KB及真CTRL_C_EVENT各驗一種；真訊號仍只在console恰含自有CLI時送一次，callback停留至事件到達、尚未進入OS建立。CLI exit130／source_cancelled／rows空、stdout單JSON／stderr空；shutdown回未管理且無PID，coverage不造process欄位，禁止process factory spy未被呼叫。不存在collector不宣稱自然退出；外層CLI自有Job實際已退出。已有waiting／completed／等待中真訊號及unmanaged pending回歸仍通過。無模型／真OS採集，未涵蓋任意CreateProcess或輸出寫入中斷。

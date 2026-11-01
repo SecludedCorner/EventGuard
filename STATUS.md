@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-02 CMD-017未適用／未請求不再回成功
+
+CLI status=not_applicable／not_requested現回exit5，operation_view_not_supported列為不合法要求exit2；JSON schema／status及既有product_not_allowlisted=2、health=0保持。UTC2026-11-01T16:47:20，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-outcomes-20261102-01 --timeout-seconds 120 --module test_command_query_outcomes --module test_core_cli --module test_cli_workflow`：31/31、0skip、375語法、source_unchanged；build-query-outcomes-20261102-01編譯375／0error，guardian自然0／remaining0／無強停。修前2/4，兩來源subtest及不支援view皆exit0；修後真CLI＋DiagnosticAPI、固定collector／禁止採集spy驗結果／退出碼，root不建runtime，模型／OS採集0。不是實機來源或已安全證據。
+
+50c4453701f3edcfeeab3387f8b927558c4a56b9（fix(collectors): cancel launch notifications before process creation [skip ci]，+53/-8）已核兩遠端同SHA，git-query-launch-remote-20261102-01；無CI。NAS-002版本／schema資訊已向使用者詢問，未取得前不連設備／讀新日誌；真人、長跑、原生覆蓋與防守恢復仍獨立未驗。
+
 ## 2026-11-02 CMD-016啟動通知前取消亦可回傳
 
 launch進度通知的KB過去仍穿透CLI，現回cancelled_before_query，不呼叫process factory、不建立collector，不捏造PID／Job退出。UTC2026-11-01T16:41:35，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-launch-cancel-20261102-01 --timeout-seconds 90 --module test_command_query_collection_cancel --module test_collectors_diagnostics`：28/28、0skip、374語法、source_unchanged；build-query-launch-cancel-20261102-01編譯374／0error，guardian自然0／remaining0／無強停。修前regression-01 2/3，launch注入及真自有console兩subtest都失敗；修後均exit130、rows空、無collector PID／coverage process，另以禁止factory spy核對。waiting／completed與等待中真控制事件仍過，無模型／原生採集；不宣稱OS create任意指令或輸出寫入瞬間已完整取消驗收。

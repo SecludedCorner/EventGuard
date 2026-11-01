@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-02 CMD-017來源未適用／未請求退出碼已修
+
+verify-query-outcomes-20261102-01：31/31、375編譯，CLI來源not_applicable/not_requested=5、unsupported view=2，health=0／product白名單拒絕2相容；JSON schema未改、真CLI搭固定／禁止collector，無OS／模型／runtime。修前2/4保留；build-query-outcomes-20261102-01。50c4453兩遠端已核同步。下一NAS-002仍缺DSM／Log Center版本、紀錄類型及官方schema，已發文字資訊詢問，未取得不假定格式；真人／長跑／防守恢復等前置保留，06已消耗批准不重跑。
+
 ## 2026-11-02 啟動通知中斷已補
 
 verify-query-launch-cancel-20261102-01：28/28、374編譯，launch KB／真私有console均在process factory前取消，exit130、無collector PID／coverage process；未建立不當成退出，修前2/3保留。見build-query-launch-cancel-20261102-01；waiting／completed回歸仍過，自有Job無殘留強停、模型／OS採集0。cb2dd45兩遠端已核同步。下一以隔離CLI核對query not_applicable的退出碼；OS建立及任意收尾窗口、真來源與外部關卡仍獨立未驗。
