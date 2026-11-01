@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-01 CMD-005 命令已接線
+
+events operation-result的9/9實際CLI整合及361編譯見verify-command-operation-20261101-01／build-command-operation-20261101-01，原結果不隨current更新，unknown=5，不確認GUI journal或ACK。API947cd1a已同步兩遠端。下一CMD-006補set-status的expected-payload-hash入口與固定身分衝突碼，沿用交易內檢查；不要用CLI source去重送GUI operation ID。主工作樹唯一寫入仍為本聊天，封存聊天不再追蹤／改檔。
+
 ## 2026-11-01 CMD-005 API可用，接續CLI
 
 operation_result提供schema1.0的原人工操作／目前狀態分離，不新增表，missing/legacy壞schema／payload不符／anchor消失為unknown，讀取不確認GUI回條。11/11、360編譯，證據verify-operation-result-api-20261101-02／build-operation-result-api-20261101-01。下一直接接events operation-result與實際CLI串接及exit5，不把API測試當命令已驗。CMD-004 c36cae4兩遠端已核同SHA；整合detached checkout已安全重建，路徑沿用，原本地main refs保留。

@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-01 CMD-005 CLI原操作查回已驗
+
+新增 `events operation-result --event-id ID --operation-id OP`，同catalog API；schema1.0分離原結果／目前狀態。not_recorded僅指當前可核保存庫沒有該筆，exit0；缺庫／身分或歷程不明unknown=exit5，格式錯誤exit2。UTC13:47:43，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-operation-20261101-01 --timeout-seconds 120 --module test_command_operation_result --module test_command_status_retry --module test_command_pending_requests`：9/9、0skip、361語法／編譯、來源未變，guardian自然0／remaining0／無強停，build-command-operation-20261101-01。實際跨程序寫→查→新狀態→查、重讀DB不變、legacy hash／anchor缺失保持unknown，pending／ACK保留。
+
+API單元947cd1af5cff8037afe4aa569de3f955797971a9，feat(events): read original handling operation results [skip ci]，+168/-1，兩遠端同SHA及乾淨工作樹已核，git-operation-api-remote-20261101-01。下一CMD-006補CLI事件payload身分綁定；不啟CI／模型／採集，04失效及真實驗收關卡保留。
+
 ## 2026-11-01 CMD-005 原操作結果API已驗／CLI待接
 
 EventCatalog.operation_result(event_id,operation_id)重用既有歷程表及唯讀交易，schema_version=1.0，分開operation原結果／current現況；available／not_recorded／unknown不混用。缺庫、壞schema／hash／來源／時間、anchor消失均unknown，不建庫／遷移／確認GUI journal／ACK。UTC13:44:20，`py -3.13 -B scripts/verify.py --run-dir reports/verify-operation-result-api-20261101-02 --timeout-seconds 120 --module test_disposition_operation_read --module test_disposition_history_read`：11/11、0skip、360語法／編譯，Job自然0、remaining0、無強停，來源未變；build-operation-result-api-20261101-01。01是加schema檢查／noop案例前的10/10，非最終scope、不累加。下一接CLI及實際跨命令驗收。

@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-01 CMD-005 CLI跨命令結果查回
+
+UTC13:47:43，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-operation-20261101-01 --timeout-seconds 120 --module test_command_operation_result --module test_command_status_retry --module test_command_pending_requests`：9/9、0skip、361語法、source_unchanged=true；guardian自然0／remaining0／無強停，build-command-operation-20261101-01編譯361、0error。實際獨立CLI程序跑set-status→operation-result→另一set-status→原operation-result；原操作不變、current更新、重讀DB bytes不變、pending1/receipt0。另驗not_recorded／非法ID／缺庫不建立／legacy NULL hash／保留歷程但anchor缺失，stdout單JSON、stderr空及exit0/2/5分開。文字呈現新增但未另算真人或原生輸入驗收。
+
+API單元947cd1af5cff8037afe4aa569de3f955797971a9，feat(events): read original handling operation results [skip ci]，+168/-1；git-operation-api-remote-20261101-01直接核開發分支及main同SHA，整合/推送Job自然0無殘留／強停。無模型／設備／CI，原04包失效維持。
+
 ## 2026-11-01 CMD-005原操作結果API
 
 UTC13:44:20：`py -3.13 -B scripts/verify.py --run-dir reports/verify-operation-result-api-20261101-02 --timeout-seconds 120 --module test_disposition_operation_read --module test_disposition_history_read`，11/11、0skip、360語法、source_unchanged，guardian自然exit0／remaining0／無強停。build-operation-result-api-20261101-01編譯360、0error；01為新增schema／noop測試前10/10，不累加。合成SQLite API驗證原結果／目前分離、跨事件不可讀取他案結果、缺庫不建立、anchor消失、hash/null/schema/source/time/status/changed損壞、noop及未確認GUI要求保留，DB bytes／pending／ACK不變。CLI尚未接，非真agent／採集／防守驗收。

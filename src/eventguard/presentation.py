@@ -264,6 +264,14 @@ def render(result, command="", operation=""):
             lines.append("前次查詢退出閘道："+text(gate["reason"]))
         lines.append("狀態／資料：status；sources list；事件：events list；報告：report export。")
         return "\n".join(lines)
+    if command=="events" and operation=="operation-result":
+        saved=result.get("operation") or {}
+        current=result.get("current") or {}
+        return "\n".join(["人工操作結果："+state(result.get("state")),
+            "event_id="+text(result.get("event_id"))+"；operation_id="+text(result.get("operation_id")),
+            "原操作："+text(saved.get("previous_status"))+" → "+text(saved.get("status"))+"；時間="+text(saved.get("at")),
+            "目前狀態："+text(current.get("status")),
+            "只查本機紀錄，不重送、不確認GUI回條、不 ACK；not_recorded 不證明外部未執行，unknown 不能判安全。"])
     if command=="events" and operation=="pending-requests":
         lines=["待確認人工操作："+state(result.get("state")),
                "事件數="+text(result.get("total"))+"；要求數="+text(result.get("request_total")),

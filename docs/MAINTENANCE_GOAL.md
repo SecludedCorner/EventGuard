@@ -7,7 +7,8 @@
 | CMD-001／P1 | 最小能力矩陣已建立，依實際路徑增補 | COMMAND_CAPABILITY_MATRIX；非全能力本次重驗 | 跟隨缺口更新命令／API／GUI及驗收 |
 | CMD-003／P1 | CLI人工狀態可冪等重送，已驗 | 既有catalog交易；verify-command-status-20261101-03 12/12、357編譯；非ACK | 逐單元保存後接CMD-004；不同事件／內容須exit2且不寫入 |
 | CMD-004／P1 | CLI查閱GUI未決請求，已驗 | verify-command-pending-20261101-02：16/16、358編譯；非真環境 | 保存並整合；unknown=exit5，穩定分頁與detail串接，不寫／dispatch／ACK |
-| CMD-005／P1 | 按operation_id唯讀查回原結果，API已驗、CLI待接 | verify-operation-result-api-20261101-02：11/11、360編譯；不需模型 | API先保存整合，再接CLI成功／unknown=5／格式錯誤=2與跨命令串接；不確認journal／ACK |
+| CMD-005／P1 | 按operation_id查回原結果，API／CLI已驗 | API11/11；verify-command-operation-20261101-01：9/9、361編譯 | 保存整合；原結果／目前分離、不確認journal／ACK；真agent未驗 |
+| CMD-006／P1 | CLI人工處置可綁定已讀payload，待實作 | set_disposition既有expected_payload_hash交易檢查，CLI未暴露；不需模型 | 接expected-payload-hash及固定衝突碼，detail→綁定寫入、錯hash不寫、舊用法相容，實際CLI驗收後保存整合 |
 | AGENT-04／P1 | 真agent閉環待外部批准且原scope失效 | 原包source-binding-invalidated.json；02已消耗、03失效 | 未來重新準備明確版本scope並取得單次批准；本次不啟模型 |
 
 ## 2026-11-01 Command First 目標與開源參考接續

@@ -16,6 +16,16 @@ monitor 需要由人類明確啟動；另一同專案終端 `py -3.13 -B scripts
 
 ## 保存事件調查
 
+人工處置可用固定operation ID重送及唯讀查回原結果；每個不同要求用不同ID：
+
+```powershell
+.\EventGuard.cmd --format json events set-status --event-id <ID> --status read --operation-id review-001
+.\EventGuard.cmd --format json events operation-result --event-id <ID> --operation-id review-001
+.\EventGuard.cmd --format json events pending-requests --limit 10 --offset 0
+```
+
+operation-result的operation是原結果，current是目前狀態；相同要求重送不回退後來狀態。not_recorded表示該保存庫沒有此筆，不證明外部未執行。unknown及exit5表示資料不足，不能判安全；非法輸入exit2。pending-requests只發現待確認要求，將其event_id傳入events detail可查看原ID；查閱不重送、不確認GUI回條、不ACK。合成案例加`--namespace test`，不讀主機新資料。
+
 事件頁「查看」後，按「建立／更新保存的調查」。它只讀目前來源 SQLite 的允許 metadata，保存一份案件與時間線；不呼叫模型、不採集、不 ACK、不改人工處置狀態。CLI 使用相同 EventCatalog：
 
 ```powershell

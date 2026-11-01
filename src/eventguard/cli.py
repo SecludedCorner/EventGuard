@@ -142,6 +142,11 @@ def parser():
     pending.add_argument("--limit",type=int,default=100)
     pending.add_argument("--offset",type=int,default=0)
     pending.add_argument("--event-source",type=Path,help="選填。test範圍內既有的合成事件source。")
+    operation_result=eventsub.add_parser("operation-result",help="唯讀查回原人工操作結果及目前狀態；不重送、不確認GUI回條。")
+    operation_result.add_argument("--namespace",choices=("live","test"),default="live")
+    operation_result.add_argument("--event-id",required=True)
+    operation_result.add_argument("--operation-id",required=True)
+    operation_result.add_argument("--event-source",type=Path,help="選填。test範圍內既有的合成事件source。")
     detail=eventsub.add_parser("detail",help="查看事件詳情與處置狀態。不採集、不ACK。")
     detail.add_argument("--namespace",choices=("live","test"),default="live")
     detail.add_argument("--event-id",required=True)
@@ -315,11 +320,13 @@ def execute(args,runtime,progress=None):
         from .diagnostics.api import DiagnosticAPI
         return DiagnosticAPI(query_admission=runtime.query_launch).query(args.operation,values)
     if args.command=="events":
-        if args.event_command in {"list","pending-requests","detail","set-status","investigate","backup-history","preview-history"}:
+        if args.event_command in {"list","pending-requests","operation-result","detail","set-status","investigate","backup-history","preview-history"}:
             from .events.catalog import EventCatalog
             catalog=EventCatalog(runtime.root,args.namespace,directory=args.event_source)
             if args.event_command=="pending-requests":
                 return catalog.pending_requests(limit=args.limit,offset=args.offset)
+            if args.event_command=="operation-result":
+                return catalog.operation_result(args.event_id,args.operation_id)
             if args.event_command=="list":
                 return catalog.list(severity=args.severity,source=args.source,status=args.status,
                                     limit=args.limit,offset=args.offset)
@@ -444,7 +451,7 @@ def main(argv=None,root=None):
         result=execute(args,Runtime(root),ProgressPrinter(sys.stderr) if human and args.command=="monitor" else None)
         show(result)
         if isinstance(result,dict):
-            if args.command=="events" and args.event_command=="pending-requests" and result.get("state")=="unknown":
+            if args.command=="events" and args.event_command in {"pending-requests","operation-result"} and result.get("state")=="unknown":
                 return 5
             if args.command in {"app","background","run","advisories","agent"} or args.command=="stop" and "desired_enabled" in result:
                 state=result.get("state")
