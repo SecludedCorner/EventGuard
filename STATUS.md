@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-01 CMD-010 query可由有界stdin串接
+
+實際PowerShell→EventGuard.cmd傳含欄位JSON原本因批次引號處理回exit2，probe-cmd-json-input-20261101-01保留觀察。新增query --args -，從非互動stdin讀一個完整UTF-8物件（可BOM），最多8192bytes，沿用共用32層／duplicate-key及型別驗證；超量讀到8193bytes即拒絕，不等producer EOF，不採集／建runtime。文字參數用法與輸出schema不變，stdin正常輸入需producer關閉後才解析。
+
+UTC14:46:49，`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-stdin-20261101-01 --timeout-seconds 120 --module test_command_query_stdin --module test_command_query_json --module test_cli_workflow`：16/16、0skip、366語法／編譯、source_unchanged，自有Job自然0／remaining0／無強停，新增模型0；build-query-stdin-20261101-01。regression-01的實際.cmd管線0/1失敗保留。06是舊固定來源的已通過合成真CLI證據與已消耗批准，本次未重跑／未追加模型，不以新stdin功能升格真環境驗收。
+
 ## 2026-11-01 06合成真CLI完整通過／擴大無模型驗證88項與入口3項
 
 人類明確批准06後保存原文／UTC／scope，以絕對路徑執行一次真原生CLI任務；UTC14:28:14 validation通過，approved_launch_hash_matches=true。四工具各一次、單event/query/result、分析已保存、source ack1/pending0/receipt1；CLI及MCP retained-HANDLE自然exit0，ACK flushed，remaining0／無強停。06 final-review.json再次核scope／intent一致及SQLite；批准已消耗，不再追加模型。這是合成短期原生CLI協定／調查／退出驗收，不是獨立provider身分、既有桌面閒置喚醒、真主機防守或恢復。05原失敗及全部證據保留，不改判通過。

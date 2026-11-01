@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-01 CMD-010補實際批次入口JSON串接
+
+新增query --args -：有界UTF-8 stdin，透過PowerShell管線可把完整JSON送入實際EventGuard.cmd，避免命令列引號改變輸入。16/16、366編譯見verify-query-stdin-20261101-01／build-query-stdin-20261101-01，含超量且stdin仍開啟的拒絕、TTY不讀、壞JSON／重複key／深度、既有文字參數與CLI流程。實際修前失敗保留；新增模型0。06歷史通過與來源／批准已消耗不改，新來源未用模型重驗。
+
 ## 2026-11-01 06完成，05仍保留launch失敗
 
 06在使用者另次具體批准後單次執行，四工具／保存調查／ACK／CLI與MCP自然退出及approved launch hash均通過；pending0/receipt1，詳06 validation／final-review。05協定證據成立但完整綁定未過，保留原始資料，不重跑；02/05/06批准已消耗、03/04失效。產品2770ad7已同步兩遠端，來源hash9ad0db6f1ab54fd796043ddff2f7b3b49576a2a5531032887d84d6ec9e7d1a82。

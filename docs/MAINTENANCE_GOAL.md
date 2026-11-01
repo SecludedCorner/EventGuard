@@ -12,6 +12,7 @@
 | CMD-007／P1 | 接收權限agent_access的CLI入口，已驗 | verify-command-agent-access-20261101-02：34/34、363編譯 | 保存整合；僅本工具設定，receiver／模型／退出證據獨立，正式設定未變 |
 | CMD-008／P0 | query JSON輸入歧義已修／已驗 | verify-command-query-json-20261101-02：32/32、364編譯，修前0/1保留 | 保存整合；8KiB／32層、duplicate/depth固定碼exit2，不dispatch／不建runtime |
 | CMD-009／P0 | 批准launch綁定正規化／前後核對已修 | verify-investigation-launch-binding-20261101-01：5/5、365編譯；明示fake CLI＋真SDK | 保存整合；路徑／參數drift在capture前拒絕，原05的完整launch驗收仍未過 |
+| CMD-010／P1 | query有界stdin與真.cmd管線已實作／已驗 | verify-query-stdin-20261101-01：16/16、366編譯；修前.cmd失敗保留，模型0 | 保存整合；8KiB／32層／duplicate-key、TTY／超量且未EOF拒絕，保留literal相容 |
 | AGENT-05／P1 | 批准已消耗；四步／ACK／退出成立，完整launch綁定未過 | 05 scope-launch-audit／post-fix-readonly-audit；相對／絕對路徑唯一差異，原資料保留 | 不重跑05；修正保存後只能準備新scope及另次明確批准，不能把fake回歸升格真驗 |
 | AGENT-06／P1 | 單次合成真CLI調查及完整launch綁定已通過 | 06 validation／final-review；四工具各1、ack1/pending0/receipt1、CLI/MCP自然0，批准已消耗 | 保存結果；不重跑、不宣稱桌面／原生防守完成；新模型工作須明確有效範圍且有必要 |
 | CLI-EXPANDED／P2 | 使用者要求的擴大無模型驗證完成 | command-core-expanded-01：88/88、365語法；cmd-entry-01：3/3，新增模型0 | 保存，僅新改動／失敗／新關切才續驗，不重跑相同來源冒充進度 |

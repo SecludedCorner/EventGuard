@@ -16,7 +16,13 @@ monitor 需要由人類明確啟動；另一同專案終端 `py -3.13 -B scripts
 
 `events list --namespace live` 查看已存 ID，`events inspect --namespace live --event-id EVENT_ID` 查看當時事實。只有明確 `events diagnose` 才執行事件綁定唯讀查詢；不接受自由命令。合成資料用 test namespace，不拿 test 結果判真主機安全。`report export` 只寫本機 JSON／HTML。
 
-query的`--args`限一筆完整JSON物件、8KiB／32層；重複欄位（含unicode escaped同名）及過深結構在查詢前exit2，固定query_input_duplicate_key／query_input_depth_exceeded，不採最後值覆蓋。`query health --args '{"request_id":"health-1"}'`只查工具能力，不查Windows來源。
+query的`--args`限一筆完整JSON物件、8KiB／32層；重複欄位（含unicode escaped同名）及過深結構在查詢前exit2，固定query_input_duplicate_key／query_input_depth_exceeded，不採最後值覆蓋。PowerShell可直接用管線傳給`--args -`，實際批次入口亦已驗：
+
+```powershell
+'{"request_id":"health-1"}' | .\EventGuard.cmd --format json query health --args -
+```
+
+health只查工具能力，不查Windows來源。stdin限UTF-8（可BOM），上游關閉後解析；超過8KiB即拒絕，互動終端不等待。`--args`文字參數仍可用；含引號的JSON經Windows批次檔時使用stdin管線，避免shell改變內容。此入口不隱含採集、模型或ACK。
 
 ## 保存事件調查
 

@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-01 CMD-010實際PowerShell／批次JSON管線
+
+probe-cmd-json-input-20261101-01：固定query health的帶欄位JSON經PowerShell→EventGuard.cmd引號處理後exit2／input_or_config_validation_failed，stderr空、自有Job自然2／remaining0／無強停，模型0。stdin功能修前verify-query-stdin-regression-20261101-01實際管線0/1失敗；新增query --args -後UTC14:46:49執行`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-stdin-20261101-01 --timeout-seconds 120 --module test_command_query_stdin --module test_command_query_json --module test_cli_workflow`：16/16、0skip、366語法、source_unchanged，guardian自然0／remaining0／無強停；build-query-stdin-20261101-01編譯366、0error。
+
+新案例為真PowerShell→批次→Python管線、UTF-8/BOM、畸形／重複key／超深JSON、8193bytes且producer仍開啟時exit2、TTY不等待。health不查OS，隔離子程序不建runtime，stdout單JSON／stderr空、request ID保留；既有literal --args回歸通過。所有測試模型0、不讀新真資料，非原生來源／真agent重驗；06歷史來源及消耗批准保留。
+
 ## 2026-11-01 06完整launch／合成調查通過與無模型擴大驗證
 
 批准原文「批准 06 單次合成調查」及UTC／scope保存在06 human-approval；scope 4c301ac292c0119b4c546ede8ff389a3b1e0672eb8b41c8c6091f6b5c0b5fc78，source9ad0db6f1ab54fd796043ddff2f7b3b49576a2a5531032887d84d6ec9e7d1a82。一次執行`py -3.13 -B scripts/validate_delivery.py investigation --root <06絕對路徑> --codex-executable <固定四檔runtime的codex.exe絕對路徑> --execute`；UTC14:28:14 exit0，approved_launch_hash_matches=true，四工具各一次、單event/query/result、分析與原始trace／query／SQLite相符，source ack1/pending0/receipt1。capture-exit、MCP retained-HANDLE及stdio回條均自然0、ACK flushed、remaining0／無強停；final-review再次唯讀核對。是實際原生CLI合成協定，不是獨立模型provider身分、桌面閒置喚醒、原生防守或恢復；05完整launch未過的原始證據保留，不升格。06批准已消耗，無自動重試。

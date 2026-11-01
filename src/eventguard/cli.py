@@ -128,7 +128,7 @@ def parser():
     monitor.add_argument("--fixture-interval",type=float,default=0.1)
     query=sub.add_parser("query")
     query.add_argument("operation")
-    query.add_argument("--args",default="{}",help="型別化 JSON，不能是 shell 指令")
+    query.add_argument("--args",default="{}",help="型別化JSON，或 - 從stdin讀取最多8KiB UTF-8；不能是shell指令。")
     events=sub.add_parser("events")
     eventsub=events.add_subparsers(dest="event_command",required=True)
     listing=eventsub.add_parser("list")
@@ -319,10 +319,20 @@ def execute(args,runtime,progress=None):
         return operator.call("monitor",max_cycles=args.max_cycles,fixture=args.fixture,fixture_interval=args.fixture_interval,
                              max_seconds=args.max_seconds,on_progress=progress)
     if args.command=="query":
-        if len(args.args.encode("utf-8"))>8192:
+        content=args.args
+        if content=="-":
+            stream=getattr(sys.stdin,"buffer",sys.stdin)
+            if stream is None or stream.isatty():
+                raise ValueError("query_stdin_required")
+            content=stream.read(8193)
+            if isinstance(content,bytes):
+                if len(content)>8192:
+                    raise ValueError("query_input_limit")
+                content=content.decode("utf-8-sig")
+        if not isinstance(content,str) or len(content.encode("utf-8"))>8192:
             raise ValueError("query_input_limit")
         from .collectors.bounded_json import loads
-        values=loads(args.args)
+        values=loads(content)
         if not isinstance(values,dict):
             raise ValueError("query_args_must_be_object")
         from .diagnostics.api import DiagnosticAPI
