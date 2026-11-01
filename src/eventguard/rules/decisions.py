@@ -49,7 +49,7 @@ def classify(events, rules):
     reclassification uses recorded input severity without mutating history.
     """
     from .configured import validate_rules, apply_rules, _winner, SEVERITIES
-    from ..events.schema import validate_event, MAX_EVENT_BYTES
+    from ..events.schema import validate_event
     configured = validate_rules(rules)
     if type(events) is not list or len(events) > MAX_CLASSIFICATION_EVENTS or any(type(event) is not dict for event in events):
         raise ValueError("rules_invalid_events")
@@ -71,6 +71,5 @@ def classify(events, rules):
             "base_severity": original["severity"], "matched": rule is not None,
             "rule_index": index, "rule": snapshot, "rule_hash": fingerprint(snapshot) if snapshot else None}
         validate_decision(event["classification"], event)
-        if len(json.dumps(event, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("ascii")) > MAX_EVENT_BYTES:
-            raise ValueError("classification_event_too_large")
+        event.update(validate_event(event))  # Includes trace in the same UTF-8 event budget.
     return result

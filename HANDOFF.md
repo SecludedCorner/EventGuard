@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-02 CMD-018新事件已保存分類決策／接查閱
+
+schema可選classification與Monitor原子保存已接，108/108、378編譯見verify-rule-decision-storage-20261102-02／build-rule-decision-storage-20261102-01。原hash／條件／severity驗證、UTF-8 8KiB上限及預算共用；legacy不加欄位，改config不覆寫歷史。初輪測試None期望錯誤保留並修正。下一改共用event_view，真CLI detail／inspect驗舊決策、legacy未記錄、不讀現有config、無ACK／模型；3d35ca2兩遠端已核同步。
+
 ## 2026-11-02 CMD-018分類trace API完成／立即接落盤
 
 decisions.classify與舊apply_rules共用winner，保存條件快照與hash／base severity，23/23、377編譯見verify-rule-decisions-20261102-02／build-rule-decisions-20261102-01；API已驗但schema與monitor未接。下一允許並驗證可選classification欄位、監看原子提交與共用event_view讀取，測試改config後仍查回原決策、舊事件不補造。只用合成fixture、模型／OS0；a98c5b0兩遠端已核同步，NAS缺資料不阻擋此工程。

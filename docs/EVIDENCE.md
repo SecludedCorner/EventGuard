@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-02 分類決策隨事件原子落盤
+
+verify-rule-decision-storage-20261102-01為26/27，只有新測試期望無state為{}而實際原契約是None；改為嚴格assertIsNone並加真容量回滾後，UTC2026-11-01T17:14:46的02六模組108/108、0skip、378語法、source_unchanged（命令見STATUS）；build-rule-decision-storage-20261102-01編譯378／0error，guardian自然0／remaining0／無強停。五個新存儲案例：EventSchema保留決策且payload hash涵蓋、重開SQLite後改config仍留舊快照、壞決策整批拒絕、容量1的兩事件交易不留任何事件／state、legacy hash不變、事件總UTF-8上限仍拒絕超量。另擴原Monitor fixture測試比對8080 high／8081 critical各自snapshot及不同config hash，後續設定info不改原紀錄；pending保留、模型0。CLI／agent投影下一接，不宣稱真來源／真agent新驗收。
+
+3d35ca230e37dfdc31a4dea6e9db8e334609488d（feat(rules): expose reproducible classification decision snapshots [skip ci]，+170/-3）兩遠端同SHA，git-rule-decisions-remote-20261102-01；模型／OS／CI0。
+
 ## 2026-11-02 規則判斷可追溯API
 
 UTC2026-11-01T17:07:48，verify-rule-decisions-20261102-02（命令見STATUS）：23/23、0skip、377語法、source_unchanged；build-rule-decisions-20261102-01編譯377／0error，guardian自然0／remaining0／無強停。五個新API案例核最後命中、原severity／detector身分與輸入保留、規則變更後舊副本不變、冪等／disabled／未命中、hash／條件／型別竄改及1000筆界線拒絕；共用舊分類器測試亦過。只為合成候選；落盤／CLI尚未接、不宣稱歷史trace已存在。a98c5b08fa719eb50ab2a5dfc41d037e7ace8143（fix(cli): distinguish unavailable query outcomes from success [skip ci]，+84/-3）兩遠端同SHA，git-query-outcomes-remote-20261102-01；模型／OS／CI0。

@@ -167,7 +167,8 @@ class Monitor:
         from .events.store import EventStore
         from .transport.adapters import DisabledAdapter
         from .rules.detector import evaluate
-        from .rules.configured import apply_rules, load_rules, RulesValidationError
+        from .rules.configured import load_rules, RulesValidationError
+        from .rules.decisions import classify
         if max_cycles is not None and (type(max_cycles) is not int or not 1<=max_cycles<=100000):
             raise ValueError("invalid_max_cycles")
         if max_seconds is not None and (type(max_seconds) not in (int,float)
@@ -280,7 +281,7 @@ class Monitor:
                                                              cooldown=config.get("cooldown_seconds", 300))
                                 for event in events:
                                     event["synthetic"] = bool(fixture)
-                                events = apply_rules(events, configured_rules)
+                                events = classify(events, configured_rules)
                                 store.commit_evaluation(new_state, events)
                                 state = new_state
                                 delivery = store.pump(DisabledAdapter())

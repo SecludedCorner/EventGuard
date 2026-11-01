@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-11-02 CMD-018事件schema／監看原子保存已接
+
+Event 2.0新增可選classification，驗winner條件／內容hash／severity綁定，並納入既有8KiB UTF-8上限與payload hash。Monitor使用共用classify，決策隨事件及detector state原子提交，無額外DB表／旁路資料；舊事件不新增欄位。API回傳使用同一UTF-8事件預算，不對Unicode另加ASCII大小限制。CLI／agent共用投影下一單元接入。
+
+UTC2026-11-01T17:14:46，`py -3.13 -B scripts/verify.py --run-dir reports/verify-rule-decision-storage-20261102-02 --timeout-seconds 180 --module test_rule_decision_storage --module test_rule_decisions --module test_configured_rules --module test_event_catalog --module test_events_transport --module test_event_ingress`：108/108、0skip、378語法、source_unchanged；build-rule-decision-storage-20261102-01編譯378／0error，guardian自然0／remaining0／無強停。真fixture Monitor重載不同規則並落SQLite，改config重開後保留原trace；壞trace整批拒絕／容量失敗回滾事件及state、legacy hash不變、大小界線驗過。首輪26/27只因新測試將無state誤期望{}，已核原None契約修正，證據保留；模型／OS／CI0。
+
+3d35ca230e37dfdc31a4dea6e9db8e334609488d（feat(rules): expose reproducible classification decision snapshots [skip ci]，+170/-3）兩遠端同SHA，git-rule-decisions-remote-20261102-01；尚不把API／存儲通過當CLI／真環境全驗。
+
 ## 2026-11-02 CMD-018分類決策API已驗／落盤待接
 
 既有自訂規則只改severity，原detector rule_ref不含分類者；新增rules.decisions.classify，與apply_rules共用最後命中判定，產生winner條件快照／hash、完整規則集hash、原severity及未命中記錄。不存顯示名稱、不變事件ID／detector ref；重算新副本保留原severity且冪等，來源內容hash不是授權。每批最多1000、事件含決策仍8KiB，舊apply_rules輸出相容；完整規則集未備份、歷史事件不補造。

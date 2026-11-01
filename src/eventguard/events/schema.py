@@ -12,7 +12,7 @@ EVENT_FIELDS = frozenset({
     "schema_version", "event_id", "host_id", "episode_id", "correlation_id",
     "sequence", "event_type", "detector", "rule_ref", "transition", "severity",
     "synthetic", "observed_at", "window", "persisted_at", "baseline_version",
-    "evidence", "inference", "coverage", "privacy", "evidence_refs",
+    "evidence", "inference", "coverage", "privacy", "evidence_refs", "classification",
 })
 META_FIELDS = frozenset({
     "id", "version", "rule_id", "protocol", "address", "local_address",
@@ -193,6 +193,12 @@ def validate_event(event):
     if not isinstance(refs, list) or len(refs) > 16:
         raise EventValidationError("invalid_evidence_refs")
     clean["evidence_refs"] = [_identifier(ref, "evidence_ref") for ref in refs]
+    if "classification" in event:
+        from ..rules.decisions import validate_decision
+        try:
+            clean["classification"] = validate_decision(event["classification"], clean)
+        except (ValueError, TypeError):
+            raise EventValidationError("invalid_classification") from None
     encoded = json.dumps(clean, ensure_ascii=False, sort_keys=True,
                          separators=(",", ":"), allow_nan=False).encode("utf-8")
     if len(encoded) > MAX_EVENT_BYTES:

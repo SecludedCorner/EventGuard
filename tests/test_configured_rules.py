@@ -220,6 +220,14 @@ class MonitorRuleTests(unittest.TestCase):
         self.assertEqual({port: event["severity"] for port, event in by_port.items()}, {8080: "high", 8081: "critical"})
         self.assertTrue(all(event["synthetic"] for event in by_port.values()))
         self.assertTrue(all(event["delivery_status"] == "pending" for event in by_port.values()))
+        decisions = {port: event["classification"] for port, event in by_port.items()}
+        self.assertEqual(decisions[8080]["rule"]["severity"], "high")
+        self.assertEqual(decisions[8081]["rule"]["severity"], "critical")
+        self.assertNotEqual(decisions[8080]["rule_set_hash"], decisions[8081]["rule_set_hash"])
+        self.rules("info")
+        reopened = EventStore(Runtime(self.root).data_dir("test")).list_events()
+        self.assertEqual({event["event_id"]: event["classification"] for event in reopened if event["event_type"] == "listener.changed"},
+                         {event["event_id"]: event["classification"] for event in by_port.values()})
         self.assertEqual(result["model_calls"], 0)
 
     def test_bad_startup_rules_prevent_collection_and_leave_no_new_runtime(self):
