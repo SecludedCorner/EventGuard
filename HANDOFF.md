@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-02 pre-Resume中斷清理補驗
+
+verify-creation-interrupt-20261102-01：process governance 23/23、379編譯／source_unchanged，build-creation-interrupt-20261102-01。新增真Windows已建立但未執行的子程序，私有Job active1後注入KB，constructor只清自有Job；子程序1460／force=true／launch_failure，關閉前active0且marker未執行。guardian自然0／remaining0／無強停是另一層，不能混稱子程序自然退出；lifecycle-evidence明列。這非Runner／CLI所有取消窗口驗收；原生真來源、任意收尾、07批准及其他實機關卡仍待條件。f0d5056兩遠端已核同步，產品source未變，不新增模型。
+
 ## 2026-11-02 分類來源與既有接收／派送擴大相容驗證
 
 verify-classification-compatibility-20261102-01四模組43/43、379編譯／source_unchanged，build-classification-compatibility-20261102-01；一般inbox／fixture批准／fake dispatcher回歸及新增九種保存來源的分類investigate→重開→detail均過，gaps／unknown／無允許處置／ACK不變。e9f409b兩遠端已核同步；src/scripts未變，07 scope保持，但明確批准尚未到達，仍不得執行。NAS資訊詢問亦待答，其餘真人／原生／長跑／恢復關卡不因合成測試通過而完成；不重跑相同未受影響來源當進度。

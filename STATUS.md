@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-02 OS建立後／Resume前中斷的私有Job清理已補驗
+
+UTC2026-11-01T18:30:34，`py -3.13 -B scripts/verify.py --run-dir reports/verify-creation-interrupt-20261102-01 --timeout-seconds 140 --module test_process_governance`：23/23、0skip、379語法、source_unchanged；build-creation-interrupt-20261102-01編譯379／0error，guardian自然0／remaining0／無強停。新增真Windows程序已建立、尚未Resume的KeyboardInterrupt注入：確有_child_created且專用Job active1，未執行合成marker程式，constructor保留例外並只清理自有Job，實際子程序退出1460、Job關閉前active0。此故障子程序明示forcibly_terminated=true／launch_failure，絕非自然退出；不與guardian自然退出混淆。既有Job／gap／fixture及固定Python版本worker回歸過，未作新全機盤點／模型。
+
+這只證明pre-Resume窗口的低階清理，不證Runner在所有OS建立／任意輸出收尾窗口均有結構取消回覆；CMD-016未驗範圍仍保留。f0d5056b983ada5e17d6c17f0023af7e95dfe210（test(investigation): preserve source gaps with saved classifications [skip ci]，+36/-2）兩遠端同SHA，git-classification-compatibility-remote-20261102-01。src/scripts未變，07批准仍待答／未啟；NAS及其他真環境關卡未完成，CI0。
+
 ## 2026-11-02 新分類來源與既有接收／派送契約相容
 
 UTC2026-11-01T18:25:04，`py -3.13 -B scripts/verify.py --run-dir reports/verify-classification-compatibility-20261102-01 --timeout-seconds 180 --module test_queue_inbox --module test_investigation_scope --module test_agent_dispatch --module test_investigation_source_golden`：43/43、0skip、379語法、source_unchanged；build-classification-compatibility-20261102-01編譯379／0error，guardian自然0／remaining0／無強停。新增九種已存來源的分類版本，透過真catalog investigate→重開→detail查回快照，逐案例保留既有gaps、owner unknown、not_assessed、allowed_actions空與未ACK；同九種legacy版本仍缺分類，未補造。接收一般profile、fixture批准及明示fake dispatcher回歸亦通過；非真LLM或新主機資料，不把各舊來源測試數相加。

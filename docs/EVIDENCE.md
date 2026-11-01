@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-11-02 真Windows程序建立後／Resume前故障清理
+
+UTC2026-11-01T18:30:34，verify-creation-interrupt-20261102-01（命令見STATUS）23/23、0skip、379語法、source_unchanged，build-creation-interrupt-20261102-01編譯379／0error。新增test_interrupt_after_creation_before_resume以真JobPopen／CreateProcessW建立合成Python，只有ResumeThread被換為KB注入；注入時_child_created=true且新專用Job.active=1。未呼叫真正ResumeThread、marker不存在；constructor的既有失敗處理經真Job終止、wait與關閉，actual returncode1460、closed前active0／forced=true／reason launch_failure，HANDLE已關。lifecycle-evidence明列child_code_executed=false及強停事實；guardian自己的自然0／remaining0／force=false不得取代故障子程序結果。測試無新原生來源／模型，既有相關Job／固定Python版本worker／gap回歸過；這不證明Runner／CLI任意窗口的結構取消。f0d5056b983ada5e17d6c17f0023af7e95dfe210兩遠端已核，git-classification-compatibility-remote-20261102-01，07產品來源未變、仍未批准／未啟。
+
 ## 2026-11-02 九種保存來源分類調查與接收／派送相容性
 
 UTC2026-11-01T18:25:04，verify-classification-compatibility-20261102-01四模組43/43、0skip、379語法、source_unchanged（命令見STATUS），build-classification-compatibility-20261102-01編譯379／0error；guardian自然0／remaining0／無強停。test_investigation_source_golden新增classified=True版本，九種fixture每種兩事件，真SQLite／catalog調查後重開detail比對原分類及保存調查；各expected gaps／成員數、owner unknown、not_assessed、allowed_actions空、missing diagnostic及原payload hash／delivery狀態均保留。舊classified=False九案例仍無classification，不補歷史。lifecycle-evidence各列9 synthetic_cases及gaps_preserved／source_ack_unchanged。一般QueueInbox、source-bound fixture approval、明示fake dispatcher相關回歸通過，未啟真模型或新原生採集，不與不同source hash的舊測試數相加。e9f409bded157fc8f3d3b2ad2dbdee84c5a4c66e兩遠端已核，git-classification-recovery-remote-20261102-01；07源未變、批准仍未取得。

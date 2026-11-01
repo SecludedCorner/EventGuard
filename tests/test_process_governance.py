@@ -232,6 +232,43 @@ class JobTests(FixtureRoot):
                 spawn([sys.executable, "-B", "-c", "pass"])
         launch.assert_not_called()
 
+    def test_interrupt_after_creation_before_resume_cleans_only_the_suspended_owned_job(self):
+        from eventguard import processes
+        created, closed = {}, []
+        original_execute, original_close = processes.JobPopen._execute_child, Job.close
+        def observe_execute(child, *args, **kwargs):
+            created['child'] = child
+            return original_execute(child, *args, **kwargs)
+        def interrupt_resume(_thread_handle):
+            child = created['child']
+            self.assertTrue(child._child_created)
+            self.assertEqual(child.job.active(), 1)
+            created['assigned_before_resume'] = True
+            raise KeyboardInterrupt('SYNTHETIC_LAUNCH_INTERRUPT')
+        def observe_close(job):
+            child = created.get('child')
+            if child is not None and job is child.job:
+                closed.append(dict(active=job.active(), forced=job.forced, reason=job.reason))
+            return original_close(job)
+        marker = self.root/'must-not-run.txt'
+        argv = [sys.executable, '-B', '-c',
+                'from pathlib import Path;import sys;Path(sys.argv[1]).write_text("synthetic")', str(marker)]
+        with patch.object(processes.JobPopen, '_execute_child', new=observe_execute), \
+             patch.object(processes.kernel(), 'ResumeThread', side_effect=interrupt_resume), \
+             patch.object(Job, 'close', new=observe_close):
+            with self.assertRaisesRegex(KeyboardInterrupt, 'SYNTHETIC_LAUNCH_INTERRUPT'):
+                spawn(argv)
+        child = created['child']
+        self.assertTrue(created['assigned_before_resume'])
+        self.assertEqual(child.returncode, 1460)
+        self.assertIsNone(child.job.handle)
+        self.assertFalse(marker.exists())
+        self.assertEqual(closed, [dict(active=0, forced=True, reason='launch_failure')])
+        self.evidence = dict(scope='actual owned Windows process suspended before first instruction; injected Ctrl+C exception',
+            assigned_before_resume=True, child_exited=True, exit_code=child.returncode,
+            remaining_owned_processes=0, forcibly_terminated=True, reason='launch_failure',
+            child_code_executed=False, native_queries=0, model_calls=0)
+
     def test_capture_start_receipt_failure_still_cleans_owned_tree(self):
         with patch("eventguard.acceptance_process.write_json", side_effect=OSError("synthetic filesystem failure")):
             self.assertEqual(capture([sys.executable, "-B", "-c", "import time;time.sleep(60)"], self.root, "d"*32, "fixture", timeout_seconds=.1), 2)
