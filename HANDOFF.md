@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-02 CMD-018分類決策完整合成通道已驗
+
+verify-classification-stdio-20261102-01：3/3、379編譯，明示FAKE CLI＋真stdio／SDK server，最大分類快照經四工具保存／ACK、CLI及MCP retained HANDLE自然0／ACK flushed、remaining0無強停，build-classification-stdio-20261102-01；lifecycle-evidence有classification_preserved／rule_hash，已核實欄位。此非模型；06批准已消耗且來源舊，不重跑。ac92c02兩遠端已核同步。下一若需當前來源真模型驗收，先完成新的具體scope／審核前置，不沿用06或假批准；NAS／真人／長跑／防守恢復仍獨立。
+
 ## 2026-11-02 分類資料已進合成調查profile，續驗stdio
 
 investigation=true才在facts帶原classification，七欄snapshot／一般profile不擴揭露；24/24、379編譯見verify-investigation-classification-20261102-02／build-investigation-classification-20261102-01。最大合法快照的4KiB晚期失敗已保留／修復，合成調查stage預留16KiB、全域8MiB仍固定，第二件空間不足在receive前拒絕；舊超量測試改注入該profile的budget常數，未放寬上限。SDK直接四工具與typed report／deep copy已驗，下一用既有owned stdio與已安裝SDK補wire／自然退出，無模型；5a28a53兩遠端已核同步。

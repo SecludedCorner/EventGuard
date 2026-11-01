@@ -44,10 +44,27 @@ class InvestigationAcceptanceTests(unittest.TestCase):
     @patch.object(scope, 'inventory', return_value={'fixture_only': 'FAKE CLI, no executable bundle'})
     @patch.object(scope, 'verified_preflight', return_value={'fixture_only': 'no native probes'})
     def test_finite_fake_cli_real_stdio_report_ack_and_held_handle_natural_exit(self, _preflight, _inventory):
+        self.check_fake_cli(classified=False)
+
+    @patch.object(scope, 'inventory', return_value={'fixture_only': 'FAKE CLI, no executable bundle'})
+    @patch.object(scope, 'verified_preflight', return_value={'fixture_only': 'no native probes'})
+    def test_classified_event_survives_real_stdio_report_ack_and_natural_exit(self, _preflight, _inventory):
+        self.check_fake_cli(classified=True)
+
+    def check_fake_cli(self, *, classified):
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
             root = base/'reports/run'
-            manifest = validation.prepare(root, 'investigation')
+            if classified:
+                from eventguard.rules.configured import ENUM_FIELDS
+                from eventguard.rules.decisions import classify
+                producer = validation.make_synthetic
+                rule = dict(id='wire-classifier', name='FAKE fixture', enabled=True, severity='high',
+                    conditions=[dict(field='coverage_status', op='in', value=sorted(ENUM_FIELDS['coverage_status'])) for _ in range(12)])
+                with patch.object(validation, 'make_synthetic', side_effect=lambda kind: classify([producer(kind)], [rule])[0]):
+                    manifest = validation.prepare(root, 'investigation')
+            else:
+                manifest = validation.prepare(root, 'investigation')
             def fake_command(codex, python, source, state, identity, evidence, **kwargs):
                 return [sys.executable, '-B', str(ROOT/'tests/fixtures/investigation_client.py'),
                         str(source), str(state), identity, str(evidence), str(base)]
@@ -68,3 +85,11 @@ class InvestigationAcceptanceTests(unittest.TestCase):
                     validation.execute(root, manifest, sys.executable)
                 self.evidence = dict(scope='FAKE CLI, actual SDK/private Jobs/HANDLE, SQLite; model_calls=0',
                     proof=proof, process=read_json(root/'stage-1/capture-exit.json'))
+                if classified:
+                    identity = manifest['events'][0]['event_id']
+                    recorded = QueueInbox.open_readonly(root/'source', root/'inbox', identity, investigation=True).evidence(identity)
+                    decision = manifest['events'][0]['classification']
+                    self.assertEqual(recorded['saved_evidence']['facts']['classification'], decision)
+                    self.assertEqual(recorded['result']['investigation']['observations']['classification'], decision)
+                    self.assertEqual(EventStore(root/'source').stats()['receipt_count'], 1)
+                    self.evidence.update(classification_rule_hash=decision['rule_hash'], classification_preserved=True)

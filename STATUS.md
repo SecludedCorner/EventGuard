@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-02 CMD-018真stdio四工具／分類保存／ACK與退出已驗（FAKE CLI）
+
+UTC2026-11-01T17:56:38，`py -3.13 -B scripts/verify.py --run-dir reports/verify-classification-stdio-20261102-01 --timeout-seconds 120 --module test_investigation_acceptance`：3/3、0skip、379語法、source_unchanged；build-classification-stdio-20261102-01編譯379／0error，guardian自然0／remaining0／無強停。新增最大12條件分類事件，以production acceptance搭明示Python FAKE CLI、真SDK server／stdio跑receive→query→save→ACK；分類快照在saved evidence及報告均完整保留，ack1/pending0，launch hash相符，ACK flushed，CLI／MCP retained HANDLE自然0、CLI process.remaining_owned_processes=0／無強停。lifecycle-evidence已逐欄核實，不只依測試數。
+
+這是無模型協定／程序驗收，不是真LLM或主機防守。CMD-018 API、監看原子保存、CLI及合成inbox通道已完成；06真模型證據只維持舊來源／已消耗批准，不重跑。ac92c0273fc25b99929623262f22c1a4f82cfd26（feat(inbox): carry saved rule decisions in funded synthetic investigations [skip ci]，+124/-10）兩遠端同SHA，git-investigation-classification-remote-20261102-01；模型／OS／CI0。下一依完整閉環核對目前來源的真模型驗收前置及剩餘實機關卡。
+
 ## 2026-11-02 CMD-018合成調查inbox可引用原分類／stdio待補
 
 僅investigation合成profile的saved_evidence.facts在事件已帶決策時附classification，report可引用並深複製，引用上限10；evidence hash綁整份資料。一般fixed-minimal七欄snapshot保持、不新增live揭露。落盤報告改canonical bytes比對防boolean／整數混淆。合成調查各階段依既有16KiB記錄上限預留；一般profile仍4KiB，全域8MiB不變，接收前先保留三個缺少stage，避免合法大快照晚到save才失敗。

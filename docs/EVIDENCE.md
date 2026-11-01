@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-02 最大分類快照的真stdio驗收
+
+UTC2026-11-01T17:56:38，verify-classification-stdio-20261102-01（命令見STATUS）：3/3、0skip、379語法、source_unchanged；build-classification-stdio-20261102-01編譯379／0error，guardian自然0／remaining0／無強停。新增分類case沿production prepare/scope/enqueue/capture/verify，但command固定為Python FAKE CLI，inventory／preflight明示fixture且歷史帳本由isolated_launch fence禁止存取；不是真人批准或模型。實際SDK server／stdio／Windows私有Job／retained HANDLE與SQLite使用正式路徑。
+
+lifecycle-evidence中classification_preserved=true，rule_hash=0082720c1798f1bbacbe5f79abff793af0c93dcfe34b909a21a830e58d0702b9；per_stage列四工具依序、investigation_saved／outbox_acknowledged／approved_launch_hash_matches皆true，mcp_natural_exit_verified=true／mcp_exit_code0／ack_response_flushed=true。capture process.child_exited=true／exit_code0／remaining_owned_processes0／forcibly_terminated=false，來源pending0／receipt1；query與分析的分類快照等於manifest原值。未將FAKE trace或SDK升格為真模型；舊06原證據保持舊source hash及已消耗批准。ac92c0273fc25b99929623262f22c1a4f82cfd26（feat(inbox): carry saved rule decisions in funded synthetic investigations [skip ci]，+124/-10）兩遠端同SHA，git-investigation-classification-remote-20261102-01；模型／OS／CI0。
+
 ## 2026-11-02 合成調查保存分類引用與提前預留
 
 verify-investigation-classification-regression-20261102-01為3/4，原facts丟分類；新增後SDK／API13/13，但最大12條合法條件的budget-regression-01為4/5，query成功／save因4KiB combined stage不足而拒絕，pending1／receipt0保留。調查profile以既有MAX_RECORD_BYTES16KiB作每個缺少stage預留、三階段接收前保留；一般4KiB及全域8MiB未放寬。原oversize注入測試改patch調查常數，仍驗ACK前拒絕。
