@@ -1,5 +1,13 @@
 # EventGuard 現況
 
+## 2026-11-02 CMD-018分類證據故障恢復已驗／07只準備未執行
+
+UTC2026-11-01T18:19:10，`py -3.13 -B scripts/verify.py --run-dir reports/verify-classification-recovery-20261102-02 --timeout-seconds 100 --module test_queue_investigation --module test_inbox_retention_recovery`：16/16、0skip、379語法、source_unchanged；build-classification-recovery-20261102-01編譯379／0error，guardian自然0／remaining0／無強停。新增最大12條件分類＋400字元Unicode報告，注入保存、ACK後完成檔及finalize失敗，實際重開SQLite／inbox並以零TTL清理：原分類／query／分析保留、回條受pin保護，重開收尾後pin0、pending0，不再ACK來源。首輪15/16僅新測試把未保存的result缺欄位誤期望null，已按既有契約改assertNotIn，失敗證據保留；產品程式未變、模型／OS0。
+
+07本機包reports/investigation-acceptance-eventguard-classification-20261102-07已完成唯讀準備審核：事件evt-138bbc13a3204e3eb05f7497e3daa448，source hash 757df523347fc167648e34440a7049af28b3159b0d82bcc76f2277586f918324，scope d38b4e9fe849761e966c197cdeef1c449ba63797de02f62c36cadfbe0bd5108a。沿用同四檔hash／已驗無模型預檢，CLI 0.166.0-alpha.5.1／Python3.13.3／MCP1.6.0；合成TCP18080由warning分類high。human-approval=false，gate確實拒絕、enqueued/stages/pending/receipt皆0，未啟程序／模型。06已消耗不能沿用；07須本次具體批准且scope仍符，僅1任務／180秒（自有Job收尾另計）／失敗不重試，不宣稱token／費用硬上限。原始包及批准紀錄不提交。
+
+ba978efb4950f505aee3072816cb7e8095008ecc（test(inbox): verify classified evidence over real stdio and owned exits [skip ci]，+44/-3）兩遠端已核同步，git-classification-stdio-remote-20261102-01。下一等待07具體批准及NAS格式資訊，同時僅對新缺陷／新關切作已授權工程；真人／原生／長跑／可信防守恢復仍獨立未驗，整體目標未完成。
+
 ## 2026-11-02 CMD-018真stdio四工具／分類保存／ACK與退出已驗（FAKE CLI）
 
 UTC2026-11-01T17:56:38，`py -3.13 -B scripts/verify.py --run-dir reports/verify-classification-stdio-20261102-01 --timeout-seconds 120 --module test_investigation_acceptance`：3/3、0skip、379語法、source_unchanged；build-classification-stdio-20261102-01編譯379／0error，guardian自然0／remaining0／無強停。新增最大12條件分類事件，以production acceptance搭明示Python FAKE CLI、真SDK server／stdio跑receive→query→save→ACK；分類快照在saved evidence及報告均完整保留，ack1/pending0，launch hash相符，ACK flushed，CLI／MCP retained HANDLE自然0、CLI process.remaining_owned_processes=0／無強停。lifecycle-evidence已逐欄核實，不只依測試數。

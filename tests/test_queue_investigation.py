@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from eventguard.events.store import EventStore
+from eventguard.events.store import EventStore, StoreError
 from eventguard.queue_inbox import QueueInbox, QueueInboxError
 from eventguard.synthetic import make_synthetic
 
@@ -113,3 +113,64 @@ class QueueInvestigationTests(unittest.TestCase):
             other.receive_event()
         self.assertEqual(len(list(state.glob('snapshot-*.json'))), 1)
         self.assertEqual((self.store.stats()['pending'], self.store.stats()['receipt_count']), (2, 0))
+
+    def test_large_classification_and_unicode_report_survive_save_and_finalization_failures(self):
+        from eventguard.rules.configured import ENUM_FIELDS
+        from eventguard.rules.decisions import classify
+        rule = dict(id='recovery-classifier', name='inert fixture', enabled=True, severity='high',
+            conditions=[dict(field='coverage_status', op='in', value=sorted(ENUM_FIELDS['coverage_status'])) for _ in range(12)])
+        event = classify([self.event], [rule])[0]
+        results = []
+        for failure in ('completion', 'finalize'):
+            with self.subTest(failure=failure):
+                source, state = self.root/failure/'source', self.root/failure/'inbox'
+                store = EventStore(source, acked_retention_seconds=0, receipt_retention_seconds=0)
+                store.enqueue(event)
+                inbox = QueueInbox(source, state, self.identity, investigation=True)
+                inbox.receive_event()
+                query = inbox.query_evidence(self.identity)
+                report = dict(self.report, summary='\U0001f9ea'*400, fact_keys=['classification'],
+                              limitations=query['saved_evidence']['limitations'])
+                with patch.object(inbox, '_immutable', side_effect=QueueInboxError('synthetic_save_failure')):
+                    with self.assertRaisesRegex(QueueInboxError, 'synthetic_save_failure'):
+                        inbox.save_investigation(self.identity, query['query_id'], report)
+                self.assertEqual((store.stats()['pending'], store.stats()['receipt_count']), (1, 0))
+                self.assertNotIn('result', inbox.evidence(self.identity))
+                inbox = QueueInbox(source, state, self.identity, investigation=True)
+                self.assertEqual(inbox.query_evidence(self.identity), query)
+                saved = inbox.save_investigation(self.identity, query['query_id'], report)
+                expected = saved['investigation']
+                self.assertEqual(expected['observations']['classification'], event['classification'])
+                original = inbox._immutable
+                def fail_completion(path, value):
+                    if path.name.startswith('completed-'):
+                        raise QueueInboxError('synthetic_completion_failure')
+                    return original(path, value)
+                target = inbox if failure == 'completion' else inbox.store
+                method = '_immutable' if failure == 'completion' else 'finalize_receiver'
+                injected = fail_completion if failure == 'completion' else StoreError('synthetic_finalize_failure')
+                with patch.object(target, method, side_effect=injected), self.assertRaises(QueueInboxError):
+                    inbox.ack_event(self.identity, query['query_id'], 'needs_more_evidence')
+                self.assertEqual((store.stats()['pending'], store.stats()['receipt_count'],
+                                  store.stats()['pending_receiver_finalizations']), (0, 1, 1))
+                self.assertEqual(inbox._path('completed', self.identity).exists(), failure == 'finalize')
+                store.maintain()
+                self.assertIsNone(store.get_event(self.identity))
+                self.assertEqual(store.stats()['receipt_count'], 1)
+                restarted = QueueInbox(source, state, self.identity, investigation=True)
+                with patch.object(EventStore, 'acknowledge', side_effect=AssertionError('must not ACK twice')):
+                    restarted.maintain()
+                    self.assertEqual(restarted.query_evidence(self.identity), query)
+                    completed = restarted.ack_event(self.identity, query['query_id'], 'needs_more_evidence')
+                    self.assertEqual(completed['investigation'], expected)
+                    self.assertTrue(completed['outbox_acknowledged'])
+                    self.assertEqual(restarted.ack_event(self.identity, query['query_id'], 'needs_more_evidence'), completed)
+                self.assertEqual(store.stats()['pending_receiver_finalizations'], 0)
+                for stage in ('snapshot', 'query', 'result'):
+                    self.assertFalse(restarted._path(stage, self.identity).exists())
+                audit = QueueInbox.open_readonly(source, state, self.identity, investigation=True).evidence(self.identity)
+                self.assertEqual(audit['saved_evidence']['facts']['classification'], event['classification'])
+                self.assertEqual(audit['result']['investigation'], expected)
+                results.append(dict(failure=failure, classification_preserved=True, pending=0,
+                                    finalization_pins=0, repeated_source_ack=False, model_calls=0))
+        self.evidence = dict(scope='synthetic SQLite/files; fault injection, zero TTL, actual reopen; no model', cases=results)

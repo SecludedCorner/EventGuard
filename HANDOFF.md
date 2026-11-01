@@ -1,5 +1,11 @@
 # EventGuard 接手
 
+## 2026-11-02 分類故障恢復完成／07待具體批准
+
+verify-classification-recovery-20261102-02兩模組16/16、379編譯；最大分類＋400字元Unicode報告經保存／ACK後完成檔／finalize故障與零TTL，重開保留原query／分類／分析、pin可收尾且無第二次來源ACK。首輪15/16為新測試對缺result誤期望null，已修測試；無產品改動／模型，source hash仍757df523347fc167648e34440a7049af28b3159b0d82bcc76f2277586f918324。build-classification-recovery-20261102-01及lifecycle-evidence可核，ba978ef兩遠端已同步。
+
+07包reports/investigation-acceptance-eventguard-classification-20261102-07/AUTHORIZATION_REQUEST.md已具體準備，scope d38b4e9fe849761e966c197cdeef1c449ba63797de02f62c36cadfbe0bd5108a、event evt-138bbc13a3204e3eb05f7497e3daa448，CLI0.166.0-alpha.5.1／Python3.13.3／MCP1.6.0；preparation-review證明approved=false／未入列／未啟模型，閘道拒絕。06單次批准已消耗，不代填07批准；明確批准到達且來源／scope仍符才一次執行，180秒／失敗不重試，收尾及實際token限制如包所列。不得把本次無模型結果升格真agent／防守；NAS格式資訊與其餘真人／實機關卡仍待前置。
+
 ## 2026-11-02 CMD-018分類決策完整合成通道已驗
 
 verify-classification-stdio-20261102-01：3/3、379編譯，明示FAKE CLI＋真stdio／SDK server，最大分類快照經四工具保存／ACK、CLI及MCP retained HANDLE自然0／ACK flushed、remaining0無強停，build-classification-stdio-20261102-01；lifecycle-evidence有classification_preserved／rule_hash，已核實欄位。此非模型；06批准已消耗且來源舊，不重跑。ac92c02兩遠端已核同步。下一若需當前來源真模型驗收，先完成新的具體scope／審核前置，不沿用06或假批准；NAS／真人／長跑／防守恢復仍獨立。

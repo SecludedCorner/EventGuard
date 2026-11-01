@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-02 分類與Unicode報告的保存／最終化故障恢復
+
+UTC2026-11-01T18:19:10，verify-classification-recovery-20261102-02（命令見STATUS）16/16、0skip、379語法、source_unchanged；build-classification-recovery-20261102-01編譯379／0error，guardian自然0／remaining0／無強停。新增真SQLite／檔案API測試，最大12條條件快照與400字元非BMP Unicode摘要，先注入保存失敗確認pending1／receipt0且無result；重開保存後分別注入ACK後完成檔、finalize失敗，兩者真實pending0／receipt1／pin1。零TTL清掉原event仍保留pinned回條，重開maintenance恢復完整query／分析／分類並解除pin；以禁止EventStore.acknowledge的patch確認恢復及重播無第二次來源ACK。lifecycle-evidence列兩故障的classification_preserved／finalization_pins0。首輪15/16是測試誤讀缺result為null，不是產品缺陷，原unit-tests保留。無模型／原生採集。
+
+07準備包preparation-review.json記錄固定三版本、四檔runtime／無模型預檢均與06一致，source757df523347fc167648e34440a7049af28b3159b0d82bcc76f2277586f918324、scope d38b4e9fe849761e966c197cdeef1c449ba63797de02f62c36cadfbe0bd5108a。source_checkpoint為ba978efb4950f505aee3072816cb7e8095008ecc，後續本次測試／文件不改src/scripts來源。human-approval=false，require_approval實際拒絕，未enqueued／stages、pending／receipt0、未啟子程序／模型；只準備不構成模型驗收或批准。新版真正四工具及自然退出仍待07具體批准；06維持歷史來源及已消耗，不重試。ba978ef兩遠端已核，見git-classification-stdio-remote-20261102-01。
+
 ## 2026-11-02 最大分類快照的真stdio驗收
 
 UTC2026-11-01T17:56:38，verify-classification-stdio-20261102-01（命令見STATUS）：3/3、0skip、379語法、source_unchanged；build-classification-stdio-20261102-01編譯379／0error，guardian自然0／remaining0／無強停。新增分類case沿production prepare/scope/enqueue/capture/verify，但command固定為Python FAKE CLI，inventory／preflight明示fixture且歷史帳本由isolated_launch fence禁止存取；不是真人批准或模型。實際SDK server／stdio／Windows私有Job／retained HANDLE與SQLite使用正式路徑。

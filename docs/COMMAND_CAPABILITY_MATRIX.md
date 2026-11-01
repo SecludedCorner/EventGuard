@@ -34,7 +34,7 @@ CMD-004已接線並驗收，可用 `EventGuard.cmd --format json events pending-
 
 [pySigma](https://github.com/SigmaHQ/pySigma/tree/2555624e3689e82824e7f2710397ae0c7c5adfd3)本機固定SHA同連結；sigma/rule/base.py的SigmaRuleBase保存id／modified／level／source，SigmaYAMLLoader拒絕duplicate key。根LICENSE為LGPL-2.1，具體檔案未另列授權；只讀設計，未複製或執行／引入YAML依賴。EventGuard已拒絕duplicate，實際缺口是自訂severity的分類來源未保存。
 
-[SigmaHQ/sigma](https://github.com/SigmaHQ/sigma/tree/05d1031f537e830b76da53bae2400c5814c89165)固定同SHA；rules/windows/process_creation/proc_creation_win_powershell_base64_encoded_obfusc.yml明列id／status／modified／logsource。根LICENSE將規則列為DRL 1.1，未採用規則內容或條件，不宣稱Sigma相容。只借鏡明確規則身分與版本；獨立實作decisions.classify及test_rule_decisions，保留winner條件快照與hash，不保存完整規則集、不把hash當來源認證／處置授權。API已驗，落盤及查閱為CMD-018下一步。
+[SigmaHQ/sigma](https://github.com/SigmaHQ/sigma/tree/05d1031f537e830b76da53bae2400c5814c89165)固定同SHA；rules/windows/process_creation/proc_creation_win_powershell_base64_encoded_obfusc.yml明列id／status／modified／logsource。根LICENSE將規則列為DRL 1.1，未採用規則內容或條件，不宣稱Sigma相容。只借鏡明確規則身分與版本；獨立實作decisions.classify及test_rule_decisions，保留winner條件快照與hash，不保存完整規則集、不把hash當來源認證／處置授權。CMD-018 API／原子落盤／CLI／合成調查SDK、stdio與故障恢復已驗；07真模型包只準備，仍待具體批准。
 
 ## 參考對照 R-CMD-001
 
