@@ -1,7 +1,9 @@
 """Saved advisory pagination over synthetic SQLite; no network or model."""
 from pathlib import Path
 import tempfile
+import threading
 import unittest
+from unittest.mock import patch
 
 from eventguard.intelligence.store import IntelligenceStore, IntelligenceError
 
@@ -48,3 +50,41 @@ class AdvisoryCasePageTests(unittest.TestCase):
         with self.assertRaisesRegex(IntelligenceError, "case_page_unreadable"):
             self.reader.case_page(now=1001)
         self.assertEqual(self.path.read_bytes(), before)
+
+    def test_page_keeps_one_snapshot_while_another_writer_changes_a_later_case(self):
+        target = self.reader.cases(limit=100, now=1001)[-1]["case_id"]
+        ready, done = threading.Event(), threading.Event()
+        failures = []
+        def write():
+            try:
+                with self.store._connect() as db:
+                    db.execute("UPDATE cases SET record=json_set(record,'$.title','concurrent fixture') WHERE case_id=?", (target,))
+                    ready.set()
+                done.set()
+            except Exception as error:
+                failures.append(type(error).__name__)
+                ready.set()
+        worker = threading.Thread(target=write)
+        original = self.reader._advisory
+        started = False
+        def read(db, case_id, stamp):
+            nonlocal started
+            if not started:
+                started = True
+                worker.start()
+                self.assertTrue(ready.wait(3))
+                self.assertFalse(failures)
+                self.assertFalse(done.wait(.1))  # Commit is held until this read snapshot ends.
+            return original(db, case_id, stamp)
+        try:
+            with patch.object(self.reader, "_advisory", side_effect=read):
+                page = self.reader.case_page(now=1001)
+        finally:
+            if started:
+                worker.join(timeout=8)
+                self.assertFalse(worker.is_alive())
+        self.assertFalse(failures)
+        self.assertTrue(done.is_set())
+        self.assertEqual(page["cases"][-1]["case_id"], target)
+        self.assertNotIn("title", page["cases"][-1]["record"])
+        self.assertEqual(self.reader.advisory(target, now=1001)["record"]["title"], "concurrent fixture")

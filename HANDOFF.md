@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-01 公告單頁快照並行驗測補齊
+
+case_page真SQLite並行writer測試4/4與368編譯通過，證明同頁不混入中途變更、writer在讀取後自然提交，新detail才見新版；跨頁不凍結。見verify-advisory-page-concurrency-20261101-01／build-advisory-page-concurrency-20261101-01；無新模型／網路。CMD-011 CLI d7050ff兩遠端已核一致；既有外部DSM／真人／長跑／恢復前置仍各自保留，不反覆重跑未受影響測試。
+
 ## 2026-11-01 CMD-011 CLI／API案件分頁均已驗
 
 advisories cases可用limit/offset與total/has_more列舉全部保存案，保留cases陣列與合法單案結果；missing selector改unknown/exit5、參數衝突exit2、壞庫／記錄exit4，清單missing/empty分開。12/12、368編譯見verify-command-advisory-pages-20261101-01／build-command-advisory-pages-20261101-01；新增模型／網路0，不凍結跨命令頁面。核心API9225df9已同步兩遠端。06歷史合成真CLI證據不擴成此次新來源的模型／實機驗證，無重跑。

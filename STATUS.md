@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-01 公告頁面並行寫入快照已驗
+
+新增真SQLite並行fixture：頁面開始投影後，另一writer更新較後案件並等待commit；頁內保持舊版本、完成讀取後writer自然提交，下一次detail才見新版。UTC15:13:34，`py -3.13 -B scripts/verify.py --run-dir reports/verify-advisory-page-concurrency-20261101-01 --timeout-seconds 90 --module test_advisory_case_page`：4/4、0skip、368語法／編譯、source_unchanged，worker thread已join、自有Job自然0／remaining0／無強停，新增模型／網路0；build-advisory-page-concurrency-20261101-01。僅加驗測、不改案件規則，跨命令多頁仍不凍結。
+
+CMD-011 CLI d7050ffa8fa08e70b98bf080e94a9f038186ab74（feat(cli): paginate saved advisory cases and report missing selections [skip ci]，+106/-6）已核兩遠端同SHA、工作樹乾淨，git-command-advisory-remote-20261101-01。已知CMD-010/011及並行驗測均不新增模型，06歷史通過不擴成新來源的真環境驗收。
+
 ## 2026-11-01 CMD-011公告案件CLI已可完整分頁
 
 advisories cases新增--limit1..100／--offset，預設cases陣列仍為100案，另有schema1.0／total／has_more等欄位，使用已驗共用case_page；可分頁→case-id詳情。missing庫清單保留not_started但total/has_more為null、不建目錄；有庫空頁為available/total0。單案找不到改unknown／exit5（舊case-id曾null/exit0），selector與分頁選項合用或越界exit2，損壞記錄exit4且不輸出半批。

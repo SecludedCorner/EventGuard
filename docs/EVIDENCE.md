@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-01 公告案件單頁並行快照
+
+UTC15:13:34，`py -3.13 -B scripts/verify.py --run-dir reports/verify-advisory-page-concurrency-20261101-01 --timeout-seconds 90 --module test_advisory_case_page`：4/4、0skip、368語法、source_unchanged，guardian自然0／remaining0／無強停；build-advisory-page-concurrency-20261101-01編譯368、0error。新增實際SQLite writer在首案投影前更新較後案件，已準備寫入但commit等待讀快照結束；整頁保留舊資料、之後detail見新版，writer thread有界join且未殘留。只改測試，無模型／網路／原生採集，不代表跨命令固定快照或多主機一致性。
+
+CMD-011 CLI d7050ffa8fa08e70b98bf080e94a9f038186ab74（feat(cli): paginate saved advisory cases and report missing selections [skip ci]，+106/-6）已普通push及ff-only整合main，git-command-advisory-remote-20261101-01核兩ref同SHA；相關Git Job自然0／remaining0／無強停，無CI。
+
 ## 2026-11-01 CMD-011公告案件真CLI分頁
 
 UTC15:05:49，`py -3.13 -B scripts/verify.py --run-dir reports/verify-command-advisory-pages-20261101-01 --timeout-seconds 120 --module test_command_advisory_cases --module test_advisory_case_page --module test_application_advisories`：12/12、0skip、368語法、source_unchanged，guardian自然0／remaining0／無強停；build-command-advisory-pages-20261101-01編譯368、0error。真CLI子程序以101合成案跑100+1頁→末案detail，total/has_more正確且無重複，unknown不提升安全、讀取DB bytes不變。另驗missing庫不建目錄、已初始化空庫、missing selector=exit5、越界／selector合分頁=exit2、壞JSON=exit4且無cases半批輸出。CLI stdout單JSON／stderr空；模型／網路0，非真公告／原生環境。
