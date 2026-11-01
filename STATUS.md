@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-01 CMD-011公告案件分頁API已驗／CLI待接
+
+既有advisories cases固定只讀最早100案且無分頁欄位；新增IntelligenceStore.case_page，limit1..100／offset，回schema1.0／total／has_more，同一交易讀ID、總數、案件及既有評估投影，不另實作判讀規則。舊cases/advisory API相容；損壞資料不回完整或半批成功。UTC14:57:43，`py -3.13 -B scripts/verify.py --run-dir reports/verify-advisory-case-page-20261101-01 --timeout-seconds 120 --module test_advisory_case_page --module test_intelligence_store`：44/44、0skip、367語法／編譯、source_unchanged，自有Job自然0／remaining0／無強停，模型／網路0；build-advisory-case-page-20261101-01。API驗101案分頁、空頁／界線、unknown及DB bytes保留，下一直接接CLI。
+
+CMD-010 b0a3d21858ae1d7c528243ca64f4c82d6fa266df（feat(cli): accept bounded query JSON from standard input [skip ci]，+125/-5）兩遠端已核同SHA、工作樹乾淨，git-query-stdin-remote-20261101-01。06歷史真CLI通過保持其來源範圍，本次無新模型或設備／CI。
+
 ## 2026-11-01 CMD-010 query可由有界stdin串接
 
 實際PowerShell→EventGuard.cmd傳含欄位JSON原本因批次引號處理回exit2，probe-cmd-json-input-20261101-01保留觀察。新增query --args -，從非互動stdin讀一個完整UTF-8物件（可BOM），最多8192bytes，沿用共用32層／duplicate-key及型別驗證；超量讀到8193bytes即拒絕，不等producer EOF，不採集／建runtime。文字參數用法與輸出schema不變，stdin正常輸入需producer關閉後才解析。

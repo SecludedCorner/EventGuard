@@ -19,6 +19,7 @@
 | agent 派送／投遞證據 | `agent start/status/pause/resume/stop/capabilities/inspect/export` | agent_service／event_ingress；Web限制控制 | 七欄CloudEvents，耐久預算／Job | start預設檢查、execute須有效批准；06短期合成調查通過，正式來源／桌面喚醒另驗 |
 | 合成真調查批准綁定 | `scripts/validate_delivery.py investigation`預設只準備；execute需新scope批准 | investigation_scope／delivery_validation，共用builder與私有Job | 一事件／一任務／180秒；原生路徑正規化、capture前及事後launch hash核對 | CMD-009已修；06實際四步／分析／ACK／launch／自然退出通過；05綁定未完整通過仍保留，禁止重跑已消耗範圍 |
 | 公告追蹤／適用性 | `advisories start/check/status/stop/cases` | intelligence engine/service；Web投影 | config白名單、來源狀態、案件證據 | check/start會擷取；本次不執行；既有公告證據，非真防守 |
+| 保存公告完整列舉 | CLI原固定100案，待接分頁 | `IntelligenceStore.case_page`與advisory共用投影 | schema1.0／limit1..100／offset／total／has_more；單頁交易快照 | CMD-011 API44/44；跨頁資料未鎖定，不擷取／啟模型，不將unknown當安全 |
 | 合成／mock | `synthetic emit`、`deliver --adapter mock`、`mock process/status` | synthetic／transport.adapters | test namespace、明示mock | 不是真agent；既有 test_events_transport |
 | 預算／MCP | `budget status/initialize/reconcile`、`mcp` | BudgetAuthority／RemoteApplication | 耐久installation預算、固定工具 | initialize/reconcile明確寫入；不自動重設；MCP observer不冷啟App |
 
@@ -45,3 +46,7 @@ CMD-004已接線並驗收，可用 `EventGuard.cmd --format json events pending-
 ## 參考對照 R-CMD-004
 
 [Fluent Bit](https://github.com/fluent/fluent-bit/tree/ad9867358257123c34b529860fe984e92a69844c)本機HEAD已核`ad9867358257123c34b529860fe984e92a69844c`；根LICENSE與`src/flb_pack.c`檔頭Apache-2.0。`flb_json_tokenise`區分INVAL／PART，`flb_pack_json_state`明確處理串流尾端不完整訊息。只借「解析失敗有明確界線、不得混作有效範圍」契約；該檔不是EventGuard duplicate/depth策略的來源或保證。本次不讀／採用其第三方parser子庫，不複製／執行C碼、不引依賴。EventGuard CLI是一筆完整JSON命令，不採串流接收或保留半批；重用自有bounded_json拒絕重複key／超深輸入，對應test_command_query_json／test_scanner_hardening，尚非NAS或Fluent Bit相容性驗收。
+
+## 參考對照 R-CMD-005
+
+[Timesketch](https://github.com/google/timesketch/tree/ea3d2ddabb91f096da596d0959adad5925a58446)本機HEAD已核`ea3d2ddabb91f096da596d0959adad5925a58446`；`timesketch/api/v1/resources/sketch.py`的清單get以paginate取得items／total／has_next，回objects與meta。根LICENSE及該檔頭為Apache-2.0，無子模組內容使用。借鏡有界清單同時表達總數及下一頁，避免把100筆窗口當全部；EventGuard以標準庫SQLite獨立實作case_page並重用既有判讀，對應test_advisory_case_page，CLI切片續驗。不複製／執行Timesketch或引入Flask／SQLAlchemy；不借此宣稱跨命令凍結快照、遠端查詢或真威脅關聯。

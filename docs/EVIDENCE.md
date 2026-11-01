@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-01 CMD-011保存公告案件分頁API
+
+UTC14:57:43，`py -3.13 -B scripts/verify.py --run-dir reports/verify-advisory-case-page-20261101-01 --timeout-seconds 120 --module test_advisory_case_page --module test_intelligence_store`：44/44、0skip、367語法、source_unchanged，guardian自然0／remaining0／無強停；build-advisory-case-page-20261101-01編譯367、0error。101個合成case以100+1完整讀取且與既有advisory投影相同、身分無重複，unknown評估不提升安全；界線／超尾空頁及損壞JSON整頁拒絕、讀前後DB bytes一致。此為API／SQLite驗證，CLI尚未接，無網路／新模型／真公告或實機驗收。
+
+前單元b0a3d21858ae1d7c528243ca64f4c82d6fa266df，feat(cli): accept bounded query JSON from standard input [skip ci]，+125/-5；git-query-stdin-remote-20261101-01直接核開發分支／main同SHA，Git Jobs自然0／remaining0／無強停，無CI。
+
 ## 2026-11-01 CMD-010實際PowerShell／批次JSON管線
 
 probe-cmd-json-input-20261101-01：固定query health的帶欄位JSON經PowerShell→EventGuard.cmd引號處理後exit2／input_or_config_validation_failed，stderr空、自有Job自然2／remaining0／無強停，模型0。stdin功能修前verify-query-stdin-regression-20261101-01實際管線0/1失敗；新增query --args -後UTC14:46:49執行`py -3.13 -B scripts/verify.py --run-dir reports/verify-query-stdin-20261101-01 --timeout-seconds 120 --module test_command_query_stdin --module test_command_query_json --module test_cli_workflow`：16/16、0skip、366語法、source_unchanged，guardian自然0／remaining0／無強停；build-query-stdin-20261101-01編譯366、0error。

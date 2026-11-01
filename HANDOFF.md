@@ -1,5 +1,9 @@
 # EventGuard 接手
 
+## 2026-11-01 CMD-011 API已驗，接續公告cases命令分頁
+
+case_page重用advisory投影，44/44、367編譯見verify-advisory-case-page-20261101-01／build-advisory-case-page-20261101-01。同頁交易快照，跨命令頁面不承諾凍結資料；readonly呼叫不改庫／查網路／啟模型。下一加advisories cases --limit/--offset並保留原cases陣列及detail selector，實測超100案、missing/empty/corrupt與參數拒絕；API通過不等於CLI已接。CMD-010 b0a3d21已同步兩遠端。
+
 ## 2026-11-01 CMD-010補實際批次入口JSON串接
 
 新增query --args -：有界UTF-8 stdin，透過PowerShell管線可把完整JSON送入實際EventGuard.cmd，避免命令列引號改變輸入。16/16、366編譯見verify-query-stdin-20261101-01／build-query-stdin-20261101-01，含超量且stdin仍開啟的拒絕、TTY不讀、壞JSON／重複key／深度、既有文字參數與CLI流程。實際修前失敗保留；新增模型0。06歷史通過與來源／批准已消耗不改，新來源未用模型重驗。

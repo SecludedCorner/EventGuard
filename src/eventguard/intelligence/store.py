@@ -666,31 +666,57 @@ class IntelligenceStore:
     def advisory(self, case_id, now=None):
         stamp = _epoch(now)
         with self._connect() as db:
-            case_id = self._resolve(db, _identifier(case_id))
-            row = db.execute("SELECT * FROM cases WHERE case_id=?", (case_id,)).fetchone()
-            if row is None:
-                return None
-            sources = [{"source_id": item["source_id"], "assertion_id": item["assertion_id"], "record": json.loads(item["record"]),
-                        "assessment": json.loads(item["assessment"]), "last_seen": _iso(item["last_seen"])}
-                       for item in db.execute("SELECT * FROM case_sources WHERE case_id=? ORDER BY source_id,assertion_id", (case_id,))]
-            source_states = {source_id: self._source(db.execute("SELECT * FROM sources WHERE source_id=?", (source_id,)).fetchone(), stamp)
-                             for source_id in {item["source_id"] for item in sources}}
-            for item in sources:
-                item["assessment_scope"] = "historical"
-                item["current_assessment"] = _current_assertion(item, source_states[item["source_id"]], stamp)
-            statuses = [item["current_assessment"]["status"] for item in sources]
-            case_status = _case_status(statuses)
-            current_reasons = sorted({reason for item in sources for reason in item["current_assessment"]["reason_codes"]})
-            return {"case_id": case_id, "record": json.loads(row["record"]),
-                    "assessment": json.loads(row["assessment"]), "assessment_scope": "historical",
-                    "historical_case_status": _case_status([item["assessment"].get("status", "unknown") for item in sources]),
-                    "current_assessment": {"status": case_status, "reason_codes": current_reasons,
-                                           "evaluated_at": _iso(stamp), "incident_conclusion": "not_assessed"},
-                    "created_at": _iso(row["created"]),
-                    "updated_at": _iso(row["updated"]), "case_status": case_status,
-                    "components": sorted({str(item["record"].get("component", "unknown")) for item in sources}),
-                    "aliases": [item[0] for item in db.execute("SELECT alias FROM aliases WHERE case_id=? ORDER BY alias", (case_id,))],
-                    "sources": sources}
+            return self._advisory(db, case_id, stamp)
+
+    def _advisory(self, db, case_id, stamp):
+        case_id = self._resolve(db, _identifier(case_id))
+        row = db.execute("SELECT * FROM cases WHERE case_id=?", (case_id,)).fetchone()
+        if row is None:
+            return None
+        sources = [{"source_id": item["source_id"], "assertion_id": item["assertion_id"], "record": json.loads(item["record"]),
+                    "assessment": json.loads(item["assessment"]), "last_seen": _iso(item["last_seen"])}
+                   for item in db.execute("SELECT * FROM case_sources WHERE case_id=? ORDER BY source_id,assertion_id", (case_id,))]
+        source_states = {source_id: self._source(db.execute("SELECT * FROM sources WHERE source_id=?", (source_id,)).fetchone(), stamp)
+                         for source_id in {item["source_id"] for item in sources}}
+        for item in sources:
+            item["assessment_scope"] = "historical"
+            item["current_assessment"] = _current_assertion(item, source_states[item["source_id"]], stamp)
+        statuses = [item["current_assessment"]["status"] for item in sources]
+        case_status = _case_status(statuses)
+        current_reasons = sorted({reason for item in sources for reason in item["current_assessment"]["reason_codes"]})
+        return {"case_id": case_id, "record": json.loads(row["record"]),
+                "assessment": json.loads(row["assessment"]), "assessment_scope": "historical",
+                "historical_case_status": _case_status([item["assessment"].get("status", "unknown") for item in sources]),
+                "current_assessment": {"status": case_status, "reason_codes": current_reasons,
+                                       "evaluated_at": _iso(stamp), "incident_conclusion": "not_assessed"},
+                "created_at": _iso(row["created"]),
+                "updated_at": _iso(row["updated"]), "case_status": case_status,
+                "components": sorted({str(item["record"].get("component", "unknown")) for item in sources}),
+                "aliases": [item[0] for item in db.execute("SELECT alias FROM aliases WHERE case_id=? ORDER BY alias", (case_id,))],
+                "sources": sources}
+
+    @staticmethod
+    def validate_case_page(limit, offset):
+        if type(limit) is not int or not 1 <= limit <= 100 or type(offset) is not int or not 0 <= offset <= 2**31-1:
+            raise ValueError("advisory_page_bounds_invalid")
+
+    def case_page(self, *, limit=100, offset=0, now=None):
+        """One bounded snapshot of saved cases; never fetch or reassess assets."""
+        self.validate_case_page(limit, offset)
+        stamp = _epoch(now)
+        try:
+            with self._connect() as db:
+                if not db.in_transaction:
+                    db.execute("BEGIN")
+                total = db.execute("SELECT COUNT(*) FROM cases").fetchone()[0]
+                ids = [row[0] for row in db.execute("SELECT case_id FROM cases ORDER BY created,case_id LIMIT ? OFFSET ?", (limit, offset))]
+                cases = [self._advisory(db, case_id, stamp) for case_id in ids]
+                if [item["case_id"] for item in cases] != ids:
+                    raise IntelligenceError("case_page_unreadable")
+                return {"schema_version": "1.0", "state": "available", "cases": cases, "total": total,
+                        "limit": limit, "offset": offset, "has_more": offset+len(cases) < total, "model_calls": 0}
+        except (ValueError, TypeError, KeyError, IndexError):
+            raise IntelligenceError("case_page_unreadable") from None
 
     def cases(self, limit=100, now=None):
         if type(limit) is not int or not 1 <= limit <= 10000:
