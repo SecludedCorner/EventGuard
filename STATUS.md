@@ -1,8 +1,12 @@
 # EventGuard 現況
 
-## 2026-11-02 正式接手核對已收到，準備轉唯一writer
+## 2026-11-02 正式接手生效，首個增量核對完成／外部前置仍blocked
 
-新聊天「EventGuard 接手：08 已驗與外部前置」`01a19b34-949a-7231-be73-05aa74696da9`已確認fdee664 checkpoint／即時遠端／clean、168產物／132來源hash、08分析／ACK／自然退出與耗用批准、環境及限制，回覆原文落本機receiver-readonly-confirmation.json。舊聊天完成本次責任紀錄保存後停止寫入，再正式傳TRANSFER_WRITE_OWNERSHIP；新聊天收到才成為唯一writer，並以receiver-started.json記生效時間／第一個實際接續動作。舊聊天僅讀確認後封存；詳HANDOFF頂部。不新增工程或驗收，不改產品source／保留refs，不把交接成功當整體產品完成。
+新聊天`01a19b34-949a-7231-be73-05aa74696da9`收到TRANSFER_WRITE_OWNERSHIP後已為唯一writer；接收後首筆UTC為2026-11-02T07:52:16.1575425+00:00，舊聊天只讀確認後可封存。handoff f735449相對fdee664僅HANDOFF／STATUS／EVIDENCE增加19行，Git原先clean／兩遠端同SHA，保留local main e5e839e；正式接續回條見reports/task-handoff-20261102-01/receiver-started.json。
+
+UTC07:52:59完成首個動作：以git diff／status、PowerShell UTF-8讀控制紀錄／DSM方案及既有產物metadata、Get-FileHash重核132來源及回歸402檔；source仍ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1，manifest SHA不變，168產物大小／修改時間未變，08仍consumed。限定既有交接／輸入範圍未見新前置或新可重現缺陷證據；NAS缺DSM build／Log Center版本／紀錄類型／官方schema及事前來源、窗口、10筆／64KiB界線，其他真人／長跑／恢復／真防守關卡仍blocked，完整目標未達成。
+
+本單元只有責任紀錄：審查diff／文件連結，沿用同來源build379／0error、6/6回歸及08真CLI有限證據，不重跑測試／模型／採集、不啟CI。沙箱帳戶讀整合worktree首次因Git ownership拒絕；改由原使用者環境核對成功，未改safe.directory或系統設定；實際Git保存結果記本機receiver-started回條。
 
 ## 2026-11-02 正式任務交接準備，暫停新增工程
 

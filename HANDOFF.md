@@ -1,17 +1,18 @@
 # EventGuard 接手
 
-## 2026-11-02 新任務已確認接手資料，待正式啟用唯一writer
+## 2026-11-02 正式接手生效，新聊天為唯一writer
 
 - 舊任務：`01a1974c-5b20-75c1-a05c-2e5b787574d8`；新任務：**EventGuard 接手：08 已驗與外部前置**，ID `01a19b34-949a-7231-be73-05aa74696da9`，host local、同一既有EventGuard project／同一目錄，沒有clone／worktree副本。
 - 新任務已在交接checkpoint `fdee664f23651618a84c3bf45e2cfa39b1bd2dc7`回覆`READONLY_HANDOFF_READY`：確認Git／即時兩遠端／保留local main、manifest與168產物大小／hash、132來源hash全符；08最終分析／ACK／退出回條可讀，理解批准已消耗及有限scope、環境可用，無已知待移交活體handle。舊任務於台北15:45讀取回覆，原文與UTC保存於`reports/task-handoff-20261102-01/receiver-readonly-confirmation.json`。
-- writer切換規則：新任務目前仍只讀等待。舊任務完成此責任紀錄的commit／push／直接核遠端後，停止所有檔案與Git寫入，再以正式App訊息送`TRANSFER_WRITE_OWNERSHIP`及最終handoff SHA。從該訊息起，新任務為唯一writer；舊任務只讀確認啟動回條及封存，禁止雙writer。
-- 實際生效時間、最終handoff SHA及新任務第一個接續動作，將由新任務保存於`reports/task-handoff-20261102-01/receiver-started.json`；根控制紀錄為同目錄`ownership-transfer.json`。初始自包含prompt亦在同目錄`receiver-initial-prompt.txt`。這些本機回條不提交Git，不包含憑證／秘密。
-- 轉移後第一動作：重新核對最終handoff SHA與source不變，實際增量核對外部前置；沒有新解鎖必要單元就記錄blocked及最小NAS格式資訊需求，保留完整目標，不重跑08、測試、下載或模型。沒有需要移交監控的已知活體程序／內部子任務；原共享MCP入口與環境不關閉，正式新聊天獨立於舊聊天，不作子代理附屬。
+- 已收到正式`TRANSFER_WRITE_OWNERSHIP`，接收後首筆UTC紀錄為`2026-11-02T07:52:16.1575425+00:00`；訊息到達即生效，未另推定平台精確送達時間。自此新任務`01a19b34-949a-7231-be73-05aa74696da9`為唯一writer；舊任務已停止全部檔案／Git寫入，只讀確認接手回條後可封存，禁止雙writer。
+- 最終handoff checkpoint為`f735449aaf5e2c82259d0f47d68fb76454940da7`；相對fdee664只有三份交接文件增加19行，source不變。生效時間、Git保存與首個接續動作記於`reports/task-handoff-20261102-01/receiver-started.json`；`ownership-transfer.json`保留移交前控制紀錄，實際生效以正式訊息及receiver-started為準。初始prompt及唯讀確認仍留同目錄，不提交本機回條。
+- 第一個接續動作已於UTC`2026-11-02T07:52:59.1470707+00:00`完成：核對佇列／能力矩陣／DSM取樣方案、交接增量與既有產物metadata；未收到新前置、樣本或可重現缺陷證據，既有168產物大小／修改時間無變，132來源hash及回歸402檔來源清單仍符。完整目標維持blocked；未重跑08、測試、下載、模型或採集，沒有已知活體handle依賴，共享環境保留。
+- 下一解鎖最小NAS資訊：DSM精確build、Log Center版本、紀錄類型、可核對的官方schema，以及匯出前能強制單一來源／確切窗口／最多10筆／64KiB的依據；之後才界定受控樣本及有效批准。真人六任務、24h／reboot、可信恢復與容量契約、入站偵查及真防守仍各缺前置，不以交接解除。
 - 交接僅文件與控制紀錄，沿用同source的379編譯／6項回歸及08實跑證據；舊任務只會在新任務確認正式取得責任且已完成首個接續動作後封存，保留聊天歷史。完整資安AI盯哨及外部關卡仍未完成。
 
-## 2026-11-02 正式任務交接：先唯讀確認，再轉移唯一寫入權
+## 2026-11-02 正式任務交接準備（歷史，已依上節轉移）
 
-目前唯一writer為舊聊天`01a1974c-5b20-75c1-a05c-2e5b787574d8`。已停止新增工程；新任務建立後只讀核對，未收到正式`TRANSFER_WRITE_OWNERSHIP`訊息前不得改檔／Git、啟模型、採集、下載或重跑測試。新舊任務ID、接手回覆與生效時間將接續記在本節及本機交接回條；未確認前不封存舊聊天。
+本節為移交前歷史：當時唯一writer為舊聊天`01a1974c-5b20-75c1-a05c-2e5b787574d8`；新任務先只讀核對，正式`TRANSFER_WRITE_OWNERSHIP`訊息前不改檔／Git、啟模型、採集、下載或重跑測試。現已依上節完成責任轉移，生效與接續回條以receiver-started為準。
 
 ### 精確恢復點與所有權
 

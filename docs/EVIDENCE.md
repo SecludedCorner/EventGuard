@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-02 正式TRANSFER_WRITE_OWNERSHIP已接收並接續
+
+新聊天01a19b34-949a-7231-be73-05aa74696da9收到正式訊息即為唯一writer，接收後首筆UTC2026-11-02T07:52:16.1575425+00:00；舊聊天停止寫入、只待核回條後封存。UTF-8讀ownership-transfer／唯讀確認／handoff-checks，handoff f735449與兩遠端一致，相對fdee664僅三份交接文件+19／-0；132來源hash與回歸source-manifest402檔全符，沿用build379／0error、6/6及08有限實跑證據。
+
+UTC07:52:59完成外部前置增量核對：既有佇列／能力矩陣／DSM方案、交接diff、當前輸入及168已驗產物metadata均無新解鎖證據；manifest hash不變，不重讀476MB或重跑模型／採集／測試。08 final-review仍passed／approval_consumed=true、real_agent_woken=false；沒有已知活體handle依賴，完整目標及NAS／真人／長跑／恢復／真防守維持blocked。只保存所有權文件、審diff／連結與Git回條；receiver-started.json記生效／首動作／遠端SHA，原manifest不覆寫，runtime不入Git。
+
 ## 2026-11-02 新聊天READONLY_HANDOFF_READY實際確認
 
 確認回條檢查首次因省略encoding而以系統cp950讀UTF-8失敗；改明定encoding=utf-8後ID／回覆解析通過，原產物未變。失敗及修正結果／額外回條path-size-hash保存本機handoff-checks.json，不冒稱首次檢查通過。
