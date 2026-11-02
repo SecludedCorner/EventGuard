@@ -1,5 +1,9 @@
 # 證據與時間日誌
 
+## 2026-11-02 同專案正式聊天交接前置
+
+使用正式App工具讀舊聊天最新兩回合及既有project清單，EventGuard projectId為553147a2-c0b3-40ac-b1aa-c05f0bfff7d5／local既有目錄，無clone需求。交接前HEAD d1eb763、Git clean／無非ignored未追蹤；08三個自有PID依原建立時間定向唯讀檢查均missing，未列全機命令列或終止程序；兩個auditor已completed。live App狀態回application_not_running／model_calls0。reports/task-handoff-20261102-01/artifact-manifest.json保存168檔path／size／SHA256，含08／06／05／07／04必要證據、CLI runtime及現有回歸／負結果；原codex-log與volatile lock／SHM保留未讀／未上傳。manifest大小／hash及scope狀態詳HANDOFF，來源132檔hash仍ae0e…7f1。純文件沿用同來源build379／6項回歸與08實跑證據，未新增驗收；待正式新任務先只讀確認後才轉唯一writer／封存舊聊天。
+
 ## 2026-11-02 08原生CLI分類合成協定實際驗收
 
 單次批准原文／UTC寫入08 human-approval.json，source-frozen記132個檔；唯一execute前後scope與source完全一致，未改src/scripts。指令與固定版本見STATUS；台北13:46:08.481–13:46:33.886，controller wall25.405秒。controller-start／exit證明私有Job validator自然0／remaining0／force=false；stage-1/capture-exit證明真CLI自然0／remaining0／force=false／capture完整／未truncated，mcp-process-exit的identity_verified／owner_job_membership_verified／handle_retained／child_exited皆true、exit0，mcp-stdio-exit ACK flushed=true。stdio自身os_exit_verified=false維持原值，由外部HANDLE及同Job自然退出證據組合驗證，不竄改自證標記。

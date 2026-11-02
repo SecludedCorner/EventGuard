@@ -1,5 +1,37 @@
 # EventGuard 接手
 
+## 2026-11-02 正式任務交接：先唯讀確認，再轉移唯一寫入權
+
+目前唯一writer為舊聊天`01a1974c-5b20-75c1-a05c-2e5b787574d8`。已停止新增工程；新任務建立後只讀核對，未收到正式`TRANSFER_WRITE_OWNERSHIP`訊息前不得改檔／Git、啟模型、採集、下載或重跑測試。新舊任務ID、接手回覆與生效時間將接續記在本節及本機交接回條；未確認前不封存舊聊天。
+
+### 精確恢復點與所有權
+
+- 同一既有專案／目錄：`C:\Users\yulin\Desktop\資安工具箱\EventGuard`；本機Windows／PowerShell、Python3.13.3、已裝MCP1.6.0。不得另clone／複製專案；正式新任務使用既有EventGuard project的local環境。
+- 分支`feat/local-codex-acceptance`、upstream同名、origin `https://github.com/SecludedCorner/EventGuard.git`；交接準備前HEAD與兩遠端為`d1eb76382c8746e970a6cd8d814652f19b90afd3`。最終交接SHA由新任務首則訊息及後續責任轉移紀錄精確指定。
+- tracked dirty與未追蹤非ignored檔案均空；必要runtime只在ignored reports中。local main刻意保留`e5e839e901efefd0f187d8ed8f70dddd087f124c`，不能reset覆蓋。整合worktree為`C:\Users\yulin\.codex\worktrees\eventguard-main-integration\EventGuard`、detached HEAD，沿既有授權ff-only整合，不切主checkout到main。
+- source checkpoint `f3e271a5ab2ff4b1c194057bc6d7c38eb54e775b`；132個src/scripts檔hash為`ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1`，至交接無產品source差異。
+- 08 controller／CLI／MCP原身份已自然退出0、remaining0／無強停；本次只查三個自有PID與建立時間，均已missing。已連接live App入口回application_not_running；不外推全機程序。沒有已知待移交的活體執行handle。兩個內部子任務acceptance_audit／prerequisite_audit已完成唯讀稽核；其08未批准摘要是執行前歷史，不能取代08 final-review。保留共享MCP連線，不停止他人程序。
+
+### 非Git產物與有效證據索引
+
+本機`reports/task-handoff-20261102-01/artifact-manifest.json`：55418 bytes、SHA256 `6a912ec3237797c21761aabbb4470dd0fb55f3593d1f141f4b93fddb3602bf71`，列168個必要檔案／476857968 bytes，各有相對路徑、大小及SHA256。只在本專案本機保存，未上傳；新任務先驗manifest再讀資料。codex-log、bytecode、volatile lock／SHM未列入，原目錄保留未動，不讀秘密或原始sessions。
+
+- 已驗證：CMD-003～018均有有限CLI／API證據；不要重新列為大量未實作功能。`reports/build-query-creation-cancel-20261102-01`為379檔語法／0error；`reports/verify-investigation-process-regression-20261102-01`為6/6／0skip，fixture／fake CLI、真SDK／stdio／SQLite及標記的Windows owned-job API分開，非全產品實機驗收。source-manifest 402檔仍符，文件變更沿用，不重跑。
+- 08已驗且批准已消耗：`reports/investigation-acceptance-eventguard-classification-20261102-08`的validation／final-review通過；四工具依序各1、原classification被引用、investigation分析落盤、pending0／receipt1，CLI／MCP／controller自然0／無殘留強停，scope與launch hash一致。scope `4fa53e3b8165a2db313cec68f31814bdccd4cf4e3cb76347f83f4cfd9fa02fc7`；不得重跑、套用或自動重包。06亦已耗用且只證real native CLI synthetic protocol；08與06皆real_agent_woken=false，未獨立證明provider／既有桌面task喚醒／正式防守。
+- 失敗與負結果保留：05四工具與ACK曾成立，但完整launch綁定失敗，不能改稱整體通過；04及07來源失效。解碼取消修前3/4、建立取消修前4/5保留，修後已驗。最新原生listener是`reports/windows-listener-diagnostics-20261029-01`的250列、identity缺122、23 access_denied、partial/baseline_incomplete；query exit0／validator exit2，13/13只是回條一致。不是10/27舊235／111／21，也不批准提權。
+- 已實作但實機未完整驗：一般監看／診斷／GUI共用核心已有功能與有限證據，原生身分覆蓋、真人／200%、長期可靠性不因此完成；不可寫成尚有大量離線功能待造。
+- NOT RUN／blocked：真DSM schema與受控樣本、真人六任務及合法比較資料、24h／reboot環境、可信恢復來源及無損容量契約、入站偵查遙測與真防守／恢復結果仍缺前置。live App未運行不等於可自行開始未指定時長監看；正常監看／idle不呼叫模型。
+
+### 最新方向、授權與精確下一步
+
+沿用Command First／GUI Second；所有能力保留可組合CLI／API、GUI共用核心，handled／ACK／處置成功各自有證據。先讀AGENTS、STATUS、此HANDOFF、docs/MAINTENANCE_GOAL及COMMAND_CAPABILITY_MATRIX；docs/COMMAND_FIRST_GOAL_PROMPT.md的04待批段是過時歷史。參考庫`D:\Github Project\Eventguard Reference`只讀，版本／檔案／授權結論沿docs/research/OPEN_SOURCE_REFERENCES及能力矩陣，不重下載或掃完所有第三方功能。
+
+既有一般可逆工程與必要普通權限唯讀／自有合成驗收授權沿用；沒有新模型、設備操作、真樣本、長跑／reboot、敏感處置、提權、系統／帳戶／安全設定、憑證、付費服務或部署授權。不動AI-Toolkit／KC Sites／其他專案；不讀秘密、原sessions、完整命令列、事件Message/XML。新子程序先私有Job、先合作停止，無法證實退出保持unknown；allowed_actions預設空，dispatch_policy僅固定enum，partial/unknown/denied/stale不等於safe。
+
+接手前第一動作：只讀確認指定HEAD、clean狀態、source hash、manifest SHA及必要artifact逐檔hash，讀08 final-review／原始結構證據並回覆可存取／限制／第一個實際動作。回覆後等舊聊天正式移交，不能雙writer。接手後第一動作：增量核對外部前置是否新到位；若仍無新資料或新可重現缺陷，保存接續回條並維持blocked，不重做已驗CLI／堆fixture／新增展示／重寫文件填空。NAS最小資訊是DSM build、Log Center版本、紀錄類型、官方schema及匯出前可強制來源／時間／筆數／bytes界線；其他支線依各自前置解鎖，有價值且解鎖的獨立工作才最大有效並行。
+
+實作後按既有單元規範必要build／相關測試、選擇性stage、commit普通push開發分支、detached ff-only整合／push main並直接核遠端；約200行／單元，工作樹及待整合diff各不超500，全部commit帶[skip ci]。唯一workflow僅workflow_dispatch，普通push沒有自動CI／部署，不手動啟動。不得force／amend／reset／clean／盲目stash／刪refs／Release／tag。完成標準是原完整資安AI盯哨及對應真實關卡，交接成功與08通過不代表整體完成。
+
 ## 2026-11-02 08已單次執行通過，批准已消耗
 
 08在使用者具體批准後執行唯一真原生CLI分類合成任務，180秒上限／重試0；台北13:46:08–13:46:33，controller25.405秒，未逾時。四工具依序各1，investigation分析含原classification與4個fact引用／完整3限制，SQLite ack1/pending0/receipt1；CLI／controller自然0／remaining0／無強停，MCP retained HANDLE exit0／ACK flushed及自然退出驗收均通過，launch hash相符。scope4fa53e3b8165a2db313cec68f31814bdccd4cf4e3cb76347f83f4cfd9fa02fc7／source ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1前後凍結一致；事件evt-eaa7084e46664cefa05b77d95ebb8048。詳reports/investigation-acceptance-eventguard-classification-20261102-08/validation.json及final-review.json，原始trace／SQLite／分析／退出回條完整保留，不提交runtime或批准紀錄。

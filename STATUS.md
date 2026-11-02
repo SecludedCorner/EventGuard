@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-02 正式任務交接準備，暫停新增工程
+
+已核主checkout d1eb763／clean／無未追蹤非ignored檔，branch/upstream仍feat/local-codex-acceptance，保留local main e5e839e及detached整合worktree。08原三個自有程序身份均已missing；兩內部唯讀auditor完成，沒有已知活體handle需移交，live App入口未運行。本機handoff manifest列168個必要產物／476857968 bytes，manifest自身55418 bytes／SHA256 6a912ec3237797c21761aabbb4470dd0fb55f3593d1f141f4b93fddb3602bf71，見HANDOFF頂部；runtime／批准／trace留本機不提交。新任務先只讀確認，正式轉移寫入權後才接續，接手成功前不封存舊聊天。
+
+本次純交接文件及本機hash manifest，同source ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1的379編譯／6項回歸與08真CLI有限證據沿用，不重跑模型／採集／測試。只檢查文件連結、diff及必要hash；現有workflow僅手動dispatch，普通push不自動CI／部署。不改寫08已耗用或原生partial／外部前置狀態。
+
 ## 2026-11-02 AGENT-08單次原生CLI分類合成調查通過／批准已消耗
 
 使用者具體批准08後凍結132個src/scripts檔，scope4fa53e3b8165a2db313cec68f31814bdccd4cf4e3cb76347f83f4cfd9fa02fc7、source ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1前後完全一致。`py -3.13 -B reports/execute-investigation-08.py authorize`只記批准／凍結；其後唯一一次`py -3.13 -B reports/execute-investigation-08.py execute`，在私有Job內執行固定production validator。台北13:46:08–13:46:33，controller wall25.405秒；CLI工作上限180秒、無逾時／重試。CLI0.166.0-alpha.5.1／Python3.13.3／MCP1.6.0，未擴來源、工具或處置。

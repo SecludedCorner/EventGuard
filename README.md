@@ -112,4 +112,4 @@ Windows 可能抑制通知。程式接受通知要求，不代表使用者已看
 
 Codex 接線、桌面閒置喚醒及開機自啟均為選配。MCP 操作不代表閒置喚醒。官方入口研究見 [事件驅動](docs/AGENT_EVENT_DRIVEN.md)，OpenOctopus 的提案見 [協定](docs/OPENOCTOPUS_EVENT_PROTOCOL.md)。成本與收益見 [維護目標](docs/MAINTENANCE_GOAL.md)。
 
-舊 Tk GUI 仍可雙擊 `EventGuard.cmd` 開啟。歷史驗收見 [EVIDENCE](docs/EVIDENCE.md)。產品範圍見 [維護目標](docs/MAINTENANCE_GOAL.md)。本專案使用 [MIT](LICENSE)。
+舊 Tk GUI 仍可雙擊 `EventGuard.cmd` 開啟。最新恢復點與唯一writer見 [HANDOFF](HANDOFF.md)，歷史驗收見 [EVIDENCE](docs/EVIDENCE.md)。產品範圍見 [維護目標](docs/MAINTENANCE_GOAL.md)。本專案使用 [MIT](LICENSE)。
