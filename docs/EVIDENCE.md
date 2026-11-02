@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-02 新聊天READONLY_HANDOFF_READY實際確認
+
+確認回條檢查首次因省略encoding而以系統cp950讀UTF-8失敗；改明定encoding=utf-8後ID／回覆解析通過，原產物未變。失敗及修正結果／額外回條path-size-hash保存本機handoff-checks.json，不冒稱首次檢查通過。
+
+正式create_thread在既有EventGuard project／local同目錄建立新聊天01a19b34-949a-7231-be73-05aa74696da9。wait_threads與read_thread讀到已完成回覆（非僅建立成功）：Git fdee664／遠端／clean、manifest SHA及168檔／476857968 bytes、132來源hash皆符；08資料與環境可讀、明確理解scope消耗與限制，沒有寫檔／模型／採集／測試。台北15:45讀回，原文保存reports/task-handoff-20261102-01/receiver-readonly-confirmation.json；新聊天仍等正式轉移訊息。舊聊天先保存此紀錄再停止寫入，唯讀核新聊天receiver-started後才封存；原source及驗收證據沿用，不啟CI或部署。
+
 ## 2026-11-02 同專案正式聊天交接前置
 
 使用正式App工具讀舊聊天最新兩回合及既有project清單，EventGuard projectId為553147a2-c0b3-40ac-b1aa-c05f0bfff7d5／local既有目錄，無clone需求。交接前HEAD d1eb763、Git clean／無非ignored未追蹤；08三個自有PID依原建立時間定向唯讀檢查均missing，未列全機命令列或終止程序；兩個auditor已completed。live App狀態回application_not_running／model_calls0。reports/task-handoff-20261102-01/artifact-manifest.json保存168檔path／size／SHA256，含08／06／05／07／04必要證據、CLI runtime及現有回歸／負結果；原codex-log與volatile lock／SHM保留未讀／未上傳。manifest大小／hash及scope狀態詳HANDOFF，來源132檔hash仍ae0e…7f1。純文件沿用同來源build379／6項回歸與08實跑證據，未新增驗收；待正式新任務先只讀確認後才轉唯一writer／封存舊聊天。
