@@ -1,5 +1,11 @@
 # EventGuard 接手
 
+## 2026-11-02 08已單次執行通過，批准已消耗
+
+08在使用者具體批准後執行唯一真原生CLI分類合成任務，180秒上限／重試0；台北13:46:08–13:46:33，controller25.405秒，未逾時。四工具依序各1，investigation分析含原classification與4個fact引用／完整3限制，SQLite ack1/pending0/receipt1；CLI／controller自然0／remaining0／無強停，MCP retained HANDLE exit0／ACK flushed及自然退出驗收均通過，launch hash相符。scope4fa53e3b8165a2db313cec68f31814bdccd4cf4e3cb76347f83f4cfd9fa02fc7／source ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1前後凍結一致；事件evt-eaa7084e46664cefa05b77d95ebb8048。詳reports/investigation-acceptance-eventguard-classification-20261102-08/validation.json及final-review.json，原始trace／SQLite／分析／退出回條完整保留，不提交runtime或批准紀錄。
+
+08 scope已消耗，07失效／06耗用仍保留；不得重跑、重用批准或為同case自動建立新包。結果只證real native CLI synthetic protocol，real_agent_woken=false，未證獨立provider、既有桌面task喚醒或防守；分析明示synthetic與主機狀態未驗。無產品source修改，379編譯／6項合成回歸沿用同hash證據；其他外部前置及完整目標仍未完成，不擴張本次授權。原HEAD84bc21e，後續僅本單元紀錄普通保存／整合，不動保留local main。
+
 ## 2026-11-02 相同外部前置稽核／無活體handle等待
 
 08仍approved=false／未入列／未啟，既有詢問待答；07失效／06消耗不變。一次已連接App MCP狀態回live blocked/application_not_running、automatic_retry_allowed=false／model_calls0，最小證據reports/command-first-runtime-audit-20261102-01/audit.json；只限該入口，不是全機／當前source原生驗收，也沒有活體handle可等待。無新可執行必要單元或已知可重現缺陷；相同當前模型批准／實機前置已跨連續三goal turns，前兩turn工程已保存，整體仍未達成。恢復需既有08具體批准、NAS資訊／相應實機前置或新缺陷證據，沿af83ee9及後續文件保存點增量接續；不要重新測同fixture、重問一般開發許可、啟長跑／模型來繞過。af83ee9兩遠端已核，同來源build379與stdio6/6沿用，未新測／CI。

@@ -1,5 +1,13 @@
 # 證據與時間日誌
 
+## 2026-11-02 08原生CLI分類合成協定實際驗收
+
+單次批准原文／UTC寫入08 human-approval.json，source-frozen記132個檔；唯一execute前後scope與source完全一致，未改src/scripts。指令與固定版本見STATUS；台北13:46:08.481–13:46:33.886，controller wall25.405秒。controller-start／exit證明私有Job validator自然0／remaining0／force=false；stage-1/capture-exit證明真CLI自然0／remaining0／force=false／capture完整／未truncated，mcp-process-exit的identity_verified／owner_job_membership_verified／handle_retained／child_exited皆true、exit0，mcp-stdio-exit ACK flushed=true。stdio自身os_exit_verified=false維持原值，由外部HANDLE及同Job自然退出證據組合驗證，不竄改自證標記。
+
+08 validation passed=true、missing／duplicates空，event evt-eaa7084e46664cefa05b77d95ebb8048，query-c5b841b795ac5c6c11bd6364fe69fd4fe692785e、result-c2f8525861a13344b6703c8df0f6014ad5f78667。獨立唯讀audit由原始codex.jsonl實數四工具各1／依序、單thread／單completed turn／無error，SQLite ack1／receipt1／pending0及payload hash／receiver result ID均符。query分類等於manifest原分類，investigation.observations明示引用classification與binding_scope／port／protocol；保留三項limitations，not_assessed／remediation=false，未補寫分析。完整structured investigation及final-review、source SQLite、inbox completed、trace與所有退出回條留08本機目錄。
+
+來源ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1、scope4fa53e3b8165a2db313cec68f31814bdccd4cf4e3cb76347f83f4cfd9fa02fc7前後一致；launch hash相符、approval_consumed=true、timeout=false／retried=false。actual trace usage input117700／cached107520／output453（非費用估算）。有限scope是real native CLI synthetic protocol，real_agent_woken=false；不證獨立provider、既有桌面task喚醒、真來源／入侵／處置成功。source checkpoint f3e271a，Git執行前84bc21e；同source build379／0error及6/6合成證據沿用，未額外啟模型或CI。
+
 ## 2026-11-02 單次App MCP觀測與外部前置稽核
 
 UTC2026-11-01T18:58:37，已連接mcp__eventguard_app__status({})一次回namespace live／state blocked／reason application_not_running／model_calls0／automatic_retry_allowed=false。只保存固定狀態與限制於reports/command-first-runtime-audit-20261102-01/audit.json，不保存原始私人資料；未啟App／採集／ACK／處置。這不是新模型、全機程序盤點、當前source的native證明或活體程序等待。08人工批准檔仍false、manifest enqueued/stages0、stage-1不存在，既有詢問未收到新答覆；07失效及06消耗維持。

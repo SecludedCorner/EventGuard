@@ -1,5 +1,15 @@
 # EventGuard 現況
 
+## 2026-11-02 AGENT-08單次原生CLI分類合成調查通過／批准已消耗
+
+使用者具體批准08後凍結132個src/scripts檔，scope4fa53e3b8165a2db313cec68f31814bdccd4cf4e3cb76347f83f4cfd9fa02fc7、source ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1前後完全一致。`py -3.13 -B reports/execute-investigation-08.py authorize`只記批准／凍結；其後唯一一次`py -3.13 -B reports/execute-investigation-08.py execute`，在私有Job內執行固定production validator。台北13:46:08–13:46:33，controller wall25.405秒；CLI工作上限180秒、無逾時／重試。CLI0.166.0-alpha.5.1／Python3.13.3／MCP1.6.0，未擴來源、工具或處置。
+
+事件evt-eaa7084e46664cefa05b77d95ebb8048；真trace的receive_event/query_evidence/save_investigation/ack_event依序各1，分析以investigation結構保存，引用binding_scope／classification／port／protocol及全部3項limitations。SQLite獨立唯讀核對ack1／pending0／receipt1，result ID及payload hash一致，原分類快照完整且確實被引用。capture完整、launch hash相符，CLI與controller自然exit0／remaining0／force=false；MCP同Job retained HANDLE證實exit0、ACK flushed，natural_exit驗收通過。`py -3.13 -B reports/audit-investigation-08.py`交叉核對通過並保存final-review.json；require_approval確認單次scope已消耗，不能重用。
+
+原始證據全留reports/investigation-acceptance-eventguard-classification-20261102-08：human-approval／source-frozen、manifest、source SQLite、inbox completed、stage-1 trace／capture／MCP退出、validation及final-review。模型摘要指出固定合成TCP18080與命中規則，不能證明主機安全、入侵、可達性或處置；incident_conclusion仍not_assessed／remediation=false／real_agent_woken=false。有限結論為real native CLI synthetic protocol，不是獨立provider身分、既有桌面task喚醒或正式防守驗收。trace usage為input117700（cached107520）、output453，不推算費用或宣稱CLI工具零token。
+
+本單元僅驗收紀錄；來源未改，沿用同hash的build-query-creation-cancel-20261102-01（379／0error）及既有6/6合成回歸，未重跑模型／無GitHub CI。Git原HEAD84bc21eb95a3b81c00b980b84cda41932f1cea30，來源checkpoint仍f3e271a5ab2ff4b1c194057bc6d7c38eb54e775b；本次批准已消耗，其他NAS／真人／原生／長跑／可信恢復與真防守前置不變，完整盯哨未完成。
+
 ## 2026-11-02 外部前置與已連接App狀態稽核
 
 UTC2026-11-01T18:58:37，本次唯讀呼叫一次mcp__eventguard_app__status，指定live入口回blocked／application_not_running／automatic_retry_allowed=false／model_calls0，未回任何活體程序handle；不是verified wait，也不外推全機程序或伺服器受測來源。最小回覆與限制保存reports/command-first-runtime-audit-20261102-01/audit.json。未啟App／採集／模型／ACK／處置；connected不代表持續盯哨已運作。

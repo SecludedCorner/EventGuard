@@ -15,7 +15,7 @@
 | 七來源已存觀察／概覽 | `sources list/show`、`overview/status/activity` | `source_status`、`OperatorAPI`；Web／Tk／MCP | JSON、limit，coverage/freshness 分開 | 唯讀；既有 test_operator_status、test_operator_success_contradictions；原生partial仍待驗 |
 | 採集與生命週期 | `monitor/stop`、`background`、`run`、`app status/start/pause/resume/stop/shutdown` | Monitor／OperatorAPI／Application，GUI共用 | fixture/max-cycles、期限、操作ID、退出回條 | 明確採集或控制自有Job；正常模型0；既有 test_application*、test_background_jobs；長跑未驗 |
 | 規則與playbook | `rules list/validate`、`playbook validate/simulate` | configured／playbooks；Web只展示規則 | 固定schema、JSON；設定檔編輯 | simulate 不執行處置；無敏感處置授權；既有 test_rules_playbooks |
-| 已存分類決策 | `events detail/inspect`回event.classification；monitor先保存 | decisions.classify／EventSchema／event_view，GUI及Operator共用；合成調查facts可引用 | 可選版本1.0、winner條件／hash、整組hash、base severity；共用8KiB | CMD-018 API／落盤／真CLI／合成inbox及FAKE CLI真stdio已驗；legacy不補造，未命中另記；非新真模型 |
+| 已存分類決策 | `events detail/inspect`回event.classification；monitor先保存 | decisions.classify／EventSchema／event_view，GUI及Operator共用；合成調查facts可引用 | 可選版本1.0、winner條件／hash、整組hash、base severity；共用8KiB | CMD-018 API／落盤／CLI／inbox及08原生CLI合成協定已驗，原分類確被引用；legacy不補造；未證provider／桌面task喚醒或真防守 |
 | 明確唯讀診斷 | `query`（--args文字或 - 讀stdin）、`events diagnose/inspect` | DiagnosticAPI／OperatorAPI；MCP；共用bounded_json | 8KiB UTF-8／32層／重複key拒絕，stdin可BOM、TTY拒絕，來源Job預算 | CMD-008/010/017已驗；來源n/a／未請求exit5、unsupported view=2；真PowerShell→.cmd管線，query/diagnose可查OS、health/inspect只讀 |
 | 指令取消 | query stdin讀取中斷回固定結果；status=cancelled為exit130 | CLI輸入邊界／DiagnosticAPI既有取消狀態 | schema1.0、query_input_cancelled；輸入階段不dispatch，stdout結果／stderr診斷分開 | CMD-012注入與真私有console控制事件已驗，Windows空／未完JSON管線在EOF前取消；真人鍵盤／原生來源中途取消未驗，不能把取消當安全或成功 |
 | 接收／ACK／重試／報告 | `events receive/ack/retry`、`report export` | OperatorAPI、共享inbox | event/query 綁定、JSON／escaped HTML | 明確保存收件／ACK或重試；既有 test_cli_workflow；ACK非結案 |
@@ -34,7 +34,7 @@ CMD-004已接線並驗收，可用 `EventGuard.cmd --format json events pending-
 
 [pySigma](https://github.com/SigmaHQ/pySigma/tree/2555624e3689e82824e7f2710397ae0c7c5adfd3)本機固定SHA同連結；sigma/rule/base.py的SigmaRuleBase保存id／modified／level／source，SigmaYAMLLoader拒絕duplicate key。根LICENSE為LGPL-2.1，具體檔案未另列授權；只讀設計，未複製或執行／引入YAML依賴。EventGuard已拒絕duplicate，實際缺口是自訂severity的分類來源未保存。
 
-[SigmaHQ/sigma](https://github.com/SigmaHQ/sigma/tree/05d1031f537e830b76da53bae2400c5814c89165)固定同SHA；rules/windows/process_creation/proc_creation_win_powershell_base64_encoded_obfusc.yml明列id／status／modified／logsource。根LICENSE將規則列為DRL 1.1，未採用規則內容或條件，不宣稱Sigma相容。只借鏡明確規則身分與版本；獨立實作decisions.classify及test_rule_decisions，保留winner條件快照與hash，不保存完整規則集、不把hash當來源認證／處置授權。CMD-018 API／原子落盤／CLI／合成調查SDK、stdio與故障恢復已驗；07因後續CMD-016來源修改失效；08已準備、未批准／未啟，真模型仍待具體批准。
+[SigmaHQ/sigma](https://github.com/SigmaHQ/sigma/tree/05d1031f537e830b76da53bae2400c5814c89165)固定同SHA；rules/windows/process_creation/proc_creation_win_powershell_base64_encoded_obfusc.yml明列id／status／modified／logsource。根LICENSE將規則列為DRL 1.1，未採用規則內容或條件，不宣稱Sigma相容。只借鏡明確規則身分與版本；獨立實作decisions.classify及test_rule_decisions，保留winner條件快照與hash，不保存完整規則集、不把hash當來源認證／處置授權。CMD-018 API／原子落盤／CLI／合成調查SDK、stdio與故障恢復已驗；07因後續CMD-016來源修改失效；08已單次執行通過並引用原分類，批准已消耗；有限scope為原生CLI合成協定，不外推真防守。
 
 ## 參考對照 R-CMD-001
 
