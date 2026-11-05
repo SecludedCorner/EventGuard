@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-05 本機D槽接續範圍修正／命令入口通過
+
+使用者澄清D槽是本機專案；舊佇列NAS支線與本次搬移無關，NAS資訊不作本機CLI／API及盯哨核心的開發前置。先前因此列出的整體接續限制不能直接沿用，各本機關卡依自身前置續做。
+
+UTC03:47:48執行`C:/Python313/python.exe -B reports/local-cmd-entry-20261105-01/check.py`，以私有Job跑一次真`EventGuard.cmd --help`，12秒上限內0.861秒自然0、1770 stdout bytes／stderr0、remaining0／force=false。僅證D盤入口可用；此前app status輔助腳本因收尾reason無效而exit1且未保存回條，App狀態／該次子程序退出未確認，失敗保留scope-correction.json，未重查狀態。source未變，build379／6項回歸沿用；本次命令入口是新有限驗收，沒有模型／原生採集／NAS／CI或產品改碼。
+
 ## 2026-11-05 D盤恢復與現行入口修正／外部前置仍blocked
 
 依使用者「請繼續」在D:\EventGuard恢復；git status／diff均空，HEAD／開發分支／main即時遠端均bd7b0d4，upstream 0/0、local main e5e839e保留，既有detached整合worktree共用D盤Git。Get-FileHash核132來源及回歸402檔全符；原manifest hash仍6a912ec3…2bf71、168指定產物均在，08 final-review仍耗用且real_agent_woken=false。無新格式／樣本／缺陷證據；NAS版本／schema／事前匯出界線已詢問，其他真人／原生／長跑／恢復／真防守關卡不變。

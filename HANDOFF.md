@@ -1,5 +1,11 @@
 # EventGuard 接手
 
+## 2026-11-05 使用者澄清本機D槽接續／CLI入口已驗
+
+`D:\EventGuard`是本機專案目錄；NAS是歷史佇列中的獨立設備支線，其版本／格式缺口不作本機CLI／API與盯哨核心的開發前置。先前將NAS需求列為本次接續下一步的判斷已修正；目前聚焦本機已授權工作，本機各剩餘關卡仍依各自必要證據／授權判定，不沿用「NAS缺資料所以全部受阻」推論。
+
+一次`EventGuard.cmd --help`在D盤真實入口通過，0.861秒／exit0／自有Job remaining0／無強停，回條`reports/local-cmd-entry-20261105-01/result.json`。此前一次app status輔助腳本因收尾reason不在固定enum而exit1，狀態與子程序退出回條未保存，不重查同狀態、不補造退出證據；目前App狀態仍未確認，詳`reports/local-app-status-20261105-01/scope-correction.json`。兩次均無模型／採集／NAS操作，產品source未改，08消耗不變。
+
 ## 2026-11-05 已從D:\EventGuard增量恢復，外部前置仍待補
 
 目前主checkout為`D:\EventGuard`，本聊天`01a19b34-949a-7231-be73-05aa74696da9`沿用唯一writer責任。恢復HEAD為`bd7b0d492cabee9c29b761ebc1be88f8a458e3cc`，分支／upstream未變、工作樹乾淨、兩遠端同SHA；既有detached整合worktree的common Git目錄已指向`D:/EventGuard/.git`，保留local main e5e839e。下方C盤路徑及原始回條的root均為當時歷史，不改寫原證據或重用已耗用scope。

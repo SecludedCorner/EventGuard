@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-05 D槽本機範圍澄清與真命令入口
+
+NAS只是歷史獨立設備支線，使用者要求接續的是D:\EventGuard本機專案；NAS schema缺口不阻止已授權的本機工作。先前下一步聚焦NAS屬判斷錯誤，已修正HANDOFF／STATUS，未改舊回條。
+
+一次app status輔助腳本的finish使用不在固定enum的reason，helper exit1，因finally失敗未保存狀態／退出結果；不補造自然退出／殘留證據，不將其視為產品故障，未重跑app status。原helper及結構失敗紀錄在reports/local-app-status-20261105-01。修正輔助收尾使用既有descendants_remaining後，另以reports/local-cmd-entry-20261105-01/check.py執行不同的純help入口：UTC2026-11-05T03:47:48.203690+00:00起0.861秒，stdout1770／stderr0、cli／Job自然exit0、remaining0／無強停，result.json為passed=true。只證移動後.cmd入口，未證當前App、持續盯哨或安全；無模型／採集／NAS操作，產品來源未變，原build／回歸沿用。
+
 ## 2026-11-05 D:\EventGuard增量恢復核對
 
 git status --short／git diff --shortstat均空，branch／upstream同名、ahead/behind0/0；ls-remote直接核開發分支與main均bd7b0d492cabee9c29b761ebc1be88f8a458e3cc。既有detached worktree同HEAD／common-dir為D:/EventGuard/.git，local main仍e5e839e。UTC2026-11-05T03:32:53.3636681+00:00以PowerShell Get-FileHash核回歸source-manifest402檔無差異；另核132來源canonical hash為ae0e2447…7f1、原manifest完整SHA不變、168指定檔均存在，未冒稱本次逐檔重驗476MB。
