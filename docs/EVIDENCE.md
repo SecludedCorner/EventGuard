@@ -1,5 +1,11 @@
 # 證據與時間日誌
 
+## 2026-11-05 D:\EventGuard增量恢復核對
+
+git status --short／git diff --shortstat均空，branch／upstream同名、ahead/behind0/0；ls-remote直接核開發分支與main均bd7b0d492cabee9c29b761ebc1be88f8a458e3cc。既有detached worktree同HEAD／common-dir為D:/EventGuard/.git，local main仍e5e839e。UTC2026-11-05T03:32:53.3636681+00:00以PowerShell Get-FileHash核回歸source-manifest402檔無差異；另核132來源canonical hash為ae0e2447…7f1、原manifest完整SHA不變、168指定檔均存在，未冒稱本次逐檔重驗476MB。
+
+只修現行入口的搬移路徑及04歷史狀態；build379／6項回歸沿用原source及有限scope，08仍消耗、real_agent_woken=false。無新可執行外部前置或缺陷證據，本輪詢問NAS最小版本／格式／匯出前界線；沒有設備／原生採集／模型／測試／CI，也未使用本次未提供的EventGuard連接工具推定App狀態。實際回條在reports/resume-relocation-20261105-01，原handoff／批准／manifest不改寫。
+
 ## 2026-11-02 正式TRANSFER_WRITE_OWNERSHIP已接收並接續
 
 新聊天01a19b34-949a-7231-be73-05aa74696da9收到正式訊息即為唯一writer，接收後首筆UTC2026-11-02T07:52:16.1575425+00:00；舊聊天停止寫入、只待核回條後封存。UTF-8讀ownership-transfer／唯讀確認／handoff-checks，handoff f735449與兩遠端一致，相對fdee664僅三份交接文件+19／-0；132來源hash與回歸source-manifest402檔全符，沿用build379／0error、6/6及08有限實跑證據。

@@ -1,5 +1,11 @@
 # EventGuard 現況
 
+## 2026-11-05 D盤恢復與現行入口修正／外部前置仍blocked
+
+依使用者「請繼續」在D:\EventGuard恢復；git status／diff均空，HEAD／開發分支／main即時遠端均bd7b0d4，upstream 0/0、local main e5e839e保留，既有detached整合worktree共用D盤Git。Get-FileHash核132來源及回歸402檔全符；原manifest hash仍6a912ec3…2bf71、168指定產物均在，08 final-review仍耗用且real_agent_woken=false。無新格式／樣本／缺陷證據；NAS版本／schema／事前匯出界線已詢問，其他真人／原生／長跑／恢復／真防守關卡不變。
+
+本單元僅修現行HANDOFF／Command First入口的路徑與過時04待批敘述，保留原回條及歷史；命令、UTC、來源綁定與Git保存見reports/resume-relocation-20261105-01/audit.json及git-save.json。內容／連結／git diff --check驗證；沿用build-query-creation-cancel-20261102-01的379／0error及verify-investigation-process-regression-20261102-01的6/6，未重測或啟CI／模型／採集。EventGuard連接工具本次未提供，未核當前App狀態，不能宣稱正在盯哨或完整目標完成。
+
 ## 2026-11-02 正式接手生效，首個增量核對完成／外部前置仍blocked
 
 新聊天`01a19b34-949a-7231-be73-05aa74696da9`收到TRANSFER_WRITE_OWNERSHIP後已為唯一writer；接收後首筆UTC為2026-11-02T07:52:16.1575425+00:00，舊聊天只讀確認後可封存。handoff f735449相對fdee664僅HANDOFF／STATUS／EVIDENCE增加19行，Git原先clean／兩遠端同SHA，保留local main e5e839e；正式接續回條見reports/task-handoff-20261102-01/receiver-started.json。

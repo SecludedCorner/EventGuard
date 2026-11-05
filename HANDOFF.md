@@ -1,5 +1,13 @@
 # EventGuard 接手
 
+## 2026-11-05 已從D:\EventGuard增量恢復，外部前置仍待補
+
+目前主checkout為`D:\EventGuard`，本聊天`01a19b34-949a-7231-be73-05aa74696da9`沿用唯一writer責任。恢復HEAD為`bd7b0d492cabee9c29b761ebc1be88f8a458e3cc`，分支／upstream未變、工作樹乾淨、兩遠端同SHA；既有detached整合worktree的common Git目錄已指向`D:/EventGuard/.git`，保留local main e5e839e。下方C盤路徑及原始回條的root均為當時歷史，不改寫原證據或重用已耗用scope。
+
+132來源hash仍ae0e24479aae433879cf1cd4bae8d231cf0cdbefd90ecd69b592d32afb3df7f1，回歸source-manifest402檔全部符合；原artifact-manifest自身hash不變、列168檔均存在，本次未重讀476MB逐檔hash。08仍consumed／real_agent_woken=false；未重跑測試、模型或採集。本聊天目前沒有EventGuard連接工具，不能沿用11/02的application_not_running當成本次App狀態。
+
+接續已核現有工作佇列及輸入，尚無新DSM格式／受控樣本、其他實機前置或可重現缺陷證據；NAS最小資訊需求沿下節，已詢問版本／格式資訊，不要求原始日誌。修正現行Command First prompt的舊路徑與04待批敘述，保留歷史紀錄；本輪回條見`reports/resume-relocation-20261105-01/audit.json`。完整盯哨仍blocked，文件修正不構成新的產品驗收。
+
 ## 2026-11-02 正式接手生效，新聊天為唯一writer
 
 - 舊任務：`01a1974c-5b20-75c1-a05c-2e5b787574d8`；新任務：**EventGuard 接手：08 已驗與外部前置**，ID `01a19b34-949a-7231-be73-05aa74696da9`，host local、同一既有EventGuard project／同一目錄，沒有clone／worktree副本。
